@@ -170,6 +170,44 @@ function findStatementSeparators(sql: string): number[] {
   return separators;
 }
 
+/** Whether `sql` contains only whitespace and SQL comments. */
+function isSqlTrivia(sql: string): boolean {
+  let i = 0;
+  while (i < sql.length) {
+    if (/\s/.test(sql[i]!)) {
+      i++;
+      continue;
+    }
+
+    if (sql[i] === '-' && sql[i + 1] === '-') {
+      const newline = sql.indexOf('\n', i + 2);
+      i = newline < 0 ? sql.length : newline + 1;
+      continue;
+    }
+
+    if (sql[i] === '/' && sql[i + 1] === '*') {
+      let depth = 1;
+      i += 2;
+      while (i < sql.length && depth > 0) {
+        if (sql[i] === '/' && sql[i + 1] === '*') {
+          depth++;
+          i += 2;
+        } else if (sql[i] === '*' && sql[i + 1] === '/') {
+          depth--;
+          i += 2;
+        } else {
+          i++;
+        }
+      }
+      if (depth > 0) return false;
+      continue;
+    }
+
+    return false;
+  }
+  return true;
+}
+
 /**
  * Splits a multi-statement script into everything-but-the-last statement plus
  * the last one, or returns `null` when `sql` is a single statement.
@@ -292,13 +330,11 @@ async function resultReaderToArrowTable<T extends arrow.TypeMap = any>(
  * Comments stay attached to the query for diagnostics and source fidelity.
  */
 function stripTrailingStatementTerminator(sql: string): string {
-  const trailingTrivia = String.raw`(?:\s|--[^\r\n]*(?:\r?\n|$)|\/\*[\s\S]*?\*\/)*`;
-  const isTrailingTrivia = new RegExp(`^${trailingTrivia}$`);
   const separators = findStatementSeparators(sql);
   let normalized = sql;
   while (separators.length > 0) {
     const separator = separators.pop()!;
-    if (!isTrailingTrivia.test(normalized.slice(separator + 1))) {
+    if (!isSqlTrivia(normalized.slice(separator + 1))) {
       break;
     }
     normalized =

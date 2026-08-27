@@ -77,6 +77,7 @@ export function createNodeDuckDbConnector(
   let connection: DuckDBConnection | null = null;
   let operationQueue = Promise.resolve();
   let closing = false;
+  let destroyPromise: Promise<void> | null = null;
 
   const enqueueOperation = <T>(operation: () => Promise<T>): Promise<T> => {
     if (closing) {
@@ -99,7 +100,6 @@ export function createNodeDuckDbConnector(
 
   const impl: BaseDuckDbConnectorImpl = {
     async initializeInternal() {
-      closing = false;
       await enqueueOperation(async () => {
         instance = await DuckDBInstance.create(dbPath, config);
         connection = await instance.connect();
@@ -112,7 +112,6 @@ export function createNodeDuckDbConnector(
     },
 
     async destroyInternal() {
-      closing = true;
       await operationQueue;
       if (connection) {
         try {
@@ -202,8 +201,27 @@ export function createNodeDuckDbConnector(
     impl,
   );
 
+  const initialize = async (): Promise<void> => {
+    if (closing) {
+      throw new Error('DuckDB connector is shutting down');
+    }
+    await baseConnector.initialize();
+  };
+
+  const destroy = (): Promise<void> => {
+    if (destroyPromise) return destroyPromise;
+    closing = true;
+    destroyPromise = baseConnector.destroy().finally(() => {
+      closing = false;
+      destroyPromise = null;
+    });
+    return destroyPromise;
+  };
+
   return {
     ...baseConnector,
+    initialize,
+    destroy,
     getInstance() {
       if (!instance) {
         throw new Error('DuckDB not initialized');

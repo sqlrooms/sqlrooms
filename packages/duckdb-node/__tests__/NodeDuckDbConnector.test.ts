@@ -268,6 +268,7 @@ describe('NodeDuckDbConnector', () => {
     it.each([
       ['line', 'SELECT 42 as answer;;; -- explanation'],
       ['block', 'SELECT 42 as answer;;; /* explanation */'],
+      ['nested block', 'SELECT 42 as answer;;; /* outer /* inner */ outer */'],
     ])(
       'should accept a terminator before a trailing %s comment',
       async (_, sql) => {
@@ -473,7 +474,7 @@ describe('NodeDuckDbConnector', () => {
   });
 
   describe('destroy', () => {
-    it('should reject operations submitted after teardown starts', async () => {
+    it('should reject operations and initialization after teardown starts', async () => {
       const connection = connector.getConnection();
       const extractStatements = connection.extractStatements.bind(connection);
       let releaseQuery!: () => void;
@@ -501,6 +502,9 @@ describe('NodeDuckDbConnector', () => {
         await expect(connector.query('SELECT 2 AS too_late')).rejects.toThrow(
           'DuckDB connector is shutting down',
         );
+        await expect(connector.initialize()).rejects.toThrow(
+          'DuckDB connector is shutting down',
+        );
       } finally {
         releaseQuery();
       }
@@ -515,6 +519,13 @@ describe('NodeDuckDbConnector', () => {
 
       // After destroy, getInstance should throw
       expect(() => connector.getInstance()).toThrow('DuckDB not initialized');
+    });
+
+    it('should allow initialization after teardown finishes', async () => {
+      await connector.destroy();
+      await connector.initialize();
+
+      await expect(connector.query('SELECT 1')).resolves.toBeDefined();
     });
 
     it('should be safe to call multiple times', async () => {
