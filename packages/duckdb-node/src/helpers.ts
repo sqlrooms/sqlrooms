@@ -6,8 +6,10 @@ import {
 } from '@duckdb/node-api';
 import {
   getRawSqlTableReference,
+  joinStatements,
   literalToSQL,
   makeQualifiedTableName,
+  splitSqlStatements,
 } from '@sqlrooms/duckdb-core';
 import * as arrow from 'apache-arrow';
 
@@ -97,147 +99,20 @@ async function countStatements(
   }
 }
 
-/** Finds semicolons outside strings, quoted identifiers, and SQL comments. */
-function findStatementSeparators(sql: string): number[] {
-  const separators: number[] = [];
-  let i = 0;
-  while (i < sql.length) {
-    const char = sql[i];
-    const next = sql[i + 1];
-
-    if (char === "'" || char === '"') {
-      const quote = char;
-      const usesBackslashEscapes =
-        quote === "'" &&
-        (sql[i - 1] === 'E' || sql[i - 1] === 'e') &&
-        (i < 2 || !/[A-Za-z0-9_$]/.test(sql[i - 2]!));
-      i++;
-      while (i < sql.length) {
-        if (usesBackslashEscapes && sql[i] === '\\') {
-          i += 2;
-          continue;
-        }
-        if (sql[i] === quote) {
-          if (sql[i + 1] === quote) {
-            i += 2;
-            continue;
-          }
-          i++;
-          break;
-        }
-        i++;
-      }
-      continue;
-    }
-
-    if (char === '-' && next === '-') {
-      const newline = sql.indexOf('\n', i + 2);
-      i = newline < 0 ? sql.length : newline + 1;
-      continue;
-    }
-
-    if (char === '/' && next === '*') {
-      let depth = 1;
-      i += 2;
-      while (i < sql.length && depth > 0) {
-        if (sql[i] === '/' && sql[i + 1] === '*') {
-          depth++;
-          i += 2;
-        } else if (sql[i] === '*' && sql[i + 1] === '/') {
-          depth--;
-          i += 2;
-        } else {
-          i++;
-        }
-      }
-      continue;
-    }
-
-    if (char === '$') {
-      const tag = sql.slice(i).match(/^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/)?.[0];
-      if (tag) {
-        const closingTag = sql.indexOf(tag, i + tag.length);
-        i = closingTag < 0 ? sql.length : closingTag + tag.length;
-        continue;
-      }
-    }
-
-    if (char === ';') {
-      separators.push(i);
-    }
-    i++;
-  }
-  return separators;
-}
-
-/** Whether `sql` contains only whitespace and SQL comments. */
-function isSqlTrivia(sql: string): boolean {
-  let i = 0;
-  while (i < sql.length) {
-    if (/\s/.test(sql[i]!)) {
-      i++;
-      continue;
-    }
-
-    if (sql[i] === '-' && sql[i + 1] === '-') {
-      const newline = sql.indexOf('\n', i + 2);
-      i = newline < 0 ? sql.length : newline + 1;
-      continue;
-    }
-
-    if (sql[i] === '/' && sql[i + 1] === '*') {
-      let depth = 1;
-      i += 2;
-      while (i < sql.length && depth > 0) {
-        if (sql[i] === '/' && sql[i + 1] === '*') {
-          depth++;
-          i += 2;
-        } else if (sql[i] === '*' && sql[i + 1] === '/') {
-          depth--;
-          i += 2;
-        } else {
-          i++;
-        }
-      }
-      if (depth > 0) return false;
-      continue;
-    }
-
-    return false;
-  }
-  return true;
-}
-
 /**
- * Splits a multi-statement script into everything-but-the-last statement plus
- * the last one, or returns `null` when `sql` is a single statement.
+ * Splits SQL with the shared DuckDB-aware lexer and confirms its statement
+ * count with DuckDB's own parser before any split statements are executed.
  *
- * A small lexical scan skips strings, quoted identifiers, and comments. The
- * remaining separator candidates are validated with DuckDB's own parser, so
- * dialect-specific syntax still decides the actual statement boundary.
+ * Returns `null` when the input does not parse or the two implementations
+ * disagree, so malformed or newly introduced syntax is passed to DuckDB whole.
  */
-async function splitTrailingStatement(
+async function splitValidatedStatements(
   conn: DuckDBConnection,
   sql: string,
-): Promise<{head: string; last: string} | null> {
+): Promise<string[] | null> {
+  const statements = splitSqlStatements(sql, {removeComments: false});
   const total = await countStatements(conn, sql);
-  if (total === null || total <= 1) {
-    return null;
-  }
-  const separators = findStatementSeparators(sql);
-  for (let i = separators.length - 1; i >= 0; i--) {
-    const separator = separators[i]!;
-    const head = sql.slice(0, separator + 1);
-    const last = sql.slice(separator + 1);
-    if (!last.trim()) continue;
-    if (
-      (await countStatements(conn, head)) === total - 1 &&
-      (await countStatements(conn, last)) === 1
-    ) {
-      return {head, last};
-    }
-  }
-  return null;
+  return total === statements.length ? statements : null;
 }
 
 /** Whether `sql` is a single SELECT, per DuckDB's parser. */
@@ -326,24 +201,6 @@ async function resultReaderToArrowTable<T extends arrow.TypeMap = any>(
 }
 
 /**
- * Removes top-level statement terminators before trailing SQL trivia.
- * Comments stay attached to the query for diagnostics and source fidelity.
- */
-function stripTrailingStatementTerminator(sql: string): string {
-  const separators = findStatementSeparators(sql);
-  let normalized = sql;
-  while (separators.length > 0) {
-    const separator = separators.pop()!;
-    if (!isSqlTrivia(normalized.slice(separator + 1))) {
-      break;
-    }
-    normalized =
-      normalized.slice(0, separator) + normalized.slice(separator + 1);
-  }
-  return normalized;
-}
-
-/**
  * Runs `sql` through `to_arrow_ipc()` and decodes the resulting Arrow IPC
  * buffers, so DuckDB itself performs the Arrow conversion and every type
  * round-trips exactly.
@@ -355,11 +212,8 @@ async function queryToArrowTableViaIpc<T extends arrow.TypeMap = any>(
   conn: DuckDBConnection,
   sql: string,
 ): Promise<arrow.Table<T>> {
-  // A statement terminator is valid at the top level but not inside the
-  // parenthesized subquery passed to `to_arrow_ipc()`.
-  const normalizedSql = stripTrailingStatementTerminator(sql);
   const reader = await conn.runAndReadAll(
-    `SELECT * FROM to_arrow_ipc((${normalizedSql}\n))`,
+    `SELECT * FROM to_arrow_ipc((${sql}\n))`,
   );
   const buffers = reader.getColumnsJS()[0] as Uint8Array[] | undefined;
   if (!buffers?.length) {
@@ -412,10 +266,14 @@ export async function queryToArrowTable<T extends arrow.TypeMap = any>(
   conn: DuckDBConnection,
   sql: string,
 ): Promise<arrow.Table<T>> {
-  const split = await splitTrailingStatement(conn, sql);
-  if (!split) {
+  const statements = await splitValidatedStatements(conn, sql);
+  if (!statements || statements.length === 0) {
     return runStatementToArrow<T>(conn, sql);
   }
-  await conn.run(split.head);
-  return runStatementToArrow<T>(conn, split.last);
+
+  const lastStatement = statements.at(-1)!;
+  if (statements.length > 1) {
+    await conn.run(joinStatements(statements.slice(0, -2), statements.at(-2)!));
+  }
+  return runStatementToArrow<T>(conn, lastStatement);
 }
