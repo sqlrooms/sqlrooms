@@ -57,6 +57,7 @@ export {
   type QualifiedTableName,
   type ResolveTableReferenceResult,
   type SeparatedStatements,
+  type SplitSqlStatementsOptions,
 } from './duckdb-utils';
 
 export {

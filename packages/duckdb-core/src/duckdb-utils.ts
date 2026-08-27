@@ -606,139 +606,222 @@ export const getSqlErrorWithPointer = (query: string, position: number) => {
   return {line, column, lineText, pointerLine, formatted};
 };
 
-//
-// const queries = splitSqlStatements(`
-//   SELECT * FROM users WHERE name = 'John;Doe';
-//   SELECT * FROM orders -- This comment; won't break;
-//   /*
-//      Multi-line comment;
-//      With semicolons;
-//   */
-//   SELECT "Quoted;identifier" FROM table;
-//`);
+type SqlCommentRange = {
+  start: number;
+  end: number;
+};
 
-// Returns:
-// [
-//   "SELECT * FROM users WHERE name = 'John;Doe'",
-//   "SELECT * FROM orders -- This comment; won't break",
-//   "SELECT \"Quoted;identifier\" FROM table"
-// ]
+type SqlStatementRange = {
+  start: number;
+  end: number;
+  comments: SqlCommentRange[];
+};
+
+function isDollarQuoteTagStart(char: string | undefined): boolean {
+  if (!char) return false;
+  const code = char.charCodeAt(0);
+  return (
+    (code >= 65 && code <= 90) ||
+    (code >= 97 && code <= 122) ||
+    char === '_' ||
+    code >= 0x80
+  );
+}
+
+function isDollarQuoteTagContinuation(char: string | undefined): boolean {
+  if (!char) return false;
+  const code = char.charCodeAt(0);
+  return isDollarQuoteTagStart(char) || (code >= 48 && code <= 57);
+}
+
+function getDollarQuoteDelimiter(
+  input: string,
+  start: number,
+): string | undefined {
+  if (input[start] !== '$') return undefined;
+  if (input[start + 1] === '$') return '$$';
+  if (!isDollarQuoteTagStart(input[start + 1])) return undefined;
+
+  let end = start + 2;
+  while (isDollarQuoteTagContinuation(input[end])) {
+    end++;
+  }
+  return input[end] === '$' ? input.slice(start, end + 1) : undefined;
+}
+
+function isEscapeStringPrefix(input: string, quoteStart: number): boolean {
+  const prefix = input[quoteStart - 1];
+  if (prefix !== 'e' && prefix !== 'E') return false;
+
+  const beforePrefix = input[quoteStart - 2];
+  return !beforePrefix || !isDollarQuoteTagContinuation(beforePrefix);
+}
+
+function scanSqlStatementRanges(input: string): SqlStatementRange[] {
+  const statements: SqlStatementRange[] = [];
+  let statementStart = 0;
+  let comments: SqlCommentRange[] = [];
+  let hasSqlContent = false;
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+
+    if (char === '-' && input[i + 1] === '-') {
+      const commentStart = i;
+      i += 2;
+      while (i < input.length && input[i] !== '\n' && input[i] !== '\r') {
+        i++;
+      }
+      comments.push({start: commentStart, end: i});
+      i--;
+      continue;
+    }
+
+    if (char === '/' && input[i + 1] === '*') {
+      const commentStart = i;
+      let depth = 1;
+      i += 2;
+      while (i < input.length && depth > 0) {
+        if (input[i] === '/' && input[i + 1] === '*') {
+          depth++;
+          i += 2;
+        } else if (input[i] === '*' && input[i + 1] === '/') {
+          depth--;
+          i += 2;
+        } else {
+          i++;
+        }
+      }
+      comments.push({start: commentStart, end: i});
+      i--;
+      continue;
+    }
+
+    if (char === "'" || char === '"') {
+      hasSqlContent = true;
+      const escapeBackslashes = char === "'" && isEscapeStringPrefix(input, i);
+      const quote = char;
+      i++;
+      while (i < input.length) {
+        if (escapeBackslashes && input[i] === '\\') {
+          i += 2;
+          continue;
+        }
+        if (input[i] === quote) {
+          if (input[i + 1] === quote) {
+            i += 2;
+            continue;
+          }
+          break;
+        }
+        i++;
+      }
+      continue;
+    }
+
+    const dollarQuoteDelimiter = getDollarQuoteDelimiter(input, i);
+    if (dollarQuoteDelimiter) {
+      hasSqlContent = true;
+      const closingDelimiter = input.indexOf(
+        dollarQuoteDelimiter,
+        i + dollarQuoteDelimiter.length,
+      );
+      i =
+        closingDelimiter === -1
+          ? input.length
+          : closingDelimiter + dollarQuoteDelimiter.length - 1;
+      continue;
+    }
+
+    if (char === ';') {
+      if (hasSqlContent) {
+        statements.push({
+          start: statementStart,
+          end: i,
+          comments,
+        });
+      }
+      statementStart = i + 1;
+      comments = [];
+      hasSqlContent = false;
+      continue;
+    }
+
+    if (char && !/\s/.test(char)) {
+      hasSqlContent = true;
+    }
+  }
+
+  if (hasSqlContent) {
+    statements.push({
+      start: statementStart,
+      end: input.length,
+      comments,
+    });
+  }
+
+  return statements;
+}
+
+function removeSqlComments(
+  input: string,
+  statement: SqlStatementRange,
+): string {
+  let result = '';
+  let current = statement.start;
+
+  for (const comment of statement.comments) {
+    result += input.slice(current, comment.start);
+    const lineBreaks = input
+      .slice(comment.start, comment.end)
+      .match(/\r\n|\r|\n/g);
+    result += lineBreaks?.join('') ?? ' ';
+    current = comment.end;
+  }
+
+  return result + input.slice(current, statement.end);
+}
+
+/**
+ * Options for {@link splitSqlStatements}.
+ */
+export type SplitSqlStatementsOptions = {
+  /**
+   * Whether to remove SQL comments from returned statements. Comment removal
+   * preserves line breaks and inserts whitespace where needed to avoid joining
+   * adjacent SQL tokens.
+   *
+   * @default true
+   */
+  removeComments?: boolean;
+};
 
 /**
  * Split a string with potentially multiple SQL queries (separated as usual by ';')
  * into an array of queries.
  * This implementation:
  *  - Handles single and double quoted strings with proper escaping
- *  - Removes all comments: line comments (--) and block comments (/* ... *\/)
+ *  - Handles DuckDB dollar-quoted strings
+ *  - Handles line comments (--) and nested block comments (/* ... *\/)
  *  - Ignores semicolons in quoted strings and comments
  *  - Trims whitespace from queries
  *  - Handles SQL-style escaped quotes ('' inside strings)
  *  - Returns only non-empty queries
  *
  * @param input - The SQL string containing one or more statements
- * @returns An array of SQL statements with all comments removed
+ * @param options - Options controlling the returned SQL
+ * @returns An array of SQL statements, with comments removed by default
  */
-export function splitSqlStatements(input: string): string[] {
-  const queries: string[] = [];
-  let currentQuery = '';
-  let inSingleQuote = false;
-  let inDoubleQuote = false;
-  let inLineComment = false;
-  let inBlockComment = false;
-
-  for (let i = 0; i < input.length; i++) {
-    const char = input[i];
-
-    if (inLineComment) {
-      if (char === '\n') {
-        inLineComment = false;
-        currentQuery += char; // preserve newlines for line numbers
-      }
-      // else: skip comment chars
-      continue;
-    }
-
-    if (inBlockComment) {
-      if (char === '*' && input[i + 1] === '/') {
-        inBlockComment = false;
-        i++; // skip '/'
-      }
-      // else: skip comment chars
-      continue;
-    }
-
-    if (inSingleQuote) {
-      currentQuery += char;
-      if (char === "'") {
-        // Handle escaped single quotes in SQL
-        if (i + 1 < input.length && input[i + 1] === "'") {
-          currentQuery += input[++i];
-        } else {
-          inSingleQuote = false;
-        }
-      }
-      continue;
-    }
-
-    if (inDoubleQuote) {
-      currentQuery += char;
-      if (char === '"') {
-        // Handle escaped double quotes
-        if (i + 1 < input.length && input[i + 1] === '"') {
-          currentQuery += input[++i];
-        } else {
-          inDoubleQuote = false;
-        }
-      }
-      continue;
-    }
-
-    // Check for comment starts
-    if (char === '-' && input[i + 1] === '-') {
-      inLineComment = true;
-      i++; // skip next '-'
-      continue;
-    }
-
-    if (char === '/' && input[i + 1] === '*') {
-      inBlockComment = true;
-      i++; // skip next '*'
-      continue;
-    }
-
-    // Check for quote starts
-    if (char === "'") {
-      inSingleQuote = true;
-      currentQuery += char;
-      continue;
-    }
-
-    if (char === '"') {
-      inDoubleQuote = true;
-      currentQuery += char;
-      continue;
-    }
-
-    // Handle query separator
-    if (char === ';') {
-      const trimmed = currentQuery.trim();
-      if (trimmed.length > 0) {
-        queries.push(trimmed);
-      }
-      currentQuery = '';
-      continue;
-    }
-
-    currentQuery += char;
-  }
-
-  // Add the final query
-  const trimmed = currentQuery.trim();
-  if (trimmed.length > 0) {
-    queries.push(trimmed);
-  }
-
-  return queries;
+export function splitSqlStatements(
+  input: string,
+  {removeComments = true}: SplitSqlStatementsOptions = {},
+): string[] {
+  return scanSqlStatementRanges(input).map((statement) =>
+    (removeComments
+      ? removeSqlComments(input, statement)
+      : input.slice(statement.start, statement.end)
+    ).trim(),
+  );
 }
 
 /**
@@ -799,7 +882,7 @@ export type SeparatedStatements = {
  * @throws Error if the query contains no statements
  */
 export function separateLastStatement(query: string): SeparatedStatements {
-  const statements = splitSqlStatements(query);
+  const statements = splitSqlStatements(query, {removeComments: false});
   if (statements.length === 0) {
     throw new Error('Query must contain at least one statement');
   }

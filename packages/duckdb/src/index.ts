@@ -128,6 +128,7 @@ export {
   type DbSchemaNode,
   type DuckDbConnector,
   type FunctionSuggestion,
+  type SplitSqlStatementsOptions,
   type FullTableIdentity,
   type GroupedFunctionSuggestion,
   type NodeObject,
