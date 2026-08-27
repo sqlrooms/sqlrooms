@@ -330,6 +330,24 @@ describe('NodeDuckDbConnector', () => {
       ).toEqual([0xff]);
     });
 
+    it('should not collide with user-owned temporary tables', async () => {
+      await connector.query(`
+        CREATE TEMP TABLE __sqlrooms_arrow_result_0 (sentinel INTEGER);
+        INSERT INTO __sqlrooms_arrow_result_0 VALUES (42)
+      `);
+      await connector.query('CREATE TABLE collision_test (id INTEGER)');
+
+      const returned = await connector.query(
+        'INSERT INTO collision_test VALUES (7) RETURNING id',
+      );
+      const existing = await connector.query(
+        'SELECT sentinel FROM __sqlrooms_arrow_result_0',
+      );
+
+      expect(returned.getChild('id')?.get(0)).toBe(7);
+      expect(existing.getChild('sentinel')?.get(0)).toBe(42);
+    });
+
     it('should serialize concurrent operations on the shared connection', async () => {
       const connection = connector.getConnection();
       const extractStatements = connection.extractStatements.bind(connection);

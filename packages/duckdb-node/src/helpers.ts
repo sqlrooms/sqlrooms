@@ -11,6 +11,7 @@ import {
   splitSqlStatements,
 } from '@sqlrooms/duckdb-core';
 import * as arrow from 'apache-arrow';
+import {randomUUID} from 'node:crypto';
 
 /**
  * Builds a qualified table name string from table name and optional schema.
@@ -138,8 +139,6 @@ function emptyTable<T extends arrow.TypeMap = any>(): arrow.Table<T> {
   return arrow.tableFromArrays({}) as unknown as arrow.Table<T>;
 }
 
-let nextResultTableId = 0;
-
 /** Quotes a DuckDB identifier. */
 function quoteIdentifier(identifier: string): string {
   return `"${identifier.replaceAll('"', '""')}"`;
@@ -167,7 +166,7 @@ async function resultReaderToArrowTable<T extends arrow.TypeMap = any>(
     return emptyTable<T>();
   }
 
-  const tableName = `__sqlrooms_arrow_result_${nextResultTableId++}`;
+  const tableName = `__sqlrooms_arrow_result_${randomUUID().replaceAll('-', '')}`;
   const columnTypes = reader.columnTypes();
   const columnDefinitions = columnTypes
     .map((type, i) => `c${i} ${type}`)
