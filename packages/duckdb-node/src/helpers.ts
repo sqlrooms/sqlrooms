@@ -150,9 +150,15 @@ function quoteIdentifier(identifier: string): string {
  * Converts a materialized non-SELECT result to Arrow without losing its
  * declared DuckDB types.
  *
+ * This is not a fallback for an unavailable `nanoarrow` extension: connector
+ * initialization requires that extension, and this function uses it below.
+ * It handles statements such as `INSERT ... RETURNING` that produce rows but
+ * cannot be embedded directly in `to_arrow_ipc((...))`. Because the mutating
+ * statement has already executed, it cannot safely be rewritten or run again.
+ *
  * The native result values are copied through a temporary table, then that
- * table is serialized by `to_arrow_ipc()`. This keeps the fallback path on the
- * same type-exact conversion mechanism as ordinary SELECT results.
+ * table is serialized by `to_arrow_ipc()`. This keeps the non-SELECT path on
+ * the same type-exact conversion mechanism as ordinary SELECT results.
  */
 async function resultReaderToArrowTable<T extends arrow.TypeMap = any>(
   conn: DuckDBConnection,
