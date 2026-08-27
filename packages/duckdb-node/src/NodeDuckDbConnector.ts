@@ -76,8 +76,12 @@ export function createNodeDuckDbConnector(
   let instance: DuckDBInstance | null = null;
   let connection: DuckDBConnection | null = null;
   let operationQueue = Promise.resolve();
+  let closing = false;
 
   const enqueueOperation = <T>(operation: () => Promise<T>): Promise<T> => {
+    if (closing) {
+      return Promise.reject(new Error('DuckDB connector is shutting down'));
+    }
     const result = operationQueue.then(operation);
     operationQueue = result.then(
       () => undefined,
@@ -95,16 +99,20 @@ export function createNodeDuckDbConnector(
 
   const impl: BaseDuckDbConnectorImpl = {
     async initializeInternal() {
-      instance = await DuckDBInstance.create(dbPath, config);
-      connection = await instance.connect();
-      // Required, not optional: `@duckdb/node-api` has no Arrow API, so this
-      // extension IS the conversion. Failing here is deliberate — the
-      // alternative was rebuilding tables from JS values, which silently
-      // mistyped TIMESTAMP/DATE/BIGINT/DECIMAL and corrupted BLOB.
-      await connection.run(ARROW_IPC_INIT_SQL);
+      closing = false;
+      await enqueueOperation(async () => {
+        instance = await DuckDBInstance.create(dbPath, config);
+        connection = await instance.connect();
+        // Required, not optional: `@duckdb/node-api` has no Arrow API, so this
+        // extension IS the conversion. Failing here is deliberate — the
+        // alternative was rebuilding tables from JS values, which silently
+        // mistyped TIMESTAMP/DATE/BIGINT/DECIMAL and corrupted BLOB.
+        await connection.run(ARROW_IPC_INIT_SQL);
+      });
     },
 
     async destroyInternal() {
+      closing = true;
       await operationQueue;
       if (connection) {
         try {

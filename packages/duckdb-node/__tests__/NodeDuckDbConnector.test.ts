@@ -259,15 +259,15 @@ describe('NodeDuckDbConnector', () => {
       expect(table.getChild('semi')?.get(0)).toBe('a;b');
     });
 
-    it('should accept a trailing statement terminator', async () => {
-      const table = await connector.query('SELECT 42 as answer;');
+    it('should accept repeated trailing statement terminators', async () => {
+      const table = await connector.query('SELECT 42 as answer;;;');
 
       expect(table.getChild('answer')?.get(0)).toBe(42);
     });
 
     it.each([
-      ['line', 'SELECT 42 as answer; -- explanation'],
-      ['block', 'SELECT 42 as answer; /* explanation */'],
+      ['line', 'SELECT 42 as answer;;; -- explanation'],
+      ['block', 'SELECT 42 as answer;;; /* explanation */'],
     ])(
       'should accept a terminator before a trailing %s comment',
       async (_, sql) => {
@@ -361,6 +361,27 @@ describe('NodeDuckDbConnector', () => {
       connection.extractStatements = extractStatements;
     });
 
+    it('should not reparse semicolons inside the final statement', async () => {
+      const connection = connector.getConnection();
+      const extractStatements = connection.extractStatements.bind(connection);
+      let extractCount = 0;
+      connection.extractStatements = async (sql) => {
+        extractCount++;
+        return extractStatements(sql);
+      };
+
+      const semicolons = ';'.repeat(200);
+      try {
+        const table = await connector.query(
+          `SET default_null_order='nulls_last'; SELECT E'a\\';${semicolons}' AS semicolons`,
+        );
+        expect(table.getChild('semicolons')?.get(0)).toBe(`a';${semicolons}`);
+        expect(extractCount).toBeLessThanOrEqual(3);
+      } finally {
+        connection.extractStatements = extractStatements;
+      }
+    });
+
     it('should surface the real error for a broken query', async () => {
       await expect(
         connector.query('SELECT * FROM no_such_table_here'),
@@ -452,6 +473,43 @@ describe('NodeDuckDbConnector', () => {
   });
 
   describe('destroy', () => {
+    it('should reject operations submitted after teardown starts', async () => {
+      const connection = connector.getConnection();
+      const extractStatements = connection.extractStatements.bind(connection);
+      let releaseQuery!: () => void;
+      const queryCanContinue = new Promise<void>((resolve) => {
+        releaseQuery = resolve;
+      });
+      let markQueryStarted!: () => void;
+      const queryStarted = new Promise<void>((resolve) => {
+        markQueryStarted = resolve;
+      });
+      let shouldBlock = true;
+      connection.extractStatements = async (sql) => {
+        if (shouldBlock) {
+          shouldBlock = false;
+          markQueryStarted();
+          await queryCanContinue;
+        }
+        return extractStatements(sql);
+      };
+
+      const activeQuery = connector.query('SELECT 1 AS active');
+      await queryStarted;
+      const destroying = connector.destroy();
+      try {
+        await expect(connector.query('SELECT 2 AS too_late')).rejects.toThrow(
+          'DuckDB connector is shutting down',
+        );
+      } finally {
+        releaseQuery();
+      }
+
+      await expect(activeQuery).resolves.toBeDefined();
+      await destroying;
+      connection.extractStatements = extractStatements;
+    });
+
     it('should clean up resources', async () => {
       await connector.destroy();
 
