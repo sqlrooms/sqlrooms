@@ -1,7 +1,6 @@
 import {
   DuckDBConnection,
   DuckDBResultReader,
-  ResultReturnType,
   StatementType,
 } from '@duckdb/node-api';
 import {
@@ -247,9 +246,10 @@ async function runStatementToArrow<T extends arrow.TypeMap = any>(
       throw error;
     }
     const reader = await conn.runAndReadAll(sql);
-    return reader.returnType === ResultReturnType.QUERY_RESULT
-      ? resultReaderToArrowTable<T>(conn, reader)
-      : emptyTable<T>();
+    // DuckDB's return type does not reliably indicate whether rows exist:
+    // `CREATE TABLE AS` is NOTHING but includes a Count row, while
+    // `INSERT ... RETURNING` is QUERY_RESULT. Inspect the reader itself.
+    return resultReaderToArrowTable<T>(conn, reader);
   }
 }
 

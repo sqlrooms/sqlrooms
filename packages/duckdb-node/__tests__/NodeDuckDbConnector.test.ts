@@ -229,6 +229,16 @@ describe('NodeDuckDbConnector', () => {
       expect(table.getChild('id')?.get(0)).toBe(7);
     });
 
+    it('should preserve the row count returned by CREATE TABLE AS', async () => {
+      const table = await connector.query(`
+        CREATE TABLE counted_create AS
+        SELECT * FROM (VALUES (1), (2), (3)) AS t(id)
+      `);
+
+      expect(table.numRows).toBe(1);
+      expect(Number(table.getChild('Count')?.get(0))).toBe(3);
+    });
+
     it('should return rows from the last statement of a script', async () => {
       // The regression this guards: running the script for its side effects and
       // returning an empty table would silently drop these rows.
