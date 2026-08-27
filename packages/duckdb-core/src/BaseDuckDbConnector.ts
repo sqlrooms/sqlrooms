@@ -6,7 +6,7 @@ import {
 import * as arrow from 'apache-arrow';
 import {DuckDbConnector, QueryHandle, QueryOptions} from './DuckDbConnector';
 import {load, loadObjects as loadObjectsSql, loadSpatial} from './load/load';
-import {createTypedRowAccessor} from './typedRowAccessor';
+import {createJsonRowAccessor} from './typedRowAccessor';
 
 export interface BaseDuckDbConnectorOptions {
   dbPath?: string;
@@ -153,7 +153,7 @@ export function createBaseDuckDbConnector(
   ): QueryHandle<Iterable<T>> =>
     createQueryHandle(async (signal, id) => {
       const table = await impl.executeQueryInternal(queryStr, signal, id);
-      return createTypedRowAccessor({arrowTable: table});
+      return createJsonRowAccessor({arrowTable: table});
     }, options);
 
   const loadFile = async (

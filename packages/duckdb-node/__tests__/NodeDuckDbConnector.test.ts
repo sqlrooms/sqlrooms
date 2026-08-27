@@ -450,6 +450,72 @@ describe('NodeDuckDbConnector', () => {
       expect(rows[0]).toEqual({id: 1, name: 'one'});
       expect(rows[1]).toEqual({id: 2, name: 'two'});
     });
+
+    it('should return DECIMAL values as JSON-compatible strings', async () => {
+      const result = await connector.queryJson<{
+        positive: string;
+        negative: string;
+        zero: string;
+      }>(`
+        SELECT
+          1.25::DECIMAL(10,4) AS positive,
+          -0.01::DECIMAL(10,4) AS negative,
+          0::DECIMAL(10,4) AS zero
+      `);
+
+      const rows = Array.from(result);
+      expect(rows).toEqual([
+        {positive: '1.2500', negative: '-0.0100', zero: '0.0000'},
+      ]);
+      expect(() => JSON.stringify(rows)).not.toThrow();
+    });
+
+    it('should return BIGINT values as JSON-compatible numbers or strings', async () => {
+      const result = await connector.queryJson<{
+        safe: number;
+        unsafe: string;
+      }>(`
+        SELECT
+          42::BIGINT AS safe,
+          9007199254740993::BIGINT AS unsafe
+      `);
+
+      const rows = Array.from(result);
+      expect(rows).toEqual([{safe: 42, unsafe: '9007199254740993'}]);
+      expect(() => JSON.stringify(rows)).not.toThrow();
+    });
+  });
+
+  describe('loadArrow', () => {
+    it('should preserve Arrow types and microsecond timestamps', async () => {
+      const source = await connector.query(`
+        SELECT
+          TIMESTAMP '2024-01-02 03:04:05.123456' AS ts,
+          1.25::DECIMAL(10,4) AS dec_value,
+          '\\x00\\xFF'::BLOB AS payload
+      `);
+
+      await connector.loadArrow(source, 'loaded_arrow');
+
+      const result = await connector.queryJson<{
+        ts: string;
+        decType: string;
+        payload: string;
+      }>(`
+        SELECT
+          strftime(ts, '%Y-%m-%d %H:%M:%S.%f') AS ts,
+          typeof(dec_value) AS "decType",
+          hex(payload) AS payload
+        FROM loaded_arrow
+      `);
+      expect(Array.from(result)).toEqual([
+        {
+          ts: '2024-01-02 03:04:05.123456',
+          decType: 'DECIMAL(10,4)',
+          payload: '00FF',
+        },
+      ]);
+    });
   });
 
   describe('cancellation', () => {

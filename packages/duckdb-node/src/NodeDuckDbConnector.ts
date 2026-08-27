@@ -3,12 +3,15 @@ import {
   BaseDuckDbConnectorImpl,
   createBaseDuckDbConnector,
   DuckDbConnector,
+  literalToSQL,
 } from '@sqlrooms/duckdb-core';
 import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/room-config';
 import * as arrow from 'apache-arrow';
+import {mkdtemp, rm, writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {
   ARROW_IPC_INIT_SQL,
-  arrowTableToRows,
   buildQualifiedName,
   objectsToCreateTableSql,
   queryToArrowTable,
@@ -144,16 +147,27 @@ export function createNodeDuckDbConnector(
       tableName: string,
       opts?: {schema?: string},
     ): Promise<void> {
-      if (table instanceof arrow.Table) {
-        const rows = arrowTableToRows(table);
-        await impl.loadObjectsInternal!(rows, tableName, {
-          schema: opts?.schema,
-          replace: true,
+      const ipc =
+        table instanceof arrow.Table
+          ? arrow.tableToIPC(table, 'stream')
+          : table;
+      const qualifiedName = buildQualifiedName(tableName, opts?.schema);
+      const tempDir = await mkdtemp(join(tmpdir(), 'sqlrooms-arrow-'));
+      const tempFile = join(tempDir, 'data.arrow');
+
+      try {
+        // node-api cannot register an in-memory Arrow buffer yet. Let DuckDB's
+        // nanoarrow extension scan the IPC stream through a short-lived file;
+        // rebuilding rows from Vector#get() loses types and sub-millisecond
+        // timestamp precision before DuckDB ever sees the values.
+        await writeFile(tempFile, ipc);
+        await enqueueOperation(async () => {
+          await ensureConnection().run(
+            `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM ${literalToSQL(tempFile)}`,
+          );
         });
-      } else {
-        throw new Error(
-          'Loading Arrow IPC streams is not yet supported in Node connector',
-        );
+      } finally {
+        await rm(tempDir, {recursive: true, force: true});
       }
     },
 

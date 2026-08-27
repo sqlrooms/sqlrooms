@@ -23,24 +23,6 @@ export function buildQualifiedName(tableName: string, schema?: string): string {
 }
 
 /**
- * Converts an Arrow table to an array of row objects.
- */
-export function arrowTableToRows(
-  table: arrow.Table,
-): Record<string, unknown>[] {
-  const rows: Record<string, unknown>[] = [];
-  for (let i = 0; i < table.numRows; i++) {
-    const row: Record<string, unknown> = {};
-    for (const field of table.schema.fields) {
-      const col = table.getChild(field.name);
-      row[field.name] = col?.get(i);
-    }
-    rows.push(row);
-  }
-  return rows;
-}
-
-/**
  * Converts a value to SQL literal, with bigint support.
  */
 function toSqlLiteral(value: unknown): string {

@@ -11,6 +11,50 @@ export interface TypedRowAccessor<T> extends Iterable<T> {
   toArray(): T[];
 }
 
+/** Converts Arrow's raw fixed-width decimal representation to a JSON string. */
+function decimalToString(value: Uint32Array | bigint, scale: number): string {
+  let unscaled: bigint;
+  if (typeof value === 'bigint') {
+    unscaled = value;
+  } else {
+    let unsigned = 0n;
+    for (let i = 0; i < value.length; i++) {
+      unsigned |= BigInt(value[i]!) << BigInt(i * 32);
+    }
+    const bits = BigInt(value.length * 32);
+    const signBit = 1n << (bits - 1n);
+    unscaled = (unsigned & signBit) === 0n ? unsigned : unsigned - (1n << bits);
+  }
+
+  if (scale < 0) {
+    return (unscaled * 10n ** BigInt(-scale)).toString();
+  }
+
+  const sign = unscaled < 0n ? '-' : '';
+  const digits = (unscaled < 0n ? -unscaled : unscaled).toString();
+  if (scale === 0) {
+    return `${sign}${digits}`;
+  }
+  const padded = digits.padStart(scale + 1, '0');
+  return `${sign}${padded.slice(0, -scale)}.${padded.slice(-scale)}`;
+}
+
+/** Converts Arrow values whose JS representation is not JSON-compatible. */
+function getJsonValue(field: arrow.Field, value: unknown): unknown {
+  if (
+    arrow.DataType.isDecimal(field.type) &&
+    (typeof value === 'bigint' || value instanceof Uint32Array)
+  ) {
+    return decimalToString(value, field.type.scale);
+  }
+  if (typeof value === 'bigint') {
+    return value >= Number.MIN_SAFE_INTEGER && value <= Number.MAX_SAFE_INTEGER
+      ? Number(value)
+      : value.toString();
+  }
+  return value;
+}
+
 /**
  * Creates a row accessor wrapper around an Arrow table that provides typed row access.
  */
@@ -20,6 +64,29 @@ export function createTypedRowAccessor<T extends arrow.TypeMap = any>({
 }: {
   arrowTable: arrow.Table<T>;
   validate?: (row: unknown) => T;
+}): TypedRowAccessor<T> {
+  return createRowAccessor({arrowTable, validate, jsonCompatible: false});
+}
+
+/** @internal Creates the JSON-compatible row accessor used by queryJson. */
+export function createJsonRowAccessor<T extends arrow.TypeMap = any>({
+  arrowTable,
+  validate,
+}: {
+  arrowTable: arrow.Table<T>;
+  validate?: (row: unknown) => T;
+}): TypedRowAccessor<T> {
+  return createRowAccessor({arrowTable, validate, jsonCompatible: true});
+}
+
+function createRowAccessor<T extends arrow.TypeMap = any>({
+  arrowTable,
+  validate,
+  jsonCompatible,
+}: {
+  arrowTable: arrow.Table<T>;
+  validate?: (row: unknown) => T;
+  jsonCompatible: boolean;
 }): TypedRowAccessor<T> {
   let cachedArray: T[] | undefined;
 
@@ -32,7 +99,8 @@ export function createTypedRowAccessor<T extends arrow.TypeMap = any>({
       arrowTable.schema.fields.forEach((field: arrow.Field) => {
         const column = arrowTable.getChild(field.name);
         if (column) {
-          row[field.name] = column.get(index);
+          const value = column.get(index);
+          row[field.name] = jsonCompatible ? getJsonValue(field, value) : value;
         }
       });
 
