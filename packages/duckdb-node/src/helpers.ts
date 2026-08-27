@@ -1,4 +1,10 @@
-import {DuckDBConnection, StatementType} from '@duckdb/node-api';
+import {
+  DuckDBConnection,
+  DuckDBResultReader,
+  DuckDBTypeId,
+  ResultReturnType,
+  StatementType,
+} from '@duckdb/node-api';
 import {
   getRawSqlTableReference,
   literalToSQL,
@@ -148,6 +154,25 @@ function emptyTable<T extends arrow.TypeMap = any>(): arrow.Table<T> {
   return arrow.tableFromArrays({}) as unknown as arrow.Table<T>;
 }
 
+/** Converts a materialized non-SELECT result to Arrow without dropping rows. */
+function resultReaderToArrowTable<T extends arrow.TypeMap = any>(
+  reader: DuckDBResultReader,
+): arrow.Table<T> {
+  const columns = reader.getColumnsJS();
+  const vectors: Record<string, arrow.Vector> = {};
+  for (let i = 0; i < reader.columnCount; i++) {
+    const type =
+      reader.columnTypeId(i) === DuckDBTypeId.BLOB
+        ? new arrow.Binary()
+        : undefined;
+    const values = columns[i] ?? [];
+    vectors[reader.columnName(i)] = type
+      ? arrow.vectorFromArray(values, type)
+      : arrow.vectorFromArray(values);
+  }
+  return new arrow.Table(vectors) as unknown as arrow.Table<T>;
+}
+
 /**
  * Runs `sql` through `to_arrow_ipc()` and decodes the resulting Arrow IPC
  * buffers, so DuckDB itself performs the Arrow conversion and every type
@@ -160,8 +185,11 @@ async function queryToArrowTableViaIpc<T extends arrow.TypeMap = any>(
   conn: DuckDBConnection,
   sql: string,
 ): Promise<arrow.Table<T>> {
+  // A statement terminator is valid at the top level but not inside the
+  // parenthesized subquery passed to `to_arrow_ipc()`.
+  const normalizedSql = sql.replace(/;(\s*)$/, '$1');
   const reader = await conn.runAndReadAll(
-    `SELECT * FROM to_arrow_ipc((${sql}))`,
+    `SELECT * FROM to_arrow_ipc((${normalizedSql}))`,
   );
   const buffers = reader.getColumnsJS()[0] as Uint8Array[] | undefined;
   if (!buffers?.length) {
@@ -188,8 +216,10 @@ async function runStatementToArrow<T extends arrow.TypeMap = any>(
     if (await isSelectStatement(conn, sql)) {
       throw error;
     }
-    await conn.run(sql);
-    return emptyTable<T>();
+    const reader = await conn.runAndReadAll(sql);
+    return reader.returnType === ResultReturnType.QUERY_RESULT
+      ? resultReaderToArrowTable<T>(reader)
+      : emptyTable<T>();
   }
 }
 

@@ -259,6 +259,29 @@ describe('NodeDuckDbConnector', () => {
       expect(table.getChild('semi')?.get(0)).toBe('a;b');
     });
 
+    it('should accept a trailing statement terminator', async () => {
+      const table = await connector.query('SELECT 42 as answer;');
+
+      expect(table.getChild('answer')?.get(0)).toBe(42);
+    });
+
+    it('should return rows from INSERT RETURNING', async () => {
+      await connector.query(
+        'CREATE TABLE returning_test (id INTEGER, payload BLOB)',
+      );
+
+      const table = await connector.query(
+        "INSERT INTO returning_test VALUES (7, '\\xFF'::BLOB) RETURNING *",
+      );
+
+      expect(table.numRows).toBe(1);
+      expect(table.getChild('id')?.get(0)).toBe(7);
+      expect(table.getChild('payload')?.type).toBeInstanceOf(arrow.Binary);
+      expect(
+        Array.from(table.getChild('payload')?.get(0) as Uint8Array),
+      ).toEqual([0xff]);
+    });
+
     it('should surface the real error for a broken query', async () => {
       await expect(
         connector.query('SELECT * FROM no_such_table_here'),
