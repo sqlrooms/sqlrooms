@@ -634,11 +634,16 @@ function isDollarQuoteTagContinuation(char: string | undefined): boolean {
   return isDollarQuoteTagStart(char) || (code >= 48 && code <= 57);
 }
 
+function isUnquotedIdentifierContinuation(char: string | undefined): boolean {
+  return char === '$' || isDollarQuoteTagContinuation(char);
+}
+
 function getDollarQuoteDelimiter(
   input: string,
   start: number,
 ): string | undefined {
   if (input[start] !== '$') return undefined;
+  if (isUnquotedIdentifierContinuation(input[start - 1])) return undefined;
   if (input[start + 1] === '$') return '$$';
   if (!isDollarQuoteTagStart(input[start + 1])) return undefined;
 
@@ -654,7 +659,7 @@ function isEscapeStringPrefix(input: string, quoteStart: number): boolean {
   if (prefix !== 'e' && prefix !== 'E') return false;
 
   const beforePrefix = input[quoteStart - 2];
-  return !beforePrefix || !isDollarQuoteTagContinuation(beforePrefix);
+  return !beforePrefix || !isUnquotedIdentifierContinuation(beforePrefix);
 }
 
 function scanSqlStatementRanges(input: string): SqlStatementRange[] {
@@ -903,6 +908,6 @@ export function joinStatements(
   lastStatement: string,
 ): string {
   return precedingStatements.length > 0
-    ? [...precedingStatements, lastStatement].join(';\n')
+    ? [...precedingStatements, lastStatement].join('\n;\n')
     : lastStatement;
 }

@@ -1,4 +1,5 @@
 import {
+  joinStatements,
   makeLimitQuery,
   separateLastStatement,
   splitSqlStatements,
@@ -33,6 +34,13 @@ describe('splitSqlStatements', () => {
       first,
       second,
       'SELECT $1',
+    ]);
+  });
+
+  it('does not treat dollar signs inside unquoted identifiers as quotes', () => {
+    expect(splitSqlStatements('SELECT 1 AS foo$bar$; SELECT 2')).toEqual([
+      'SELECT 1 AS foo$bar$',
+      'SELECT 2',
     ]);
   });
 
@@ -74,6 +82,18 @@ describe('splitSqlStatements', () => {
 
     expect(splitSqlStatements(input)).toEqual([]);
     expect(splitSqlStatements(input, {removeComments: false})).toEqual([]);
+  });
+});
+
+describe('joinStatements', () => {
+  it('keeps separators outside trailing line comments', () => {
+    const {precedingStatements, lastStatement} = separateLastStatement(
+      'CREATE TEMP TABLE t AS SELECT 1 -- setup\n; SELECT * FROM t',
+    );
+
+    expect(joinStatements(precedingStatements, lastStatement)).toBe(
+      'CREATE TEMP TABLE t AS SELECT 1 -- setup\n;\nSELECT * FROM t',
+    );
   });
 });
 
