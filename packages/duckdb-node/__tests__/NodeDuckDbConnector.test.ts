@@ -1,3 +1,4 @@
+import * as arrow from 'apache-arrow';
 import {
   createNodeDuckDbConnector,
   NodeDuckDbConnector,
@@ -138,6 +139,134 @@ describe('NodeDuckDbConnector', () => {
       const table = await connector.query('SELECT * FROM empty_table');
 
       expect(table.numRows).toBe(0);
+    });
+
+    // BLOB columns used to be rendered through DuckDB's BLOB-to-VARCHAR
+    // escaping and inferred as `Dictionary<Int32, Utf8>`, which has no
+    // `valueOffsets`. Consumers reading binary columns positionally (kepler.gl's
+    // WKB geometry reader indexes `chunk.valueOffsets[i + 1]`) crashed with
+    // `Cannot read properties of undefined (reading '1')`.
+    it('should return BLOB columns as Arrow Binary, not strings', async () => {
+      const table = await connector.query(
+        "SELECT 'abc'::BLOB as blob_val, 1 as other",
+      );
+
+      const col = table.getChild('blob_val');
+      expect(col?.type).toBeInstanceOf(arrow.Binary);
+      expect(col?.data[0]?.valueOffsets).toBeDefined();
+      expect(Array.from(col?.get(0) as Uint8Array)).toEqual([0x61, 0x62, 0x63]);
+    });
+
+    it('should preserve BLOB bytes that are not valid UTF-8', async () => {
+      // \x00 and \xff do not survive a round trip through a JS string, so this
+      // fails loudly if BLOBs are ever stringified again.
+      const table = await connector.query(
+        "SELECT '\\x00\\x01\\xFF'::BLOB as blob_val",
+      );
+
+      expect(
+        Array.from(table.getChild('blob_val')?.get(0) as Uint8Array),
+      ).toEqual([0x00, 0x01, 0xff]);
+    });
+
+    it('should handle NULL and multi-row BLOB columns', async () => {
+      const table = await connector.query(`
+        SELECT * FROM (VALUES
+          ('a'::BLOB),
+          (NULL),
+          ('cc'::BLOB)
+        ) AS t(blob_val)
+      `);
+
+      const col = table.getChild('blob_val');
+      expect(table.numRows).toBe(3);
+      expect(col?.type).toBeInstanceOf(arrow.Binary);
+      expect(Array.from(col?.get(0) as Uint8Array)).toEqual([0x61]);
+      expect(col?.get(1)).toBeNull();
+      expect(Array.from(col?.get(2) as Uint8Array)).toEqual([0x63, 0x63]);
+    });
+  });
+
+  // `to_arrow_ipc()` is the only conversion path, so these assert the types the
+  // JS value conversion could never produce.
+  describe('Arrow type fidelity', () => {
+    it('should preserve DuckDB types that JS values cannot represent', async () => {
+      const table = await connector.query(`
+        SELECT
+          TIMESTAMP '2024-01-02 03:04:05' as ts,
+          DATE '2024-01-02' as d,
+          9007199254740993::BIGINT as big,
+          1.25::DECIMAL(10,4) as dec,
+          [1, 2, 3] as lst,
+          {'a': 1} as strct,
+          NULL::INTEGER as allnull
+      `);
+
+      // Decoded IPC yields the generic type classes (`Int_`, not `Int64`), so
+      // compare the rendered type instead of the constructor.
+      const typeOf = (name: string) => String(table.getChild(name)?.type);
+      expect(typeOf('ts')).toBe('Timestamp<MICROSECOND>');
+      expect(typeOf('d')).toBe('Date32<DAY>');
+      expect(typeOf('big')).toBe('Int64');
+      expect(typeOf('dec')).toMatch(/^Decimal/);
+      expect(typeOf('lst')).toBe('List<Int32>');
+      expect(typeOf('strct')).toBe('Struct<{a:Int32}>');
+      expect(typeOf('allnull')).toBe('Int32');
+      // Beyond Number.MAX_SAFE_INTEGER: only a real Int64 keeps this exact.
+      expect(table.getChild('big')?.get(0)).toBe(9007199254740993n);
+    });
+  });
+
+  // `to_arrow_ipc()` only wraps a single sub-selectable statement, so anything
+  // else has to be routed around it without losing rows.
+  describe('statements to_arrow_ipc cannot wrap', () => {
+    it('should run DDL and DML', async () => {
+      await connector.query('CREATE TABLE stmt_test (id INTEGER)');
+      await connector.query('INSERT INTO stmt_test VALUES (7)');
+
+      const table = await connector.query('SELECT id FROM stmt_test');
+      expect(table.numRows).toBe(1);
+      expect(table.getChild('id')?.get(0)).toBe(7);
+    });
+
+    it('should return rows from the last statement of a script', async () => {
+      // The regression this guards: running the script for its side effects and
+      // returning an empty table would silently drop these rows.
+      const table = await connector.query(
+        "SET default_null_order='nulls_last'; SELECT 42 as answer",
+      );
+
+      expect(table.numRows).toBe(1);
+      expect(table.getChild('answer')?.get(0)).toBe(42);
+    });
+
+    it('should apply every leading statement of a script', async () => {
+      const table = await connector.query(
+        `CREATE TABLE script_test (id INTEGER);
+         INSERT INTO script_test VALUES (1), (2);
+         SELECT count(*)::INTEGER as n FROM script_test`,
+      );
+
+      expect(table.getChild('n')?.get(0)).toBe(2);
+    });
+
+    it('should split on the parse, not on semicolons', async () => {
+      // A `;` inside a string literal must not be treated as a boundary.
+      const table = await connector.query(
+        `SET default_null_order='nulls_last'; SELECT 'a;b' as semi`,
+      );
+
+      expect(table.getChild('semi')?.get(0)).toBe('a;b');
+    });
+
+    it('should surface the real error for a broken query', async () => {
+      await expect(
+        connector.query('SELECT * FROM no_such_table_here'),
+      ).rejects.toThrow(/no_such_table_here/);
+    });
+
+    it('should surface the real error for broken syntax', async () => {
+      await expect(connector.query('SELEKT 1')).rejects.toThrow();
     });
   });
 

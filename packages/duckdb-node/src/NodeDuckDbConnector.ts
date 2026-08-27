@@ -7,6 +7,7 @@ import {
 import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/room-config';
 import * as arrow from 'apache-arrow';
 import {
+  ARROW_IPC_INIT_SQL,
   arrowTableToRows,
   buildQualifiedName,
   objectsToCreateTableSql,
@@ -86,6 +87,11 @@ export function createNodeDuckDbConnector(
     async initializeInternal() {
       instance = await DuckDBInstance.create(dbPath, config);
       connection = await instance.connect();
+      // Required, not optional: `@duckdb/node-api` has no Arrow API, so this
+      // extension IS the conversion. Failing here is deliberate — the
+      // alternative was rebuilding tables from JS values, which silently
+      // mistyped TIMESTAMP/DATE/BIGINT/DECIMAL and corrupted BLOB.
+      await connection.run(ARROW_IPC_INIT_SQL);
     },
 
     async destroyInternal() {
