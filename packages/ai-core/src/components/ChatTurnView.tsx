@@ -9,6 +9,12 @@ import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
 import {useToolTimingRecorder} from '../hooks/useToolTimingRecorder';
 import type {AgentToolCall} from '../types';
 import {
+  getChatAttachmentText,
+  getChatMessageAttachments,
+  isMarkdownAttachment,
+  type ChatAttachmentPart,
+} from '../chatAttachments';
+import {
   isDynamicToolPart,
   isReasoningPart,
   isTextPart,
@@ -35,10 +41,6 @@ import {HoistedRenderersProvider} from './HoistedRenderersContext';
 import {processMessageContent} from './MessageContent';
 import {createChatTurnPresentation} from './defaultChatRendering';
 import {useChatTurnContentBinder} from './useChatTurnContentBinder';
-import {
-  getChatAttachmentText,
-  getChatMessageAttachments,
-} from '../chatAttachments';
 
 export type ChatTurnViewProps = {
   /** @deprecated Prefer `chatTurn`; this accepts the legacy derived result shape. */
@@ -57,6 +59,15 @@ const ToolTimingRecorder: React.FC<{
   useToolTimingRecorder(toolCallId, isComplete);
   return null;
 };
+
+/** Returns attachment text normalized to match its rendered search offsets. */
+export function getChatAttachmentSearchText(
+  attachment: ChatAttachmentPart,
+): string | undefined {
+  const text = getChatAttachmentText(attachment);
+  if (!text || !isMarkdownAttachment(attachment)) return text;
+  return markdownToPlainText(processMessageContent(text).processedContent);
+}
 
 export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
   analysisResult,
@@ -162,7 +173,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
     ];
 
     promptAttachments.forEach((attachment, index) => {
-      const text = getChatAttachmentText(attachment);
+      const text = getChatAttachmentSearchText(attachment);
       if (!text) return;
       blocks.push({
         id: `${searchBlockPrefix}:attachment:${index}`,

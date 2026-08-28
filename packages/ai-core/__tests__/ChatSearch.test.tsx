@@ -27,6 +27,8 @@ const {
 } = await import('../src/components/ChatSearch');
 const {ChatAttachmentPreview} =
   await import('../src/components/ChatAttachmentPreview');
+const {getChatAttachmentSearchText} =
+  await import('../src/components/ChatTurnView');
 
 const blocks: ChatSearchBlock[] = [
   {
@@ -170,6 +172,22 @@ describe('chat search helpers', () => {
     expect(findChatSearchMatches(blocks, '   ')).toEqual([]);
   });
 
+  it('normalizes Markdown attachments to their rendered search offsets', () => {
+    const text = getChatAttachmentSearchText({
+      type: 'file',
+      filename: 'report.md',
+      mediaType: 'text/markdown',
+      url: 'data:text/markdown;base64,IyBSZXBvcnQKClJldmVudWUgZ3Jldy4=',
+    });
+    const [match] = findChatSearchMatches(
+      [{id: 'attachment', resultId: 'result', text: text ?? ''}],
+      'Revenue',
+    );
+
+    expect(text).toBe('Report\nRevenue grew.');
+    expect(match?.start).toBe(7);
+  });
+
   it('uses lightweight tool labels instead of large payload text', () => {
     const matches = findChatSearchMatches(blocks, 'payload');
 
@@ -272,6 +290,78 @@ describe('Chat.Search', () => {
     }
     expect(document.body.textContent).toContain('Attached text file preview');
     expect(document.getElementById(activeMatchId!)).not.toBeNull();
+
+    cleanup(container, root);
+  });
+
+  it('reopens a closed attachment when the query changes at the same offset', async () => {
+    latestSearchRef.current = undefined;
+    const attachmentBlock: ChatSearchBlock = {
+      id: 'session-1:result-1:attachment:0',
+      resultId: 'result-1',
+      text: 'foobar content',
+    };
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+
+    await act(async () => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <BlockRegistrar blocks={[attachmentBlock]} />
+            <SearchController />
+            <ChatAttachmentPreview
+              attachment={{
+                type: 'file',
+                filename: 'report.txt',
+                mediaType: 'text/plain',
+                url: 'data:text/plain;base64,Zm9vYmFyIGNvbnRlbnQ=',
+              }}
+              searchBlockId={attachmentBlock.id}
+            />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    await act(async () => {
+      latestSearchRef.current?.setQuery('foo');
+    });
+
+    const firstMatchId = latestSearchRef.current?.activeMatchId;
+    for (let attempts = 0; attempts < 20; attempts += 1) {
+      if (document.getElementById(firstMatchId!)) break;
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    }
+
+    const closeButton = Array.from(
+      document.body.querySelectorAll<HTMLButtonElement>('button'),
+    ).find((button) => button.textContent?.trim() === 'Close');
+    expect(closeButton).toBeDefined();
+    act(() => closeButton?.click());
+    expect(document.body.textContent).not.toContain(
+      'Attached text file preview',
+    );
+
+    await act(async () => {
+      latestSearchRef.current?.setQuery('foobar');
+    });
+    expect(latestSearchRef.current?.activeMatchId).toBe(firstMatchId);
+
+    for (let attempts = 0; attempts < 20; attempts += 1) {
+      if (document.body.textContent?.includes('Attached text file preview')) {
+        break;
+      }
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    }
+    expect(document.body.textContent).toContain('Attached text file preview');
+    expect(document.getElementById(firstMatchId!)).not.toBeNull();
 
     cleanup(container, root);
   });

@@ -35,6 +35,7 @@ export const ChatAttachmentPreview: FC<ChatAttachmentPreviewProps> = ({
   const text = useMemo(() => getChatAttachmentText(attachment), [attachment]);
   const filename = attachment.filename ?? (isImage ? 'Image' : 'Text file');
   const activeMatchId = search?.activeMatchId;
+  const searchQuery = search?.query;
   const hasActiveAttachmentMatch = Boolean(
     searchBlockId &&
     activeMatchId &&
@@ -58,7 +59,7 @@ export const ChatAttachmentPreview: FC<ChatAttachmentPreviewProps> = ({
       clearTimeout(openTimeoutId);
       if (scrollTimeoutId !== undefined) clearTimeout(scrollTimeoutId);
     };
-  }, [activeMatchId, hasActiveAttachmentMatch]);
+  }, [activeMatchId, hasActiveAttachmentMatch, searchQuery]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
