@@ -4,6 +4,7 @@ import type {UIMessage} from 'ai';
 import {useCallback, useMemo, useRef} from 'react';
 import {type AiSliceState, useStoreWithAi} from '../AiSlice';
 import type {AssistantMessageMetadata} from '../types';
+import {buildConversationText} from '../utils';
 
 const DEFAULT_CONTEXT_WINDOW = 200_000;
 const USAGE_WARNING_THRESHOLD = 60;
@@ -23,20 +24,6 @@ function estimateTokenCount(text: string): number {
   const normalized = text.trim();
   if (!normalized) return 0;
   return Math.ceil(normalized.length / 4);
-}
-
-function buildConversationText(messages: UIMessage[]): string {
-  return messages
-    .map((msg) => {
-      const role = msg.role === 'user' ? 'User' : 'Assistant';
-      const text = msg.parts
-        .filter((p) => p.type === 'text')
-        .map((p) => (p as {text: string}).text)
-        .join('');
-      return `${role}: ${text}`;
-    })
-    .filter((line) => line.length > 6)
-    .join('\n\n');
 }
 
 function getStrokeColor(percentage: number): string {

@@ -1,11 +1,13 @@
 import type {FileUIPart, UIMessage} from 'ai';
+import type {ChatSessionSchema} from '@sqlrooms/ai-config';
 import {
   getChatAttachmentText,
   getChatMessageAttachments,
   isMarkdownAttachment,
   textAttachmentToModelText,
 } from '../src/chatAttachments';
-import {sanitizeMessagesForLLM} from '../src/utils';
+import {getSessionUserMessageText} from '../src/hooks/useGenerateSessionTitle';
+import {buildConversationText, sanitizeMessagesForLLM} from '../src/utils';
 
 function textAttachment(text: string, filename = 'notes.md'): FileUIPart {
   return {
@@ -68,5 +70,48 @@ describe('chat attachments', () => {
       text,
       image,
     ]);
+  });
+
+  it('uses attachment filenames for attachment-only session titles', () => {
+    const session: ChatSessionSchema = {
+      id: 'session-1',
+      name: 'Chat',
+      modelProvider: 'openai',
+      model: 'gpt-4.1',
+      uiMessages: [
+        {
+          id: 'user-1',
+          role: 'user',
+          parts: [textAttachment('quarterly results', 'report.md')],
+        },
+      ],
+      messagesRevision: 0,
+      prompt: '',
+      isRunning: false,
+    };
+
+    expect(getSessionUserMessageText(session)).toEqual([
+      'Attached file: report.md',
+    ]);
+  });
+
+  it('includes text attachment contents in conversation summaries', () => {
+    const attachment = textAttachment('Revenue grew 18%.', 'report.md');
+    const messages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'Summarize this'}, attachment],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [{type: 'text', text: 'I found the main trend.'}],
+      },
+    ];
+
+    expect(buildConversationText(messages)).toBe(
+      'User: Summarize this\n\nAttached file: report.md\n\nRevenue grew 18%.\n\nAssistant: I found the main trend.',
+    );
   });
 });
