@@ -80,11 +80,15 @@ export const LocalAgentChatRuntimeProvider: FC<LocalAgentChatRootProps> = ({
   const sendPrompt = useCallback(
     (value?: string, attachments: FileUIPart[] = []) => {
       const text = (value ?? prompt).trim();
-      if (!text || isStreaming) return;
-      void sendMessage({
-        text,
-        ...(attachments.length > 0 ? {files: attachments} : {}),
-      });
+      if ((!text && attachments.length === 0) || isStreaming) return;
+      void sendMessage(
+        text
+          ? {
+              text,
+              ...(attachments.length > 0 ? {files: attachments} : {}),
+            }
+          : {files: attachments},
+      );
       setPrompt('');
     },
     [isStreaming, prompt, sendMessage],

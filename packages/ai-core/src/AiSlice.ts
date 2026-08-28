@@ -1923,10 +1923,16 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
             }),
           );
-          void chat.sendMessage({
-            text: promptText,
-            ...(attachments.length > 0 ? {files: attachments} : {}),
-          });
+          void chat.sendMessage(
+            promptText
+              ? {
+                  text: promptText,
+                  ...(attachments.length > 0 ? {files: attachments} : {}),
+                }
+              : attachments.length > 0
+                ? {files: attachments}
+                : {text: promptText},
+          );
         },
 
         startAnalysisWhenReady: async (

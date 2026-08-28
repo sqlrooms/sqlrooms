@@ -12,7 +12,6 @@ import {
   setMockSessionRuntime,
   stubAnalysisActions,
   textarea,
-  typeInto,
 } from './support';
 
 jest.unstable_mockModule(
@@ -68,8 +67,8 @@ async function selectAttachment(
 }
 
 describe('Chat composer attachments', () => {
-  it('opts in through a composer child, sends the file part, and clears it', async () => {
-    const runtime = setMockRuntime({prompt: 'Summarize this file'});
+  it('sends an attachment without prompt text and clears it', async () => {
+    const runtime = setMockRuntime({prompt: ''});
     const {container, root} = await renderTree(
       <LocalAgentChatComposerProvider>
         <QueryControls>
@@ -109,7 +108,7 @@ describe('Chat composer attachments', () => {
     await cleanup(container, root);
   });
 
-  it('forwards attachments through session-mode analysis', async () => {
+  it('forwards an attachment-only send through session-mode analysis', async () => {
     setMockSessionRuntime();
     const store = createSessionTestStore();
     const {startAnalysisWhenReady} = stubAnalysisActions(store);
@@ -130,10 +129,6 @@ describe('Chat composer attachments', () => {
       new File(['plain text'], 'notes.txt', {type: 'text/plain'}),
       container,
     );
-    await act(async () => {
-      typeInto(textarea(container)!, 'Read the notes');
-    });
-
     await act(async () => {
       fireKeyDown(textarea(container)!);
     });
@@ -294,6 +289,42 @@ describe('Chat composer attachments', () => {
       fireKeyDown(textarea(container)!);
     });
     expect(runtime.sendPrompt).toHaveBeenCalledWith();
+
+    await cleanup(container, root);
+  });
+
+  it('enforces a combined text attachment size limit', async () => {
+    setMockRuntime();
+    const {container, root} = await renderTree(
+      <LocalAgentChatComposerProvider>
+        <QueryControls>
+          <Attachments maxTextFileSize={10} maxTotalTextFileSize={12} />
+        </QueryControls>
+      </LocalAgentChatComposerProvider>,
+    );
+    const input =
+      container.querySelector<HTMLInputElement>('input[type=file]')!;
+
+    await selectAttachment(
+      input,
+      new File(['12345678'], 'first.txt', {type: 'text/plain'}),
+      container,
+    );
+    await act(async () => {
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: [new File(['abcdefgh'], 'second.txt', {type: 'text/plain'})],
+      });
+      input.dispatchEvent(new Event('change', {bubbles: true}));
+    });
+
+    expect(container.textContent).toContain('first.txt');
+    expect(
+      container.querySelector('button[aria-label="Open second.txt"]'),
+    ).toBeNull();
+    expect(container.textContent).toContain(
+      'second.txt exceeds the combined text attachment limit.',
+    );
 
     await cleanup(container, root);
   });

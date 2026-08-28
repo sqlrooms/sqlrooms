@@ -35,6 +35,8 @@ export type ChatActiveStatusProps = {
 export type ChatPromptProps = {
   prompt: string;
   attachments: readonly ChatAttachmentPart[];
+  /** Search block IDs corresponding by index to {@link attachments}. */
+  attachmentSearchBlockIds: readonly string[];
   searchBlockId: string;
 };
 

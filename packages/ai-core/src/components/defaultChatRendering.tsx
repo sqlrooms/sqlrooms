@@ -55,6 +55,7 @@ import {ChatAttachmentPreview} from './ChatAttachmentPreview';
 export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
   prompt,
   attachments,
+  attachmentSearchBlockIds,
   searchBlockId,
 }) => (
   <div className="group/prompt bg-muted relative ml-auto flex w-fit max-w-[85%] flex-col gap-2 rounded-md border p-2 text-sm">
@@ -64,6 +65,7 @@ export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
           <ChatAttachmentPreview
             key={`${attachment.filename ?? 'attachment'}-${index}`}
             attachment={attachment}
+            searchBlockId={attachmentSearchBlockIds[index]}
           />
         ))}
       </div>
@@ -303,6 +305,9 @@ export function createChatTurnPresentation({
     <Prompt
       prompt={prompt}
       attachments={promptAttachments}
+      attachmentSearchBlockIds={promptAttachments.map(
+        (_, index) => `${searchBlockPrefix}:attachment:${index}`,
+      )}
       searchBlockId={`${searchBlockPrefix}:prompt`}
     />
   ));

@@ -7,10 +7,11 @@ import {
   cn,
 } from '@sqlrooms/ui';
 import {FileTextIcon} from 'lucide-react';
-import {useMemo, useState, type FC} from 'react';
+import {useEffect, useMemo, useState, type FC} from 'react';
 import type {ChatAttachmentPart} from '../chatAttachments';
 import {getChatAttachmentText, isMarkdownAttachment} from '../chatAttachments';
 import {MessageContent} from './MessageContent';
+import {HighlightedChatSearchText, useOptionalChatSearch} from './ChatSearch';
 
 /** Props for a clickable image or text/Markdown attachment preview. */
 export type ChatAttachmentPreviewProps = {
@@ -18,17 +19,46 @@ export type ChatAttachmentPreviewProps = {
   attachment: ChatAttachmentPart;
   /** Use the smaller composer-chip presentation. */
   compact?: boolean;
+  /** Registered chat-search block for this attachment's text content. */
+  searchBlockId?: string;
 };
 
 /** Clickable attachment preview with an image or text/Markdown dialog. */
 export const ChatAttachmentPreview: FC<ChatAttachmentPreviewProps> = ({
   attachment,
   compact = false,
+  searchBlockId,
 }) => {
   const [open, setOpen] = useState(false);
+  const search = useOptionalChatSearch();
   const isImage = attachment.mediaType.startsWith('image/');
   const text = useMemo(() => getChatAttachmentText(attachment), [attachment]);
   const filename = attachment.filename ?? (isImage ? 'Image' : 'Text file');
+  const activeMatchId = search?.activeMatchId;
+  const hasActiveAttachmentMatch = Boolean(
+    searchBlockId &&
+    activeMatchId &&
+    search
+      ?.getMatchesForBlock(searchBlockId)
+      .some((match) => match.id === activeMatchId),
+  );
+
+  useEffect(() => {
+    if (!hasActiveAttachmentMatch || !activeMatchId) return;
+    let scrollTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    const openTimeoutId = setTimeout(() => {
+      setOpen(true);
+      scrollTimeoutId = setTimeout(() => {
+        document.getElementById(activeMatchId)?.scrollIntoView?.({
+          block: 'center',
+        });
+      }, 0);
+    }, 0);
+    return () => {
+      clearTimeout(openTimeoutId);
+      if (scrollTimeoutId !== undefined) clearTimeout(scrollTimeoutId);
+    };
+  }, [activeMatchId, hasActiveAttachmentMatch]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -85,11 +115,19 @@ export const ChatAttachmentPreview: FC<ChatAttachmentPreviewProps> = ({
           </p>
         ) : isMarkdownAttachment(attachment) ? (
           <div className="min-h-0 overflow-auto rounded-md border p-4">
-            <MessageContent content={text} isAnswer />
+            <MessageContent
+              content={text}
+              isAnswer
+              searchBlockId={searchBlockId}
+            />
           </div>
         ) : (
           <pre className="bg-muted min-h-0 overflow-auto rounded-md border p-4 text-sm whitespace-pre-wrap">
-            {text}
+            {searchBlockId ? (
+              <HighlightedChatSearchText blockId={searchBlockId} text={text} />
+            ) : (
+              text
+            )}
           </pre>
         )}
       </DialogContent>

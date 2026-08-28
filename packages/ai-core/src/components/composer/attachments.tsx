@@ -15,6 +15,7 @@ import type {FileUIPart} from 'ai';
 import {
   fileToChatAttachmentPart,
   getChatAttachmentMediaType,
+  getChatAttachmentText,
   isSupportedChatAttachment,
 } from '../../chatAttachments';
 import {ChatAttachmentPreview} from '../ChatAttachmentPreview';
@@ -23,7 +24,8 @@ import {useBlockSends} from './beforeSend';
 const DEFAULT_ACCEPT = 'image/*,.txt,.md,.markdown,text/plain,text/markdown';
 const DEFAULT_MAX_FILES = 4;
 const DEFAULT_MAX_FILE_SIZE = 2 * 1024 * 1024;
-const DEFAULT_MAX_TEXT_FILE_SIZE = 1024 * 1024;
+const DEFAULT_MAX_TEXT_FILE_SIZE = 128 * 1024;
+const DEFAULT_MAX_TOTAL_TEXT_FILE_SIZE = 128 * 1024;
 
 /** Transient files and actions shared by attachment UI under one chat root. */
 export type ChatAttachmentsState = {
@@ -110,8 +112,9 @@ export function useChatAttachments(): ChatAttachmentsState {
  * Configuration for the opt-in composer attachment picker.
  *
  * By default it accepts up to four files, limits images to 2 MiB each, and
- * limits plain-text or Markdown files to 1 MiB each. Unsupported, oversized,
- * or excess files are rejected and reported through {@link onError}.
+ * limits plain-text or Markdown files to 128 KiB each and in aggregate.
+ * Unsupported, oversized, or excess files are rejected and reported through
+ * {@link onError}.
  */
 export type ChatComposerAttachmentsProps = {
   className?: string;
@@ -123,6 +126,8 @@ export type ChatComposerAttachmentsProps = {
   maxFileSize?: number;
   /** Maximum text or Markdown size in bytes. */
   maxTextFileSize?: number;
+  /** Maximum combined size of pending text and Markdown files in bytes. */
+  maxTotalTextFileSize?: number;
   /** Called when one or more selected files cannot be attached. */
   onError?: (message: string) => void;
 };
@@ -137,6 +142,7 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
   maxFiles = DEFAULT_MAX_FILES,
   maxFileSize = DEFAULT_MAX_FILE_SIZE,
   maxTextFileSize = DEFAULT_MAX_TEXT_FILE_SIZE,
+  maxTotalTextFileSize = DEFAULT_MAX_TOTAL_TEXT_FILE_SIZE,
   onError,
 }) => {
   const attachmentState = useChatAttachmentsContext();
@@ -165,6 +171,12 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
       }
 
       const accepted: File[] = [];
+      let totalTextFileSize = attachments.reduce((total, attachment) => {
+        const text = getChatAttachmentText(attachment);
+        return text === undefined
+          ? total
+          : total + new TextEncoder().encode(text).byteLength;
+      }, 0);
       for (const file of files.slice(0, remaining)) {
         if (!isSupportedChatAttachment(file)) {
           reportError(`${file.name} is not a supported image or text file.`);
@@ -176,6 +188,13 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
           reportError(`${file.name} is too large.`);
           continue;
         }
+        if (isText && totalTextFileSize + file.size > maxTotalTextFileSize) {
+          reportError(
+            `${file.name} exceeds the combined text attachment limit.`,
+          );
+          continue;
+        }
+        if (isText) totalTextFileSize += file.size;
         accepted.push(file);
       }
       if (files.length > remaining) {
@@ -201,12 +220,13 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
       }
     },
     [
-      attachments.length,
+      attachments,
       appendAtRevision,
       getRevision,
       maxFiles,
       maxFileSize,
       maxTextFileSize,
+      maxTotalTextFileSize,
       reportError,
     ],
   );

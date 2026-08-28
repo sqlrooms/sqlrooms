@@ -7,11 +7,13 @@ import {createRoot, type Root} from 'react-dom/client';
 import {createStore} from 'zustand';
 import {RoomStateProvider} from '@sqlrooms/room-store';
 import {TransformStream} from 'node:stream/web';
+import {TextDecoder} from 'node:util';
 import type {ChatSearchBlock} from '../src/components/ChatSearch';
 import type {AiSliceState} from '../src/AiSlice';
 
 Object.assign(globalThis, {
   TransformStream,
+  TextDecoder,
   IS_REACT_ACT_ENVIRONMENT: true,
 });
 
@@ -23,6 +25,8 @@ const {
   useChatSearch,
   useRegisterChatSearchBlocks,
 } = await import('../src/components/ChatSearch');
+const {ChatAttachmentPreview} =
+  await import('../src/components/ChatAttachmentPreview');
 
 const blocks: ChatSearchBlock[] = [
   {
@@ -222,6 +226,56 @@ describe('chat search helpers', () => {
 });
 
 describe('Chat.Search', () => {
+  it('opens and highlights an active text-attachment match', async () => {
+    latestSearchRef.current = undefined;
+    const attachmentBlock: ChatSearchBlock = {
+      id: 'session-1:result-1:attachment:0',
+      resultId: 'result-1',
+      text: 'Revenue grew this quarter.',
+    };
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+
+    await act(async () => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <BlockRegistrar blocks={[attachmentBlock]} />
+            <SearchController />
+            <ChatAttachmentPreview
+              attachment={{
+                type: 'file',
+                filename: 'report.txt',
+                mediaType: 'text/plain',
+                url: 'data:text/plain;base64,UmV2ZW51ZSBncmV3IHRoaXMgcXVhcnRlci4=',
+              }}
+              searchBlockId={attachmentBlock.id}
+            />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    await act(async () => {
+      latestSearchRef.current?.setQuery('Revenue');
+    });
+
+    const activeMatchId = latestSearchRef.current?.activeMatchId;
+    expect(activeMatchId).toBeDefined();
+    for (let attempts = 0; attempts < 20; attempts += 1) {
+      if (document.getElementById(activeMatchId!)) break;
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    }
+    expect(document.body.textContent).toContain('Attached text file preview');
+    expect(document.getElementById(activeMatchId!)).not.toBeNull();
+
+    cleanup(container, root);
+  });
+
   it('reports matches when blocks are registered after the query is entered', () => {
     latestSearchRef.current = undefined;
     const container = document.createElement('div');

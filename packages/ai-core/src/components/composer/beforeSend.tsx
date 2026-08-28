@@ -157,13 +157,13 @@ export function useBlockSends(enabled = true): void {
  *
  * @param send - The mode's raw send action.
  * @param prompt - Used as the veto's argument when `send` gets no text.
- * @param canSendText - The mode's readiness predicate, consulted before any
+ * @param canSend - The mode's readiness predicate, consulted before any
  *   handler runs so a vetoed-or-impossible send triggers no side effects.
  */
 export function useVetoableSend(
   send: (text?: string) => void,
   prompt: string,
-  canSendText: (text: string) => boolean,
+  canSend: (text: string) => boolean,
 ): (text?: string) => void {
   const {run, blocked} = useBeforeSendRegistry();
   return useCallback(
@@ -172,11 +172,11 @@ export function useVetoableSend(
       const text = args[0] ?? prompt;
       // Readiness before vetoes: handlers have side effects, and `send` is
       // documented as a no-op when sending isn't possible.
-      if (blocked || !canSendText(text)) return;
+      if (blocked || !canSend(text)) return;
       if (!run(text)) return;
       send(...args);
     },
-    [run, blocked, canSendText, send, prompt],
+    [run, blocked, canSend, send, prompt],
   );
 }
 
