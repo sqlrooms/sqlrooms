@@ -1,8 +1,9 @@
 import {type BaseRoomStoreState, useRoomStoreApi} from '@sqlrooms/room-store';
 import {Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
-import type {UIMessage} from 'ai';
+import type {FileUIPart, UIMessage} from 'ai';
 import {useCallback, useMemo, useRef} from 'react';
 import {type AiSliceState, useStoreWithAi} from '../AiSlice';
+import {textAttachmentToModelText} from '../chatAttachments';
 import type {AssistantMessageMetadata} from '../types';
 import {buildConversationText} from '../utils';
 
@@ -93,13 +94,19 @@ function computeTokenUsage(
   return {contextTokens, cumulativeTokens};
 }
 
-function estimateMessageTokens(msg: UIMessage): number {
+/** Estimates one persisted message when provider-reported usage is absent. */
+export function estimateMessageTokens(msg: UIMessage): number {
   let tokens = 4; // per-message overhead
   for (const part of msg.parts) {
     if (part.type === 'text') {
       tokens += estimateTokenCount((part as {text: string}).text);
     } else if (part.type === 'reasoning') {
       tokens += estimateTokenCount((part as {text?: string}).text ?? '');
+    } else if (part.type === 'file') {
+      const attachmentText = textAttachmentToModelText(part as FileUIPart);
+      if (attachmentText !== undefined) {
+        tokens += estimateTokenCount(attachmentText);
+      }
     } else if (
       typeof part.type === 'string' &&
       (part.type.startsWith('tool-') || part.type === 'dynamic-tool')
