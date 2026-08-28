@@ -27,7 +27,7 @@ function createElement(
 }
 
 function matchesSelector(
-  element: Pick<FakeElement, 'attributes' | 'tagName'>,
+  element: {attributes: Record<string, string>; tagName: string},
   selector: string,
 ) {
   if (selector === 'iframe') return element.tagName === 'IFRAME';
