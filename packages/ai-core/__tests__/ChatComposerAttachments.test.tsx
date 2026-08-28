@@ -28,6 +28,45 @@ const {ChatAttachmentPreview} =
   await import('../src/components/ChatAttachmentPreview');
 const {TooltipProvider} = await import('@sqlrooms/ui');
 
+async function waitForText(
+  container: HTMLElement,
+  text: string,
+): Promise<void> {
+  await waitForCondition(
+    () => Boolean(container.textContent?.includes(text)),
+    text,
+  );
+}
+
+async function waitForCondition(
+  condition: () => boolean,
+  description: string,
+): Promise<void> {
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    if (condition()) return;
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  }
+  throw new Error(`Timed out waiting for ${description}`);
+}
+
+async function selectAttachment(
+  input: HTMLInputElement,
+  file: File,
+  container: HTMLElement,
+): Promise<void> {
+  await act(async () => {
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file],
+    });
+    input.dispatchEvent(new Event('change', {bubbles: true}));
+  });
+  await waitForText(container, file.name);
+}
+
 describe('Chat composer attachments', () => {
   it('opts in through a composer child, sends the file part, and clears it', async () => {
     const runtime = setMockRuntime({prompt: 'Summarize this file'});
@@ -44,14 +83,7 @@ describe('Chat composer attachments', () => {
       type: 'application/octet-stream',
     });
 
-    await act(async () => {
-      Object.defineProperty(input, 'files', {
-        configurable: true,
-        value: [file],
-      });
-      input.dispatchEvent(new Event('change', {bubbles: true}));
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    });
+    await selectAttachment(input, file, container);
 
     expect(container.textContent).toContain('report.md');
 
@@ -93,13 +125,12 @@ describe('Chat composer attachments', () => {
     const input =
       container.querySelector<HTMLInputElement>('input[type=file]')!;
 
+    await selectAttachment(
+      input,
+      new File(['plain text'], 'notes.txt', {type: 'text/plain'}),
+      container,
+    );
     await act(async () => {
-      Object.defineProperty(input, 'files', {
-        configurable: true,
-        value: [new File(['plain text'], 'notes.txt', {type: 'text/plain'})],
-      });
-      input.dispatchEvent(new Event('change', {bubbles: true}));
-      await new Promise((resolve) => setTimeout(resolve, 20));
       typeInto(textarea(container)!, 'Read the notes');
     });
 
@@ -118,6 +149,151 @@ describe('Chat composer attachments', () => {
         }),
       ]),
     );
+
+    await cleanup(container, root);
+  });
+
+  it('clears pending attachments when the active session changes', async () => {
+    setMockSessionRuntime();
+    const store = createSessionTestStore();
+    const firstSessionId = store.getState().ai.createSession('First');
+    const secondSessionId = store.getState().ai.createSession('Second');
+    store.getState().ai.switchSession(firstSessionId);
+    const {container, root} = await renderTree(
+      <TooltipProvider>
+        <RoomStateProvider roomStore={store}>
+          <QueryControls>
+            <Attachments />
+          </QueryControls>
+        </RoomStateProvider>
+      </TooltipProvider>,
+    );
+    const input =
+      container.querySelector<HTMLInputElement>('input[type=file]')!;
+
+    await selectAttachment(
+      input,
+      new File(['private notes'], 'first-session.txt', {type: 'text/plain'}),
+      container,
+    );
+    expect(container.textContent).toContain('first-session.txt');
+
+    await act(async () => {
+      store.getState().ai.switchSession(secondSessionId);
+    });
+
+    expect(container.textContent).not.toContain('first-session.txt');
+    await cleanup(container, root);
+  });
+
+  it('does not append a file that finishes reading after a session change', async () => {
+    const OriginalFileReader = globalThis.FileReader;
+    let finishRead: (() => void) | undefined;
+    class DeferredFileReader {
+      result: string | ArrayBuffer | null = null;
+      error: DOMException | null = null;
+      onload: FileReader['onload'] = null;
+      onerror: FileReader['onerror'] = null;
+
+      readAsDataURL() {
+        finishRead = () => {
+          this.result = 'data:text/plain;base64,cHJpdmF0ZSBub3Rlcw==';
+          this.onload?.call(
+            this as unknown as FileReader,
+            new ProgressEvent('load') as ProgressEvent<FileReader>,
+          );
+        };
+      }
+    }
+    Object.defineProperty(globalThis, 'FileReader', {
+      configurable: true,
+      value: DeferredFileReader,
+    });
+
+    const store = createSessionTestStore();
+    const firstSessionId = store.getState().ai.createSession('First');
+    const secondSessionId = store.getState().ai.createSession('Second');
+    store.getState().ai.switchSession(firstSessionId);
+    setMockSessionRuntime();
+    const {container, root} = await renderTree(
+      <TooltipProvider>
+        <RoomStateProvider roomStore={store}>
+          <QueryControls>
+            <Attachments />
+          </QueryControls>
+        </RoomStateProvider>
+      </TooltipProvider>,
+    );
+
+    try {
+      const input =
+        container.querySelector<HTMLInputElement>('input[type=file]')!;
+      await act(async () => {
+        Object.defineProperty(input, 'files', {
+          configurable: true,
+          value: [
+            new File(['private notes'], 'first-session.txt', {
+              type: 'text/plain',
+            }),
+          ],
+        });
+        input.dispatchEvent(new Event('change', {bubbles: true}));
+      });
+      expect(finishRead).toBeDefined();
+
+      await act(async () => {
+        store.getState().ai.switchSession(secondSessionId);
+      });
+      await act(async () => finishRead?.());
+      await waitForCondition(
+        () =>
+          !container
+            .querySelector<HTMLButtonElement>(
+              'button[aria-label="Attach images or text files"]',
+            )
+            ?.hasAttribute('disabled'),
+        'file read to finish',
+      );
+
+      expect(container.textContent).not.toContain('first-session.txt');
+    } finally {
+      Object.defineProperty(globalThis, 'FileReader', {
+        configurable: true,
+        value: OriginalFileReader,
+      });
+      await cleanup(container, root);
+    }
+  });
+
+  it('rejects images larger than the constrained default', async () => {
+    const runtime = setMockRuntime({prompt: 'Inspect this image'});
+    const {container, root} = await renderTree(
+      <LocalAgentChatComposerProvider>
+        <QueryControls>
+          <Attachments />
+        </QueryControls>
+      </LocalAgentChatComposerProvider>,
+    );
+    const input =
+      container.querySelector<HTMLInputElement>('input[type=file]')!;
+
+    await act(async () => {
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: [
+          new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'large.png', {
+            type: 'image/png',
+          }),
+        ],
+      });
+      input.dispatchEvent(new Event('change', {bubbles: true}));
+    });
+
+    expect(container.textContent).toContain('large.png is too large.');
+    await act(async () => {
+      fireKeyDown(textarea(container)!);
+    });
+    expect(runtime.sendPrompt).toHaveBeenCalledWith();
 
     await cleanup(container, root);
   });

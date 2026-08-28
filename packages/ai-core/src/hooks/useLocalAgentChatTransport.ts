@@ -5,6 +5,7 @@ import {
   type UIMessage,
 } from 'ai';
 import {useMemo} from 'react';
+import {sanitizeMessagesForLLM} from '../utils';
 
 /**
  * Build a local `useChat` transport that drives a pre-constructed
@@ -17,7 +18,7 @@ export function useLocalAgentChatTransport(
     () =>
       new DefaultChatTransport<UIMessage>({
         fetch: (async (_url: RequestInfo | URL, init?: RequestInit) => {
-          const uiMessages = parseUiMessages(init?.body);
+          const uiMessages = parseLocalAgentUiMessages(init?.body);
           return createAgentUIStreamResponse({
             agent,
             uiMessages,
@@ -32,7 +33,7 @@ export function useLocalAgentChatTransport(
 export function parseLocalAgentUiMessages(
   body: BodyInit | null | undefined,
 ): UIMessage[] {
-  return parseUiMessages(body);
+  return sanitizeMessagesForLLM(parseUiMessages(body));
 }
 
 function parseUiMessages(body: BodyInit | null | undefined): UIMessage[] {

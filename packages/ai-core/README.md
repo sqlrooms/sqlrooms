@@ -106,7 +106,7 @@ to accept images and plain-text or Markdown files. Pending files render in the
 composer footer and are sent as AI SDK file parts. Posted files remain part of
 the user message: images open at full size in a dialog, while text and Markdown
 open in a scrollable text or rendered-Markdown dialog. The default limits are
-eight files, 10 MB per image, and 1 MB per text file; the component props can
+four files, 2 MB per image, and 1 MB per text file; the component props can
 override those limits.
 
 > `<InlineApiKeyInput>` assumes session mode: it calls `useStoreWithAi`

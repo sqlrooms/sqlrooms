@@ -12,7 +12,9 @@ import type {ChatAttachmentPart} from '../chatAttachments';
 import {getChatAttachmentText, isMarkdownAttachment} from '../chatAttachments';
 import {MessageContent} from './MessageContent';
 
+/** Props for a clickable image or text/Markdown attachment preview. */
 export type ChatAttachmentPreviewProps = {
+  /** Serialized attachment displayed by the preview and its dialog. */
   attachment: ChatAttachmentPart;
   /** Use the smaller composer-chip presentation. */
   compact?: boolean;

@@ -205,6 +205,7 @@ export {
   isSupportedChatAttachment,
   isTextAttachmentFilename,
   isTextAttachmentMediaType,
+  useChatAttachments,
 } from '@sqlrooms/ai-core';
 export type {
   ChatAttachmentPart,

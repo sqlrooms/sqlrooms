@@ -21,8 +21,8 @@ import {ChatAttachmentPreview} from '../ChatAttachmentPreview';
 import {useBlockSends} from './beforeSend';
 
 const DEFAULT_ACCEPT = 'image/*,.txt,.md,.markdown,text/plain,text/markdown';
-const DEFAULT_MAX_FILES = 8;
-const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024;
+const DEFAULT_MAX_FILES = 4;
+const DEFAULT_MAX_FILE_SIZE = 2 * 1024 * 1024;
 const DEFAULT_MAX_TEXT_FILE_SIZE = 1024 * 1024;
 
 /** Transient files and actions shared by attachment UI under one chat root. */
@@ -37,7 +37,23 @@ export type ChatAttachmentsState = {
   clear: () => void;
 };
 
-const ChatAttachmentsContext = createContext<ChatAttachmentsState | null>(null);
+type ChatAttachmentsContextValue = ChatAttachmentsState & {
+  getRevision: () => number;
+  appendAtRevision: (attachments: FileUIPart[], revision: number) => void;
+};
+
+const ChatAttachmentsContext =
+  createContext<ChatAttachmentsContextValue | null>(null);
+
+function useChatAttachmentsContext(): ChatAttachmentsContextValue {
+  const value = useContext(ChatAttachmentsContext);
+  if (!value) {
+    throw new Error(
+      'useChatAttachments must be used under Chat.Root, Chat.LocalAgentRoot, or ChatComposerStateBoundary.',
+    );
+  }
+  return value;
+}
 
 /** Holds transient attachments for one chat composer tree. */
 export const ChatComposerAttachmentsProvider: FC<PropsWithChildren> = ({
@@ -45,6 +61,7 @@ export const ChatComposerAttachmentsProvider: FC<PropsWithChildren> = ({
 }) => {
   const inherited = useContext(ChatAttachmentsContext);
   const [attachments, setAttachments] = useState<FileUIPart[]>([]);
+  const revisionRef = useRef(0);
 
   const append = useCallback((next: FileUIPart[]) => {
     setAttachments((current) => [...current, ...next]);
@@ -52,10 +69,28 @@ export const ChatComposerAttachmentsProvider: FC<PropsWithChildren> = ({
   const remove = useCallback((attachment: FileUIPart) => {
     setAttachments((current) => current.filter((item) => item !== attachment));
   }, []);
-  const clear = useCallback(() => setAttachments([]), []);
+  const clear = useCallback(() => {
+    revisionRef.current += 1;
+    setAttachments([]);
+  }, []);
+  const getRevision = useCallback(() => revisionRef.current, []);
+  const appendAtRevision = useCallback(
+    (next: FileUIPart[], revision: number) => {
+      if (revisionRef.current !== revision) return;
+      setAttachments((current) => [...current, ...next]);
+    },
+    [],
+  );
   const value = useMemo(
-    () => ({attachments, append, remove, clear}),
-    [attachments, append, remove, clear],
+    () => ({
+      attachments,
+      append,
+      remove,
+      clear,
+      getRevision,
+      appendAtRevision,
+    }),
+    [attachments, append, remove, clear, getRevision, appendAtRevision],
   );
 
   if (inherited) return <>{children}</>;
@@ -68,15 +103,16 @@ export const ChatComposerAttachmentsProvider: FC<PropsWithChildren> = ({
 
 /** Reads and manages the transient attachments for the current composer. */
 export function useChatAttachments(): ChatAttachmentsState {
-  const value = useContext(ChatAttachmentsContext);
-  if (!value) {
-    throw new Error(
-      'useChatAttachments must be used under Chat.Root, Chat.LocalAgentRoot, or ChatComposerStateBoundary.',
-    );
-  }
-  return value;
+  return useChatAttachmentsContext();
 }
 
+/**
+ * Configuration for the opt-in composer attachment picker.
+ *
+ * By default it accepts up to four files, limits images to 2 MiB each, and
+ * limits plain-text or Markdown files to 1 MiB each. Unsupported, oversized,
+ * or excess files are rejected and reported through {@link onError}.
+ */
 export type ChatComposerAttachmentsProps = {
   className?: string;
   /** Native file-input accept value. */
@@ -103,7 +139,8 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
   maxTextFileSize = DEFAULT_MAX_TEXT_FILE_SIZE,
   onError,
 }) => {
-  const {attachments, append, remove} = useChatAttachments();
+  const attachmentState = useChatAttachmentsContext();
+  const {attachments, remove, getRevision, appendAtRevision} = attachmentState;
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string>();
   const [isReading, setIsReading] = useState(false);
@@ -146,9 +183,13 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
       }
       if (accepted.length === 0) return;
 
+      const revision = getRevision();
       setIsReading(true);
       try {
-        append(await Promise.all(accepted.map(fileToChatAttachmentPart)));
+        appendAtRevision(
+          await Promise.all(accepted.map(fileToChatAttachmentPart)),
+          revision,
+        );
       } catch (readError) {
         reportError(
           readError instanceof Error
@@ -161,7 +202,8 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
     },
     [
       attachments.length,
-      append,
+      appendAtRevision,
+      getRevision,
       maxFiles,
       maxFileSize,
       maxTextFileSize,

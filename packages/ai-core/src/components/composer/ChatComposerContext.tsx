@@ -1,4 +1,11 @@
-import {useCallback, useMemo, type FC, type PropsWithChildren} from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type FC,
+  type PropsWithChildren,
+} from 'react';
 import {useStoreWithAi} from '../../AiSlice';
 import type {LocalAgentChatRuntime} from '../ChatRuntimeContext';
 import {
@@ -89,6 +96,14 @@ function useSessionComposerState(): ChatComposerState {
   // Select the id, not the session: the session object is replaced as messages
   // stream in, which would re-render every composer on each token.
   const sessionId = useStoreWithAi((s) => s.ai.getCurrentSession()?.id);
+  const previousSessionIdRef = useRef(sessionId);
+
+  useEffect(() => {
+    if (previousSessionIdRef.current !== sessionId) {
+      clearAttachments();
+      previousSessionIdRef.current = sessionId;
+    }
+  }, [sessionId, clearAttachments]);
 
   // Short-circuits: `requiresApiKey()` invokes the host's factory, and this
   // selector re-runs once per streamed token.
