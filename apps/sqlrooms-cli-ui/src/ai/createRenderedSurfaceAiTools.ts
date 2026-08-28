@@ -108,6 +108,7 @@ export function createRenderedSurfaceAiTools(
               `${formatTarget(target)} is not currently rendered. Open the containing artifact in the workspace, then retry.`,
             );
           }
+          assertCaptureSupported(element, target);
 
           const image = await captureElement(element);
           cacheImage(imageCache, toolCallId, image);
@@ -161,7 +162,7 @@ export function createRenderedSurfaceAiTools(
   return {
     render_artifact_image: createTool({
       description: `Capture the visible rendering of a specific artifact as a PNG and inspect it visually.
-Use this after creating or updating an artifact when visual appearance, layout, clipping, labels, or render errors matter. The artifact must be open in the workspace. This tool requires a vision-capable model.`,
+Use this after creating or updating an artifact when visual appearance, layout, clipping, labels, or render errors matter. The artifact must be open in the workspace. Iframe-backed content is not supported. This tool requires a vision-capable model.`,
       inputSchema: RenderArtifactImageParameters,
       getTarget: ({artifactId}) => ({kind: 'artifact', artifactId}),
       findElement: ({artifactId}) =>
@@ -171,7 +172,7 @@ Use this after creating or updating an artifact when visual appearance, layout, 
     }),
     render_document_block_image: createTool({
       description: `Capture one rendered document block as a PNG and inspect it visually.
-Use this after creating or updating a chart, map, app, table, or other document block to verify its actual appearance. The containing Document must be open in the workspace. This tool requires a vision-capable model.`,
+Use this after creating or updating a chart, map, table, or other non-iframe document block to verify its actual appearance. The containing Document must be open in the workspace. Iframe-backed content such as HTML apps is not supported. This tool requires a vision-capable model.`,
       inputSchema: RenderDocumentBlockImageParameters,
       getTarget: ({blockDocumentId, blockId}) => ({
         kind: 'document-block',
@@ -189,7 +190,7 @@ Use this after creating or updating a chart, map, app, table, or other document 
     }),
     render_dashboard_panel_image: createTool({
       description: `Capture one rendered dashboard panel as a PNG and inspect it visually.
-Use this after creating or updating a dashboard panel to verify its actual chart, map, table, layout, labels, and render state. The containing dashboard must be open, either as an artifact or a Document block. This tool requires a vision-capable model.`,
+Use this after creating or updating a dashboard panel to verify its actual chart, map, table, layout, labels, and render state. The containing dashboard must be open, either as an artifact or a Document block. Iframe-backed content is not supported. This tool requires a vision-capable model.`,
       inputSchema: RenderDashboardPanelImageParameters,
       getTarget: ({dashboardId, panelId}) => ({
         kind: 'dashboard-panel',
@@ -203,6 +204,17 @@ Use this after creating or updating a dashboard panel to verify its actual chart
         }),
     }),
   };
+}
+
+function assertCaptureSupported(
+  element: HTMLElement,
+  target: RenderedSurfaceImageTarget,
+) {
+  if (element.matches('iframe') || element.querySelector('iframe')) {
+    throw new Error(
+      `${formatTarget(target)} contains iframe-backed content, which cannot be included in the generated image. Use the target's source and runtime diagnostics instead, or inspect it directly in the workspace.`,
+    );
+  }
 }
 
 function findElementByAttributes(

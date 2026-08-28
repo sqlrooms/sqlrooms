@@ -4,18 +4,36 @@ import {createRenderedSurfaceAiTools} from '../createRenderedSurfaceAiTools';
 type FakeElement = HTMLElement & {
   attributes: Record<string, string>;
   descendants: FakeElement[];
+  tagName: string;
 };
 
 function createElement(
   attributes: Record<string, string>,
   descendants: FakeElement[] = [],
+  tagName = 'div',
 ): FakeElement {
   return {
     attributes,
     descendants,
+    tagName: tagName.toUpperCase(),
     getAttribute: (name: string) => attributes[name] ?? null,
     querySelectorAll: () => descendants,
+    matches: (selector: string) =>
+      selector === 'iframe' && tagName.toLowerCase() === 'iframe',
+    querySelector: (selector: string) =>
+      selector === 'iframe' ? findDescendantIframe(descendants) : null,
   } as unknown as FakeElement;
+}
+
+function findDescendantIframe(
+  descendants: FakeElement[],
+): FakeElement | undefined {
+  for (const descendant of descendants) {
+    if (descendant.tagName === 'IFRAME') return descendant;
+    const nestedIframe = findDescendantIframe(descendant.descendants);
+    if (nestedIframe) return nestedIframe;
+  }
+  return undefined;
 }
 
 function createDocument(elements: FakeElement[]) {
@@ -166,6 +184,37 @@ describe('createRenderedSurfaceAiTools', () => {
       target: {kind: 'artifact', artifactId: 'missing'},
       error:
         'artifact "missing" is not currently rendered. Open the containing artifact in the workspace, then retry.',
+    });
+  });
+
+  it('rejects iframe-backed targets instead of returning a blank image', async () => {
+    const iframe = createElement({}, [], 'iframe');
+    const artifact = createElement({'data-artifact-id': 'html-app-1'}, [
+      iframe,
+    ]);
+    const captureElement = jest.fn(async () => ({
+      base64: 'blank-iframe',
+      width: 640,
+      height: 480,
+    }));
+    const tools = createRenderedSurfaceAiTools({
+      document: createDocument([artifact]),
+      captureElement,
+      prepareCapture: async () => {},
+    });
+
+    const output = await executeTool(tools.render_artifact_image, {
+      artifactId: 'html-app-1',
+    });
+
+    expect(captureElement).not.toHaveBeenCalled();
+    expect(output).toEqual({
+      success: false,
+      details:
+        'Failed to capture artifact "html-app-1": artifact "html-app-1" contains iframe-backed content, which cannot be included in the generated image. Use the target\'s source and runtime diagnostics instead, or inspect it directly in the workspace.',
+      target: {kind: 'artifact', artifactId: 'html-app-1'},
+      error:
+        'artifact "html-app-1" contains iframe-backed content, which cannot be included in the generated image. Use the target\'s source and runtime diagnostics instead, or inspect it directly in the workspace.',
     });
   });
 });
