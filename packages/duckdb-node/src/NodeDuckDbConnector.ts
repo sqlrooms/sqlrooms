@@ -3,11 +3,15 @@ import {
   BaseDuckDbConnectorImpl,
   createBaseDuckDbConnector,
   DuckDbConnector,
+  literalToSQL,
 } from '@sqlrooms/duckdb-core';
 import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/room-config';
 import * as arrow from 'apache-arrow';
+import {mkdtemp, rm, writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {
-  arrowTableToRows,
+  ARROW_IPC_INIT_SQL,
   buildQualifiedName,
   objectsToCreateTableSql,
   queryToArrowTable,
@@ -74,6 +78,21 @@ export function createNodeDuckDbConnector(
 
   let instance: DuckDBInstance | null = null;
   let connection: DuckDBConnection | null = null;
+  let operationQueue = Promise.resolve();
+  let closing = false;
+  let destroyPromise: Promise<void> | null = null;
+
+  const enqueueOperation = <T>(operation: () => Promise<T>): Promise<T> => {
+    if (closing) {
+      return Promise.reject(new Error('DuckDB connector is shutting down'));
+    }
+    const result = operationQueue.then(operation);
+    operationQueue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  };
 
   const ensureConnection = (): DuckDBConnection => {
     if (!connection) {
@@ -84,11 +103,19 @@ export function createNodeDuckDbConnector(
 
   const impl: BaseDuckDbConnectorImpl = {
     async initializeInternal() {
-      instance = await DuckDBInstance.create(dbPath, config);
-      connection = await instance.connect();
+      await enqueueOperation(async () => {
+        instance = await DuckDBInstance.create(dbPath, config);
+        connection = await instance.connect();
+        // Required, not optional: `@duckdb/node-api` has no Arrow API, so this
+        // extension IS the conversion. Failing here is deliberate — the
+        // alternative was rebuilding tables from JS values, which silently
+        // mistyped TIMESTAMP/DATE/BIGINT/DECIMAL and corrupted BLOB.
+        await connection.run(ARROW_IPC_INIT_SQL);
+      });
     },
 
     async destroyInternal() {
+      await operationQueue;
       if (connection) {
         try {
           connection.closeSync();
@@ -107,10 +134,12 @@ export function createNodeDuckDbConnector(
       sql: string,
       signal: AbortSignal,
     ): Promise<arrow.Table<T>> {
-      if (signal.aborted) {
-        throw new DOMException('Query was cancelled', 'AbortError');
-      }
-      return queryToArrowTable<T>(ensureConnection(), sql);
+      return enqueueOperation(async () => {
+        if (signal.aborted) {
+          throw new DOMException('Query was cancelled', 'AbortError');
+        }
+        return queryToArrowTable<T>(ensureConnection(), sql);
+      });
     },
 
     async loadArrowInternal(
@@ -118,16 +147,27 @@ export function createNodeDuckDbConnector(
       tableName: string,
       opts?: {schema?: string},
     ): Promise<void> {
-      if (table instanceof arrow.Table) {
-        const rows = arrowTableToRows(table);
-        await impl.loadObjectsInternal!(rows, tableName, {
-          schema: opts?.schema,
-          replace: true,
+      const ipc =
+        table instanceof arrow.Table
+          ? arrow.tableToIPC(table, 'stream')
+          : table;
+      const qualifiedName = buildQualifiedName(tableName, opts?.schema);
+      const tempDir = await mkdtemp(join(tmpdir(), 'sqlrooms-arrow-'));
+      const tempFile = join(tempDir, 'data.arrow');
+
+      try {
+        // node-api cannot register an in-memory Arrow buffer yet. Let DuckDB's
+        // nanoarrow extension scan the IPC stream through a short-lived file;
+        // rebuilding rows from Vector#get() loses types and sub-millisecond
+        // timestamp precision before DuckDB ever sees the values.
+        await writeFile(tempFile, ipc);
+        await enqueueOperation(async () => {
+          await ensureConnection().run(
+            `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM ${literalToSQL(tempFile)}`,
+          );
         });
-      } else {
-        throw new Error(
-          'Loading Arrow IPC streams is not yet supported in Node connector',
-        );
+      } finally {
+        await rm(tempDir, {recursive: true, force: true});
       }
     },
 
@@ -142,7 +182,9 @@ export function createNodeDuckDbConnector(
 
       const qualifiedName = buildQualifiedName(tableName, opts?.schema);
       const sql = objectsToCreateTableSql(data, qualifiedName);
-      await ensureConnection().run(sql);
+      await enqueueOperation(async () => {
+        await ensureConnection().run(sql);
+      });
     },
 
     async loadFileInternal(
@@ -162,7 +204,9 @@ export function createNodeDuckDbConnector(
           ? `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM '${fileName}'`
           : `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM ${method}('${fileName}')`;
 
-      await ensureConnection().run(sql);
+      await enqueueOperation(async () => {
+        await ensureConnection().run(sql);
+      });
     },
   };
 
@@ -171,8 +215,27 @@ export function createNodeDuckDbConnector(
     impl,
   );
 
+  const initialize = async (): Promise<void> => {
+    if (closing) {
+      throw new Error('DuckDB connector is shutting down');
+    }
+    await baseConnector.initialize();
+  };
+
+  const destroy = (): Promise<void> => {
+    if (destroyPromise) return destroyPromise;
+    closing = true;
+    destroyPromise = baseConnector.destroy().finally(() => {
+      closing = false;
+      destroyPromise = null;
+    });
+    return destroyPromise;
+  };
+
   return {
     ...baseConnector,
+    initialize,
+    destroy,
     getInstance() {
       if (!instance) {
         throw new Error('DuckDB not initialized');
