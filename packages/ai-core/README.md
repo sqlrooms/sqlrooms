@@ -102,13 +102,14 @@ Use `Chat.Composer`'s `topActions` slot for compact controls that should sit in
 the prompt's top row, right-aligned beside context selectors.
 
 Attachments are opt-in. Add `<Chat.Composer.Attachments />` as a composer child
-to accept images and plain-text or Markdown files. Pending files render in the
-composer footer and are sent as AI SDK file parts. Posted files remain part of
-the user message: images open at full size in a dialog, while text and Markdown
-open in a scrollable text or rendered-Markdown dialog. The default limits are
-four files, 2 MiB per image, 128 KiB per text file, and 128 KiB across all
-pending text files; the component props can override those limits. A file can
-be sent without adding prompt text.
+to accept images and plain-text or Markdown files. Its paperclip menu shows the
+supported categories and opens a type-specific file picker for each one.
+Pending files render in the composer footer and are sent as AI SDK file parts.
+Posted files remain part of the user message: images open at full size in a
+dialog, while text and Markdown open in a scrollable text or rendered-Markdown
+dialog. The default limits are four files, 2 MiB per image, 128 KiB per text
+file, and 128 KiB across all pending text files; the component props can
+override those limits. A file can be sent without adding prompt text.
 
 > `<InlineApiKeyInput>` assumes session mode: it calls `useStoreWithAi`
 > unconditionally, so passing it as a `Chat.Composer` child under

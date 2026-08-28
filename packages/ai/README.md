@@ -137,8 +137,9 @@ function AiPanel() {
 ```
 
 `Chat.Composer.Attachments` is opt-in. It accepts images plus plain-text and
-Markdown files, shows removable previews before sending, and renders posted
-attachments as clickable previews that open in a larger dialog.
+Markdown files through explicit choices in the paperclip menu, shows removable
+previews before sending, and renders posted attachments as clickable previews
+that open in a larger dialog.
 
 ### Customize chat presentation
 

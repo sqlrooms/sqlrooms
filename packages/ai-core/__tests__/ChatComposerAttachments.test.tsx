@@ -66,7 +66,66 @@ async function selectAttachment(
   await waitForText(container, file.name);
 }
 
+function attachmentInput(
+  container: HTMLElement,
+  kind: 'image' | 'text' = 'text',
+): HTMLInputElement {
+  const label =
+    kind === 'image' ? 'Attach image files' : 'Attach text or Markdown files';
+  return container.querySelector<HTMLInputElement>(
+    `input[type=file][aria-label="${label}"]`,
+  )!;
+}
+
 describe('Chat composer attachments', () => {
+  it('shows separate supported-file choices with matching picker filters', async () => {
+    setMockRuntime();
+    const {container, root} = await renderTree(
+      <LocalAgentChatComposerProvider>
+        <QueryControls>
+          <Attachments />
+        </QueryControls>
+      </LocalAgentChatComposerProvider>,
+    );
+    const imageInput = attachmentInput(container, 'image');
+    const textInput = attachmentInput(container);
+    const imagePicker = jest.spyOn(imageInput, 'click').mockImplementation();
+    const textPicker = jest.spyOn(textInput, 'click').mockImplementation();
+
+    expect(imageInput.accept).toBe('image/*');
+    expect(textInput.accept).toBe(
+      '.txt,.md,.markdown,.mdown,.mkd,text/plain,text/markdown',
+    );
+
+    await act(async () => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Attach files"]')!
+        .dispatchEvent(
+          new MouseEvent('pointerdown', {bubbles: true, button: 0}),
+        );
+    });
+    await waitForCondition(
+      () => document.body.textContent?.includes('Supported files') ?? false,
+      'attachment menu to open',
+    );
+
+    expect(document.body.textContent).toContain('Image');
+    expect(document.body.textContent).toContain('Any image format');
+    expect(document.body.textContent).toContain('Text or Markdown');
+    expect(document.body.textContent).toContain(
+      '.txt, .md, .markdown, .mdown, .mkd',
+    );
+
+    const menuItems = Array.from(
+      document.body.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+    );
+    await act(async () => menuItems[0]!.click());
+    expect(imagePicker).toHaveBeenCalledTimes(1);
+    expect(textPicker).not.toHaveBeenCalled();
+
+    await cleanup(container, root);
+  });
+
   it('sends an attachment without prompt text and clears it', async () => {
     const runtime = setMockRuntime({prompt: ''});
     const {container, root} = await renderTree(
@@ -76,8 +135,7 @@ describe('Chat composer attachments', () => {
         </QueryControls>
       </LocalAgentChatComposerProvider>,
     );
-    const input =
-      container.querySelector<HTMLInputElement>('input[type=file]')!;
+    const input = attachmentInput(container);
     const file = new File(['# Report\n\nRevenue grew.'], 'report.md', {
       type: 'application/octet-stream',
     });
@@ -121,8 +179,7 @@ describe('Chat composer attachments', () => {
         </RoomStateProvider>
       </TooltipProvider>,
     );
-    const input =
-      container.querySelector<HTMLInputElement>('input[type=file]')!;
+    const input = attachmentInput(container);
 
     await selectAttachment(
       input,
@@ -163,8 +220,7 @@ describe('Chat composer attachments', () => {
         </RoomStateProvider>
       </TooltipProvider>,
     );
-    const input =
-      container.querySelector<HTMLInputElement>('input[type=file]')!;
+    const input = attachmentInput(container);
 
     await selectAttachment(
       input,
@@ -221,8 +277,7 @@ describe('Chat composer attachments', () => {
     );
 
     try {
-      const input =
-        container.querySelector<HTMLInputElement>('input[type=file]')!;
+      const input = attachmentInput(container);
       await act(async () => {
         Object.defineProperty(input, 'files', {
           configurable: true,
@@ -244,7 +299,7 @@ describe('Chat composer attachments', () => {
         () =>
           !container
             .querySelector<HTMLButtonElement>(
-              'button[aria-label="Attach images or text files"]',
+              'button[aria-label="Attach files"]',
             )
             ?.hasAttribute('disabled'),
         'file read to finish',
@@ -269,8 +324,7 @@ describe('Chat composer attachments', () => {
         </QueryControls>
       </LocalAgentChatComposerProvider>,
     );
-    const input =
-      container.querySelector<HTMLInputElement>('input[type=file]')!;
+    const input = attachmentInput(container, 'image');
 
     await act(async () => {
       Object.defineProperty(input, 'files', {
@@ -302,8 +356,7 @@ describe('Chat composer attachments', () => {
         </QueryControls>
       </LocalAgentChatComposerProvider>,
     );
-    const input =
-      container.querySelector<HTMLInputElement>('input[type=file]')!;
+    const input = attachmentInput(container);
 
     await selectAttachment(
       input,

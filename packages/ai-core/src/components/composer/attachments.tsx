@@ -1,5 +1,13 @@
-import {Button, cn} from '@sqlrooms/ui';
-import {PaperclipIcon, XIcon} from 'lucide-react';
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+  cn,
+} from '@sqlrooms/ui';
+import {FileTextIcon, ImageIcon, PaperclipIcon, XIcon} from 'lucide-react';
 import {
   createContext,
   useCallback,
@@ -21,7 +29,9 @@ import {
 import {ChatAttachmentPreview} from '../ChatAttachmentPreview';
 import {useBlockSends} from './beforeSend';
 
-const DEFAULT_ACCEPT = 'image/*,.txt,.md,.markdown,text/plain,text/markdown';
+const DEFAULT_IMAGE_ACCEPT = 'image/*';
+const DEFAULT_TEXT_ACCEPT =
+  '.txt,.md,.markdown,.mdown,.mkd,text/plain,text/markdown';
 const DEFAULT_MAX_FILES = 4;
 const DEFAULT_MAX_FILE_SIZE = 2 * 1024 * 1024;
 const DEFAULT_MAX_TEXT_FILE_SIZE = 128 * 1024;
@@ -118,8 +128,10 @@ export function useChatAttachments(): ChatAttachmentsState {
  */
 export type ChatComposerAttachmentsProps = {
   className?: string;
-  /** Native file-input accept value. */
-  accept?: string;
+  /** Native file-input accept value for the image choice. */
+  imageAccept?: string;
+  /** Native file-input accept value for the text or Markdown choice. */
+  textAccept?: string;
   /** Maximum number of files waiting in the composer. */
   maxFiles?: number;
   /** Maximum image size in bytes. */
@@ -138,7 +150,8 @@ export type ChatComposerAttachmentsProps = {
  */
 export const Attachments: FC<ChatComposerAttachmentsProps> = ({
   className,
-  accept = DEFAULT_ACCEPT,
+  imageAccept = DEFAULT_IMAGE_ACCEPT,
+  textAccept = DEFAULT_TEXT_ACCEPT,
   maxFiles = DEFAULT_MAX_FILES,
   maxFileSize = DEFAULT_MAX_FILE_SIZE,
   maxTextFileSize = DEFAULT_MAX_TEXT_FILE_SIZE,
@@ -147,7 +160,8 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
 }) => {
   const attachmentState = useChatAttachmentsContext();
   const {attachments, remove, getRevision, appendAtRevision} = attachmentState;
-  const inputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string>();
   const [isReading, setIsReading] = useState(false);
 
@@ -243,26 +257,67 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <input
-        ref={inputRef}
+        ref={imageInputRef}
         type="file"
         className="sr-only"
-        accept={accept}
+        accept={imageAccept}
         multiple
         onChange={handleChange}
-        aria-label="Attach files"
+        aria-label="Attach image files"
       />
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 shrink-0"
-        aria-label="Attach images or text files"
-        title="Attach images or text files"
-        disabled={isReading || attachments.length >= maxFiles}
-        onClick={() => inputRef.current?.click()}
-      >
-        <PaperclipIcon className="h-4 w-4" />
-      </Button>
+      <input
+        ref={textInputRef}
+        type="file"
+        className="sr-only"
+        accept={textAccept}
+        multiple
+        onChange={handleChange}
+        aria-label="Attach text or Markdown files"
+      />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            aria-label="Attach files"
+            title="Attach files"
+            disabled={isReading || attachments.length >= maxFiles}
+          >
+            <PaperclipIcon className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" side="top" className="w-64">
+          <DropdownMenuLabel className="text-muted-foreground text-xs">
+            Supported files
+          </DropdownMenuLabel>
+          <DropdownMenuItem
+            className="items-start gap-2 p-2"
+            onSelect={() => imageInputRef.current?.click()}
+          >
+            <ImageIcon className="mt-0.5" />
+            <span className="grid gap-0.5">
+              <span>Image</span>
+              <span className="text-muted-foreground text-xs font-normal">
+                Any image format
+              </span>
+            </span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="items-start gap-2 p-2"
+            onSelect={() => textInputRef.current?.click()}
+          >
+            <FileTextIcon className="mt-0.5" />
+            <span className="grid gap-0.5">
+              <span>Text or Markdown</span>
+              <span className="text-muted-foreground text-xs font-normal">
+                .txt, .md, .markdown, .mdown, .mkd
+              </span>
+            </span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       {attachments.map((attachment, index) => (
         <div
           key={`${attachment.filename ?? 'attachment'}-${index}`}
