@@ -484,6 +484,44 @@ describe('NodeDuckDbConnector', () => {
       expect(rows).toEqual([{safe: 42, unsafe: '9007199254740993'}]);
       expect(() => JSON.stringify(rows)).not.toThrow();
     });
+
+    it('should recursively convert nested Arrow values to JSON values', async () => {
+      const result = await connector.queryJson<{
+        listValue: Array<number | string>;
+        structValue: {
+          amount: string;
+          big: string;
+          values: number[];
+        };
+        mapValue: Record<string, number | string>;
+      }>(`
+        SELECT
+          [9007199254740993::BIGINT, 42::BIGINT] AS "listValue",
+          {
+            'amount': 1.25::DECIMAL(10,4),
+            'big': 9007199254740993::BIGINT,
+            'values': [42::BIGINT]
+          } AS "structValue",
+          MAP {
+            'large': 9007199254740993::BIGINT,
+            'small': 42::BIGINT
+          } AS "mapValue"
+      `);
+
+      const rows = Array.from(result);
+      expect(rows).toEqual([
+        {
+          listValue: ['9007199254740993', 42],
+          structValue: {
+            amount: '1.2500',
+            big: '9007199254740993',
+            values: [42],
+          },
+          mapValue: {large: '9007199254740993', small: 42},
+        },
+      ]);
+      expect(() => JSON.stringify(rows)).not.toThrow();
+    });
   });
 
   describe('loadArrow', () => {

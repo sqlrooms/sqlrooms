@@ -39,18 +39,46 @@ function decimalToString(value: Uint32Array | bigint, scale: number): string {
   return `${sign}${padded.slice(0, -scale)}.${padded.slice(-scale)}`;
 }
 
-/** Converts Arrow values whose JS representation is not JSON-compatible. */
-function getJsonValue(field: arrow.Field, value: unknown): unknown {
+/** Recursively converts Arrow values to JSON-compatible JS values. */
+function getJsonValue(type: arrow.DataType, value: unknown): unknown {
+  if (value === null || value === undefined) {
+    return value;
+  }
   if (
-    arrow.DataType.isDecimal(field.type) &&
+    arrow.DataType.isDecimal(type) &&
     (typeof value === 'bigint' || value instanceof Uint32Array)
   ) {
-    return decimalToString(value, field.type.scale);
+    return decimalToString(value, type.scale);
   }
   if (typeof value === 'bigint') {
     return value >= Number.MIN_SAFE_INTEGER && value <= Number.MAX_SAFE_INTEGER
       ? Number(value)
       : value.toString();
+  }
+  if (arrow.DataType.isList(type) || arrow.DataType.isFixedSizeList(type)) {
+    return Array.from(value as Iterable<unknown>, (item) =>
+      getJsonValue(type.valueType, item),
+    );
+  }
+  if (arrow.DataType.isStruct(type)) {
+    const row = value as Record<string, unknown>;
+    return Object.fromEntries(
+      type.children.map((child) => [
+        child.name,
+        getJsonValue(child.type, row[child.name]),
+      ]),
+    );
+  }
+  if (arrow.DataType.isMap(type)) {
+    return Object.fromEntries(
+      Array.from(value as Iterable<[unknown, unknown]>, ([key, mapValue]) => [
+        String(key),
+        getJsonValue(type.valueType, mapValue),
+      ]),
+    );
+  }
+  if (arrow.DataType.isDictionary(type)) {
+    return getJsonValue(type.dictionary, value);
   }
   return value;
 }
@@ -100,7 +128,9 @@ function createRowAccessor<T extends arrow.TypeMap = any>({
         const column = arrowTable.getChild(field.name);
         if (column) {
           const value = column.get(index);
-          row[field.name] = jsonCompatible ? getJsonValue(field, value) : value;
+          row[field.name] = jsonCompatible
+            ? getJsonValue(field.type, value)
+            : value;
         }
       });
 
