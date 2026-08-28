@@ -214,6 +214,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
                 }}
               />
               <AssistantContextSelector />
+              <Chat.Composer.Attachments />
               <div className="flex min-w-0 items-center justify-end">
                 <Chat.ModelSelector />
               </div>

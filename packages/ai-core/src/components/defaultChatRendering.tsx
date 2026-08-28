@@ -48,14 +48,27 @@ import {
   type ChatTurnTextItem,
 } from './buildChatTurnModel';
 import type {ChatTurnContentBinder} from './useChatTurnContentBinder';
+import type {ChatAttachmentPart} from '../chatAttachments';
+import {ChatAttachmentPreview} from './ChatAttachmentPreview';
 
 /** SQLRooms default user-prompt presentation. */
 export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
   prompt,
+  attachments,
   searchBlockId,
 }) => (
-  <div className="group/prompt bg-muted relative ml-auto flex w-fit max-w-[85%] items-start rounded-md border p-2 text-sm">
-    <div className="min-w-0 flex-1">
+  <div className="group/prompt bg-muted relative ml-auto flex w-fit max-w-[85%] flex-col gap-2 rounded-md border p-2 text-sm">
+    {attachments.length > 0 ? (
+      <div className="flex max-w-full flex-wrap justify-end gap-2">
+        {attachments.map((attachment, index) => (
+          <ChatAttachmentPreview
+            key={`${attachment.filename ?? 'attachment'}-${index}`}
+            attachment={attachment}
+          />
+        ))}
+      </div>
+    ) : null}
+    <div className="min-w-0">
       <ExpandableContent maxHeight={60} showLabels={false}>
         <div className="break-words">
           <HighlightedChatSearchText blockId={searchBlockId} text={prompt} />
@@ -232,6 +245,7 @@ type CreateChatTurnPresentationOptions = {
   turnId: string;
   model: ChatTurnModel;
   prompt: string;
+  promptAttachments: readonly ChatAttachmentPart[];
   isCompleted: boolean;
   searchBlockPrefix: string;
   customMarkdownComponents?: Partial<Components>;
@@ -258,6 +272,7 @@ export function createChatTurnPresentation({
   turnId,
   model,
   prompt,
+  promptAttachments,
   isCompleted,
   searchBlockPrefix,
   customMarkdownComponents,
@@ -285,7 +300,11 @@ export function createChatTurnPresentation({
     Actions,
   } = components;
   const PromptContent = bindContent('prompt', () => (
-    <Prompt prompt={prompt} searchBlockId={`${searchBlockPrefix}:prompt`} />
+    <Prompt
+      prompt={prompt}
+      attachments={promptAttachments}
+      searchBlockId={`${searchBlockPrefix}:prompt`}
+    />
   ));
 
   const isActivityRunning =
@@ -564,7 +583,11 @@ export function createChatTurnPresentation({
   return {
     id: turnId,
     isCompleted,
-    prompt: {text: prompt, Content: PromptContent},
+    prompt: {
+      text: prompt,
+      attachments: promptAttachments,
+      Content: PromptContent,
+    },
     activity: {
       isRunning: isActivityRunning,
       toolCount: model.leafToolCount,

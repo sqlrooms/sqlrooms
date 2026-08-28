@@ -35,6 +35,10 @@ import {HoistedRenderersProvider} from './HoistedRenderersContext';
 import {processMessageContent} from './MessageContent';
 import {createChatTurnPresentation} from './defaultChatRendering';
 import {useChatTurnContentBinder} from './useChatTurnContentBinder';
+import {
+  getChatAttachmentText,
+  getChatMessageAttachments,
+} from '../chatAttachments';
 
 export type ChatTurnViewProps = {
   /** @deprecated Prefer `chatTurn`; this accepts the legacy derived result shape. */
@@ -88,6 +92,10 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
   );
   const turnId = chatTurn?.id ?? analysisResult?.id ?? '';
   const prompt = chatTurn?.prompt ?? analysisResult?.prompt ?? '';
+  const promptAttachments = useMemo(
+    () => getChatMessageAttachments(chatTurn?.userMessage),
+    [chatTurn?.userMessage],
+  );
   const isCompleted =
     chatTurn?.isCompleted ?? analysisResult?.isCompleted ?? true;
   const errorMessage = chatTurn?.errorMessage ?? analysisResult?.errorMessage;
@@ -153,6 +161,16 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       },
     ];
 
+    promptAttachments.forEach((attachment, index) => {
+      const text = getChatAttachmentText(attachment);
+      if (!text) return;
+      blocks.push({
+        id: `${searchBlockPrefix}:attachment:${index}`,
+        resultId: turnId,
+        text,
+      });
+    });
+
     uiMessageParts.forEach((part, index) => {
       if (isTextPart(part)) {
         const isSuppressed = !model.textItems.some(
@@ -192,6 +210,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
     searchBlockPrefix,
     uiMessageParts,
     model.textItems,
+    promptAttachments,
   ]);
 
   useRegisterChatSearchBlocks(searchBlockPrefix, searchBlocks);
@@ -251,6 +270,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
         turnId,
         model,
         prompt,
+        promptAttachments,
         isCompleted,
         searchBlockPrefix,
         customMarkdownComponents,
@@ -274,6 +294,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       turnId,
       model,
       prompt,
+      promptAttachments,
       isCompleted,
       searchBlockPrefix,
       customMarkdownComponents,

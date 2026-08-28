@@ -197,6 +197,21 @@ export {ModelSelector} from '@sqlrooms/ai-core';
 export {SessionControls} from '@sqlrooms/ai-core';
 export {QueryControls} from '@sqlrooms/ai-core';
 export {
+  fileToChatAttachmentPart,
+  getChatAttachmentMediaType,
+  getChatAttachmentText,
+  getChatMessageAttachments,
+  isMarkdownAttachment,
+  isSupportedChatAttachment,
+  isTextAttachmentFilename,
+  isTextAttachmentMediaType,
+} from '@sqlrooms/ai-core';
+export type {
+  ChatAttachmentPart,
+  ChatAttachmentsState,
+  ChatComposerAttachmentsProps,
+} from '@sqlrooms/ai-core';
+export {
   BlockAiPromptPopover,
   type BlockAiPromptPopoverProps,
   createAskAiBlockHeaderAction,

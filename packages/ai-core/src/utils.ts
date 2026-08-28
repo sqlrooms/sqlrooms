@@ -13,12 +13,14 @@ import {
   UIMessagePart,
 } from '@sqlrooms/ai-config';
 import {
+  type FileUIPart,
   TextUIPart,
   UIMessage,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import {ABORT_EVENT, TOOL_CALL_CANCELLED} from './constants';
 import {CHAT_REQUEST_ERROR_PART_TYPE} from './chatTurns';
+import {textAttachmentToModelText} from './chatAttachments';
 
 /**
  * Merge multiple AbortSignals into a single signal.
@@ -420,6 +422,12 @@ export function sanitizeMessagesForLLM(
           return true;
         })
         .map((part) => {
+          if (part.type === 'file') {
+            const text = textAttachmentToModelText(part as FileUIPart);
+            if (text !== undefined) {
+              return {type: 'text' as const, text};
+            }
+          }
           const p = part as Record<string, unknown>;
           if (
             p.state === 'output-available' &&

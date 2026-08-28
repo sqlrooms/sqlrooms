@@ -23,6 +23,7 @@ import {
   UIMessage,
   DefaultChatTransport,
   LanguageModel,
+  FileUIPart,
   generateText,
   lastAssistantMessageIsCompleteWithApprovalResponses,
   lastAssistantMessageIsCompleteWithToolCalls,
@@ -185,9 +186,15 @@ export type AiSliceState = {
         sessionId?: string;
       },
     ) => Promise<string>;
-    startAnalysis: (sessionId: string) => Promise<void>;
+    startAnalysis: (
+      sessionId: string,
+      attachments?: FileUIPart[],
+    ) => Promise<void>;
     /** Compatibility entry point; session controllers are ready synchronously. */
-    startAnalysisWhenReady: (sessionId: string) => Promise<boolean>;
+    startAnalysisWhenReady: (
+      sessionId: string,
+      attachments?: FileUIPart[],
+    ) => Promise<boolean>;
     startNewSession: (name: string, prompt: string) => Promise<void>;
     cancelAnalysis: (sessionId: string) => void;
     setAiModel: (modelProvider: string, model: string) => void;
@@ -1842,7 +1849,10 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         /**
          * Start the analysis for a specific session
          */
-        startAnalysis: async (sessionId: string) => {
+        startAnalysis: async (
+          sessionId: string,
+          attachments: FileUIPart[] = [],
+        ) => {
           const state = get();
           const session = state.ai.config.sessions.find(
             (s: ChatSessionSchema) => s.id === sessionId,
@@ -1913,15 +1923,21 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
             }),
           );
-          void chat.sendMessage({text: promptText});
+          void chat.sendMessage({
+            text: promptText,
+            ...(attachments.length > 0 ? {files: attachments} : {}),
+          });
         },
 
-        startAnalysisWhenReady: async (sessionId: string) => {
+        startAnalysisWhenReady: async (
+          sessionId: string,
+          attachments: FileUIPart[] = [],
+        ) => {
           if (!get().ai.getSessionChat(sessionId)) {
             console.error('Session not found:', sessionId);
             return false;
           }
-          await get().ai.startAnalysis(sessionId);
+          await get().ai.startAnalysis(sessionId, attachments);
           return true;
         },
 
