@@ -9,7 +9,9 @@ import {sanitizeMessagesForLLM} from '../utils';
 
 /**
  * Build a local `useChat` transport that drives a pre-constructed
- * `ToolLoopAgent` directly instead of calling an HTTP endpoint.
+ * `ToolLoopAgent` directly instead of calling an HTTP endpoint. Before local
+ * dispatch, text and Markdown file parts are converted to model text while
+ * image file parts are retained.
  */
 export function useLocalAgentChatTransport(
   agent: ToolLoopAgent<any, any, any>,
@@ -30,6 +32,10 @@ export function useLocalAgentChatTransport(
   );
 }
 
+/**
+ * Parses and sanitizes a local-agent request body for model dispatch.
+ * Text and Markdown file parts become labeled text; image parts remain files.
+ */
 export function parseLocalAgentUiMessages(
   body: BodyInit | null | undefined,
 ): UIMessage[] {
