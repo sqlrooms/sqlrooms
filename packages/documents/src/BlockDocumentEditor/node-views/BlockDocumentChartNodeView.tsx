@@ -116,6 +116,7 @@ export const BlockDocumentChartNodeView: FC<
       )}
       contentEditable={false}
       data-block-document-widget-node-view=""
+      data-block-document-block-id={blockId}
       onClick={handleClick}
     >
       {Renderer ? (

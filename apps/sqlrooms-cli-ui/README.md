@@ -261,3 +261,19 @@ an explicit `artifactId`; if omitted, dashboard chart tools only use an
 unambiguous primary dashboard. Reference artifacts are not implicit mutation
 targets. `set_primary_context_artifact` updates the current run and session
 context when the assistant creates or switches to a new primary artifact.
+
+## AI Rendering Tools
+
+Start the CLI with `--ai-rendering-tools` (or
+`SQLROOMS_AI_RENDERING_TOOLS=1`) to opt a vision-capable model into three
+read-only tools:
+
+- `render_artifact_image`
+- `render_document_block_image`
+- `render_dashboard_panel_image`
+
+Each tool captures the target that is currently mounted in the workspace and
+returns a bounded PNG directly to the model. The image pixels use a small
+ephemeral cache; persisted chat history keeps only the target and capture
+metadata. These tools are disabled by default because models and
+OpenAI-compatible providers vary in their support for image tool results.

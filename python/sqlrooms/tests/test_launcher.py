@@ -45,6 +45,7 @@ def test_api_config(server):
     assert "dbBridge" in data
     assert "aiProviders" in data
     assert data["aiDevtools"] is False
+    assert data["aiRenderingTools"] is False
     assert data["capabilityProfile"] == "default"
     assert data["experimentalEnabled"] is False
     assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"
@@ -849,6 +850,24 @@ def test_api_config_with_ai_devtools_flag(tmp_path):
 
     assert response.status_code == 200
     assert response.json()["aiDevtools"] is True
+
+
+def test_api_config_with_ai_rendering_tools_flag(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        ai_rendering_tools=True,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    assert response.json()["aiRenderingTools"] is True
 
 
 def test_api_upload(server, tmp_path):

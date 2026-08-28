@@ -15,6 +15,9 @@ export const runtimeConfig = import.meta.env.DEV
 export const aiDevtoolsEnabled =
   import.meta.env.DEV || Boolean(runtimeConfig.aiDevtools);
 
+/** Whether vision-only rendered-surface AI tools are enabled for this runtime. */
+export const aiRenderingToolsEnabled = Boolean(runtimeConfig.aiRenderingTools);
+
 /** Production capability profile selected for this runtime. */
 export const cliCapabilityProfile = resolveCliCapabilityProfile({
   profileName: runtimeConfig.capabilityProfile,

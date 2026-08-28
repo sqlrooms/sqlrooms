@@ -26,6 +26,7 @@ What happens:
 - `--experimental`: Compatibility alias for `--profile experimental`.
 - `--experimental-sync`: Enable experimental sync (CRDT) over WebSocket (Loro). Requires the `experimental` profile.
 - `--ai-devtools`: Enable the AI session devtools button in the UI, including production-built UI bundles. Can also be set with `SQLROOMS_AI_DEVTOOLS=1`.
+- `--ai-rendering-tools`: Enable read-only artifact, document-block, and dashboard-panel image tools for vision-capable models. Can also be set with `SQLROOMS_AI_RENDERING_TOOLS=1`.
 - `--debug`: Enable verbose debug logging, including HTTP access logs and DuckDB query timing.
 - `--meta-db`: Optional path to a dedicated DuckDB file for SQLRooms meta tables (UI state + CRDT snapshots). If omitted, meta tables are stored in the main DB.
 - `--meta-namespace` (default `__sqlrooms`): Namespace for SQLRooms meta tables. If `--meta-db` is provided, used as ATTACH alias; otherwise used as a schema in the main DB.

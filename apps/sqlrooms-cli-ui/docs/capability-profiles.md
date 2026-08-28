@@ -57,6 +57,9 @@ workspace under this narrower profile does not delete disabled content.
   actionable error instead of merging capability flags.
 - `experimentalEnabled` remains in runtime config for older bundled UIs;
   `capabilityProfile` is the source of truth for current UIs.
+- `--ai-rendering-tools` is an independent model/transport compatibility gate,
+  not a product capability profile. It adds read-only visual inspection tools
+  only when the configured model and provider accept image tool results.
 
 ## Model construction baseline
 

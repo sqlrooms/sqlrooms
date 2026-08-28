@@ -97,6 +97,7 @@ import {formatRunContextInstructions} from './context/formatRunContextInstructio
 import {getRunContext} from './context/getRunContext';
 import {createCliAiInstructions} from './createCliAiInstructions';
 import {createCliAiTools} from './createCliAiTools';
+import {createRenderedSurfaceAiTools} from './ai/createRenderedSurfaceAiTools';
 import {dashboardAgentTool} from './createDashboardAgent';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {getDefaultScaffoldTree} from './helpers';
@@ -109,6 +110,7 @@ import {
 import type {RuntimeConfig} from './runtimeConfig';
 import {
   aiDevtoolsEnabled,
+  aiRenderingToolsEnabled,
   cliCapabilityProfile,
   runtimeConfig,
 } from './runtimeEnvironment';
@@ -1012,6 +1014,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             createHtmlAppAgentTool: htmlAppAgentTool,
             createStandaloneChartTool: createVegaChartTool,
             createChartImageTool: createChartImageForMarkdownTool,
+            renderedSurfaceImageToolsEnabled: aiRenderingToolsEnabled,
+            createRenderedSurfaceImageTools: createRenderedSurfaceAiTools,
           });
           return createAiSlice({
             config: AiSliceConfig.parse({sessions: []}),

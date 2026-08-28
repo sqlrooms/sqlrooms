@@ -567,6 +567,12 @@ def main(
         envvar="SQLROOMS_AI_DEVTOOLS",
         help="Enable the AI session devtools button in the UI, including production-built UI bundles.",
     ),
+    ai_rendering_tools: bool = typer.Option(
+        False,
+        "--ai-rendering-tools",
+        envvar="SQLROOMS_AI_RENDERING_TOOLS",
+        help="Enable visual rendering tools for vision-capable AI models.",
+    ),
     mcp: bool = typer.Option(
         False,
         "--mcp",
@@ -707,6 +713,7 @@ def main(
         external_url=external_url,
         external_ws_url=external_ws_url,
         ai_devtools=ai_devtools,
+        ai_rendering_tools=ai_rendering_tools,
         mcp_enabled=mcp,
         mcp_port=mcp_port,
         debug=debug,

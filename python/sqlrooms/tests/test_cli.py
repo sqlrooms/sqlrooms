@@ -27,6 +27,7 @@ def test_cli_help():
     assert "my-project.duckdb" in stdout
     assert "--version" in stdout
     assert "--ai-devtools" in stdout
+    assert "--ai-rendering-tools" in stdout
     assert "--debug" in stdout
     assert "--experimental" in stdout
     assert "--profile" in stdout

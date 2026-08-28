@@ -506,6 +506,7 @@ class SqlroomsHttpServer:
         external_url: str | None = None,
         external_ws_url: str | None = None,
         ai_devtools: bool = False,
+        ai_rendering_tools: bool = False,
         mcp_enabled: bool = False,
         mcp_port: int | None = None,
         debug: bool = False,
@@ -563,6 +564,7 @@ class SqlroomsHttpServer:
             raise ValueError("sync_enabled requires capability_profile 'experimental'.")
         self.experimental_enabled = self.capability_profile == "experimental"
         self.ai_devtools = bool(ai_devtools)
+        self.ai_rendering_tools = bool(ai_rendering_tools)
         self.mcp_enabled_default = bool(mcp_enabled)
         self.debug = bool(debug)
         self.sync_enabled = bool(sync_enabled)
@@ -919,6 +921,7 @@ class SqlroomsHttpServer:
             "capabilityProfile": self.capability_profile,
             "experimentalEnabled": self.experimental_enabled,
             "aiDevtools": self.ai_devtools,
+            "aiRenderingTools": self.ai_rendering_tools,
             "syncEnabled": self.sync_enabled,
             "crdtWsUrl": ws_url,
             "crdtRoomId": (

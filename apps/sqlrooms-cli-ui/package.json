@@ -42,6 +42,7 @@
     "@sqlrooms/webcontainer": "workspace:*",
     "@webcontainer/api": "^1.6.1",
     "ai": "^6.0.159",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
