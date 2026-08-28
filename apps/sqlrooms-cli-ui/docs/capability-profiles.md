@@ -59,7 +59,8 @@ workspace under this narrower profile does not delete disabled content.
   `capabilityProfile` is the source of truth for current UIs.
 - `--ai-rendering-tools` is an independent model/transport compatibility gate,
   not a product capability profile. It adds read-only visual inspection tools
-  only when the configured model and provider accept image tool results.
+  without detecting model or provider capabilities. Enable it only when the
+  configured model and provider accept image tool results.
 
 ## Model construction baseline
 
