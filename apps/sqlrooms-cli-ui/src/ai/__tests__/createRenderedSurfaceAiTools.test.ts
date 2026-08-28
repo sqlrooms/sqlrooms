@@ -12,26 +12,42 @@ function createElement(
   descendants: FakeElement[] = [],
   tagName = 'div',
 ): FakeElement {
+  const normalizedTagName = tagName.toUpperCase();
   return {
     attributes,
     descendants,
-    tagName: tagName.toUpperCase(),
+    tagName: normalizedTagName,
     getAttribute: (name: string) => attributes[name] ?? null,
     querySelectorAll: () => descendants,
     matches: (selector: string) =>
-      selector === 'iframe' && tagName.toLowerCase() === 'iframe',
+      matchesSelector({attributes, tagName: normalizedTagName}, selector),
     querySelector: (selector: string) =>
-      selector === 'iframe' ? findDescendantIframe(descendants) : null,
+      findDescendant(descendants, selector) ?? null,
   } as unknown as FakeElement;
 }
 
-function findDescendantIframe(
+function matchesSelector(
+  element: Pick<FakeElement, 'attributes' | 'tagName'>,
+  selector: string,
+) {
+  if (selector === 'iframe') return element.tagName === 'IFRAME';
+  if (selector === 'canvas.maplibregl-canvas') {
+    return Boolean(
+      element.tagName === 'CANVAS' &&
+      element.attributes.class?.split(/\s+/).includes('maplibregl-canvas'),
+    );
+  }
+  return false;
+}
+
+function findDescendant(
   descendants: FakeElement[],
+  selector: string,
 ): FakeElement | undefined {
   for (const descendant of descendants) {
-    if (descendant.tagName === 'IFRAME') return descendant;
-    const nestedIframe = findDescendantIframe(descendant.descendants);
-    if (nestedIframe) return nestedIframe;
+    if (matchesSelector(descendant, selector)) return descendant;
+    const nestedMatch = findDescendant(descendant.descendants, selector);
+    if (nestedMatch) return nestedMatch;
   }
   return undefined;
 }
@@ -55,7 +71,9 @@ async function executeTool(
 
 describe('createRenderedSurfaceAiTools', () => {
   it('returns an artifact PNG to the model without persisting its pixels', async () => {
-    const artifact = createElement({'data-artifact-id': 'artifact-1'});
+    const artifact = createElement({'data-artifact-id': 'artifact-1'}, [
+      createElement({}, [], 'canvas'),
+    ]);
     const captureElement = jest.fn(async () => ({
       base64: 'png-base64',
       width: 900,
@@ -215,6 +233,50 @@ describe('createRenderedSurfaceAiTools', () => {
       target: {kind: 'artifact', artifactId: 'html-app-1'},
       error:
         'artifact "html-app-1" contains iframe-backed content, which cannot be included in the generated image. Use the target\'s source and runtime diagnostics instead, or inspect it directly in the workspace.',
+    });
+  });
+
+  it('rejects MapLibre WebGL targets instead of returning a blank image', async () => {
+    const mapCanvas = createElement(
+      {class: 'maplibregl-canvas another-class'},
+      [],
+      'canvas',
+    );
+    const panel = createElement(
+      {
+        'data-dashboard-id': 'dashboard-1',
+        'data-dashboard-panel-id': 'map-panel-1',
+      },
+      [mapCanvas],
+    );
+    const captureElement = jest.fn(async () => ({
+      base64: 'blank-webgl-canvas',
+      width: 640,
+      height: 480,
+    }));
+    const tools = createRenderedSurfaceAiTools({
+      document: createDocument([panel]),
+      captureElement,
+      prepareCapture: async () => {},
+    });
+
+    const output = await executeTool(tools.render_dashboard_panel_image, {
+      dashboardId: 'dashboard-1',
+      panelId: 'map-panel-1',
+    });
+
+    expect(captureElement).not.toHaveBeenCalled();
+    expect(output).toEqual({
+      success: false,
+      details:
+        'Failed to capture panel "map-panel-1" in dashboard "dashboard-1": panel "map-panel-1" in dashboard "dashboard-1" contains MapLibre WebGL content, which cannot be captured reliably because its drawing buffer is not preserved. Inspect it directly in the workspace.',
+      target: {
+        kind: 'dashboard-panel',
+        dashboardId: 'dashboard-1',
+        panelId: 'map-panel-1',
+      },
+      error:
+        'panel "map-panel-1" in dashboard "dashboard-1" contains MapLibre WebGL content, which cannot be captured reliably because its drawing buffer is not preserved. Inspect it directly in the workspace.',
     });
   });
 });

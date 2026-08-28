@@ -277,3 +277,5 @@ returns a bounded PNG directly to the model. The image pixels use a small
 ephemeral cache; persisted chat history keeps only the target and capture
 metadata. These tools are disabled by default because models and
 OpenAI-compatible providers vary in their support for image tool results.
+Iframe-backed content and MapLibre WebGL surfaces are rejected because their
+rendered pixels cannot be captured reliably through DOM-to-image.
