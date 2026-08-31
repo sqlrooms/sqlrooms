@@ -20,9 +20,12 @@ const RAW_MESSAGE =
 
 let streamError: unknown = new Error(RAW_MESSAGE);
 
+let rejectOnCreate: unknown;
+
 const createAgentUIStream = jest.fn(
   async (options: {onError?: (error: unknown) => string}) => {
     capturedOnError = options.onError;
+    if (rejectOnCreate) throw rejectOnCreate;
     return createErrorStream(streamError);
   },
 );
@@ -58,6 +61,7 @@ describe('streamSubAgent error surfacing', () => {
   afterEach(() => {
     consoleErrorSpy.mockRestore();
     streamError = new Error(RAW_MESSAGE);
+    rejectOnCreate = undefined;
   });
 
   it('keeps the raw child exception out of the message handed to the parent model', async () => {
@@ -106,6 +110,40 @@ describe('streamSubAgent error surfacing', () => {
         'do something',
         createStubStore(),
         'parent-tool-call-optin',
+        undefined,
+        {formatError: getSubAgentErrorMessage},
+      ),
+    ).rejects.toThrow(RAW_MESSAGE);
+  });
+
+  it('redacts a failure raised before stream iteration begins', async () => {
+    // createAgentUIStream can reject before onError is ever wired up.
+    rejectOnCreate = new Error(RAW_MESSAGE);
+
+    const thrown = await streamSubAgent(
+      {} as any,
+      'do something',
+      createStubStore(),
+      'parent-tool-call-create-failure',
+    ).catch((err: unknown) => (err as Error).message);
+
+    expect(thrown).toBe(SUB_AGENT_ERROR_MESSAGE);
+    expect(thrown).not.toContain('sk-live-abc123');
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Sub-agent stream error:',
+      expect.any(Error),
+    );
+  });
+
+  it('honours formatError for a failure raised before stream iteration', async () => {
+    rejectOnCreate = new Error(RAW_MESSAGE);
+
+    await expect(
+      streamSubAgent(
+        {} as any,
+        'do something',
+        createStubStore(),
+        'parent-tool-call-create-optin',
         undefined,
         {formatError: getSubAgentErrorMessage},
       ),

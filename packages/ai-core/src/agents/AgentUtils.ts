@@ -368,6 +368,41 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
     );
   };
 
+  /**
+   * The parent model sees this text; the console keeps the original. Callers
+   * serialize it into a tool result, and the child may run on a different
+   * provider than the parent.
+   */
+  const toModelFacingMessage = (error: unknown) => {
+    console.error('Sub-agent stream error:', error);
+    return options?.formatError
+      ? options.formatError(error)
+      : SUB_AGENT_ERROR_MESSAGE;
+  };
+
+  /** Ends the run, converting an abort into a snapshot and anything else into
+   * a redacted throw. */
+  const failStream: (err: unknown) => never = (err) => {
+    const abortMessage = getAbortMessage();
+    markPendingToolCallsAsCancelled(toolCallMap, abortMessage);
+    pushProgress();
+
+    if (abortSignal?.aborted) {
+      const snapshot = buildAbortSnapshot(
+        parentToolCallId,
+        toolCallMap,
+        finalText,
+        store,
+      );
+      store.getState().ai.writeAbortSnapshot?.(parentToolCallId, snapshot);
+      throw new ToolAbortError(abortMessage, snapshot);
+    }
+    if (err instanceof ToolAbortError || err instanceof ChatTimeoutError) {
+      throw err;
+    }
+    throw new Error(toModelFacingMessage(err));
+  };
+
   // Build the initial uiMessages for the agent stream
   let uiMessages: Array<{
     id: string;
@@ -390,19 +425,20 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
       toolCallId: string;
     } | null = null;
 
-    const stream = await createAgentUIStream({
-      agent,
-      uiMessages,
-      abortSignal,
-      // Local diagnostics keep the raw error; the returned text reaches the
-      // parent model, so it stays redacted unless the caller opts out.
-      onError: (error) => {
-        console.error('Sub-agent stream error:', error);
-        return options?.formatError
-          ? options.formatError(error)
-          : SUB_AGENT_ERROR_MESSAGE;
-      },
-    });
+    let stream;
+    try {
+      stream = await createAgentUIStream({
+        agent,
+        uiMessages,
+        abortSignal,
+        onError: toModelFacingMessage,
+      });
+    } catch (err) {
+      // Creating the stream can reject before `onError` is ever wired up, and
+      // that rejection reaches the parent model the same way a stream error
+      // does.
+      failStream(err);
+    }
 
     // Accumulated assistant tool parts for the current stream iteration,
     // keyed by toolCallId. If the stream ends with a pending approval we
@@ -531,21 +567,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
         }
       }
     } catch (err) {
-      const abortMessage = getAbortMessage();
-      markPendingToolCallsAsCancelled(toolCallMap, abortMessage);
-      pushProgress();
-
-      if (abortSignal?.aborted) {
-        const snapshot = buildAbortSnapshot(
-          parentToolCallId,
-          toolCallMap,
-          finalText,
-          store,
-        );
-        store.getState().ai.writeAbortSnapshot?.(parentToolCallId, snapshot);
-        throw new ToolAbortError(abortMessage, snapshot);
-      }
-      throw err;
+      failStream(err);
     }
 
     // If no approval was requested, we're done
