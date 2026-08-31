@@ -43,6 +43,18 @@ interface AgentStreamStore {
   };
 }
 
+/** Local stand-in for `getErrorMessage`, which ai-core does not depend on. */
+function getSubAgentErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (error === undefined || error === null) return 'unknown error';
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
 function getAgentAvailableTools(
   agent: unknown,
 ): AgentSnapshot['availableTools'] {
@@ -359,6 +371,13 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
       agent,
       uiMessages,
       abortSignal,
+      // The SDK default redacts to "An error occurred."; this stream is
+      // in-browser, so there is nothing to redact.
+      onError: (error) => {
+        const message = getSubAgentErrorMessage(error);
+        console.error('Sub-agent stream error:', error);
+        return message;
+      },
     });
 
     // Accumulated assistant tool parts for the current stream iteration,

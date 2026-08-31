@@ -438,7 +438,11 @@ function createCustomModelProbe(
     if (!cache.has(key)) {
       try {
         cache.set(key, getCustomModel());
-      } catch {
+      } catch (error) {
+        console.error(
+          'getCustomModel threw; treating it as unavailable:',
+          error,
+        );
         cache.set(key, undefined);
       }
     }
@@ -1716,6 +1720,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return instructions;
         },
 
+        /**
+         * Run a one-shot `generateText` call outside the chat transport.
+         *
+         * A model from `getCustomModel` wins over the settings-built one, and
+         * over any explicit `modelProvider`/`modelName`/`baseUrl` passed here.
+         */
         sendPrompt: async (
           prompt: string,
           options: {
@@ -1772,12 +1782,17 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             Object.entries(tools).filter(([, tool]) => !tool.execute),
           );
 
-          const model = createOpenAICompatible({
-            apiKey: state.ai.getApiKeyFromSettings(provider, modelId),
-            name: provider,
-            baseURL,
-            includeUsage: true,
-          }).chatModel(modelId);
+          const model =
+            customModelProbe(
+              {modelProvider: provider, model: modelId},
+              hasAiSettingsConfig(state) ? state.aiSettings.config : undefined,
+            ) ??
+            createOpenAICompatible({
+              apiKey: state.ai.getApiKeyFromSettings(provider, modelId),
+              name: provider,
+              baseURL,
+              includeUsage: true,
+            }).chatModel(modelId);
 
           const diagnosticsByStep: string[] = [];
           let completedStep = 0;
