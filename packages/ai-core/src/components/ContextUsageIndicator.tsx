@@ -127,6 +127,23 @@ type ContextUsageIndicatorProps = {
   modelName?: string;
 };
 
+/** Summary prompt and visual evidence used to seed a continuation session. */
+export function createConversationContinuationSeed(
+  summary: string,
+  messages: UIMessage[],
+): {prompt: string; attachments: FileUIPart[]} {
+  const attachments = messages.flatMap((message) =>
+    message.parts.filter(
+      (part): part is FileUIPart =>
+        part.type === 'file' && part.mediaType.startsWith('image/'),
+    ),
+  );
+  return {
+    prompt: `Please use the following context from a previous session and only respond "Got it" to this message:\n\n${summary}`,
+    attachments,
+  };
+}
+
 export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
   contextWindow = DEFAULT_CONTEXT_WINDOW,
   modelProvider,
@@ -180,10 +197,15 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
       const newSessionId = state.ai.config.currentSessionId;
       if (!newSessionId) return;
 
-      const contextMessage = `Please use the following context from a previous session and only respond "Got it" to this message:\n\n${summary}`;
-      state.ai.setPrompt(newSessionId, contextMessage);
+      const continuation = createConversationContinuationSeed(
+        summary,
+        uiMessages,
+      );
+      state.ai.setPrompt(newSessionId, continuation.prompt);
 
-      await storeApi.getState().ai.startAnalysisWhenReady(newSessionId);
+      await storeApi
+        .getState()
+        .ai.startAnalysisWhenReady(newSessionId, continuation.attachments);
     } catch (error) {
       console.error('Failed to summarize conversation:', error);
     } finally {

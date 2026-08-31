@@ -35,7 +35,11 @@ async function waitForText(
   text: string,
 ): Promise<void> {
   await waitForCondition(
-    () => Boolean(container.textContent?.includes(text)),
+    () =>
+      Boolean(container.textContent?.includes(text)) ||
+      Array.from(container.querySelectorAll('button')).some(
+        (button) => button.getAttribute('aria-label') === `Open ${text}`,
+      ),
     text,
   );
 }
@@ -401,7 +405,7 @@ describe('Chat composer attachments', () => {
       Object.defineProperty(input, 'files', {
         configurable: true,
         value: [
-          new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'large.png', {
+          new File([new Uint8Array(1024 * 1024 + 1)], 'large.png', {
             type: 'image/png',
           }),
         ],
@@ -414,6 +418,47 @@ describe('Chat composer attachments', () => {
       fireKeyDown(textarea(container)!);
     });
     expect(runtime.sendPrompt).toHaveBeenCalledWith();
+
+    await cleanup(container, root);
+  });
+
+  it('enforces the default combined image attachment size limit', async () => {
+    setMockRuntime();
+    const {container, root} = await renderTree(
+      <LocalAgentChatComposerProvider>
+        <QueryControls>
+          <Attachments />
+        </QueryControls>
+      </LocalAgentChatComposerProvider>,
+    );
+    const input = attachmentInput(container, 'image');
+
+    await selectAttachment(
+      input,
+      new File([new Uint8Array(600 * 1024)], 'first.png', {type: 'image/png'}),
+      container,
+    );
+    await act(async () => {
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: [
+          new File([new Uint8Array(600 * 1024)], 'second.png', {
+            type: 'image/png',
+          }),
+        ],
+      });
+      input.dispatchEvent(new Event('change', {bubbles: true}));
+    });
+
+    expect(
+      container.querySelector('button[aria-label="Open first.png"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('button[aria-label="Open second.png"]'),
+    ).toBeNull();
+    expect(container.textContent).toContain(
+      'second.png exceeds the combined image attachment limit.',
+    );
 
     await cleanup(container, root);
   });

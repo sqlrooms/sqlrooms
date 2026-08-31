@@ -33,9 +33,26 @@ const DEFAULT_IMAGE_ACCEPT = 'image/*';
 const DEFAULT_TEXT_ACCEPT =
   '.txt,.md,.markdown,.mdown,.mkd,text/plain,text/markdown';
 const DEFAULT_MAX_FILES = 4;
-const DEFAULT_MAX_FILE_SIZE = 2 * 1024 * 1024;
+const DEFAULT_MAX_FILE_SIZE = 1024 * 1024;
+const DEFAULT_MAX_TOTAL_IMAGE_FILE_SIZE = 1024 * 1024;
 const DEFAULT_MAX_TEXT_FILE_SIZE = 128 * 1024;
 const DEFAULT_MAX_TOTAL_TEXT_FILE_SIZE = 128 * 1024;
+
+function estimateAttachmentPayloadSize(url: string): number {
+  const commaIndex = url.indexOf(',');
+  if (commaIndex < 0) return new TextEncoder().encode(url).byteLength;
+  const header = url.slice(0, commaIndex);
+  const payload = url.slice(commaIndex + 1);
+  if (!header.includes(';base64')) {
+    try {
+      return new TextEncoder().encode(decodeURIComponent(payload)).byteLength;
+    } catch {
+      return new TextEncoder().encode(url).byteLength;
+    }
+  }
+  const padding = payload.endsWith('==') ? 2 : payload.endsWith('=') ? 1 : 0;
+  return Math.max(0, Math.floor((payload.length * 3) / 4) - padding);
+}
 
 /** Transient files and actions shared by attachment UI under one chat root. */
 export type ChatAttachmentsState = {
@@ -125,8 +142,9 @@ export function useChatAttachments(): ChatAttachmentsState {
 /**
  * Configuration for the opt-in composer attachment picker.
  *
- * By default it accepts up to four files, limits images to 2 MiB each, and
- * limits plain-text or Markdown files to 128 KiB each and in aggregate.
+ * By default it accepts up to four files, limits images to 1 MiB each and in
+ * aggregate, and limits plain-text or Markdown files to 128 KiB each and in
+ * aggregate.
  * Unsupported, oversized, or excess files are rejected and reported through
  * {@link onError}.
  */
@@ -140,6 +158,8 @@ export type ChatComposerAttachmentsProps = {
   maxFiles?: number;
   /** Maximum image size in bytes. */
   maxFileSize?: number;
+  /** Maximum combined size of pending image files in bytes. */
+  maxTotalImageFileSize?: number;
   /** Maximum text or Markdown size in bytes. */
   maxTextFileSize?: number;
   /** Maximum combined size of pending text and Markdown files in bytes. */
@@ -158,6 +178,7 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
   textAccept = DEFAULT_TEXT_ACCEPT,
   maxFiles = DEFAULT_MAX_FILES,
   maxFileSize = DEFAULT_MAX_FILE_SIZE,
+  maxTotalImageFileSize = DEFAULT_MAX_TOTAL_IMAGE_FILE_SIZE,
   maxTextFileSize = DEFAULT_MAX_TEXT_FILE_SIZE,
   maxTotalTextFileSize = DEFAULT_MAX_TOTAL_TEXT_FILE_SIZE,
   onError,
@@ -189,6 +210,13 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
       }
 
       const accepted: File[] = [];
+      let totalImageFileSize = attachments.reduce(
+        (total, attachment) =>
+          attachment.mediaType.startsWith('image/')
+            ? total + estimateAttachmentPayloadSize(attachment.url)
+            : total,
+        0,
+      );
       let totalTextFileSize = attachments.reduce((total, attachment) => {
         const text = getChatAttachmentText(attachment);
         return text === undefined
@@ -206,13 +234,23 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
           reportError(`${file.name} is too large.`);
           continue;
         }
+        if (!isText && totalImageFileSize + file.size > maxTotalImageFileSize) {
+          reportError(
+            `${file.name} exceeds the combined image attachment limit.`,
+          );
+          continue;
+        }
         if (isText && totalTextFileSize + file.size > maxTotalTextFileSize) {
           reportError(
             `${file.name} exceeds the combined text attachment limit.`,
           );
           continue;
         }
-        if (isText) totalTextFileSize += file.size;
+        if (isText) {
+          totalTextFileSize += file.size;
+        } else {
+          totalImageFileSize += file.size;
+        }
         accepted.push(file);
       }
       if (files.length > remaining) {
@@ -240,6 +278,7 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
       appendAsync,
       maxFiles,
       maxFileSize,
+      maxTotalImageFileSize,
       maxTextFileSize,
       maxTotalTextFileSize,
       reportError,
