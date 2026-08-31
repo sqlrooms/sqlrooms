@@ -196,7 +196,15 @@ Composer primitives (imported from `@sqlrooms/ai-core`, or via
 The styled **`Chat.Composer.Attachments`** recipe is intentionally separate
 from those unstyled primitives: mounting it enables the file input and footer
 previews for that chat root. For a custom attachment UI, use
-`useChatAttachments()` under the same composer state boundary.
+`useChatAttachments()` under the same composer state boundary. Pass
+asynchronous file preparation to `appendAsync` so a file that finishes reading
+after the user switches sessions is discarded:
+
+```tsx
+const {appendAsync} = useChatAttachments();
+
+await appendAsync(async () => [await fileToChatAttachmentPart(file)]);
+```
 
 ### Pre-send policy: `useRegisterBeforeSend`
 

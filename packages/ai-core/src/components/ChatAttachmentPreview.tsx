@@ -7,7 +7,7 @@ import {
   cn,
 } from '@sqlrooms/ui';
 import {FileTextIcon} from 'lucide-react';
-import {useEffect, useMemo, useState, type FC} from 'react';
+import {useEffect, useMemo, useRef, useState, type FC} from 'react';
 import type {ChatAttachmentPart} from '../chatAttachments';
 import {getChatAttachmentText, isMarkdownAttachment} from '../chatAttachments';
 import {MessageContent} from './MessageContent';
@@ -30,6 +30,7 @@ export const ChatAttachmentPreview: FC<ChatAttachmentPreviewProps> = ({
   searchBlockId,
 }) => {
   const [open, setOpen] = useState(false);
+  const openedBySearchRef = useRef(false);
   const search = useOptionalChatSearch();
   const isImage = attachment.mediaType.startsWith('image/');
   const text = useMemo(() => getChatAttachmentText(attachment), [attachment]);
@@ -45,9 +46,16 @@ export const ChatAttachmentPreview: FC<ChatAttachmentPreviewProps> = ({
   );
 
   useEffect(() => {
-    if (!hasActiveAttachmentMatch || !activeMatchId) return;
+    if (!hasActiveAttachmentMatch || !activeMatchId) {
+      if (openedBySearchRef.current) {
+        openedBySearchRef.current = false;
+        setOpen(false);
+      }
+      return;
+    }
     let scrollTimeoutId: ReturnType<typeof setTimeout> | undefined;
     const openTimeoutId = setTimeout(() => {
+      openedBySearchRef.current = true;
       setOpen(true);
       scrollTimeoutId = setTimeout(() => {
         document.getElementById(activeMatchId)?.scrollIntoView?.({
@@ -61,8 +69,13 @@ export const ChatAttachmentPreview: FC<ChatAttachmentPreviewProps> = ({
     };
   }, [activeMatchId, hasActiveAttachmentMatch, searchQuery]);
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) openedBySearchRef.current = false;
+    setOpen(nextOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <button
         type="button"
         className={cn(

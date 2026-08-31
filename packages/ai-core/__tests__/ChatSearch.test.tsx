@@ -133,6 +133,20 @@ function cleanup(container: HTMLElement, root: Root) {
   container.remove();
 }
 
+async function waitForCondition(
+  condition: () => boolean,
+  description: string,
+): Promise<void> {
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    if (condition()) return;
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  }
+  throw new Error(`Timed out waiting for ${description}`);
+}
+
 function setDesignQuery() {
   act(() => {
     if (!latestSearchRef.current) {
@@ -362,6 +376,84 @@ describe('Chat.Search', () => {
     }
     expect(document.body.textContent).toContain('Attached text file preview');
     expect(document.getElementById(firstMatchId!)).not.toBeNull();
+
+    cleanup(container, root);
+  });
+
+  it('closes the previous attachment preview during search navigation', async () => {
+    latestSearchRef.current = undefined;
+    const attachmentBlocks: ChatSearchBlock[] = [
+      {
+        id: 'session-1:result-1:attachment:0',
+        resultId: 'result-1',
+        text: 'needle in first',
+      },
+      {
+        id: 'session-1:result-1:attachment:1',
+        resultId: 'result-1',
+        text: 'needle in second',
+      },
+    ];
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+
+    await act(async () => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <BlockRegistrar blocks={attachmentBlocks} />
+            <SearchController />
+            <ChatAttachmentPreview
+              attachment={{
+                type: 'file',
+                filename: 'first.txt',
+                mediaType: 'text/plain',
+                url: 'data:text/plain;base64,bmVlZGxlIGluIGZpcnN0',
+              }}
+              searchBlockId={attachmentBlocks[0]!.id}
+            />
+            <ChatAttachmentPreview
+              attachment={{
+                type: 'file',
+                filename: 'second.txt',
+                mediaType: 'text/plain',
+                url: 'data:text/plain;base64,bmVlZGxlIGluIHNlY29uZA==',
+              }}
+              searchBlockId={attachmentBlocks[1]!.id}
+            />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    await act(async () => {
+      latestSearchRef.current?.setQuery('needle');
+    });
+    await waitForCondition(
+      () => document.body.querySelectorAll('[role="dialog"]').length === 1,
+      'first attachment preview to open',
+    );
+    expect(
+      document.body.querySelector('[role="dialog"]')?.textContent,
+    ).toContain('first.txt');
+
+    await act(async () => {
+      latestSearchRef.current?.goToNextMatch();
+    });
+    await waitForCondition(() => {
+      const dialogs = document.body.querySelectorAll('[role="dialog"]');
+      return (
+        dialogs.length === 1 &&
+        dialogs[0]?.textContent?.includes('second.txt') === true
+      );
+    }, 'second attachment preview to replace the first');
+
+    expect(document.body.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+    expect(
+      document.body.querySelector('[role="dialog"]')?.textContent,
+    ).not.toContain('first.txt');
 
     cleanup(container, root);
   });

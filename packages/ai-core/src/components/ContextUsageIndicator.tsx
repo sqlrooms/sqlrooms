@@ -8,6 +8,8 @@ import type {AssistantMessageMetadata} from '../types';
 import {buildConversationText} from '../utils';
 
 const DEFAULT_CONTEXT_WINDOW = 200_000;
+// Cross-provider fallback when image dimensions and tokenizer usage are absent.
+const FALLBACK_IMAGE_TOKEN_ESTIMATE = 4_096;
 const USAGE_WARNING_THRESHOLD = 60;
 const USAGE_CRITICAL_THRESHOLD = 80;
 
@@ -106,6 +108,8 @@ export function estimateMessageTokens(msg: UIMessage): number {
       const attachmentText = textAttachmentToModelText(part as FileUIPart);
       if (attachmentText !== undefined) {
         tokens += estimateTokenCount(attachmentText);
+      } else if ((part as FileUIPart).mediaType.startsWith('image/')) {
+        tokens += FALLBACK_IMAGE_TOKEN_ESTIMATE;
       }
     } else if (
       typeof part.type === 'string' &&

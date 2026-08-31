@@ -2,6 +2,8 @@
 import {jest} from '@jest/globals';
 import {RoomStateProvider} from '@sqlrooms/room-store';
 import React, {act} from 'react';
+import type {FileUIPart} from 'ai';
+import type {ChatAttachmentsState} from '../src/components/composer';
 import {
   cleanup,
   createSessionTestStore,
@@ -21,7 +23,8 @@ jest.unstable_mockModule(
 
 const {LocalAgentChatComposerProvider} =
   await import('../src/components/composer');
-const {Attachments} = await import('../src/components/composer/attachments');
+const {Attachments, useChatAttachments} =
+  await import('../src/components/composer/attachments');
 const {QueryControls} = await import('../src/components/QueryControls');
 const {ChatAttachmentPreview} =
   await import('../src/components/ChatAttachmentPreview');
@@ -75,6 +78,27 @@ function attachmentInput(
   return container.querySelector<HTMLInputElement>(
     `input[type=file][aria-label="${label}"]`,
   )!;
+}
+
+let customAttachmentState: ChatAttachmentsState | undefined;
+
+function CustomAttachmentHarness() {
+  const attachmentState = useChatAttachments();
+  React.useEffect(() => {
+    customAttachmentState = attachmentState;
+    return () => {
+      if (customAttachmentState === attachmentState) {
+        customAttachmentState = undefined;
+      }
+    };
+  }, [attachmentState]);
+  return (
+    <span>
+      {attachmentState.attachments
+        .map((attachment) => attachment.filename)
+        .join(',')}
+    </span>
+  );
 }
 
 describe('Chat composer attachments', () => {
@@ -313,6 +337,53 @@ describe('Chat composer attachments', () => {
       });
       await cleanup(container, root);
     }
+  });
+
+  it('protects custom asynchronous appends across session changes', async () => {
+    customAttachmentState = undefined;
+    setMockSessionRuntime();
+    const store = createSessionTestStore();
+    const firstSessionId = store.getState().ai.createSession('First');
+    const secondSessionId = store.getState().ai.createSession('Second');
+    store.getState().ai.switchSession(firstSessionId);
+    const {container, root} = await renderTree(
+      <TooltipProvider>
+        <RoomStateProvider roomStore={store}>
+          <QueryControls>
+            <CustomAttachmentHarness />
+          </QueryControls>
+        </RoomStateProvider>
+      </TooltipProvider>,
+    );
+
+    let finishPreparation: ((attachments: FileUIPart[]) => void) | undefined;
+    const preparation = new Promise<FileUIPart[]>((resolve) => {
+      finishPreparation = resolve;
+    });
+    let appendResult: Promise<boolean> | undefined;
+    act(() => {
+      appendResult = customAttachmentState?.appendAsync(() => preparation);
+    });
+
+    await act(async () => {
+      store.getState().ai.switchSession(secondSessionId);
+    });
+    await act(async () => {
+      finishPreparation?.([
+        {
+          type: 'file',
+          filename: 'first-session.txt',
+          mediaType: 'text/plain',
+          url: 'data:text/plain;base64,cHJpdmF0ZSBub3Rlcw==',
+        },
+      ]);
+      await appendResult;
+    });
+
+    expect(await appendResult).toBe(false);
+    expect(container.textContent).not.toContain('first-session.txt');
+
+    await cleanup(container, root);
   });
 
   it('rejects images larger than the constrained default', async () => {

@@ -22,4 +22,21 @@ describe('ContextUsageIndicator fallback estimates', () => {
     // "Attached file: report.md\n\nRevenue grew 18%.".
     expect(estimateMessageTokens(message)).toBe(15);
   });
+
+  it('reserves a conservative fallback budget for image attachments', () => {
+    const message: UIMessage = {
+      id: 'user-1',
+      role: 'user',
+      parts: [
+        {
+          type: 'file',
+          filename: 'chart.png',
+          mediaType: 'image/png',
+          url: 'data:image/png;base64,aW1hZ2U=',
+        },
+      ],
+    };
+
+    expect(estimateMessageTokens(message)).toBe(4_100);
+  });
 });

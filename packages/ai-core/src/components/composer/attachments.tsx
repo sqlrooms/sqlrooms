@@ -41,23 +41,24 @@ const DEFAULT_MAX_TOTAL_TEXT_FILE_SIZE = 128 * 1024;
 export type ChatAttachmentsState = {
   /** Files waiting to be included in the next user message. */
   attachments: FileUIPart[];
-  /** Adds already-serialized AI SDK file parts. */
+  /** Adds already-serialized AI SDK file parts without asynchronous work. */
   append: (attachments: FileUIPart[]) => void;
+  /**
+   * Prepares files asynchronously and appends them only if the composer state
+   * has not been cleared while the work is pending.
+   *
+   * @returns Whether the prepared attachments were still current and appended.
+   */
+  appendAsync: (prepare: () => Promise<FileUIPart[]>) => Promise<boolean>;
   /** Removes one pending file part by identity. */
   remove: (attachment: FileUIPart) => void;
   /** Removes every pending attachment. */
   clear: () => void;
 };
 
-type ChatAttachmentsContextValue = ChatAttachmentsState & {
-  getRevision: () => number;
-  appendAtRevision: (attachments: FileUIPart[], revision: number) => void;
-};
+const ChatAttachmentsContext = createContext<ChatAttachmentsState | null>(null);
 
-const ChatAttachmentsContext =
-  createContext<ChatAttachmentsContextValue | null>(null);
-
-function useChatAttachmentsContext(): ChatAttachmentsContextValue {
+function useChatAttachmentsContext(): ChatAttachmentsState {
   const value = useContext(ChatAttachmentsContext);
   if (!value) {
     throw new Error(
@@ -78,6 +79,18 @@ export const ChatComposerAttachmentsProvider: FC<PropsWithChildren> = ({
   const append = useCallback((next: FileUIPart[]) => {
     setAttachments((current) => [...current, ...next]);
   }, []);
+  const appendAsync = useCallback(
+    async (prepare: () => Promise<FileUIPart[]>): Promise<boolean> => {
+      const revision = revisionRef.current;
+      const next = await prepare();
+      if (revisionRef.current !== revision) return false;
+      if (next.length > 0) {
+        setAttachments((current) => [...current, ...next]);
+      }
+      return true;
+    },
+    [],
+  );
   const remove = useCallback((attachment: FileUIPart) => {
     setAttachments((current) => current.filter((item) => item !== attachment));
   }, []);
@@ -85,24 +98,15 @@ export const ChatComposerAttachmentsProvider: FC<PropsWithChildren> = ({
     revisionRef.current += 1;
     setAttachments([]);
   }, []);
-  const getRevision = useCallback(() => revisionRef.current, []);
-  const appendAtRevision = useCallback(
-    (next: FileUIPart[], revision: number) => {
-      if (revisionRef.current !== revision) return;
-      setAttachments((current) => [...current, ...next]);
-    },
-    [],
-  );
   const value = useMemo(
     () => ({
       attachments,
       append,
+      appendAsync,
       remove,
       clear,
-      getRevision,
-      appendAtRevision,
     }),
-    [attachments, append, remove, clear, getRevision, appendAtRevision],
+    [attachments, append, appendAsync, remove, clear],
   );
 
   if (inherited) return <>{children}</>;
@@ -159,7 +163,7 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
   onError,
 }) => {
   const attachmentState = useChatAttachmentsContext();
-  const {attachments, remove, getRevision, appendAtRevision} = attachmentState;
+  const {attachments, appendAsync, remove} = attachmentState;
   const imageInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string>();
@@ -216,12 +220,10 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
       }
       if (accepted.length === 0) return;
 
-      const revision = getRevision();
       setIsReading(true);
       try {
-        appendAtRevision(
-          await Promise.all(accepted.map(fileToChatAttachmentPart)),
-          revision,
+        await appendAsync(() =>
+          Promise.all(accepted.map(fileToChatAttachmentPart)),
         );
       } catch (readError) {
         reportError(
@@ -235,8 +237,7 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
     },
     [
       attachments,
-      appendAtRevision,
-      getRevision,
+      appendAsync,
       maxFiles,
       maxFileSize,
       maxTextFileSize,
