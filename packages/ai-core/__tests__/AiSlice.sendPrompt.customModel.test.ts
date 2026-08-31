@@ -228,6 +228,25 @@ describe('AiSlice sendPrompt custom model routing', () => {
     }
   });
 
+  it('re-resolves getCustomModel on every call so a swapped model takes effect', async () => {
+    const first = createStubModel('first model');
+    const second = createStubModel('second model');
+    let current = first;
+    const store = createTestStore({
+      getCustomModel: () => current,
+      sessionConfig: createSessionConfig('proxy', 'unlisted-model'),
+      aiSettingsConfig: createSettingsConfig([]),
+    });
+
+    await expect(store.getState().ai.sendPrompt('hello')).resolves.toBe(
+      'first model',
+    );
+    current = second;
+    await expect(store.getState().ai.sendPrompt('hello')).resolves.toBe(
+      'second model',
+    );
+  });
+
   it('logs and falls back to settings when getCustomModel throws', async () => {
     const consoleError = jest
       .spyOn(console, 'error')
@@ -277,7 +296,7 @@ describe('AiSlice sendPrompt custom model routing', () => {
         'fallback response',
       );
       expect(consoleError).toHaveBeenCalledWith(
-        'getCustomModel threw; treating it as unavailable:',
+        'getCustomModel threw; falling back to settings:',
         expect.any(Error),
       );
     } finally {

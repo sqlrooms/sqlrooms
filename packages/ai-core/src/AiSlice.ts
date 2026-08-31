@@ -438,11 +438,7 @@ function createCustomModelProbe(
     if (!cache.has(key)) {
       try {
         cache.set(key, getCustomModel());
-      } catch (error) {
-        console.error(
-          'getCustomModel threw; treating it as unavailable:',
-          error,
-        );
+      } catch {
         cache.set(key, undefined);
       }
     }
@@ -1782,17 +1778,39 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             Object.entries(tools).filter(([, tool]) => !tool.execute),
           );
 
+          // Resolved per request, not through `customModelProbe`: that cache
+          // exists for selectors that re-run per token, and only retires on a
+          // new settings object, so a host that swaps its model at runtime
+          // would keep getting the stale one here.
+          let customModel: LanguageModel | undefined;
+          try {
+            customModel = getCustomModel?.();
+          } catch (error) {
+            console.error(
+              'getCustomModel threw; falling back to settings:',
+              error,
+            );
+          }
+
           const model =
-            customModelProbe(
-              {modelProvider: provider, model: modelId},
-              hasAiSettingsConfig(state) ? state.aiSettings.config : undefined,
-            ) ??
+            customModel ??
             createOpenAICompatible({
               apiKey: state.ai.getApiKeyFromSettings(provider, modelId),
               name: provider,
               baseURL,
               includeUsage: true,
             }).chatModel(modelId);
+
+          // Diagnostics follow the model actually invoked, which is not the
+          // selection when a custom model wins.
+          const diagnosticProvider =
+            customModel && typeof customModel !== 'string'
+              ? customModel.provider
+              : provider;
+          const diagnosticModelId =
+            customModel && typeof customModel !== 'string'
+              ? customModel.modelId
+              : modelId;
 
           const diagnosticsByStep: string[] = [];
           let completedStep = 0;
@@ -1813,8 +1831,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 }
                 const diagnostic = await tryMeasureProviderContext({
                   role,
-                  provider,
-                  model: modelId,
+                  provider: diagnosticProvider,
+                  model: diagnosticModelId,
                   sessionId: sessionId ?? currentSession?.id,
                   step: stepNumber,
                   instructions: resolvedInstructions,

@@ -15,12 +15,14 @@ function createErrorStream(error: unknown) {
   };
 }
 
+let streamError: unknown = new Error(
+  'provider rejected the request: 429 rate limited',
+);
+
 const createAgentUIStream = jest.fn(
   async (options: {onError?: (error: unknown) => string}) => {
     capturedOnError = options.onError;
-    return createErrorStream(
-      new Error('provider rejected the request: 429 rate limited'),
-    );
+    return createErrorStream(streamError);
   },
 );
 
@@ -43,6 +45,10 @@ function createStubStore() {
 }
 
 describe('streamSubAgent error surfacing', () => {
+  afterEach(() => {
+    streamError = new Error('provider rejected the request: 429 rate limited');
+  });
+
   it('rejects with the real error message instead of the SDK default redaction', async () => {
     const consoleErrorSpy = jest
       .spyOn(console, 'error')
@@ -80,5 +86,25 @@ describe('streamSubAgent error surfacing', () => {
     );
     expect(capturedOnError?.(new Error('boom'))).toBe('boom');
     expect(capturedOnError?.('plain string error')).toBe('plain string error');
+  });
+
+  it('still produces a message for a thrown value JSON.stringify cannot encode', async () => {
+    const consoleErrorSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    streamError = Symbol('boom');
+
+    try {
+      await expect(
+        streamSubAgent(
+          {} as any,
+          'do something',
+          createStubStore(),
+          'parent-tool-call-symbol',
+        ),
+      ).rejects.toThrow('Symbol(boom)');
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 });
