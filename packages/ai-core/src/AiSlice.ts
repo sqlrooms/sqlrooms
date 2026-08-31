@@ -1802,15 +1802,17 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             }).chatModel(modelId);
 
           // Diagnostics follow the model actually invoked, which is not the
-          // selection when a custom model wins.
-          const diagnosticProvider =
-            customModel && typeof customModel !== 'string'
-              ? customModel.provider
-              : provider;
-          const diagnosticModelId =
-            customModel && typeof customModel !== 'string'
-              ? customModel.modelId
-              : modelId;
+          // selection when a custom model wins. A string is a model id the AI
+          // SDK resolves through the global provider, so only the id is known.
+          let diagnosticProvider = provider;
+          let diagnosticModelId = modelId;
+          if (typeof customModel === 'string') {
+            diagnosticProvider = 'global-provider';
+            diagnosticModelId = customModel;
+          } else if (customModel) {
+            diagnosticProvider = customModel.provider;
+            diagnosticModelId = customModel.modelId;
+          }
 
           const diagnosticsByStep: string[] = [];
           let completedStep = 0;
