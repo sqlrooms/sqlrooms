@@ -43,8 +43,26 @@ interface AgentStreamStore {
   };
 }
 
-/** Local stand-in for `getErrorMessage`, which ai-core does not depend on. */
-function getSubAgentErrorMessage(error: unknown): string {
+/**
+ * Message handed to the parent model when a sub-agent stream fails.
+ *
+ * The raw exception goes to the console instead. A child agent may run on a
+ * different provider than its parent, and callers serialize the thrown message
+ * into a tool result the parent model receives, so a provider error carrying an
+ * endpoint, account detail, or credential would cross that boundary. Pass
+ * `formatError` to opt into the raw text once the trust boundary is known.
+ */
+export const SUB_AGENT_ERROR_MESSAGE =
+  'The sub-agent request failed. See the browser console for the underlying error.';
+
+/**
+ * Extracts the underlying message from a thrown value.
+ *
+ * Local stand-in for `getErrorMessage`, which ai-core does not depend on.
+ * Exported so a host that has verified parent and child share a trust boundary
+ * can pass it as `formatError` to get the unredacted text back.
+ */
+export function getSubAgentErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === 'string') return error;
   if (error === undefined || error === null) return 'unknown error';
@@ -306,6 +324,10 @@ export function formatAbortSnapshot(
  * @param store - Store providing updateAgentProgress / clearAgentProgress / approval methods
  * @param parentToolCallId - The parent tool call ID for progress tracking
  * @param abortSignal - Optional abort signal for cancellation
+ * @param options - Optional overrides. `formatError` replaces the redacted
+ *   {@link SUB_AGENT_ERROR_MESSAGE} thrown on a stream failure; pass
+ *   {@link getSubAgentErrorMessage} when the parent and child are known to
+ *   share a trust boundary. The raw error always reaches the console.
  * @returns The final text and collected tool calls from the agent
  */
 export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
@@ -314,6 +336,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
   store: AgentStreamStore,
   parentToolCallId: string,
   abortSignal?: AbortSignal,
+  options?: {formatError?: (error: unknown) => string},
 ): Promise<AgentStreamOutput> {
   const getAbortMessage = () =>
     abortSignal?.reason instanceof ChatTimeoutError
@@ -371,12 +394,13 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
       agent,
       uiMessages,
       abortSignal,
-      // The SDK default redacts to "An error occurred."; this stream is
-      // in-browser, so there is nothing to redact.
+      // Local diagnostics keep the raw error; the returned text reaches the
+      // parent model, so it stays redacted unless the caller opts out.
       onError: (error) => {
-        const message = getSubAgentErrorMessage(error);
         console.error('Sub-agent stream error:', error);
-        return message;
+        return options?.formatError
+          ? options.formatError(error)
+          : SUB_AGENT_ERROR_MESSAGE;
       },
     });
 

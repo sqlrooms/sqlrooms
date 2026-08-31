@@ -15,9 +15,10 @@ function createErrorStream(error: unknown) {
   };
 }
 
-let streamError: unknown = new Error(
-  'provider rejected the request: 429 rate limited',
-);
+const RAW_MESSAGE =
+  'provider rejected the request: 429 rate limited (key sk-live-abc123)';
+
+let streamError: unknown = new Error(RAW_MESSAGE);
 
 const createAgentUIStream = jest.fn(
   async (options: {onError?: (error: unknown) => string}) => {
@@ -31,7 +32,8 @@ jest.unstable_mockModule('ai', () => ({
   createAgentUIStream,
 }));
 
-const {streamSubAgent} = await import('../src/agents/AgentUtils');
+const {streamSubAgent, getSubAgentErrorMessage, SUB_AGENT_ERROR_MESSAGE} =
+  await import('../src/agents/AgentUtils');
 
 function createStubStore() {
   return {
@@ -45,66 +47,98 @@ function createStubStore() {
 }
 
 describe('streamSubAgent error surfacing', () => {
-  afterEach(() => {
-    streamError = new Error('provider rejected the request: 429 rate limited');
-  });
+  let consoleErrorSpy: ReturnType<typeof jest.spyOn>;
 
-  it('rejects with the real error message instead of the SDK default redaction', async () => {
-    const consoleErrorSpy = jest
+  beforeEach(() => {
+    consoleErrorSpy = jest
       .spyOn(console, 'error')
-      .mockImplementation(() => {});
-
-    try {
-      await expect(
-        streamSubAgent(
-          {} as any,
-          'do something',
-          createStubStore(),
-          'parent-tool-call-1',
-        ),
-      ).rejects.toThrow('provider rejected the request: 429 rate limited');
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Sub-agent stream error:',
-        expect.any(Error),
-      );
-    } finally {
-      consoleErrorSpy.mockRestore();
-    }
+      .mockImplementation(() => {}) as any;
   });
 
-  it('passes an onError to createAgentUIStream that never falls back to the generic redaction', async () => {
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    streamError = new Error(RAW_MESSAGE);
+  });
+
+  it('keeps the raw child exception out of the message handed to the parent model', async () => {
+    await expect(
+      streamSubAgent(
+        {} as any,
+        'do something',
+        createStubStore(),
+        'parent-tool-call-redacted',
+      ),
+    ).rejects.toThrow(SUB_AGENT_ERROR_MESSAGE);
+
+    // A caller such as runSkillTool serializes err.message into a tool result
+    // sent to the parent model, which may run on a different provider.
+    const thrown = await streamSubAgent(
+      {} as any,
+      'do something',
+      createStubStore(),
+      'parent-tool-call-redacted-2',
+    ).catch((err: unknown) => (err as Error).message);
+
+    expect(thrown).not.toContain('sk-live-abc123');
+    expect(thrown).not.toContain('429 rate limited');
+  });
+
+  it('preserves the raw error in the console for local diagnostics', async () => {
     await streamSubAgent(
       {} as any,
       'do something',
       createStubStore(),
-      'parent-tool-call-2',
+      'parent-tool-call-console',
+    ).catch(() => {});
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Sub-agent stream error:',
+      expect.any(Error),
+    );
+    const [, loggedError] = consoleErrorSpy.mock.calls[0] as [string, Error];
+    expect(loggedError.message).toBe(RAW_MESSAGE);
+  });
+
+  it('returns the underlying message when a caller opts in via formatError', async () => {
+    await expect(
+      streamSubAgent(
+        {} as any,
+        'do something',
+        createStubStore(),
+        'parent-tool-call-optin',
+        undefined,
+        {formatError: getSubAgentErrorMessage},
+      ),
+    ).rejects.toThrow(RAW_MESSAGE);
+  });
+
+  it('does not fall back to the SDK default redaction', async () => {
+    await streamSubAgent(
+      {} as any,
+      'do something',
+      createStubStore(),
+      'parent-tool-call-wiring',
     ).catch(() => {});
 
     expect(createAgentUIStream).toHaveBeenCalledWith(
       expect.objectContaining({onError: expect.any(Function)}),
     );
-    expect(capturedOnError?.(new Error('boom'))).toBe('boom');
-    expect(capturedOnError?.('plain string error')).toBe('plain string error');
+    expect(capturedOnError?.(new Error('boom'))).not.toBe('An error occurred.');
+  });
+});
+
+describe('getSubAgentErrorMessage', () => {
+  it('extracts messages from the shapes a provider can throw', () => {
+    expect(getSubAgentErrorMessage(new Error('boom'))).toBe('boom');
+    expect(getSubAgentErrorMessage('plain string error')).toBe(
+      'plain string error',
+    );
+    expect(getSubAgentErrorMessage(undefined)).toBe('unknown error');
+    expect(getSubAgentErrorMessage({status: 429})).toBe('{"status":429}');
   });
 
-  it('still produces a message for a thrown value JSON.stringify cannot encode', async () => {
-    const consoleErrorSpy = jest
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
-    streamError = Symbol('boom');
-
-    try {
-      await expect(
-        streamSubAgent(
-          {} as any,
-          'do something',
-          createStubStore(),
-          'parent-tool-call-symbol',
-        ),
-      ).rejects.toThrow('Symbol(boom)');
-    } finally {
-      consoleErrorSpy.mockRestore();
-    }
+  it('still returns a string for values JSON.stringify cannot encode', () => {
+    expect(getSubAgentErrorMessage(Symbol('boom'))).toBe('Symbol(boom)');
+    expect(getSubAgentErrorMessage(() => {})).toContain('=>');
   });
 });

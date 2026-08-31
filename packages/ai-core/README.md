@@ -863,6 +863,8 @@ including the model stream and any approval wait — is only cancellable through
 `streamSubAgent`'s fifth argument, so omitting it lets a stopped parent turn
 leave the nested run going.
 
+When a sub-agent stream fails, `streamSubAgent` throws `SUB_AGENT_ERROR_MESSAGE` rather than the provider's own text, and logs the raw error to the console. Callers serialize the thrown message into a tool result that the parent model receives, and a child agent can run on a different provider than its parent, so an exception carrying an endpoint, account detail, or credential would otherwise cross that boundary. A host that has verified parent and child share a trust boundary can pass `{formatError: getSubAgentErrorMessage}` as the sixth argument to get the underlying text back, or supply its own formatter. Local diagnostics are unaffected either way.
+
 Pass the parent's `getAiRunContext` (not a copied `aiRunContext`) so an in-turn
 retarget via `set_primary_context_artifact` is visible to subsequent nested tool
 calls. Parent scope wins over inner options, so a nested agent cannot reassign
