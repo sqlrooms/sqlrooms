@@ -8,6 +8,7 @@ import {
 } from './ChatRuntimeContext';
 import {
   DropTarget as ComposerDropTarget,
+  Attachments as ComposerAttachments,
   Input as ComposerInput,
   LocalAgentChatComposerProvider,
   Send as ComposerSend,
@@ -55,6 +56,7 @@ type ChatComponent = FC<RootProps> & {
     Send: typeof ComposerSend;
     Stop: typeof ComposerStop;
     DropTarget: typeof ComposerDropTarget;
+    Attachments: typeof ComposerAttachments;
   };
   InlineApiKeyInput: typeof InlineApiKeyInput;
   PromptSuggestions: typeof PromptSuggestions;
@@ -109,6 +111,7 @@ const Composer = Object.assign(QueryControls, {
   Send: ComposerSend,
   Stop: ComposerStop,
   DropTarget: ComposerDropTarget,
+  Attachments: ComposerAttachments,
 });
 
 export const Chat: ChatComponent = Object.assign(Root, {

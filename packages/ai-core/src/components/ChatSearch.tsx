@@ -181,7 +181,7 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
   useEffect(() => {
     if (!activeMatchId) return;
     const scrollToActiveMatch = () => {
-      document.getElementById(activeMatchId)?.scrollIntoView({
+      document.getElementById(activeMatchId)?.scrollIntoView?.({
         block: 'center',
         inline: 'nearest',
       });
@@ -238,8 +238,7 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
   }, [matches]);
 
   const getMatchesForBlock = useCallback(
-    (blockId: string) =>
-      matchesByBlock.get(blockId) ?? EMPTY_SEARCH_MATCHES,
+    (blockId: string) => matchesByBlock.get(blockId) ?? EMPTY_SEARCH_MATCHES,
     [matchesByBlock],
   );
 

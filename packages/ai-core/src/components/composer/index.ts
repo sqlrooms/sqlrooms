@@ -23,3 +23,9 @@ export type {ChatComposerStopProps} from './Stop';
 
 export {DropTarget} from './DropTarget';
 export type {ChatComposerDropTargetProps} from './DropTarget';
+
+export {Attachments, useChatAttachments} from './attachments';
+export type {
+  ChatAttachmentsState,
+  ChatComposerAttachmentsProps,
+} from './attachments';

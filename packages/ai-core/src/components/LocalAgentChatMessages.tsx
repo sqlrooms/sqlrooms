@@ -11,6 +11,8 @@ import {getChatActiveStatus} from './ChatActiveStatus';
 import {useChatRenderingComponents} from './ChatRenderingContext';
 import {useToolRenderBehavior} from './FlatAgentRenderer';
 import {useChatRuntime} from './ChatRuntimeContext';
+import {ChatAttachmentPreview} from './ChatAttachmentPreview';
+import type {ChatAttachmentPart} from '../chatAttachments';
 
 export type LocalAgentChatMessagesProps = {
   className?: string;
@@ -100,6 +102,13 @@ const LocalAgentMessagePart: FC<{
   }
   if (type === 'reasoning') {
     return <ReasoningPart text={(part as {text?: string}).text ?? ''} />;
+  }
+  if (type === 'file') {
+    return (
+      <div className="bg-muted max-w-[75%] rounded-md border p-2">
+        <ChatAttachmentPreview attachment={part as ChatAttachmentPart} />
+      </div>
+    );
   }
   if (type === 'dynamic-tool' || type.startsWith('tool-')) {
     return <LocalAgentToolActivityLine part={part} />;

@@ -6,6 +6,7 @@ import type {
 } from 'react';
 import type {Components} from 'react-markdown';
 import type {AgentToolCall} from '../types';
+import type {ChatAttachmentPart} from '../chatAttachments';
 import type {ToolPartWithId} from './buildChatTurnModel';
 import type {HoistableToolCall} from './collectHoistableRenderers';
 
@@ -33,6 +34,9 @@ export type ChatActiveStatusProps = {
 /** Props for the user-prompt presentation slot. */
 export type ChatPromptProps = {
   prompt: string;
+  attachments: readonly ChatAttachmentPart[];
+  /** Search block IDs corresponding by index to {@link attachments}. */
+  attachmentSearchBlockIds: readonly string[];
   searchBlockId: string;
 };
 
@@ -117,6 +121,7 @@ export type ChatToolState = AgentToolCall['state'];
 /** Prompt semantics plus its pre-wired rendering component. */
 export type ChatPromptRegion = {
   text: string;
+  attachments: readonly ChatAttachmentPart[];
   Content: ChatComponentType;
 };
 

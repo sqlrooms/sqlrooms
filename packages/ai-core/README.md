@@ -86,7 +86,9 @@ export function AiPanel() {
       <Chat.Composer
         placeholder="Ask a question"
         topActions={<Chat.PromptSuggestions.VisibilityToggle />}
-      />
+      >
+        <Chat.Composer.Attachments />
+      </Chat.Composer>
     </Chat>
   );
 }
@@ -98,6 +100,17 @@ and the first `ai.createSession()` transfers it to the new session.
 
 Use `Chat.Composer`'s `topActions` slot for compact controls that should sit in
 the prompt's top row, right-aligned beside context selectors.
+
+Attachments are opt-in. Add `<Chat.Composer.Attachments />` as a composer child
+to accept images and plain-text or Markdown files. Its paperclip menu shows the
+supported categories and opens a type-specific file picker for each one.
+Pending files render in the composer footer and are sent as AI SDK file parts.
+Posted files remain part of the user message: images open at full size in a
+dialog, while text and Markdown open in a scrollable text or rendered-Markdown
+dialog. The default limits are four files, 1 MiB per image and across all
+pending images, 128 KiB per text file, and 128 KiB across all pending text
+files; the component props can override those limits. A file can be sent
+without adding prompt text.
 
 > `<InlineApiKeyInput>` assumes session mode: it calls `useStoreWithAi`
 > unconditionally, so passing it as a `Chat.Composer` child under
@@ -180,6 +193,19 @@ Composer primitives (imported from `@sqlrooms/ai-core`, or via
   plain one it renders but never fires `onDrop`, because drops are accepted
   only for collisions carrying the `pointerWithin` marker that
   `RoomDndProvider`'s collision detector adds.
+
+The styled **`Chat.Composer.Attachments`** recipe is intentionally separate
+from those unstyled primitives: mounting it enables the file input and footer
+previews for that chat root. For a custom attachment UI, use
+`useChatAttachments()` under the same composer state boundary. Pass
+asynchronous file preparation to `appendAsync` so a file that finishes reading
+after the user switches sessions is discarded:
+
+```tsx
+const {appendAsync} = useChatAttachments();
+
+await appendAsync(async () => [await fileToChatAttachmentPart(file)]);
+```
 
 ### Pre-send policy: `useRegisterBeforeSend`
 
@@ -305,7 +331,7 @@ order, what is hoistable / running / completed), then asks the nearest
 | --------------- | ------------------------------------------------------------- |
 | `ActiveStatus`  | Current in-flight run status and elapsed-time presentation    |
 | `Turn`          | Full turn layout recipe — composes pre-wired semantic regions |
-| `Prompt`        | User prompt chrome for the turn                               |
+| `Prompt`        | User prompt and attachment chrome for the turn                |
 | `Activity`      | Collapsible / status chrome around in-progress work           |
 | `Reasoning`     | Model thinking / reasoning disclosure                         |
 | `ToolActivity`  | One tool (or nested agent) line inside Activity               |
