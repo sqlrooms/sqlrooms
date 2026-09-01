@@ -44,6 +44,12 @@ interface AgentStreamStore {
 }
 
 /**
+ * Carries text `onError` already produced, so the failure path does not format
+ * it a second time. A caller's `formatError` sees each error exactly once.
+ */
+class FormattedStreamError extends Error {}
+
+/**
  * Message handed to the parent model when a sub-agent stream fails.
  *
  * The raw exception goes to the console instead. A child agent may run on a
@@ -397,7 +403,11 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
       store.getState().ai.writeAbortSnapshot?.(parentToolCallId, snapshot);
       throw new ToolAbortError(abortMessage, snapshot);
     }
-    if (err instanceof ToolAbortError || err instanceof ChatTimeoutError) {
+    if (
+      err instanceof ToolAbortError ||
+      err instanceof ChatTimeoutError ||
+      err instanceof FormattedStreamError
+    ) {
       throw err;
     }
     throw new Error(toModelFacingMessage(err));
@@ -459,7 +469,9 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
         // error so callers can react (revert, show a retry) instead of silently
         // treating the run as a successful no-op.
         if (chunk.type === 'error') {
-          throw new Error(chunk.errorText || 'The AI request failed.');
+          throw new FormattedStreamError(
+            chunk.errorText || 'The AI request failed.',
+          );
         }
 
         if (chunk.type === 'text-delta') {

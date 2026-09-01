@@ -97,10 +97,8 @@ describe('streamSubAgent error surfacing', () => {
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'Sub-agent stream error:',
-      expect.any(Error),
+      expect.objectContaining({message: RAW_MESSAGE}),
     );
-    const [, loggedError] = consoleErrorSpy.mock.calls[0] as [string, Error];
-    expect(loggedError.message).toBe(RAW_MESSAGE);
   });
 
   it('returns the underlying message when a caller opts in via formatError', async () => {
@@ -131,7 +129,7 @@ describe('streamSubAgent error surfacing', () => {
     expect(thrown).not.toContain('sk-live-abc123');
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'Sub-agent stream error:',
-      expect.any(Error),
+      expect.objectContaining({message: RAW_MESSAGE}),
     );
   });
 
@@ -148,6 +146,25 @@ describe('streamSubAgent error surfacing', () => {
         {formatError: getSubAgentErrorMessage},
       ),
     ).rejects.toThrow(RAW_MESSAGE);
+  });
+
+  it('applies formatError exactly once to a streamed provider failure', async () => {
+    const formatError = jest.fn(
+      (error: unknown) => `subagent: ${getSubAgentErrorMessage(error)}`,
+    );
+
+    const thrown = await streamSubAgent(
+      {} as any,
+      'do something',
+      createStubStore(),
+      'parent-tool-call-once',
+      undefined,
+      {formatError},
+    ).catch((err: unknown) => (err as Error).message);
+
+    expect(thrown).toBe(`subagent: ${RAW_MESSAGE}`);
+    expect(thrown).not.toContain('subagent: subagent:');
+    expect(formatError).toHaveBeenCalledTimes(1);
   });
 
   it('does not fall back to the SDK default redaction', async () => {
