@@ -265,6 +265,8 @@ export {
   streamSubAgent,
   updateAgentToolCallData,
   formatAbortSnapshot,
+  getSubAgentErrorMessage,
+  SUB_AGENT_ERROR_MESSAGE,
 } from './agents/AgentUtils';
 export type {
   AgentStreamOutput,

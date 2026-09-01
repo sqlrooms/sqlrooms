@@ -26,6 +26,8 @@ Send readiness (`ai.hasResolvableModel()`) reflects whichever of these paths can
 
 Its counterpart `ai.requiresApiKey()` reports whether the path in effect needs a browser-held key at all — `false` when a `chatEndPoint` is configured (the remote transport sends server-side, so no key reaches the browser), and `false` when `getCustomModel` is configured **and currently returns a model**, since that model carries its own credentials. A configured factory returning `undefined` still needs a key, because the transport then falls back to the built-in OpenAI-compatible client. Unlike `hasResolvableModel()`, this predicate therefore invokes the factory: guessing optimistically about readiness only risks a failed send, but guessing optimistically about credentials hides the only UI for entering one. The result is cached per resolved provider/model pair — keyed, so returning to a previously selected model does not re-probe — meaning a mounted composer asks the factory once per distinct selection rather than once per store update. Keep it idempotent for a given selection. The composer's `needsApiKey` is gated on it, so an app behind a server-side proxy is never asked for a key it has no use for.
 
+Both model paths consult `getCustomModel`: the chat transport, and the one-shot `ai.sendPrompt()` helper. In `sendPrompt` a resolved custom model also wins over the `modelProvider`, `modelName`, and `baseUrl` options that call passes, because an app reaching its provider only through a proxy has no other usable endpoint; those options still select the API key and base URL for the fallback client, which is built only when the factory returns `undefined`. Unlike `requiresApiKey()`, `sendPrompt` calls the factory fresh on every request rather than reading the cached probe, so a host that swaps its model at runtime takes effect on the next send. A factory that throws is logged and treated as `undefined`.
+
 > **Upgrading from 0.28.x?** See the [0.29.0 migration guide](https://sqlrooms.org/upgrade-guide#_0-29-0-upcoming) for the full list of breaking changes: `parameters` → `inputSchema`, `component` → `toolRenderers`, `setSessionToolAdditionalData` removed.
 
 ```tsx
@@ -886,6 +888,8 @@ the signal intact for the tools the sub-agent calls, but the agent loop —
 including the model stream and any approval wait — is only cancellable through
 `streamSubAgent`'s fifth argument, so omitting it lets a stopped parent turn
 leave the nested run going.
+
+When a sub-agent stream fails, `streamSubAgent` throws `SUB_AGENT_ERROR_MESSAGE` rather than the provider's own text, and logs the raw error to the console. Callers serialize the thrown message into a tool result that the parent model receives, and a child agent can run on a different provider than its parent, so an exception carrying an endpoint, account detail, or credential would otherwise cross that boundary. A host that has verified parent and child share a trust boundary can pass `{formatError: getSubAgentErrorMessage}` as the sixth argument to get the underlying text back, or supply its own formatter. Local diagnostics are unaffected either way.
 
 Pass the parent's `getAiRunContext` (not a copied `aiRunContext`) so an in-turn
 retarget via `set_primary_context_artifact` is visible to subsequent nested tool

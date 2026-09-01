@@ -1723,6 +1723,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return instructions;
         },
 
+        /**
+         * Run a one-shot `generateText` call outside the chat transport.
+         *
+         * A model from `getCustomModel` wins over the settings-built one, and
+         * over any explicit `modelProvider`/`modelName`/`baseUrl` passed here.
+         */
         sendPrompt: async (
           prompt: string,
           options: {
@@ -1779,12 +1785,41 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             Object.entries(tools).filter(([, tool]) => !tool.execute),
           );
 
-          const model = createOpenAICompatible({
-            apiKey: state.ai.getApiKeyFromSettings(provider, modelId),
-            name: provider,
-            baseURL,
-            includeUsage: true,
-          }).chatModel(modelId);
+          // Resolved per request, not through `customModelProbe`: that cache
+          // exists for selectors that re-run per token, and only retires on a
+          // new settings object, so a host that swaps its model at runtime
+          // would keep getting the stale one here.
+          let customModel: LanguageModel | undefined;
+          try {
+            customModel = getCustomModel?.();
+          } catch (error) {
+            console.error(
+              'getCustomModel threw; falling back to settings:',
+              error,
+            );
+          }
+
+          const model =
+            customModel ??
+            createOpenAICompatible({
+              apiKey: state.ai.getApiKeyFromSettings(provider, modelId),
+              name: provider,
+              baseURL,
+              includeUsage: true,
+            }).chatModel(modelId);
+
+          // Diagnostics follow the model actually invoked, which is not the
+          // selection when a custom model wins. A string is a model id the AI
+          // SDK resolves through the global provider, so only the id is known.
+          let diagnosticProvider = provider;
+          let diagnosticModelId = modelId;
+          if (typeof customModel === 'string') {
+            diagnosticProvider = 'global-provider';
+            diagnosticModelId = customModel;
+          } else if (customModel) {
+            diagnosticProvider = customModel.provider;
+            diagnosticModelId = customModel.modelId;
+          }
 
           const diagnosticsByStep: string[] = [];
           let completedStep = 0;
@@ -1805,8 +1840,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 }
                 const diagnostic = await tryMeasureProviderContext({
                   role,
-                  provider,
-                  model: modelId,
+                  provider: diagnosticProvider,
+                  model: diagnosticModelId,
                   sessionId: sessionId ?? currentSession?.id,
                   step: stepNumber,
                   instructions: resolvedInstructions,
