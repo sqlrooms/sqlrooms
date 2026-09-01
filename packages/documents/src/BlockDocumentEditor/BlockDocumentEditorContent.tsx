@@ -2,7 +2,7 @@ import {cn, ScrollArea} from '@sqlrooms/ui';
 import {TextSelection} from '@tiptap/pm/state';
 import {EditorContent, type Editor} from '@tiptap/react';
 import type {FC, MouseEvent as ReactMouseEvent} from 'react';
-import {useCallback, useState} from 'react';
+import {useCallback, useRef, useState} from 'react';
 import {BlockDocumentBlockControls} from './BlockDocumentBlockControls';
 import {useBlockDocumentEditorContext} from './BlockDocumentEditorContext';
 import {useBlockSettingsStore} from '../block-settings/useBlockSettingsStore';
@@ -195,14 +195,33 @@ export const BlockDocumentEditorContent: FC<
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
     null,
   );
+  const mouseDownStartedInEditorRef = useRef(false);
   const clearSelection = useBlockSettingsStore(
     (state) => state.blockSettings?.clearSelection,
+  );
+
+  const handleMouseDown = useCallback(
+    (e: ReactMouseEvent) => {
+      mouseDownStartedInEditorRef.current = Boolean(
+        editor &&
+        e.target instanceof Node &&
+        editor.view.dom.contains(e.target),
+      );
+    },
+    [editor],
   );
 
   const handleClick = useCallback(
     (e: ReactMouseEvent) => {
       // Clear custom block selection if clicking in editable document space.
       const target = e.target as HTMLElement;
+      const preservesEditorTextSelection = Boolean(
+        editor &&
+        mouseDownStartedInEditorRef.current &&
+        editor.state.selection instanceof TextSelection &&
+        !editor.state.selection.empty,
+      );
+      mouseDownStartedInEditorRef.current = false;
       if (
         editor &&
         scrollElement?.contains(target) &&
@@ -210,7 +229,7 @@ export const BlockDocumentEditorContent: FC<
         !isInteractiveClickTarget(target)
       ) {
         clearSelection?.();
-        if (!readOnly) {
+        if (!readOnly && !preservesEditorTextSelection) {
           focusClosestTextBlock(editor, e);
         }
       }
@@ -225,6 +244,7 @@ export const BlockDocumentEditorContent: FC<
         'relative h-full min-h-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-h-full',
         className,
       )}
+      onMouseDown={handleMouseDown}
       onClick={handleClick}
     >
       <div className="relative min-h-full">
