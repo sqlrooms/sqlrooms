@@ -30,6 +30,7 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import {FormEvent, useEffect, useRef, useState} from 'react';
+import {isCreateSessionDisabled} from '../../components/sessionCreation';
 import {useRoomStore} from '../../roomStoreHooks';
 import {useCliArtifactSidebarTabs} from './useCliArtifactSidebarTabs';
 
@@ -41,7 +42,9 @@ export function CliArtifactsSidebarSection() {
   const createArtifactScopedSession = useRoomStore(
     (state) => state.artifactAi.createArtifactScopedSession,
   );
+  const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
   const setCollapsed = useRoomStore((state) => state.layout.setCollapsed);
+  const createSessionDisabled = isCreateSessionDisabled(currentSession);
   const [renameArtifact, setRenameArtifact] = useState<{
     id: string;
     name: string;
@@ -110,7 +113,9 @@ export function CliArtifactsSidebarSection() {
                     <ArtifactSidebarItemMenu
                       artifactName={artifact.name}
                       isPinned={artifact.isPinned}
+                      newArtifactChatDisabled={createSessionDisabled}
                       onNewArtifactChat={() => {
+                        if (createSessionDisabled) return;
                         artifactTabs.selectArtifact(artifact.id);
                         createArtifactScopedSession();
                         setCollapsed('assistant-sidebar', false);
@@ -160,6 +165,7 @@ export function CliArtifactsSidebarSection() {
 function ArtifactSidebarItemMenu({
   artifactName,
   isPinned,
+  newArtifactChatDisabled,
   onNewArtifactChat,
   onTogglePin,
   onDelete,
@@ -167,6 +173,7 @@ function ArtifactSidebarItemMenu({
 }: {
   artifactName: string;
   isPinned: boolean;
+  newArtifactChatDisabled: boolean;
   onNewArtifactChat: () => void;
   onTogglePin: () => void;
   onDelete: () => void;
@@ -186,7 +193,10 @@ function ArtifactSidebarItemMenu({
         </SidebarMenuAction>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="right">
-        <DropdownMenuItem onSelect={onNewArtifactChat}>
+        <DropdownMenuItem
+          disabled={newArtifactChatDisabled}
+          onSelect={onNewArtifactChat}
+        >
           <MessageSquarePlusIcon className="h-4 w-4" aria-hidden />
           New artifact chat
         </DropdownMenuItem>

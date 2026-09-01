@@ -5,6 +5,11 @@ import {useStoreWithAi, type AiSliceState} from '../AiSlice';
 type SessionMessagePart =
   ChatSessionSchema['uiMessages'][number]['parts'][number];
 type SessionTextPart = SessionMessagePart & {type: 'text'; text: string};
+type SessionFilePart = SessionMessagePart & {
+  type: 'file';
+  filename?: string;
+  mediaType: string;
+};
 
 export type GenerateSessionTitlePromptOptions = Parameters<
   AiSliceState['ai']['sendPrompt']
@@ -81,13 +86,33 @@ function isTextPart(part: SessionMessagePart): part is SessionTextPart {
   );
 }
 
+function isFilePart(part: SessionMessagePart): part is SessionFilePart {
+  return part.type === 'file' && 'mediaType' in part;
+}
+
+function getFileTitleText(part: SessionFilePart): string {
+  const filename = part.filename?.replace(/[\r\n]+/g, ' ').trim();
+  if (filename) return `Attached file: ${filename}`;
+  return part.mediaType.startsWith('image/')
+    ? 'Attached image'
+    : 'Attached file';
+}
+
+/**
+ * Collects user-authored text for session-title generation. File parts add a
+ * bounded filename or media-type fallback so attachment-only turns can receive
+ * a generated title without sending the attachment payload a second time.
+ */
 export function getSessionUserMessageText(session: ChatSessionSchema) {
   return session.uiMessages
     .filter((message) => message.role === 'user')
     .map((message) =>
       message.parts
-        .filter(isTextPart)
-        .map((part) => part.text)
+        .map((part) => {
+          if (isTextPart(part)) return part.text;
+          if (isFilePart(part)) return getFileTitleText(part);
+          return '';
+        })
         .join(' ')
         .trim(),
     )

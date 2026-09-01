@@ -13,12 +13,14 @@ import {
   UIMessagePart,
 } from '@sqlrooms/ai-config';
 import {
+  type FileUIPart,
   TextUIPart,
   UIMessage,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import {ABORT_EVENT, TOOL_CALL_CANCELLED} from './constants';
 import {CHAT_REQUEST_ERROR_PART_TYPE} from './chatTurns';
+import {textAttachmentToModelText} from './chatAttachments';
 
 /**
  * Merge multiple AbortSignals into a single signal.
@@ -420,6 +422,12 @@ export function sanitizeMessagesForLLM(
           return true;
         })
         .map((part) => {
+          if (part.type === 'file') {
+            const text = textAttachmentToModelText(part as FileUIPart);
+            if (text !== undefined) {
+              return {type: 'text' as const, text};
+            }
+          }
           const p = part as Record<string, unknown>;
           if (
             p.state === 'output-available' &&
@@ -450,6 +458,44 @@ export function sanitizeMessagesForLLM(
       // Remove messages that have no parts (shouldn't happen after above logic, but safety check)
       return message.parts && message.parts.length > 0;
     });
+}
+
+/**
+ * Formats persisted UI messages for conversation summarization. Consecutive
+ * text parts remain contiguous, while text and Markdown file parts are decoded
+ * into labeled sections so summarize-and-continue does not lose their content.
+ */
+export function buildConversationText(messages: UIMessage[]): string {
+  return messages
+    .map((message) => {
+      const sections: string[] = [];
+      let text = '';
+
+      const flushText = () => {
+        if (text) sections.push(text);
+        text = '';
+      };
+
+      for (const part of message.parts) {
+        if (part.type === 'text') {
+          text += (part as TextUIPart).text;
+          continue;
+        }
+        if (part.type !== 'file') continue;
+
+        const attachmentText = textAttachmentToModelText(part as FileUIPart);
+        if (attachmentText === undefined) continue;
+        flushText();
+        sections.push(attachmentText);
+      }
+      flushText();
+
+      const role = message.role === 'user' ? 'User' : 'Assistant';
+      const content = sections.join('\n\n');
+      return content ? `${role}: ${content}` : '';
+    })
+    .filter((line) => line.length > 0)
+    .join('\n\n');
 }
 
 /**

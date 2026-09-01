@@ -28,6 +28,7 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import {FormEvent, useCallback, useEffect, useMemo, useState} from 'react';
+import {isCreateSessionDisabled} from '../../components/sessionCreation';
 import {useRoomStore} from '../../roomStoreHooks';
 
 export function CliChatsSidebarSection() {
@@ -38,6 +39,7 @@ export function CliChatsSidebarSection() {
   const pinnedSessionIds = useRoomStore(
     (state) => state.ai.config.pinnedSessionIds,
   );
+  const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
   const createSession = useRoomStore((state) => state.ai.createSession);
   const switchSession = useRoomStore((state) => state.ai.switchSession);
   const renameSession = useRoomStore((state) => state.ai.renameSession);
@@ -48,6 +50,7 @@ export function CliChatsSidebarSection() {
     useState<ChatSessionSchema | null>(null);
   const [sessionToDelete, setSessionToDelete] =
     useState<ChatSessionSchema | null>(null);
+  const createSessionDisabled = isCreateSessionDisabled(currentSession);
 
   const sortedSessions = useMemo(() => {
     const pinnedIds = new Set(pinnedSessionIds ?? []);
@@ -68,9 +71,10 @@ export function CliChatsSidebarSection() {
   }, [pinnedSessionIds, sessions]);
 
   const handleCreateChat = useCallback(() => {
+    if (createSessionDisabled) return;
     createSession();
     setCollapsed('assistant-sidebar', false);
-  }, [createSession, setCollapsed]);
+  }, [createSession, createSessionDisabled, setCollapsed]);
 
   const handleSelectChat = useCallback(
     (sessionId: string) => {
@@ -89,6 +93,7 @@ export function CliChatsSidebarSection() {
           size="sm"
           className="text-primary hover:bg-primary/10 hover:text-primary h-6 gap-1 px-2 text-sm"
           onClick={handleCreateChat}
+          disabled={createSessionDisabled}
         >
           <PlusIcon className="h-3.5 w-3.5" aria-hidden />
           New Chat
@@ -141,7 +146,7 @@ export function CliChatsSidebarSection() {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/chat:opacity-100 data-[state=open]:opacity-100"
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/chat:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
                           aria-label={`Actions for ${session.name}`}
                         >
                           <EllipsisVerticalIcon className="h-3.5 w-3.5" />

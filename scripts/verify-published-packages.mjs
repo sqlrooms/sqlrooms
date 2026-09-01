@@ -6,7 +6,8 @@ import {promisify} from 'node:util';
 const execFileAsync = promisify(execFile);
 const requestedVersion = process.argv[2];
 const registry = 'https://registry.npmjs.org/';
-const attempts = 8;
+// Budget 3.5 minutes of retry delays for npm registry propagation.
+const attempts = 15;
 const batchSize = 8;
 
 async function readJson(filePath) {

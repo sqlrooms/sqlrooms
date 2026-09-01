@@ -49,6 +49,15 @@ jobs:
         if: always()
         run: pnpm evals:export --database "$PROMPTFOO_CONFIG_DIR/promptfoo.db" --output artifacts/summary.json --markdown artifacts/summary.md
 
+      - name: Publish observatory summary
+        if: always()
+        run: |
+          if [ -f artifacts/summary.md ]; then
+            cat artifacts/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '_No behavioral eval summary was generated._' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload retained run history
         if: always()
         uses: actions/upload-artifact@v6

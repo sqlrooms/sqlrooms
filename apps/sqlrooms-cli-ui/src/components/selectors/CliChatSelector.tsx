@@ -33,11 +33,10 @@ export function CliChatSelector({
   );
 
   if (artifactSessions.length <= 1) {
-    const session = artifactSessions[0] ?? currentSession;
     return (
       <div className="flex h-9 max-w-full min-w-0 items-center gap-2 px-2 text-sm font-medium">
         <MessageSquareIcon className="h-4 w-4 shrink-0" aria-hidden />
-        <span className="truncate">{session.name}</span>
+        <span className="truncate">{currentSession.name}</span>
       </div>
     );
   }

@@ -121,6 +121,8 @@ export {
   Send as ChatComposerSend,
   Stop as ChatComposerStop,
   DropTarget as ChatComposerDropTarget,
+  Attachments as ChatComposerAttachments,
+  useChatAttachments,
 } from './components/composer';
 export type {
   ChatComposerMode,
@@ -130,7 +132,20 @@ export type {
   ChatComposerSendProps,
   ChatComposerStopProps,
   ChatComposerDropTargetProps,
+  ChatComposerAttachmentsProps,
+  ChatAttachmentsState,
 } from './components/composer';
+export {
+  fileToChatAttachmentPart,
+  getChatAttachmentMediaType,
+  getChatAttachmentText,
+  getChatMessageAttachments,
+  isMarkdownAttachment,
+  isSupportedChatAttachment,
+  isTextAttachmentFilename,
+  isTextAttachmentMediaType,
+} from './chatAttachments';
+export type {ChatAttachmentPart} from './chatAttachments';
 export {
   usePromptSuggestions,
   ChatSuggestionsStateBoundary,

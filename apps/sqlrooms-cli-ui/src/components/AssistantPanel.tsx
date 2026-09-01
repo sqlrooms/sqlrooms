@@ -1,4 +1,3 @@
-import {isChatSessionEmpty} from '@sqlrooms/ai';
 import {
   Button,
   cn,
@@ -15,7 +14,7 @@ import {CliChatSelector} from './selectors/CliChatSelector';
 import {AssistantChatContainer} from './AssistantChatContainer';
 import {AssistantSettingsDialog} from './AssistantSettingsDialog';
 import {useAssistantContextDropTarget} from './assistantUtils';
-import {isDefaultAssistantSessionName} from './useGenSessionTitle';
+import {isCreateSessionDisabled} from './sessionCreation';
 
 const ChatSessionDebugView = React.lazy(() =>
   import('@sqlrooms/ai/devtools').then((mod) => ({
@@ -56,11 +55,7 @@ export const AssistantPanel: React.FC = () => {
   const settingsPanelOpen = useDisclosure();
   const contextDropTarget = useAssistantContextDropTarget();
   const [debugOpen, setDebugOpen] = useState(false);
-  const createSessionDisabled = Boolean(
-    currentSession &&
-    isChatSessionEmpty(currentSession) &&
-    isDefaultAssistantSessionName(currentSession.name),
-  );
+  const createSessionDisabled = isCreateSessionDisabled(currentSession);
 
   const handleCreateSession = () => {
     if (createSessionDisabled) return;

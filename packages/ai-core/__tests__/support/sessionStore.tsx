@@ -6,6 +6,7 @@
  * the real runtime context in ahead of the mock.
  */
 import {jest} from '@jest/globals';
+import type {FileUIPart} from 'ai';
 import {createStore} from 'zustand';
 import {
   createBaseRoomSlice,
@@ -45,11 +46,11 @@ export type SessionTestStore = ReturnType<typeof createSessionTestStore>;
  * the real model/transport pipeline.
  */
 export function stubAnalysisActions(store: SessionTestStore) {
-  const startAnalysis = jest.fn<(sessionId: string) => Promise<void>>(
-    async () => {},
-  );
+  const startAnalysis = jest.fn<
+    (sessionId: string, attachments?: FileUIPart[]) => Promise<void>
+  >(async () => {});
   const startAnalysisWhenReady = jest.fn<
-    (sessionId: string) => Promise<boolean>
+    (sessionId: string, attachments?: FileUIPart[]) => Promise<boolean>
   >(async () => true);
   store.setState((state) => ({
     ai: {...state.ai, startAnalysis, startAnalysisWhenReady},

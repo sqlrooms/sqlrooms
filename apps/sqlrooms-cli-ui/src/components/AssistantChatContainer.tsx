@@ -1,4 +1,4 @@
-import {Chat, isChatSessionEmpty, type ChatTurnSlotProps} from '@sqlrooms/ai';
+import {Chat, type ChatTurnSlotProps} from '@sqlrooms/ai';
 import {
   Button,
   ResizableHandle,
@@ -10,10 +10,8 @@ import {PlusIcon} from 'lucide-react';
 import React, {useCallback} from 'react';
 import {useRoomStore} from '../roomStoreHooks';
 import {AssistantContextSelector} from './AssistantContextSelector';
-import {
-  isDefaultAssistantSessionName,
-  useGenSessionTitle,
-} from './useGenSessionTitle';
+import {isCreateSessionDisabled} from './sessionCreation';
+import {useGenSessionTitle} from './useGenSessionTitle';
 
 interface AssistantChatContainerProps {
   contextDropTarget: {
@@ -66,11 +64,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
 
   useGenSessionTitle();
 
-  const createSessionDisabled = Boolean(
-    currentSession &&
-    isChatSessionEmpty(currentSession) &&
-    isDefaultAssistantSessionName(currentSession.name),
-  );
+  const createSessionDisabled = isCreateSessionDisabled(currentSession);
 
   const handleCreateSession = useCallback(() => {
     if (createSessionDisabled) {
@@ -160,6 +154,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
               }}
             />
             <AssistantContextSelector />
+            <Chat.Composer.Attachments />
             <div className="flex min-w-0 items-center justify-end">
               <Chat.ModelSelector />
             </div>
