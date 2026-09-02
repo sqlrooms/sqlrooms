@@ -300,7 +300,13 @@ export {
 } from './components/HoistedRenderersContext';
 export {
   findChatSearchMatches,
+  HighlightedChatSearchText,
   markdownToPlainText,
   normalizeChatSearchQuery,
+  useOptionalChatSearch,
 } from './components/ChatSearch';
-export type {ChatSearchBlock, ChatSearchMatch} from './components/ChatSearch';
+export type {
+  ChatSearchBlock,
+  ChatSearchContextValue,
+  ChatSearchMatch,
+} from './components/ChatSearch';

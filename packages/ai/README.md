@@ -257,6 +257,30 @@ const blocks: ChatSearchBlock[] = [
 const matches = findChatSearchMatches(blocks, query);
 ```
 
+**Keeping highlighting in a replaced slot.** A host that swaps out a chat leaf
+slot renders its own text, so it loses the highlighting the default slot got for
+free. `HighlightedChatSearchText` restores it. Pass the same `blockId` the turn
+model registered for that part; without it there are no matches to highlight and
+the component renders the text unchanged.
+
+```tsx
+import {HighlightedChatSearchText} from '@sqlrooms/ai';
+
+function AppPrompt({prompt, searchBlockId}: ChatPromptProps) {
+  return (
+    <MyPromptBubble>
+      <HighlightedChatSearchText text={prompt} blockId={searchBlockId} />
+    </MyPromptBubble>
+  );
+}
+```
+
+Matches are wrapped in `<mark>`, and the active match carries the match id as its
+DOM id, so a host can scroll it into view. `useOptionalChatSearch()` exposes the
+same state directly (`activeMatchId`, `getMatchesForBlock`) for slots that need
+to do their own anchoring. It returns `null` outside a `ChatSearchProvider`, so a
+component rendered away from `Chat.Root` degrades instead of throwing.
+
 ## Chat Session Types
 
 Use `ChatSessionSchema` for persisted chat session validation and

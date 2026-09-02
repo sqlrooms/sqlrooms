@@ -91,7 +91,7 @@ function areChatSearchBlocksEqual(
   return true;
 }
 
-type ChatSearchContextValue = {
+export type ChatSearchContextValue = {
   query: string;
   setQuery: (query: string) => void;
   matches: ChatSearchMatch[];
@@ -238,8 +238,7 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
   }, [matches]);
 
   const getMatchesForBlock = useCallback(
-    (blockId: string) =>
-      matchesByBlock.get(blockId) ?? EMPTY_SEARCH_MATCHES,
+    (blockId: string) => matchesByBlock.get(blockId) ?? EMPTY_SEARCH_MATCHES,
     [matchesByBlock],
   );
 
