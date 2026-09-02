@@ -416,11 +416,11 @@ default. Both map canvases are identified for capture validation, including
 overlays with a custom deck ID. A lost context or disabled preservation on
 either canvas causes the CLI rendering tools to return an actionable error.
 Preserving the buffer can increase GPU memory use and reduce rendering
-performance. Hosts that do not need image capture can opt out with
-`mapProps={{canvasContextAttributes: {preserveDrawingBuffer: false}}}`.
+performance. Hosts that do not need image capture can opt out by setting
+`mapProps.canvasContextAttributes.preserveDrawingBuffer` to `false`.
 Changing this context option requires remounting the map.
 To opt out for a separate deck overlay, set
-`deckProps={{deviceProps: {webgl: {preserveDrawingBuffer: false}}}}` and remount
+`deckProps.deviceProps.webgl.preserveDrawingBuffer` to `false` and remount
 the map; DOM image capture will then be unavailable.
 
 ```tsx
