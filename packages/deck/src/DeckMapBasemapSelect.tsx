@@ -39,17 +39,17 @@ export const DeckMapBasemapSelect: FC<{
           if (!readOnly) onConfigChange({...config, mapStyle});
         }}
       >
-        <SelectTrigger aria-label="Basemap" className="w-full">
+        <SelectTrigger aria-label="Basemap" className="w-full text-xs">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {DECK_MAP_BASEMAP_STYLES.map(({id, label}) => (
-            <SelectItem key={id} value={id}>
+            <SelectItem key={id} value={id} className="text-xs">
               {label}
             </SelectItem>
           ))}
           {value === 'custom' && (
-            <SelectItem value="custom" disabled>
+            <SelectItem value="custom" className="text-xs" disabled>
               Custom
             </SelectItem>
           )}

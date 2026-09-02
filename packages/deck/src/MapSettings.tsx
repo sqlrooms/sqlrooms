@@ -1386,7 +1386,16 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
         closeLabel="Close map settings"
       />
 
-      <div className="px-2 pb-2">
+      <div className="flex shrink-0 flex-col gap-2 px-2 pb-2">
+        <Field label="Title">
+          <input
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+            placeholder="Map title"
+            disabled={readOnly}
+            className="border-input placeholder:text-muted-foreground focus-visible:ring-ring h-8 w-full rounded-md border bg-transparent px-3 py-2 text-xs font-medium shadow-sm outline-hidden transition-colors focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+          />
+        </Field>
         <DeckMapBasemapSelect
           config={config}
           onConfigChange={onConfigChange}
@@ -1401,16 +1410,6 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
       ) : (
         <ScrollArea className="min-h-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block">
           <div className="flex flex-col gap-2 p-2 pt-0">
-            <Field label="Title">
-              <input
-                value={title}
-                onChange={(e) => onTitleChange(e.target.value)}
-                placeholder="Map title"
-                disabled={readOnly}
-                className="border-input placeholder:text-muted-foreground focus-visible:ring-ring h-8 w-full rounded-md border bg-transparent px-3 py-2 text-xs font-medium shadow-sm outline-hidden transition-colors focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </Field>
-
             <Field label="Dataset" required>
               <DataTableSelector
                 onChange={handleTableChange}
@@ -1474,12 +1473,16 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                       )
                     }
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full text-xs">
                       <SelectValue placeholder="Select layer type" />
                     </SelectTrigger>
                     <SelectContent>
                       {layerTypeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                          className="text-xs"
+                        >
                           {option.label}
                         </SelectItem>
                       ))}
