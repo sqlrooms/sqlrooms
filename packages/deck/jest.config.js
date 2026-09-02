@@ -23,7 +23,7 @@ export default {
       ...sharedConfig,
       displayName: 'react',
       testEnvironment: resolveJestEnvironment('jest-environment-jsdom'),
-      testEnvironmentOptions: {customExportConditions: ['node', 'node-addons']},
+      testEnvironmentOptions: {customExportConditions: ['browser']},
       setupFiles: ['<rootDir>/test/setup-dom.ts'],
       testMatch: ['**/__tests__/**/*.test.tsx'],
     },

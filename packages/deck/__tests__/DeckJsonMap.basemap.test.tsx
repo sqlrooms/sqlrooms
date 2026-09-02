@@ -1,7 +1,7 @@
 import {describe, expect, jest, test} from '@jest/globals';
 import {createBaseRoomSlice, RoomStateProvider} from '@sqlrooms/room-store';
-import React from 'react';
-import {renderToStaticMarkup} from 'react-dom/server';
+import React, {act} from 'react';
+import {createRoot} from 'react-dom/client';
 import type {MapProps} from 'react-map-gl/maplibre';
 import {createStore} from 'zustand/vanilla';
 import {createDeckMapsSlice} from '../src/DeckMapsSlice';
@@ -33,18 +33,29 @@ function renderMapWithProviders(
       : {}),
   }));
   renderMap.mockClear();
-  const markup = renderToStaticMarkup(
-    <RoomStateProvider roomStore={store}>
-      <DeckJsonMap
-        spec={{layers: []}}
-        datasets={{points: {sqlQuery: 'SELECT 1 AS id'}}}
-        mapStyle="protomaps-dark"
-        basemapProvider={propProvider}
-        showLegends={false}
-      />
-    </RoomStateProvider>,
-  );
-  return {markup, style: renderMap.mock.calls[0]?.[0].mapStyle};
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  try {
+    act(() =>
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <DeckJsonMap
+            spec={{layers: []}}
+            datasets={{points: {sqlQuery: 'SELECT 1 AS id'}}}
+            mapStyle="protomaps-dark"
+            basemapProvider={propProvider}
+            showLegends={false}
+          />
+        </RoomStateProvider>,
+      ),
+    );
+    return {
+      markup: container.innerHTML,
+      style: renderMap.mock.calls[0]?.[0].mapStyle,
+    };
+  } finally {
+    act(() => root.unmount());
+  }
 }
 
 describe('DeckJsonMap basemap providers', () => {
