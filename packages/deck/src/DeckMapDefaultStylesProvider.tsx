@@ -12,7 +12,8 @@ const DeckMapDefaultStylesContext = createContext<
 
 /**
  * Supplies host-owned, theme-aware basemap defaults without persisting them in
- * individual map resources. Explicit map config styles still take precedence.
+ * individual map resources. The required `styles` object is keyed by `light`
+ * and/or `dark`. Explicit map styles and basemap callbacks take precedence.
  */
 export const DeckMapDefaultStylesProvider: FC<
   PropsWithChildren<{styles: DeckMapDefaultStyles}>

@@ -94,6 +94,11 @@ export type DeckJsonMapHandle = {
   }) => void;
 };
 
+/**
+ * Renders a JSON deck.gl specification with named datasets in a room store.
+ * A per-map basemap provider overrides the room's provider; explicit custom
+ * map styles take precedence over both providers.
+ */
 export type DeckJsonMapProps = {
   spec: string | Record<string, unknown>;
   datasets: Record<string, DeckDatasetInput>;

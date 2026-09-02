@@ -3,7 +3,7 @@ import type {ResolvedTheme} from '@sqlrooms/ui';
 import type {StyleSpecification} from 'maplibre-gl';
 import type {DeckMapBasemapProvider} from './basemap';
 
-/** Supported Protomaps basemap color palettes. */
+/** Supported Protomaps palettes: light, dark, white, black, and grayscale. */
 export type ProtomapsFlavor =
   | 'light'
   | 'dark'

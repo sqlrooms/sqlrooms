@@ -1,7 +1,7 @@
 import nodeConfig from '@sqlrooms/preset-jest/node.js';
+import {resolveJestEnvironment} from '@sqlrooms/preset-jest/base.js';
 
-/** @type {import('ts-jest').JestConfigWithTsJest} */
-export default {
+const sharedConfig = {
   ...nodeConfig,
   moduleNameMapper: {
     ...nodeConfig.moduleNameMapper,
@@ -9,4 +9,23 @@ export default {
     '^@sqlrooms/color-scales/colorSchemeNames$':
       '<rootDir>/../color-scales/src/colorSchemeNames.ts',
   },
+};
+
+/** @type {import('jest').Config} */
+export default {
+  projects: [
+    {
+      ...sharedConfig,
+      displayName: 'node',
+      testMatch: ['**/__tests__/**/*.test.ts'],
+    },
+    {
+      ...sharedConfig,
+      displayName: 'react',
+      testEnvironment: resolveJestEnvironment('jest-environment-jsdom'),
+      testEnvironmentOptions: {customExportConditions: ['node', 'node-addons']},
+      setupFiles: ['<rootDir>/test/setup-dom.ts'],
+      testMatch: ['**/__tests__/**/*.test.tsx'],
+    },
+  ],
 };
