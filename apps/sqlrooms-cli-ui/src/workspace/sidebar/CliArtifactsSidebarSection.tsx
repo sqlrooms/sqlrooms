@@ -1,12 +1,5 @@
 import {
   Button,
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -18,31 +11,27 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Input,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   ScrollArea,
   ScrollBar,
-  useSidebar,
 } from '@sqlrooms/ui';
 import {
   EllipsisVerticalIcon,
   FileStackIcon,
   LoaderCircleIcon,
+  MessageSquarePlusIcon,
   PencilIcon,
+  PinIcon,
+  PinOffIcon,
   Plus,
   Trash2Icon,
 } from 'lucide-react';
 import {FormEvent, useEffect, useRef, useState} from 'react';
+import {isCreateSessionDisabled} from '../../components/sessionCreation';
 import {useRoomStore} from '../../roomStoreHooks';
-import {
-  CLI_SIDEBAR_COMMAND_CLASS,
-  CLI_SIDEBAR_COMMAND_ITEM_CLASS,
-} from './constants';
 import {useCliArtifactSidebarTabs} from './useCliArtifactSidebarTabs';
 
 export function CliArtifactsSidebarSection() {
@@ -50,9 +39,12 @@ export function CliArtifactsSidebarSection() {
   const openArtifactChooser = useRoomStore(
     (state) => state.workspaceUi.setShowArtifactChooser,
   );
-  const {state} = useSidebar();
-  const [popoverOpen, setPopoverOpen] = useState(false);
-  const [isKeyboardNavigating, setIsKeyboardNavigating] = useState(false);
+  const createArtifactScopedSession = useRoomStore(
+    (state) => state.artifactAi.createArtifactScopedSession,
+  );
+  const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
+  const setCollapsed = useRoomStore((state) => state.layout.setCollapsed);
+  const createSessionDisabled = isCreateSessionDisabled(currentSession);
   const [renameArtifact, setRenameArtifact] = useState<{
     id: string;
     name: string;
@@ -75,28 +67,29 @@ export function CliArtifactsSidebarSection() {
     setDeleteConfirm(null);
   };
 
-  if (state === 'expanded') {
-    return (
-      <div className="flex h-full min-h-0 min-w-0 flex-col">
-        <div className="mb-1 flex h-7 shrink-0 items-center justify-between px-2">
-          <div className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-            Workspace
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            className="text-primary hover:bg-primary/10 hover:text-primary h-6 gap-1 px-2 text-sm"
-            onClick={() => openArtifactChooser(true)}
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden />
-            New
-          </Button>
-        </div>
-        <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!w-full [&_[data-radix-scroll-area-viewport]>div]:!min-w-0">
-          <div className="w-full max-w-full min-w-0 overflow-visible py-0.5 pr-2 pl-0.5">
-            <SidebarMenu className="max-w-full min-w-0 gap-0.5 overflow-visible">
-              {artifactTabs.tabs.map((artifact) => {
+  return (
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
+      <div className="mb-1 flex h-7 shrink-0 items-center justify-end px-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          className="text-primary hover:bg-primary/10 hover:text-primary h-6 gap-1 px-2 text-sm"
+          onClick={() => openArtifactChooser(true)}
+        >
+          <Plus className="h-3.5 w-3.5" aria-hidden />
+          New
+        </Button>
+      </div>
+      <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!w-full [&_[data-radix-scroll-area-viewport]>div]:!min-w-0">
+        <div className="w-full max-w-full min-w-0 overflow-visible py-0.5 pr-2 pl-0.5">
+          <SidebarMenu className="max-w-full min-w-0 gap-0.5 overflow-visible">
+            {artifactTabs.tabs.length === 0 ? (
+              <div className="text-muted-foreground px-2 py-8 text-center text-sm">
+                No artifacts yet. Click &quot;New&quot; to start.
+              </div>
+            ) : (
+              artifactTabs.tabs.map((artifact) => {
                 const type = artifactTabs.artifactTypes[artifact.type];
                 const Icon = type?.icon ?? FileStackIcon;
                 return (
@@ -119,6 +112,17 @@ export function CliArtifactsSidebarSection() {
                     </SidebarMenuButton>
                     <ArtifactSidebarItemMenu
                       artifactName={artifact.name}
+                      isPinned={artifact.isPinned}
+                      newArtifactChatDisabled={createSessionDisabled}
+                      onNewArtifactChat={() => {
+                        if (createSessionDisabled) return;
+                        artifactTabs.selectArtifact(artifact.id);
+                        createArtifactScopedSession();
+                        setCollapsed('assistant-sidebar', false);
+                      }}
+                      onTogglePin={() =>
+                        artifactTabs.togglePinArtifact(artifact.id)
+                      }
                       onDelete={() =>
                         setDeleteConfirm({
                           id: artifact.id,
@@ -134,121 +138,44 @@ export function CliArtifactsSidebarSection() {
                     />
                   </SidebarMenuItem>
                 );
-              })}
-            </SidebarMenu>
-          </div>
-          <ScrollBar orientation="vertical" />
-        </ScrollArea>
-        <RenameArtifactDialog
-          artifact={renameArtifact}
-          onOpenChange={(open) => {
-            if (!open) setRenameArtifact(null);
-          }}
-          onRename={handleRenameArtifact}
-        />
-        <DeleteArtifactDialog
-          artifact={deleteConfirm}
-          onOpenChange={(open) => {
-            if (!open) setDeleteConfirm(null);
-          }}
-          onConfirm={handleDeleteArtifact}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <Popover
-      open={popoverOpen}
-      onOpenChange={(open) => {
-        setPopoverOpen(open);
-        setIsKeyboardNavigating(false);
-      }}
-    >
-      <PopoverTrigger asChild>
-        <SidebarMenuButton
-          className="hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent"
-          type="button"
-          size="lg"
-          aria-label="Workspace items"
-        >
-          <FileStackIcon className="h-4 w-4" aria-hidden />
-        </SidebarMenuButton>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-80 p-0"
-        align="start"
-        side="right"
-        sideOffset={10}
-      >
-        <Command
-          className={CLI_SIDEBAR_COMMAND_CLASS}
-          data-keyboard-navigation={isKeyboardNavigating}
-          onKeyDown={(event) => {
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-              setIsKeyboardNavigating(true);
-            }
-          }}
-          onPointerMove={() => setIsKeyboardNavigating(false)}
-        >
-          <CommandInput placeholder="Search workspace items..." />
-          <CommandList className="max-h-none overflow-hidden">
-            <CommandEmpty>No matching items.</CommandEmpty>
-            <ScrollArea className="h-[min(70vh,360px)] overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block">
-              <CommandGroup heading="Workspace items">
-                {artifactTabs.tabs.map((artifact) => {
-                  const type = artifactTabs.artifactTypes[artifact.type];
-                  const Icon = type?.icon ?? FileStackIcon;
-                  return (
-                    <CommandItem
-                      className={CLI_SIDEBAR_COMMAND_ITEM_CLASS}
-                      data-active={artifact.id === artifactTabs.selectedTabId}
-                      key={artifact.id}
-                      value={`${artifact.name} ${artifact.id}`}
-                      onSelect={() => {
-                        artifactTabs.selectArtifact(artifact.id);
-                        setPopoverOpen(false);
-                      }}
-                    >
-                      <Icon className="h-4 w-4" aria-hidden />
-                      <span className="min-w-0 flex-1 truncate">
-                        {artifact.name}
-                      </span>
-                      {artifact.runningSessionCount > 0 ? (
-                        <LoaderCircleIcon className="text-primary ml-auto h-3.5 w-3.5 shrink-0 animate-spin" />
-                      ) : null}
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            </ScrollArea>
-            <CommandSeparator />
-            <CommandGroup>
-              <CommandItem
-                className={CLI_SIDEBAR_COMMAND_ITEM_CLASS}
-                value="new"
-                onSelect={() => {
-                  openArtifactChooser(true);
-                  setPopoverOpen(false);
-                }}
-              >
-                <Plus className="h-4 w-4" aria-hidden />
-                Create new
-              </CommandItem>
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+              })
+            )}
+          </SidebarMenu>
+        </div>
+        <ScrollBar orientation="vertical" />
+      </ScrollArea>
+      <RenameArtifactDialog
+        artifact={renameArtifact}
+        onOpenChange={(open) => {
+          if (!open) setRenameArtifact(null);
+        }}
+        onRename={handleRenameArtifact}
+      />
+      <DeleteArtifactDialog
+        artifact={deleteConfirm}
+        onOpenChange={(open) => {
+          if (!open) setDeleteConfirm(null);
+        }}
+        onConfirm={handleDeleteArtifact}
+      />
+    </div>
   );
 }
 
 function ArtifactSidebarItemMenu({
   artifactName,
+  isPinned,
+  newArtifactChatDisabled,
+  onNewArtifactChat,
+  onTogglePin,
   onDelete,
   onRename,
 }: {
   artifactName: string;
+  isPinned: boolean;
+  newArtifactChatDisabled: boolean;
+  onNewArtifactChat: () => void;
+  onTogglePin: () => void;
   onDelete: () => void;
   onRename: () => void;
 }) {
@@ -266,6 +193,21 @@ function ArtifactSidebarItemMenu({
         </SidebarMenuAction>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="right">
+        <DropdownMenuItem
+          disabled={newArtifactChatDisabled}
+          onSelect={onNewArtifactChat}
+        >
+          <MessageSquarePlusIcon className="h-4 w-4" aria-hidden />
+          New artifact chat
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onTogglePin}>
+          {isPinned ? (
+            <PinOffIcon className="h-4 w-4" aria-hidden />
+          ) : (
+            <PinIcon className="h-4 w-4" aria-hidden />
+          )}
+          {isPinned ? 'Unpin' : 'Pin'}
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={onRename}>
           <PencilIcon className="h-4 w-4" aria-hidden />
           Rename
