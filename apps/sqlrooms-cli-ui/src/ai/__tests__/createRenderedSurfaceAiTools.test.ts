@@ -35,7 +35,18 @@ function createElement(
 function matchesSelector(
   element: {attributes: Record<string, string>; tagName: string},
   selector: string,
-) {
+): boolean {
+  if (selector.includes(',')) {
+    return selector
+      .split(',')
+      .some((part) => matchesSelector(element, part.trim()));
+  }
+  if (selector === 'canvas[data-sqlrooms-deck-canvas]') {
+    return (
+      element.tagName === 'CANVAS' &&
+      'data-sqlrooms-deck-canvas' in element.attributes
+    );
+  }
   if (selector.startsWith('[')) {
     return selector.slice(1, -1) in element.attributes;
   }
@@ -321,6 +332,71 @@ describe('createRenderedSurfaceAiTools', () => {
     });
     expect(captureElement).not.toHaveBeenCalled();
   });
+
+  it.each([
+    {preserved: true, lost: false, available: true, success: true},
+    {preserved: false, lost: false, available: true, success: false},
+    {preserved: true, lost: true, available: true, success: false},
+    {preserved: true, lost: false, available: false, success: false},
+  ])(
+    'validates the separate deck overlay in addition to the basemap: %j',
+    async ({preserved, lost, available, success}) => {
+      const base = createElement({class: 'maplibregl-canvas'}, [], 'canvas');
+      base.getContext = jest.fn(() => ({
+        isContextLost: () => false,
+        getContextAttributes: () => ({preserveDrawingBuffer: true}),
+      })) as unknown as HTMLCanvasElement['getContext'];
+      const overlay = createElement(
+        {id: 'custom-deck-id', 'data-sqlrooms-deck-canvas': ''},
+        [],
+        'canvas',
+      );
+      overlay.getContext = jest.fn(() =>
+        available
+          ? {
+              isContextLost: () => lost,
+              getContextAttributes: () => ({preserveDrawingBuffer: preserved}),
+            }
+          : null,
+      ) as unknown as HTMLCanvasElement['getContext'];
+      const block = createElement({'data-block-document-block-id': 'map-1'}, [
+        base,
+        overlay,
+      ]);
+      const document = createElement({'data-artifact-id': 'document-1'}, [
+        block,
+      ]);
+      const captureElement = jest.fn(async () => ({
+        base64: 'both-canvases',
+        width: 640,
+        height: 480,
+      }));
+      const tools = createRenderedSurfaceAiTools({
+        document: createDocument([document]),
+        captureElement,
+        prepareCapture: async () => {},
+      });
+
+      const output = await executeTool(tools.render_document_block_image, {
+        blockDocumentId: 'document-1',
+        blockId: 'map-1',
+      });
+
+      expect(output).toMatchObject({success});
+      if (success) {
+        expect(captureElement).toHaveBeenCalledWith(block);
+      } else {
+        expect(captureElement).not.toHaveBeenCalled();
+        expect(output).toMatchObject({
+          error: expect.stringContaining(
+            !preserved
+              ? 'deckProps.deviceProps.webgl.preserveDrawingBuffer'
+              : 'deck overlay whose WebGL context is unavailable',
+          ),
+        });
+      }
+    },
+  );
 
   it('rejects maps that explicitly disable drawing-buffer preservation', async () => {
     const mapCanvas = createElement(

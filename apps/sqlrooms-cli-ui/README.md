@@ -287,6 +287,7 @@ the exact cached PNG, dimensions, and capture time. The preview never recaptures
 the current view. After a reload or eviction from the six-image cache, it
 explains that the capture is unavailable and must be run again.
 SQLRooms maps preserve their WebGL drawing buffer so captures include the
-basemap and interleaved deck.gl layers. Maps with an unavailable context or
+basemap and interleaved deck.gl layers. Separate deck overlays preserve their
+buffer through deck.gl/luma.gl's default and are checked as well. Maps with an unavailable context or
 explicitly disabled buffer preservation return an actionable error.
 Iframe-backed content is still unsupported.

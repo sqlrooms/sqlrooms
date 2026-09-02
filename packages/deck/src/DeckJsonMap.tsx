@@ -279,7 +279,15 @@ function DeckOverlayControl({
   }, [clearing, overlay]);
 
   if (!clearing && overlay) {
-    overlay.setProps(deckProps);
+    overlay.setProps({
+      ...deckProps,
+      onLoad: () => {
+        // The separate canvas is created asynchronously. Mark it once deck
+        // initializes, including when the host supplies a custom canvas ID.
+        overlay.getCanvas()?.setAttribute('data-sqlrooms-deck-canvas', '');
+        if (typeof deckProps.onLoad === 'function') deckProps.onLoad();
+      },
+    });
   }
 
   return null;

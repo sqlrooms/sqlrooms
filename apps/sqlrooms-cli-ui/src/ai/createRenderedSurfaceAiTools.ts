@@ -12,6 +12,7 @@ const BLOCK_ID_ATTRIBUTE = 'data-block-document-block-id';
 const DASHBOARD_ID_ATTRIBUTE = 'data-dashboard-id';
 const DASHBOARD_PANEL_ID_ATTRIBUTE = 'data-dashboard-panel-id';
 const MAPLIBRE_CANVAS_SELECTOR = 'canvas.maplibregl-canvas';
+const MAP_CANVAS_SELECTOR = `${MAPLIBRE_CANVAS_SELECTOR}, canvas[data-sqlrooms-deck-canvas]`;
 const DEFAULT_MAX_IMAGE_EDGE = 1536;
 
 const RenderArtifactImageParameters = z.object({
@@ -218,21 +219,26 @@ function assertCaptureSupported(
       `${formatTarget(target)} contains iframe-backed content, which cannot be included in the generated image. Use the target's source and runtime diagnostics instead, or inspect it directly in the workspace.`,
     );
   }
-  const mapCanvases = element.matches(MAPLIBRE_CANVAS_SELECTOR)
+  const mapCanvases = element.matches(MAP_CANVAS_SELECTOR)
     ? [element as HTMLCanvasElement]
     : Array.from(
-        element.querySelectorAll<HTMLCanvasElement>(MAPLIBRE_CANVAS_SELECTOR),
+        element.querySelectorAll<HTMLCanvasElement>(MAP_CANVAS_SELECTOR),
       );
   for (const canvas of mapCanvases) {
+    const isDeckOverlay = !canvas.matches(MAPLIBRE_CANVAS_SELECTOR);
+    const surface = isDeckOverlay ? 'deck overlay' : 'map';
     const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
     if (!gl || gl.isContextLost()) {
       throw new Error(
-        `${formatTarget(target)} contains a map whose WebGL context is unavailable. Wait for the map to finish loading or reopen it, then retry.`,
+        `${formatTarget(target)} contains a ${surface} whose WebGL context is unavailable. Wait for the map to finish loading or reopen it, then retry.`,
       );
     }
     if (!gl.getContextAttributes()?.preserveDrawingBuffer) {
+      const option = isDeckOverlay
+        ? 'deckProps.deviceProps.webgl.preserveDrawingBuffer'
+        : 'mapProps.canvasContextAttributes.preserveDrawingBuffer';
       throw new Error(
-        `${formatTarget(target)} contains a map without drawing-buffer preservation. Enable mapProps.canvasContextAttributes.preserveDrawingBuffer and reopen the map, then retry.`,
+        `${formatTarget(target)} contains a ${surface} without drawing-buffer preservation. Enable ${option} and reopen the map, then retry.`,
       );
     }
   }
