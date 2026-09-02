@@ -7,6 +7,7 @@ import {
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
 } from '@sqlrooms/documents';
+import {useDataTable} from '@sqlrooms/db';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {
   ChartConfig,
@@ -15,7 +16,6 @@ import {
   MosaicChartView,
   MosaicDashboard,
   MosaicDashboardPanelLayout,
-  useDataTable,
   useTablesWithColumns,
   type MosaicDashboardSliceConfig,
 } from '@sqlrooms/mosaic';
@@ -156,14 +156,6 @@ export function useRefreshWorksheetDbSchemas(tableNames: string[]) {
   }, [refreshTableSchemas, tableNamesKey]);
 }
 
-function normalizeStatefulBlockOwnership(ownership: string | undefined) {
-  return ownership === 'owned' ||
-    ownership === 'shared' ||
-    ownership === 'external'
-    ? ownership
-    : undefined;
-}
-
 const WorksheetDataTableBlockRenderer = (
   props: BlockDocumentStatefulBlockRendererProps,
 ) => {
@@ -172,21 +164,25 @@ const WorksheetDataTableBlockRenderer = (
     WorkspaceRoomState['blockDocuments']['updateBlock']
   >((state) => state.blockDocuments.updateBlock);
 
-  const handleTitleChange = useCallback(
-    (title: string | undefined) => {
-      if (props.onTitleChange) {
-        props.onTitleChange(title);
+  const handleTableNameChange = useCallback(
+    (tableName: string | undefined) => {
+      if (props.onTableNameChange) {
+        props.onTableNameChange(tableName);
         return;
       }
-
       updateBlock(props.documentId, props.blockId, {
         id: props.blockId,
         type: 'statefulBlock',
         blockType: props.blockType,
         blockInstanceId: props.blockInstanceId,
-        ownership: normalizeStatefulBlockOwnership(props.ownership),
-        title: title || undefined,
+        ownership:
+          props.ownership === 'owned' ||
+          props.ownership === 'shared' ||
+          props.ownership === 'external'
+            ? props.ownership
+            : undefined,
         caption: props.caption,
+        tableName: tableName || undefined,
         height: props.height,
       });
     },
@@ -197,22 +193,26 @@ const WorksheetDataTableBlockRenderer = (
       props.caption,
       props.documentId,
       props.height,
-      props.onTitleChange,
+      props.onTableNameChange,
       props.ownership,
       updateBlock,
     ],
   );
 
   return (
-    <DataTableBlockRenderer {...props} onTitleChange={handleTitleChange} />
+    <DataTableBlockRenderer
+      {...props}
+      onTableNameChange={handleTableNameChange}
+    />
   );
 };
 
 const WorksheetDashboardBlockRenderer = ({
   blockInstanceId,
   blockType,
-  title,
   caption,
+  readOnly,
+  headerActions,
 }: BlockDocumentStatefulBlockRendererProps) => {
   const ensureDashboard = useBaseRoomStore<
     WorkspaceRoomState,
@@ -221,9 +221,9 @@ const WorksheetDashboardBlockRenderer = ({
 
   useEffect(() => {
     if (blockType === 'dashboard' && blockInstanceId) {
-      ensureDashboard(blockInstanceId, title ?? 'Embedded Dashboard', 'grid');
+      ensureDashboard(blockInstanceId, 'Embedded Dashboard', 'grid');
     }
-  }, [blockInstanceId, blockType, ensureDashboard, title]);
+  }, [blockInstanceId, blockType, ensureDashboard]);
 
   if (!blockInstanceId || blockType !== 'dashboard') {
     return <UnsupportedStatefulBlock blockType={blockType} />;
@@ -237,7 +237,13 @@ const WorksheetDashboardBlockRenderer = ({
         </div>
       ) : null}
       <div className="min-h-0 flex-1">
-        <MosaicDashboard dashboardId={blockInstanceId} />
+        <MosaicDashboard
+          dashboardId={blockInstanceId}
+          defaultLayoutType="grid"
+          headerActions={headerActions}
+          selectable
+          readOnly={readOnly}
+        />
       </div>
     </div>
   );
@@ -246,7 +252,6 @@ const WorksheetDashboardBlockRenderer = ({
 const WorksheetSqlQueryBlockRenderer = ({
   blockInstanceId,
   blockType,
-  title,
   readOnly,
 }: BlockDocumentStatefulBlockRendererProps) => {
   if (!blockInstanceId || blockType !== SQL_QUERY_BLOCK_TYPE) {
@@ -254,12 +259,7 @@ const WorksheetSqlQueryBlockRenderer = ({
   }
 
   return (
-    <SqlQueryBlock
-      queryId={blockInstanceId}
-      title={title ?? 'SQL Query'}
-      readOnly={readOnly}
-      compact
-    />
+    <SqlQueryBlock queryId={blockInstanceId} readOnly={readOnly} compact />
   );
 };
 
@@ -423,7 +423,6 @@ const WorksheetChartRenderer: BlockDocumentChartRenderer = ({
       dataTable={dataTable}
       config={chartConfig}
       onChange={handleConfigChange}
-      onClose={() => handleSettingsOpenChange(false)}
     />
   );
   const content = (

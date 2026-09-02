@@ -6,6 +6,7 @@ import {
 import {createDbSlice, type DbSliceState} from '@sqlrooms/db';
 import {type DuckDbConnector} from '@sqlrooms/duckdb';
 import {
+  createBlockDocumentCommands,
   createBlockDocumentsSlice,
   type BlockDocumentsSliceState,
 } from '@sqlrooms/documents';
@@ -17,6 +18,7 @@ import {
 } from '@sqlrooms/layout';
 import {
   createDefaultMosaicDashboardPanelRenderers,
+  createMosaicDashboardCommands,
   createMosaicDashboardSlice,
   createMosaicSlice,
   defaultAddPanelActions,
@@ -25,15 +27,19 @@ import {
 } from '@sqlrooms/mosaic';
 import {
   createBaseRoomSlice,
+  createCommandSlice,
   createRoomStorePersistence,
   createRoomStoreCreator,
   type BaseRoomStoreState,
+  type CommandSliceState,
   type PersistenceSaveMetadata,
+  registerCommandsForOwner,
   type RoomStorePersistence,
   type StoreApi,
 } from '@sqlrooms/room-store';
 import {
   createSqlEditorSlice,
+  SQL_QUERY_BLOCK_TYPE,
   type SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import type {JsonObject} from '#/lib/json';
@@ -54,6 +60,7 @@ import {createWorkspaceSlice, type WorkspaceSliceState} from './workspaceSlice';
 export const ASSISTANT_PANEL_ID = 'assistant-panel';
 
 export type WorkspaceRoomState = BaseRoomStoreState &
+  CommandSliceState &
   LayoutSliceState &
   AiSliceState &
   DbSliceState &
@@ -175,6 +182,7 @@ export function createWorkspaceRoomStore({
   const {createRoomStore} = createRoomStoreCreator<WorkspaceRoomState>()(
     () => (set, get, store) => ({
       ...createBaseRoomSlice()(set, get, store),
+      ...createCommandSlice()(set, get, store),
       ...createLayoutSlice({config: layout, panels})(set, get, store),
       ...createDbSlice({
         duckDb: {connector: duckDbConnector},
@@ -207,7 +215,43 @@ export function createWorkspaceRoomStore({
     }),
   );
 
-  return createRoomStore({storeKey: `workspace-room:${workspaceKey}`});
+  const roomStore = createRoomStore({
+    storeKey: `workspace-room:${workspaceKey}`,
+  });
+  registerCommandsForOwner(
+    roomStore,
+    '@sqlrooms/web-app/worksheet',
+    createBlockDocumentCommands<WorkspaceRoomState>({
+      artifactType: 'worksheet',
+      artifactLabel: 'Worksheet',
+      commandNamespace: 'worksheet',
+      commandGroup: 'Worksheet',
+      defaultTitle: 'Worksheet',
+      statefulBlockTypes: [
+        {
+          blockType: 'dashboard',
+          label: 'Dashboard',
+          defaultTitle: 'Embedded Dashboard',
+        },
+        {
+          blockType: 'data-table',
+          label: 'Data Table',
+          defaultTitle: 'Data Table',
+        },
+        {
+          blockType: SQL_QUERY_BLOCK_TYPE,
+          label: 'SQL Query',
+          defaultTitle: 'Embedded SQL Query',
+        },
+      ],
+    }),
+  );
+  registerCommandsForOwner(
+    roomStore,
+    '@sqlrooms/web-app/mosaic-dashboard',
+    createMosaicDashboardCommands<WorkspaceRoomState>(),
+  );
+  return roomStore;
 }
 
 function didWorkspacePersistedStateChange(

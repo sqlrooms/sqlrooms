@@ -48,17 +48,11 @@ type StatefulBlockConfig = {
   ensureState: (
     state: WorksheetStatefulBlockRoomState,
     blockInstanceId: string,
-    title: string,
     options?: BlockDocumentStatefulBlockCreateNodeOptions,
   ) => void;
   deleteState: (
     state: WorksheetStatefulBlockRoomState,
     blockInstanceId: string,
-  ) => void;
-  renameState?: (
-    state: WorksheetStatefulBlockRoomState,
-    blockInstanceId: string,
-    title: string,
   ) => void;
 };
 
@@ -76,14 +70,15 @@ const STATEFUL_BLOCK_CONFIGS: StatefulBlockConfig[] = [
     maxHeight: 1600,
     requireScrollModifier: true,
     scrollHintLabel: 'this dashboard',
-    ensureState: (state, blockInstanceId, title) => {
-      state.mosaicDashboard.ensureDashboard(blockInstanceId, title, 'grid');
+    ensureState: (state, blockInstanceId) => {
+      state.mosaicDashboard.ensureDashboard(
+        blockInstanceId,
+        'Embedded Dashboard',
+        'grid',
+      );
     },
     deleteState: (state, blockInstanceId) => {
       state.mosaicDashboard.removeDashboard(blockInstanceId);
-    },
-    renameState: (state, blockInstanceId, title) => {
-      state.mosaicDashboard.ensureDashboard(blockInstanceId, title, 'grid');
     },
   },
   {
@@ -105,17 +100,14 @@ const STATEFUL_BLOCK_CONFIGS: StatefulBlockConfig[] = [
     label: 'SQL Query',
     title: 'Embedded SQL Query',
     description: 'Embedded SQL query editor and result table',
-    ensureState: (state, blockInstanceId, title, options) => {
+    ensureState: (state, blockInstanceId, options) => {
       state.sqlEditor.ensureQuery(blockInstanceId, {
-        name: title,
+        name: 'Embedded SQL Query',
         query: options?.initialText,
       });
     },
     deleteState: (state, blockInstanceId) => {
       state.sqlEditor.removeQuery(blockInstanceId);
-    },
-    renameState: (state, blockInstanceId, title) => {
-      state.sqlEditor.renameQuery(blockInstanceId, title);
     },
   },
 ];
@@ -135,29 +127,18 @@ export function createWorkspaceBlockDocumentSliceProps<
     onCreateOwnedStatefulBlock: ({
       blockType,
       blockInstanceId,
-      title,
       caption,
       getState,
     }) => {
       ensureStatefulBlockState(getState(), {
         blockType,
         blockInstanceId,
-        title,
         initialText: caption,
       });
     },
     onDeleteOwnedStatefulBlock: ({blockType, blockInstanceId, getState}) => {
       const config = STATEFUL_BLOCK_CONFIG_BY_TYPE[blockType];
       config?.deleteState(getState(), blockInstanceId);
-    },
-    onRenameOwnedStatefulBlock: ({
-      blockType,
-      blockInstanceId,
-      title,
-      getState,
-    }) => {
-      const config = STATEFUL_BLOCK_CONFIG_BY_TYPE[blockType];
-      config?.renameState?.(getState(), blockInstanceId, title);
     },
   };
 }
@@ -178,7 +159,7 @@ export function createWorksheetStatefulBlockTypes({
     requireScrollModifier: config.requireScrollModifier,
     scrollHintLabel: config.scrollHintLabel,
     createNode: (blockId, options) => {
-      config.ensureState(getState(), blockId, config.title, options);
+      config.ensureState(getState(), blockId, options);
       return {
         type: 'blockDocumentStatefulBlock',
         attrs: {
@@ -186,7 +167,6 @@ export function createWorksheetStatefulBlockTypes({
           blockType: config.blockType,
           blockInstanceId: blockId,
           ownership: 'owned',
-          title: config.title,
           caption: '',
           ...(config.resizableHeight
             ? {height: config.defaultHeight ?? 560}
@@ -256,7 +236,6 @@ export function ensureStatefulBlocksForContent(
     ensureStatefulBlockState(state, {
       blockType: block.blockType,
       blockInstanceId: block.blockInstanceId,
-      title: block.title,
       initialText: block.caption,
     });
   }
@@ -285,18 +264,14 @@ function ensureStatefulBlockState(
     blockType,
     blockInstanceId,
     initialText,
-    title,
   }: {
     blockType: string;
     blockInstanceId: string;
     initialText?: string;
-    title?: string;
   },
 ) {
   const config = STATEFUL_BLOCK_CONFIG_BY_TYPE[blockType];
-  config?.ensureState(state, blockInstanceId, title ?? config.title, {
-    initialText,
-  });
+  config?.ensureState(state, blockInstanceId, {initialText});
 }
 
 function isOwnedStatefulBlock(
@@ -320,7 +295,6 @@ function normalizeWorksheetBlockDocumentNode(
         attrs: {
           ...attrs,
           blockType: SQL_QUERY_BLOCK_TYPE,
-          title: attrs.title ?? 'Embedded SQL Query',
         },
       };
     }

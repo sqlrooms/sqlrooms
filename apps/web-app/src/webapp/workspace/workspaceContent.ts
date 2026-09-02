@@ -101,10 +101,10 @@ export function createDefaultWorkspaceContent({
           id: worksheetId,
           type: 'worksheet',
           title: worksheetTitle,
-          visibility: 'workspace',
         },
       },
       artifactOrder: [worksheetId],
+      pinnedArtifactIds: [],
       currentArtifactId: worksheetId,
     },
     blockDocuments: {

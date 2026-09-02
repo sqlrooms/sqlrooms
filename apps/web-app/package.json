@@ -30,6 +30,7 @@
     "@sqlrooms/documents": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
+    "@sqlrooms/mcp": "workspace:*",
     "@sqlrooms/mosaic": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",

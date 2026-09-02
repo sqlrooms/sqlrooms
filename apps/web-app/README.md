@@ -18,9 +18,11 @@ Parquet files, and assistant usage through Neon/Cloudflare/OpenRouter.
   directly to private R2 with presigned `PUT` URLs, and reloads saved files
   through Worker-authorized reads.
 - Worksheets use `@sqlrooms/documents` `BlockDocument` with query, dashboard,
-  data table, and chart block scaffolds.
+  data table, and chart blocks backed by the current SQLRooms room store.
 - The assistant calls OpenRouter from a server route and records token usage in
   `ai_usage_events`.
+- When a browser exposes the experimental WebMCP imperative API, the initialized
+  room registers the shared SQLRooms query, table, and command capabilities.
 
 ## Local Development
 
@@ -40,6 +42,23 @@ pnpm --filter sqlrooms-web-app db:generate
 pnpm --filter sqlrooms-web-app db:migrate
 pnpm --filter sqlrooms-web-app deploy
 ```
+
+## WebMCP
+
+WebMCP is progressive enhancement. The app feature-detects
+`document.modelContext`, registers tools only after the room initializes, and
+unregisters them when the room is disposed. Browsers without the API retain the
+normal manual and assistant experience.
+
+Chrome currently distributes WebMCP as an origin trial. For local development,
+enable `chrome://flags/#enable-webmcp-testing` in a supporting Chrome build,
+restart Chrome, open the app, and inspect the registered tools with the WebMCP
+Inspector extension or `document.modelContext.getTools()`.
+
+The exposed catalog is `query`, `list_tables`, `read_table_schema`,
+`search_commands`, `get_command`, and `execute_command`. It uses the same
+validation, bounded results, cancellation, command policy, and live room store
+as the CLI MCP host. Cross-origin exposure is disabled by default.
 
 ## Environment Variables
 
@@ -184,10 +203,9 @@ OpenRouter key, R2 credentials, and final app/domain values.
   the user signs in and saves it.
 - File reads are Worker-mediated and currently stream full objects; byte-range
   handling still needs to be added before large Parquet restores.
-- Worksheet blocks are persisted `BlockDocument` scaffolds. Query execution,
-  data-table rendering, Mosaic charts, and dashboard composition still need the
-  next implementation pass.
 - The assistant is context-aware and usage-tracked, but it does not yet mutate
   worksheet blocks through normal UI commands.
+- The WebMCP adapter is available only while the page is open and initialized;
+  it is not a hosted or durable remote execution session.
 - Storage quota reconciliation, orphan R2 cleanup, delete flows, and usage
   meters are not implemented yet.

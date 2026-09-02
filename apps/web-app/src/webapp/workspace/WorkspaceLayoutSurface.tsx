@@ -22,6 +22,7 @@ import {
 } from 'react';
 import type {JsonObject} from '#/lib/json';
 import {AssistantPanel} from '../assistant/AssistantPanel';
+import {WorkspaceWebMcpTools} from '../capabilities/WorkspaceWebMcpTools';
 import {WorksheetSurface} from '../WorksheetSurface';
 import type {useWorkspaceDuckDbRuntime} from '../worksheet/useWorkspaceDuckDbRuntime';
 import {
@@ -148,6 +149,7 @@ function WorkspaceLayoutSurfaceContent({
 
   return (
     <RoomStateProvider roomStore={roomStore}>
+      <WorkspaceWebMcpTools roomStore={roomStore} />
       <WorkspaceLayoutRuntimeContext.Provider value={runtimeContextValue}>
         <div className="workspace-panels">
           <WorkspaceRoomLayoutRenderer roomStore={roomStore} />

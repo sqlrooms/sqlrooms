@@ -100,7 +100,7 @@ jest.unstable_mockModule('@sqlrooms/duckdb', () => ({
     ),
   }),
 }));
-jest.unstable_mockModule('@sqlrooms/room-shell', () => ({
+jest.unstable_mockModule('@sqlrooms/room-store', () => ({
   invokeCommandWithPolicy,
 }));
 
