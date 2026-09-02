@@ -264,9 +264,8 @@ context when the assistant creates or switches to a new primary artifact.
 
 ## AI Rendering Tools
 
-Start the CLI with `--ai-rendering-tools` (or
-`SQLROOMS_AI_RENDERING_TOOLS=1`) to opt a vision-capable model into three
-read-only tools:
+The CLI UI always makes three read-only rendering tools available across all
+capability profiles:
 
 - `render_artifact_image`
 - `render_document_block_image`
@@ -275,7 +274,13 @@ read-only tools:
 Each tool captures the target that is currently mounted in the workspace and
 returns a bounded PNG directly to the model. The image pixels use a small
 ephemeral cache; persisted chat history keeps only the target and capture
-metadata. These tools are disabled by default because models and
-OpenAI-compatible providers vary in their support for image tool results.
-Iframe-backed content and MapLibre WebGL surfaces are rejected because their
-rendered pixels cannot be captured reliably through DOM-to-image.
+metadata. Using the image results requires a vision-capable model and a provider
+that supports image tool results.
+Each rendering tool result includes a **View captured image** button showing
+the exact cached PNG, dimensions, and capture time. The preview never recaptures
+the current view. After a reload or eviction from the six-image cache, it
+explains that the capture is unavailable and must be run again.
+SQLRooms maps preserve their WebGL drawing buffer so captures include the
+basemap and interleaved deck.gl layers. Maps with an unavailable context or
+explicitly disabled buffer preservation return an actionable error.
+Iframe-backed content is still unsupported.

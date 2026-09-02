@@ -20,11 +20,11 @@ export type CreateCliAiToolsOptions = {
   createHtmlAppAgentTool?: (store: StoreApi<RoomState>) => Tool;
   createStandaloneChartTool?: () => Tool;
   createChartImageTool?: (store: StoreApi<RoomState>) => Tool;
-  renderedSurfaceImageToolsEnabled?: boolean;
+  /** Browser capture tools, always registered when supplied; omitted by headless targets. */
   createRenderedSurfaceImageTools?: () => Record<string, Tool>;
 };
 
-/** Creates exactly the top-level AI tool groups enabled by a CLI profile. */
+/** Creates profile-selected AI tools plus any host-provided rendering tools. */
 export function createCliAiTools({
   store,
   profile,
@@ -34,7 +34,6 @@ export function createCliAiTools({
   createHtmlAppAgentTool,
   createStandaloneChartTool,
   createChartImageTool,
-  renderedSurfaceImageToolsEnabled = false,
   createRenderedSurfaceImageTools,
 }: CreateCliAiToolsOptions): Record<string, Tool> {
   const enabledTools = new Set(profile.ai.topLevelToolGroups);
@@ -74,12 +73,7 @@ export function createCliAiTools({
   if (enabledTools.has('chart-image-for-markdown') && createChartImageTool) {
     tools.chart_image_for_markdown = createChartImageTool(store);
   }
-  if (renderedSurfaceImageToolsEnabled) {
-    if (!createRenderedSurfaceImageTools) {
-      throw new Error(
-        'Rendered surface image tool factory is required when the tools are enabled.',
-      );
-    }
+  if (createRenderedSurfaceImageTools) {
     Object.assign(tools, createRenderedSurfaceImageTools());
   }
   return tools;

@@ -1,6 +1,11 @@
 import {toPng} from 'html-to-image';
 import {tool, type Tool} from 'ai';
 import {z} from 'zod';
+import {
+  createRenderedSurfaceImageStore,
+  type CapturedRenderedElement,
+  type RenderedSurfaceImageStore,
+} from './renderedSurfaceImageStore';
 
 const ARTIFACT_ID_ATTRIBUTE = 'data-artifact-id';
 const BLOCK_ID_ATTRIBUTE = 'data-block-document-block-id';
@@ -8,7 +13,6 @@ const DASHBOARD_ID_ATTRIBUTE = 'data-dashboard-id';
 const DASHBOARD_PANEL_ID_ATTRIBUTE = 'data-dashboard-panel-id';
 const MAPLIBRE_CANVAS_SELECTOR = 'canvas.maplibregl-canvas';
 const DEFAULT_MAX_IMAGE_EDGE = 1536;
-const MAX_CACHED_IMAGES = 6;
 
 const RenderArtifactImageParameters = z.object({
   artifactId: z
@@ -42,6 +46,8 @@ export type RenderedSurfaceImageToolOutput =
       width: number;
       height: number;
       capturedAt: string;
+      /** Absent in older persisted results; pixels live only in the runtime cache. */
+      captureId?: string;
     }
   | {
       success: false;
@@ -49,12 +55,6 @@ export type RenderedSurfaceImageToolOutput =
       target: RenderedSurfaceImageTarget;
       error: string;
     };
-
-type CapturedRenderedElement = {
-  base64: string;
-  width: number;
-  height: number;
-};
 
 /** Captures a rendered DOM element as a bounded PNG for a vision model. */
 export type CaptureRenderedElement = (
@@ -66,6 +66,7 @@ export type CreateRenderedSurfaceAiToolsOptions = {
   document?: Document;
   captureElement?: CaptureRenderedElement;
   prepareCapture?: () => Promise<void>;
+  imageStore?: RenderedSurfaceImageStore;
 };
 
 /** AI tools that let a vision-capable model inspect visible SQLRooms surfaces. */
@@ -76,7 +77,7 @@ export type RenderedSurfaceAiTools = {
 };
 
 /**
- * Creates opt-in tools for inspecting the current rendering of an artifact,
+ * Creates tools for inspecting the current rendering of an artifact,
  * document block, or dashboard panel.
  *
  * Targets must already be mounted in the visible workspace. This keeps the
@@ -88,7 +89,7 @@ export function createRenderedSurfaceAiTools(
   const rootDocument = options.document ?? globalThis.document;
   const captureElement = options.captureElement ?? captureElementAsPng;
   const prepareCapture = options.prepareCapture ?? waitForUiPaint;
-  const imageCache = new Map<string, CapturedRenderedElement>();
+  const imageStore = options.imageStore ?? createRenderedSurfaceImageStore();
 
   const createTool = <TInput>(config: {
     description: string;
@@ -99,7 +100,7 @@ export function createRenderedSurfaceAiTools(
     tool({
       description: config.description,
       inputSchema: config.inputSchema,
-      execute: async (input, {toolCallId}) => {
+      execute: async (input) => {
         const target = config.getTarget(input);
         try {
           await prepareCapture();
@@ -112,7 +113,7 @@ export function createRenderedSurfaceAiTools(
           assertCaptureSupported(element, target);
 
           const image = await captureElement(element);
-          cacheImage(imageCache, toolCallId, image);
+          const captureId = imageStore.getState().add(image);
           return {
             success: true,
             details: `Captured the current rendering of ${formatTarget(target)}.`,
@@ -121,6 +122,7 @@ export function createRenderedSurfaceAiTools(
             width: image.width,
             height: image.height,
             capturedAt: new Date().toISOString(),
+            captureId,
           } satisfies RenderedSurfaceImageToolOutput;
         } catch (error) {
           const message =
@@ -133,12 +135,12 @@ export function createRenderedSurfaceAiTools(
           } satisfies RenderedSurfaceImageToolOutput;
         }
       },
-      toModelOutput: ({toolCallId, output}) => {
+      toModelOutput: ({output}) => {
         if (!output.success) {
           return {type: 'error-text', value: output.details};
         }
 
-        const image = imageCache.get(toolCallId);
+        const image = imageStore.getState().images.get(output.captureId);
         if (!image) {
           return {
             type: 'text',
@@ -163,7 +165,7 @@ export function createRenderedSurfaceAiTools(
   return {
     render_artifact_image: createTool({
       description: `Capture the visible rendering of a specific artifact as a PNG and inspect it visually.
-Use this after creating or updating a DOM-rendered artifact when visual appearance, layout, clipping, labels, or render errors matter. The artifact must be open in the workspace. Iframe-backed and MapLibre WebGL content is not supported. This tool requires a vision-capable model.`,
+Use this after creating or updating a rendered artifact when visual appearance, layout, clipping, labels, or render errors matter. The artifact must be open in the workspace. SQLRooms maps are supported. Iframe-backed content is not supported. This tool requires a vision-capable model.`,
       inputSchema: RenderArtifactImageParameters,
       getTarget: ({artifactId}) => ({kind: 'artifact', artifactId}),
       findElement: ({artifactId}) =>
@@ -173,7 +175,7 @@ Use this after creating or updating a DOM-rendered artifact when visual appearan
     }),
     render_document_block_image: createTool({
       description: `Capture one rendered document block as a PNG and inspect it visually.
-Use this after creating or updating a DOM-rendered chart, table, or other document block to verify its actual appearance. The containing Document must be open in the workspace. Iframe-backed content such as HTML apps and MapLibre WebGL content is not supported. This tool requires a vision-capable model.`,
+Use this after creating or updating a chart, table, map, or other document block to verify its actual appearance. The containing Document must be open in the workspace. SQLRooms maps are supported. Iframe-backed content such as HTML apps is not supported. This tool requires a vision-capable model.`,
       inputSchema: RenderDocumentBlockImageParameters,
       getTarget: ({blockDocumentId, blockId}) => ({
         kind: 'document-block',
@@ -191,7 +193,7 @@ Use this after creating or updating a DOM-rendered chart, table, or other docume
     }),
     render_dashboard_panel_image: createTool({
       description: `Capture one rendered dashboard panel as a PNG and inspect it visually.
-Use this after creating or updating a DOM-rendered dashboard panel to verify its actual chart, table, layout, labels, and render state. The containing dashboard must be open, either as an artifact or a Document block. Iframe-backed and MapLibre WebGL content is not supported. This tool requires a vision-capable model.`,
+Use this after creating or updating a dashboard panel to verify its actual chart, table, map, layout, labels, and render state. The containing dashboard must be open, either as an artifact or a Document block. SQLRooms maps are supported. Iframe-backed content is not supported. This tool requires a vision-capable model.`,
       inputSchema: RenderDashboardPanelImageParameters,
       getTarget: ({dashboardId, panelId}) => ({
         kind: 'dashboard-panel',
@@ -216,13 +218,23 @@ function assertCaptureSupported(
       `${formatTarget(target)} contains iframe-backed content, which cannot be included in the generated image. Use the target's source and runtime diagnostics instead, or inspect it directly in the workspace.`,
     );
   }
-  if (
-    element.matches(MAPLIBRE_CANVAS_SELECTOR) ||
-    element.querySelector(MAPLIBRE_CANVAS_SELECTOR)
-  ) {
-    throw new Error(
-      `${formatTarget(target)} contains MapLibre WebGL content, which cannot be captured reliably because its drawing buffer is not preserved. Inspect it directly in the workspace.`,
-    );
+  const mapCanvases = element.matches(MAPLIBRE_CANVAS_SELECTOR)
+    ? [element as HTMLCanvasElement]
+    : Array.from(
+        element.querySelectorAll<HTMLCanvasElement>(MAPLIBRE_CANVAS_SELECTOR),
+      );
+  for (const canvas of mapCanvases) {
+    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+    if (!gl || gl.isContextLost()) {
+      throw new Error(
+        `${formatTarget(target)} contains a map whose WebGL context is unavailable. Wait for the map to finish loading or reopen it, then retry.`,
+      );
+    }
+    if (!gl.getContextAttributes()?.preserveDrawingBuffer) {
+      throw new Error(
+        `${formatTarget(target)} contains a map without drawing-buffer preservation. Enable mapProps.canvasContextAttributes.preserveDrawingBuffer and reopen the map, then retry.`,
+      );
+    }
   }
 }
 
@@ -241,20 +253,6 @@ function findElementByAttributes(
       ([attribute, value]) => element.getAttribute(attribute) === value,
     ),
   );
-}
-
-function cacheImage(
-  cache: Map<string, CapturedRenderedElement>,
-  toolCallId: string,
-  image: CapturedRenderedElement,
-) {
-  cache.delete(toolCallId);
-  cache.set(toolCallId, image);
-  while (cache.size > MAX_CACHED_IMAGES) {
-    const oldestKey = cache.keys().next().value;
-    if (oldestKey === undefined) break;
-    cache.delete(oldestKey);
-  }
 }
 
 async function waitForUiPaint() {

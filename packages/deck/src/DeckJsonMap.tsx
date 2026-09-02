@@ -584,6 +584,12 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
 
     const mergedMapProps = {
       ...extraMapProps,
+      // DOM image capture reads the canvas after the render frame has ended.
+      // Interleaved deck layers share this buffer with the basemap.
+      canvasContextAttributes: {
+        preserveDrawingBuffer: true,
+        ...mapProps?.canvasContextAttributes,
+      },
       mapStyle: resolveDeckMapStyle({
         mapStyle,
         mapPropsMapStyle: mapProps?.mapStyle,

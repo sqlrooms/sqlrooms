@@ -11,10 +11,22 @@ describe('createCliAiTools rendered surface images', () => {
     },
   };
 
-  it('does not register image tools unless the runtime opts in', () => {
-    const createRenderedSurfaceImageTools = jest.fn(() => ({
+  it('supports headless targets without a rendering tool factory', () => {
+    expect(
+      createCliAiTools({
+        store: {} as never,
+        profile,
+      }),
+    ).toEqual({});
+  });
+
+  it('registers all image tools without a runtime opt-in or profile tool group', () => {
+    const imageTools = {
       render_artifact_image: {} as never,
-    }));
+      render_document_block_image: {} as never,
+      render_dashboard_panel_image: {} as never,
+    };
+    const createRenderedSurfaceImageTools = jest.fn(() => imageTools);
 
     expect(
       createCliAiTools({
@@ -22,22 +34,7 @@ describe('createCliAiTools rendered surface images', () => {
         profile,
         createRenderedSurfaceImageTools,
       }),
-    ).toEqual({});
-    expect(createRenderedSurfaceImageTools).not.toHaveBeenCalled();
-  });
-
-  it('registers the image tools when the runtime explicitly enables them', () => {
-    const renderArtifactImage = {} as never;
-
-    expect(
-      createCliAiTools({
-        store: {} as never,
-        profile,
-        renderedSurfaceImageToolsEnabled: true,
-        createRenderedSurfaceImageTools: () => ({
-          render_artifact_image: renderArtifactImage,
-        }),
-      }),
-    ).toEqual({render_artifact_image: renderArtifactImage});
+    ).toEqual(imageTools);
+    expect(createRenderedSurfaceImageTools).toHaveBeenCalledTimes(1);
   });
 });

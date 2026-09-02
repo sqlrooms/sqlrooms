@@ -36,8 +36,6 @@ export type RuntimeConfig = {
   /** @deprecated Use capabilityProfile. Kept for older Python runtimes. */
   experimentalEnabled?: boolean;
   aiDevtools?: boolean;
-  /** Enables DOM rendering tools for explicitly configured vision-capable models. */
-  aiRenderingTools?: boolean;
   syncEnabled?: boolean;
   crdtWsUrl?: string;
   crdtRoomId?: string;

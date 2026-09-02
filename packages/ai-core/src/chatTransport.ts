@@ -51,6 +51,7 @@ import {
   type AiTimeoutOptions,
 } from './timeouts';
 import {tryMeasureProviderContext} from './devtools/providerContextDiagnostics';
+import {prepareOpenAiCompatibleToolImages} from './openAiCompatibleToolImages';
 
 /**
  * Write tool timings from the store into assistant message metadata so they
@@ -544,6 +545,7 @@ export function createLocalChatTransportFactory({
 
       // Prefer a user-supplied model if available
       let model: LanguageModel | undefined = getCustomModel?.();
+      const usesOpenAiCompatibleModel = !model;
 
       // Fallback to OpenAI-compatible if no custom model provided
       if (!model) {
@@ -604,8 +606,15 @@ export function createLocalChatTransportFactory({
         tools,
         stopWhen: stepCountIs(maxSteps),
         prepareStep: async ({stepNumber, messages}) => {
+          const providerMessages = usesOpenAiCompatibleModel
+            ? prepareOpenAiCompatibleToolImages(messages)
+            : messages;
+          const preparedStep =
+            providerMessages === messages
+              ? undefined
+              : {messages: providerMessages};
           if (!state.ai.devtools.shouldCaptureProviderContexts()) {
-            return undefined;
+            return preparedStep;
           }
           const diagnostic = await tryMeasureProviderContext({
             role: 'chat-coordinator',
@@ -614,7 +623,7 @@ export function createLocalChatTransportFactory({
             sessionId,
             step: stepNumber,
             instructions: systemInstructions,
-            messages,
+            messages: providerMessages,
             tools,
             sources: [
               'base-instructions',
@@ -623,10 +632,10 @@ export function createLocalChatTransportFactory({
               'top-level-tool-registry',
             ],
           });
-          if (!diagnostic) return undefined;
+          if (!diagnostic) return preparedStep;
           diagnosticsByStep[stepNumber] = diagnostic.id;
           state.ai.devtools.writeProviderContext(diagnostic);
-          return undefined;
+          return preparedStep;
         },
         onStepFinish: ({usage}) => {
           const diagnosticId = diagnosticsByStep[completedDiagnosticStep++];

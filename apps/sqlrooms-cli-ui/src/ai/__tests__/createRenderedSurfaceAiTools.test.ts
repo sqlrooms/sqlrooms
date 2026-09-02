@@ -5,6 +5,7 @@ type FakeElement = HTMLElement & {
   attributes: Record<string, string>;
   descendants: FakeElement[];
   tagName: string;
+  getContext?: HTMLCanvasElement['getContext'];
 };
 
 function createElement(
@@ -18,7 +19,12 @@ function createElement(
     descendants,
     tagName: normalizedTagName,
     getAttribute: (name: string) => attributes[name] ?? null,
-    querySelectorAll: () => descendants,
+    querySelectorAll: (selector: string) => {
+      const all = descendants.flatMap(function visit(child): FakeElement[] {
+        return [child, ...child.descendants.flatMap(visit)];
+      });
+      return all.filter((child) => matchesSelector(child, selector));
+    },
     matches: (selector: string) =>
       matchesSelector({attributes, tagName: normalizedTagName}, selector),
     querySelector: (selector: string) =>
@@ -30,6 +36,9 @@ function matchesSelector(
   element: {attributes: Record<string, string>; tagName: string},
   selector: string,
 ) {
+  if (selector.startsWith('[')) {
+    return selector.slice(1, -1) in element.attributes;
+  }
   if (selector === 'iframe') return element.tagName === 'IFRAME';
   if (selector === 'canvas.maplibregl-canvas') {
     return Boolean(
@@ -236,12 +245,93 @@ describe('createRenderedSurfaceAiTools', () => {
     });
   });
 
-  it('rejects MapLibre WebGL targets instead of returning a blank image', async () => {
+  it('captures a document map with a preserved WebGL buffer', async () => {
+    const canvas = createElement({class: 'maplibregl-canvas'}, [], 'canvas');
+    canvas.getContext = jest.fn(() => ({
+      isContextLost: () => false,
+      getContextAttributes: () => ({preserveDrawingBuffer: true}),
+    })) as unknown as HTMLCanvasElement['getContext'];
+    const block = createElement({'data-block-document-block-id': 'map-1'}, [
+      canvas,
+    ]);
+    const document = createElement({'data-artifact-id': 'document-1'}, [block]);
+    const captureElement = jest.fn(async () => ({
+      base64: 'map-png',
+      width: 640,
+      height: 480,
+    }));
+    const tools = createRenderedSurfaceAiTools({
+      document: createDocument([document]),
+      captureElement,
+      prepareCapture: async () => {},
+    });
+
+    const output = await executeTool(tools.render_document_block_image, {
+      blockDocumentId: 'document-1',
+      blockId: 'map-1',
+    });
+
+    expect(output).toMatchObject({success: true, mediaType: 'image/png'});
+    expect(captureElement).toHaveBeenCalledWith(block);
+    expect(
+      await tools.render_document_block_image.toModelOutput!({
+        input: {blockDocumentId: 'document-1', blockId: 'map-1'},
+        output,
+        toolCallId: 'call-1',
+      }),
+    ).toMatchObject({
+      type: 'content',
+      value: expect.arrayContaining([
+        {type: 'image-data', data: 'map-png', mediaType: 'image/png'},
+      ]),
+    });
+  });
+
+  it('checks every map in a capture and rejects lost WebGL contexts', async () => {
+    const canvases = [false, true].map((lost) => {
+      const canvas = createElement({class: 'maplibregl-canvas'}, [], 'canvas');
+      canvas.getContext = jest.fn(() => ({
+        isContextLost: () => lost,
+        getContextAttributes: () => ({preserveDrawingBuffer: true}),
+      })) as unknown as HTMLCanvasElement['getContext'];
+      return canvas;
+    });
+    const artifact = createElement(
+      {'data-artifact-id': 'document-1'},
+      canvases,
+    );
+    const captureElement = jest.fn(async () => ({
+      base64: 'png',
+      width: 640,
+      height: 480,
+    }));
+    const tools = createRenderedSurfaceAiTools({
+      document: createDocument([artifact]),
+      captureElement,
+      prepareCapture: async () => {},
+    });
+
+    const output = await executeTool(tools.render_artifact_image, {
+      artifactId: 'document-1',
+    });
+
+    expect(output).toMatchObject({
+      success: false,
+      error: expect.stringContaining('WebGL context is unavailable'),
+    });
+    expect(captureElement).not.toHaveBeenCalled();
+  });
+
+  it('rejects maps that explicitly disable drawing-buffer preservation', async () => {
     const mapCanvas = createElement(
       {class: 'maplibregl-canvas another-class'},
       [],
       'canvas',
     );
+    mapCanvas.getContext = jest.fn(() => ({
+      isContextLost: () => false,
+      getContextAttributes: () => ({preserveDrawingBuffer: false}),
+    })) as unknown as HTMLCanvasElement['getContext'];
     const panel = createElement(
       {
         'data-dashboard-id': 'dashboard-1',
@@ -269,14 +359,14 @@ describe('createRenderedSurfaceAiTools', () => {
     expect(output).toEqual({
       success: false,
       details:
-        'Failed to capture panel "map-panel-1" in dashboard "dashboard-1": panel "map-panel-1" in dashboard "dashboard-1" contains MapLibre WebGL content, which cannot be captured reliably because its drawing buffer is not preserved. Inspect it directly in the workspace.',
+        'Failed to capture panel "map-panel-1" in dashboard "dashboard-1": panel "map-panel-1" in dashboard "dashboard-1" contains a map without drawing-buffer preservation. Enable mapProps.canvasContextAttributes.preserveDrawingBuffer and reopen the map, then retry.',
       target: {
         kind: 'dashboard-panel',
         dashboardId: 'dashboard-1',
         panelId: 'map-panel-1',
       },
       error:
-        'panel "map-panel-1" in dashboard "dashboard-1" contains MapLibre WebGL content, which cannot be captured reliably because its drawing buffer is not preserved. Inspect it directly in the workspace.',
+        'panel "map-panel-1" in dashboard "dashboard-1" contains a map without drawing-buffer preservation. Enable mapProps.canvasContextAttributes.preserveDrawingBuffer and reopen the map, then retry.',
     });
   });
 });

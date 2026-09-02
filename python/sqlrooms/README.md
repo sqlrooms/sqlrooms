@@ -26,7 +26,6 @@ What happens:
 - `--experimental`: Compatibility alias for `--profile experimental`.
 - `--experimental-sync`: Enable experimental sync (CRDT) over WebSocket (Loro). Requires the `experimental` profile.
 - `--ai-devtools`: Enable the AI session devtools button in the UI, including production-built UI bundles. Can also be set with `SQLROOMS_AI_DEVTOOLS=1`.
-- `--ai-rendering-tools`: Enable read-only artifact, document-block, and dashboard-panel image tools for vision-capable models. You can also set this flag with `SQLROOMS_AI_RENDERING_TOOLS=1`.
 - `--debug`: Enable verbose debug logging, including HTTP access logs and DuckDB query timing.
 - `--meta-db`: Optional path to a dedicated DuckDB file for SQLRooms meta tables (UI state + CRDT snapshots). If omitted, meta tables are stored in the main DB.
 - `--meta-namespace` (default `__sqlrooms`): Namespace for SQLRooms meta tables. If `--meta-db` is provided, used as ATTACH alias; otherwise used as a schema in the main DB.
@@ -37,6 +36,10 @@ What happens:
 - `--mcp-port`: Select the loopback MCP port (defaults to 42100 or the next free port).
 - `--config`: Path to a SQLRooms TOML config file. Defaults to `~/.config/sqlrooms/config.toml` (`%APPDATA%\sqlrooms\config.toml` on Windows).
 - `--no-config`: Disable config file loading.
+
+Read-only artifact, document-block, and dashboard-panel image tools are always
+available in the CLI UI. Using their image results requires a vision-capable
+model and a provider that supports image tool results.
 
 `--host 0.0.0.0` is an advanced local-network mode. Only use it on trusted
 networks; it exposes the SQLRooms UI/API bind address beyond your loopback
