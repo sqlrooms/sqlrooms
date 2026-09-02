@@ -204,6 +204,17 @@ type CommandToolExecutionContext = {
   metadata?: Record<string, unknown>;
 };
 
+/** The caller-scoped access decision for a room command descriptor. */
+export type CommandGuardResult = {
+  /** Whether the command tools may expose and execute the command. */
+  allowed: boolean;
+  /** Optional machine-readable refusal code returned by `execute_command`. */
+  code?: string;
+  /** Optional refusal or redirect message returned by `execute_command`. */
+  message?: string;
+};
+
+/** Options for configuring the model-facing room command tools. */
 export type CommandToolsOptions = {
   searchToolName?: string;
   getToolName?: string;
@@ -216,6 +227,12 @@ export type CommandToolsOptions = {
   defaultMetadata?: Record<string, unknown>;
   includeInvisibleCommandsByDefault?: boolean;
   includeDisabledCommandsInList?: boolean;
+  /**
+   * Restricts which commands this tool instance may expose or execute.
+   * Denied commands are omitted from discovery and details. Execution returns
+   * `command-not-available-to-caller` unless the decision supplies a code.
+   */
+  commandGuard?: (descriptor: CommandToolDescriptor) => CommandGuardResult;
 };
 
 const DEFAULT_SEARCH_TOOL_NAME = 'search_commands';
@@ -288,7 +305,10 @@ Use this for routine command discovery before calling ${getToolName} for the sel
           includeDisabled: params.includeDisabled,
           includeInputSchema: params.includeInputSchema,
         });
-        const rankedCommands = rankCommandDescriptors(descriptors, params);
+        const rankedCommands = rankCommandDescriptors(
+          filterGuardedCommandDescriptors(descriptors, options),
+          params,
+        );
 
         return {
           success: true,
@@ -334,7 +354,9 @@ Call this after ${searchToolName} and before ${executeToolName} when the command
           includeInputSchema: true,
         });
         const command = descriptors.find(
-          (descriptor) => descriptor.id === params.commandId,
+          (descriptor) =>
+            descriptor.id === params.commandId &&
+            isCommandAllowed(descriptor, options),
         );
         if (!command) {
           return {
@@ -366,17 +388,20 @@ For routine command use, prefer ${searchToolName}, then ${getToolName} for the s
           } satisfies ListCommandsToolLlmResult;
         }
 
-        const descriptors = state.commands.listCommands({
-          ...createCommandToolInvocationOptions(
-            defaultSurface,
-            options,
-            context,
-            state,
-          ),
-          includeInvisible: params.includeInvisible,
-          includeDisabled: params.includeDisabled,
-          includeInputSchema: params.includeInputSchema,
-        });
+        const descriptors = filterGuardedCommandDescriptors(
+          state.commands.listCommands({
+            ...createCommandToolInvocationOptions(
+              defaultSurface,
+              options,
+              context,
+              state,
+            ),
+            includeInvisible: params.includeInvisible,
+            includeDisabled: params.includeDisabled,
+            includeInputSchema: params.includeInputSchema,
+          }),
+          options,
+        );
 
         return {
           success: true,
@@ -426,6 +451,23 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
             includeInputSchema: false,
           })
           .find((command) => command.id === commandId);
+        const guardResult = descriptor
+          ? options?.commandGuard?.(descriptor)
+          : undefined;
+        if (guardResult && !guardResult.allowed) {
+          const message =
+            guardResult.message ??
+            `Command "${commandId}" is not available to this caller.`;
+          return {
+            success: false,
+            commandId,
+            errorMessage: message,
+            result: {
+              code: guardResult.code ?? 'command-not-available-to-caller',
+              message,
+            },
+          } satisfies ExecuteCommandToolLlmResult;
+        }
         if (
           descriptor &&
           !confirmed &&
@@ -486,6 +528,22 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
     // ([searchToolName], [getToolName], [listToolName], [executeToolName]) to
     // their literal string types.
   } as DefaultCommandTools;
+}
+
+function filterGuardedCommandDescriptors(
+  descriptors: RoomCommandDescriptor[],
+  options: CommandToolsOptions | undefined,
+): RoomCommandDescriptor[] {
+  return options?.commandGuard
+    ? descriptors.filter((descriptor) => isCommandAllowed(descriptor, options))
+    : descriptors;
+}
+
+function isCommandAllowed(
+  descriptor: RoomCommandDescriptor,
+  options: CommandToolsOptions | undefined,
+): boolean {
+  return options?.commandGuard?.(descriptor).allowed ?? true;
 }
 
 type RankedCommandDescriptor = {

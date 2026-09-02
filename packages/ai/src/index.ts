@@ -26,6 +26,7 @@ export {
 export type {
   CommandToolDescriptor,
   CommandToolSearchDescriptor,
+  CommandGuardResult,
   CommandToolsOptions,
   DefaultCommandTools,
   ExecuteCommandToolLlmResult,
