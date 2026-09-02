@@ -4,12 +4,12 @@ import {createDeckMapsSlice, DeckMapsSliceConfig} from '../src/DeckMapsSlice';
 import {
   createDeckMapDashboardPanelConfig,
   createEmptyDeckMapConfig,
+  withDefaultDeckMapStyle,
 } from '../src/mapConfig';
 import {
   createDeckMapConfigForTable,
   regenerateMapConfigForTable,
 } from '../src/mapConfigUtils';
-import {withDefaultDeckMapStyle} from '../src/mapStyles';
 
 const originalDocument = Object.getOwnPropertyDescriptor(
   globalThis,

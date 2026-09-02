@@ -6,8 +6,11 @@ import {
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
 import {z} from 'zod';
-import {createEmptyDeckMapConfig, type DeckMapConfig} from './mapConfig';
-import {withDefaultDeckMapStyle} from './mapStyles';
+import {
+  createEmptyDeckMapConfig,
+  withDefaultDeckMapStyle,
+  type DeckMapConfig,
+} from './mapConfig';
 
 const DeckMapConfigSchema = z.object({
   spec: z.union([z.string(), z.record(z.string(), z.unknown())]),

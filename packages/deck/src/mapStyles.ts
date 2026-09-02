@@ -1,5 +1,4 @@
 import {getTheme, type ResolvedTheme} from '@sqlrooms/ui';
-import type {DeckMapConfig} from './mapConfig';
 
 /** Built-in basemaps offered in map settings. IDs are persisted in map configs. */
 export const DECK_MAP_BASEMAP_STYLES = [
@@ -30,11 +29,4 @@ export function getDefaultDeckMapStyle(
   theme: ResolvedTheme = getCurrentTheme(),
 ): string {
   return theme === 'dark' ? 'protomaps-dark' : 'protomaps-light';
-}
-
-/** Adds a creation-time basemap default while preserving explicit custom styles. */
-export function withDefaultDeckMapStyle(config: DeckMapConfig): DeckMapConfig {
-  return config.mapStyle || config.mapProps?.mapStyle
-    ? config
-    : {...config, mapStyle: getDefaultDeckMapStyle()};
 }

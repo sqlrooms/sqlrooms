@@ -1,5 +1,5 @@
 import {createId} from '@paralleldrive/cuid2';
-import {withDefaultDeckMapStyle} from './mapStyles';
+import {getDefaultDeckMapStyle} from './mapStyles';
 import type {
   DeckJsonMapProps,
   DeckSqlDatasetInput,
@@ -78,6 +78,13 @@ export type DeckMapConfig = {
   dataPolicy?: DeckMapDataPolicyOverride;
   settingsOpen?: boolean;
 };
+
+/** Adds a creation-time basemap default while preserving explicit custom styles. */
+export function withDefaultDeckMapStyle(config: DeckMapConfig): DeckMapConfig {
+  return config.mapStyle || config.mapProps?.mapStyle
+    ? config
+    : {...config, mapStyle: getDefaultDeckMapStyle()};
+}
 
 /** Creates the portable empty configuration used for a new Deck map. */
 export function createEmptyDeckMapConfig(): DeckMapConfig {
