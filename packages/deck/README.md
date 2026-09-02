@@ -162,8 +162,17 @@ Return stable MapLibre style objects or URLs. Direct `DeckJsonMap` callers
 can pass `basemapProvider` as a prop, overriding the room's provider without
 requiring the Deck maps slice. The existing room store is still required for
 dataset preparation. Explicit custom map styles take precedence over
-the provider. The existing `DeckMapDefaultStylesProvider styles={{light, dark}}`
-remains supported as a fallback when the callback returns no style.
+the provider.
+
+`DeckMapDefaultStylesProvider` and `useDeckMapDefaultStyles` are deprecated.
+To migrate an existing `styles={{light, dark}}` wrapper, keep the style objects
+and pass `basemapProvider: (theme) => styles[theme]` to `createDeckMapsSlice`,
+then remove the wrapper. For individual map overrides, pass the same callback
+to `DeckJsonMap`. Code that reads `useDeckMapDefaultStyles` should use the room's
+`deckMaps.basemapProvider` or the supplied callback instead.
+The context API remains functional for backward compatibility, as a fallback
+when no callback style is available. Removal is reserved for a future breaking
+release.
 
 `createProtomapsStyle(flavor, apiKey)` creates a MapLibre style object, and
 `createProtomapsDefaultStyles(apiKey)` creates the light/dark pair.

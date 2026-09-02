@@ -14,6 +14,9 @@ const DeckMapDefaultStylesContext = createContext<
  * Supplies host-owned, theme-aware basemap defaults without persisting them in
  * individual map resources. The required `styles` object is keyed by `light`
  * and/or `dark`. Explicit map styles and basemap callbacks take precedence.
+ *
+ * @deprecated Configure `basemapProvider` on `createDeckMapsSlice` or pass it
+ * directly to `DeckJsonMap` instead. Retained for backward compatibility.
  */
 export const DeckMapDefaultStylesProvider: FC<
   PropsWithChildren<{styles: DeckMapDefaultStyles}>
@@ -23,7 +26,12 @@ export const DeckMapDefaultStylesProvider: FC<
   </DeckMapDefaultStylesContext.Provider>
 );
 
-/** Returns theme-aware host map defaults from the nearest provider, if any. */
+/**
+ * Returns theme-aware host map defaults from the nearest provider, if any.
+ *
+ * @deprecated Use the room's `deckMaps.basemapProvider` or an explicitly supplied
+ * basemap callback instead. Retained for backward compatibility.
+ */
 export function useDeckMapDefaultStyles() {
   return useContext(DeckMapDefaultStylesContext);
 }
