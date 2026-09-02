@@ -10,6 +10,7 @@ import type {DeckMapBasemapProvider} from './basemap';
 import {
   createEmptyDeckMapConfig,
   withDefaultDeckMapStyle,
+  withPreservedDeckMapStyle,
   type DeckMapConfig,
 } from './mapConfig';
 
@@ -145,17 +146,9 @@ export function createDeckMapsSlice(props?: {
           produce(state, (draft) => {
             const map = draft.deckMaps.config.mapsById[id];
             if (!map) throw new Error(`Deck map ${id} was not found`);
-            const config = patch.config && {...patch.config};
-            if (config && !config.mapStyle && !config.mapProps?.mapStyle) {
-              if (map.config.mapStyle) {
-                config.mapStyle = map.config.mapStyle;
-              } else if (map.config.mapProps?.mapStyle) {
-                config.mapProps = {
-                  ...config.mapProps,
-                  mapStyle: map.config.mapProps.mapStyle,
-                };
-              }
-            }
+            const config =
+              patch.config &&
+              withPreservedDeckMapStyle({...patch.config}, map.config);
             Object.assign(map, patch, {id}, config ? {config} : {});
             if (patch.config) {
               const issue = draft.deckMaps.runtime.issuesByMapId[id];

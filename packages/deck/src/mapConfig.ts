@@ -86,6 +86,27 @@ export function withDefaultDeckMapStyle(config: DeckMapConfig): DeckMapConfig {
     : {...config, mapStyle: getDefaultDeckMapStyle()};
 }
 
+/** Retains a map's basemap on config replacement unless a new style is supplied. */
+export function withPreservedDeckMapStyle(
+  config: DeckMapConfig,
+  previousConfig: DeckMapConfig | null,
+): DeckMapConfig {
+  if (config.mapStyle || config.mapProps?.mapStyle) return config;
+  if (previousConfig?.mapStyle) {
+    return {...config, mapStyle: previousConfig.mapStyle};
+  }
+  if (previousConfig?.mapProps?.mapStyle) {
+    return {
+      ...config,
+      mapProps: {
+        ...config.mapProps,
+        mapStyle: previousConfig.mapProps.mapStyle,
+      },
+    };
+  }
+  return config;
+}
+
 /** Creates the portable empty configuration used for a new Deck map. */
 export function createEmptyDeckMapConfig(): DeckMapConfig {
   return withDefaultDeckMapStyle({
