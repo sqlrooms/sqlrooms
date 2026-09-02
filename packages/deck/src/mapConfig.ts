@@ -1,4 +1,5 @@
 import {createId} from '@paralleldrive/cuid2';
+import {withDefaultDeckMapStyle} from './mapStyles';
 import type {
   DeckJsonMapProps,
   DeckSqlDatasetInput,
@@ -68,6 +69,7 @@ export type DeckMapConfig = {
   spec: DeckJsonMapProps['spec'];
   datasets: Record<string, DeckMapDatasetConfig>;
   configMode?: DeckMapConfigMode;
+  /** Built-in basemap ID (`protomaps-light`/`protomaps-dark`) or custom style URL. */
   mapStyle?: string;
   mapProps?: Record<string, unknown>;
   showLegends?: boolean;
@@ -79,13 +81,13 @@ export type DeckMapConfig = {
 
 /** Creates the portable empty configuration used for a new Deck map. */
 export function createEmptyDeckMapConfig(): DeckMapConfig {
-  return {
+  return withDefaultDeckMapStyle({
     spec: {
       initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
       layers: [],
     },
     datasets: {},
-  };
+  });
 }
 
 /** Adapter-facing dashboard panel shape; document resources never store it. */
@@ -111,7 +113,9 @@ export function createDeckMapDashboardPanelConfig(
     id: createId(),
     type: DECK_MAP_DASHBOARD_PANEL_TYPE,
     title: title ?? 'Map',
-    config: JSON.parse(JSON.stringify(config)) as Record<string, unknown>,
+    config: JSON.parse(
+      JSON.stringify(withDefaultDeckMapStyle(config)),
+    ) as Record<string, unknown>,
   };
 }
 

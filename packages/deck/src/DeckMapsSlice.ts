@@ -7,6 +7,7 @@ import {
 import {produce} from 'immer';
 import {z} from 'zod';
 import {createEmptyDeckMapConfig, type DeckMapConfig} from './mapConfig';
+import {withDefaultDeckMapStyle} from './mapStyles';
 
 const DeckMapConfigSchema = z.object({
   spec: z.union([z.string(), z.record(z.string(), z.unknown())]),
@@ -115,7 +116,9 @@ export function createDeckMapsSlice(props?: {
               draft.deckMaps.config.mapsById[id] = {
                 id,
                 title: options?.title ?? 'Map',
-                config: options?.config ?? createEmptyDeckMapConfig(),
+                config: withDefaultDeckMapStyle(
+                  options?.config ?? createEmptyDeckMapConfig(),
+                ),
               };
             }
           }),
@@ -133,7 +136,15 @@ export function createDeckMapsSlice(props?: {
           produce(state, (draft) => {
             const map = draft.deckMaps.config.mapsById[id];
             if (!map) throw new Error(`Deck map ${id} was not found`);
-            Object.assign(map, patch, {id});
+            const config = patch.config && {
+              ...patch.config,
+              ...(!patch.config.mapStyle &&
+              !patch.config.mapProps?.mapStyle &&
+              map.config.mapStyle
+                ? {mapStyle: map.config.mapStyle}
+                : {}),
+            };
+            Object.assign(map, patch, {id}, config ? {config} : {});
             if (patch.config) {
               const issue = draft.deckMaps.runtime.issuesByMapId[id];
               if (

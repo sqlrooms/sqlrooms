@@ -27,6 +27,7 @@ import {DeckJsonMapSpec} from './DeckJsonMapSpec';
 import {
   resolveDeckMapStyle,
   useDeckMapDefaultStyles,
+  type DeckMapStyle,
 } from './DeckMapDefaultStylesProvider';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
 import {usePreparedDatasetStates} from './datasets/usePreparedDatasetStates';
@@ -41,9 +42,30 @@ import type {
   PreparedDeckDatasetState,
 } from './types';
 
-const DEFAULT_MAP_STYLES: Record<ResolvedTheme, string> = {
-  light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+// Keep data layers usable before the host has configured its tile API key.
+const UNCONFIGURED_MAP_STYLES: Record<ResolvedTheme, DeckMapStyle> = {
+  light: {
+    version: 8,
+    sources: {},
+    layers: [
+      {
+        id: 'background',
+        type: 'background',
+        paint: {'background-color': '#fff'},
+      },
+    ],
+  },
+  dark: {
+    version: 8,
+    sources: {},
+    layers: [
+      {
+        id: 'background',
+        type: 'background',
+        paint: {'background-color': '#111'},
+      },
+    ],
+  },
 };
 
 function parseSpec(spec: DeckJsonMapProps['spec']) {
@@ -589,7 +611,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
         mapPropsMapStyle: mapProps?.mapStyle,
         hostDefaultStyles: hostDefaultMapStyles,
         resolvedTheme,
-        fallbackStyles: DEFAULT_MAP_STYLES,
+        fallbackStyles: UNCONFIGURED_MAP_STYLES,
       }),
     };
     const legends = useMemo(
@@ -622,6 +644,18 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
           <DeckOverlayControl interleaved={interleaved} {...overlayDeckProps} />
           {children}
         </Map>
+
+        {Object.values(UNCONFIGURED_MAP_STYLES).includes(
+          mergedMapProps.mapStyle,
+        ) && (
+          <div
+            role="status"
+            className="bg-background/90 text-muted-foreground absolute top-2 right-2 left-2 rounded border p-2 text-xs"
+          >
+            Basemap unavailable. Configure a Protomaps API key or provide a
+            custom map style.
+          </div>
+        )}
 
         {renderDatasetErrorOverlay(datasetStates)}
         {!hasRenderingError && showLegends ? (

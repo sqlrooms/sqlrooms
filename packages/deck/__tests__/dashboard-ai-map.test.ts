@@ -308,7 +308,7 @@ describe('createDeckMapConfigTool', () => {
       kind: 'deck-map-config',
       type: DECK_MAP_DASHBOARD_PANEL_TYPE,
       title: 'Standalone earthquake map',
-      config: normalizedScatterConfig,
+      config: {...normalizedScatterConfig, mapStyle: 'protomaps-light'},
     });
   });
 

@@ -10,6 +10,24 @@ const fallbackStyles = {
 };
 
 describe('resolveDeckMapStyle', () => {
+  test('retains a saved basemap when the app theme changes', () => {
+    expect(
+      resolveDeckMapStyle({
+        mapStyle: 'protomaps-dark',
+        hostDefaultStyles: {light: 'host-light', dark: 'host-dark'},
+        resolvedTheme: 'light',
+        fallbackStyles,
+      }),
+    ).toBe('host-dark');
+    expect(
+      resolveDeckMapStyle({
+        mapStyle: 'protomaps-light',
+        resolvedTheme: 'dark',
+        fallbackStyles,
+      }),
+    ).toBe('fallback-light');
+  });
+
   test('prefers explicit map styles over map props and host defaults', () => {
     expect(
       resolveDeckMapStyle({

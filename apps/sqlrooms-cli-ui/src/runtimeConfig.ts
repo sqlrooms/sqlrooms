@@ -26,6 +26,8 @@ export type RuntimeStartupStatus = {
 };
 
 export type RuntimeConfig = {
+  /** Browser-visible Protomaps tile API key supplied by the CLI environment. */
+  protomapsApiKey?: string;
   wsUrl?: string;
   wsAuthToken?: string;
   apiBaseUrl?: string;

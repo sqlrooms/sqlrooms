@@ -1,8 +1,11 @@
 import type {ResolvedTheme} from '@sqlrooms/ui';
 import type {MapProps} from 'react-map-gl/maplibre';
+import {getDeckMapStyleTheme} from './mapStyles';
+import {createProtomapsDefaultStyles} from './protomapsStyles';
 import {
   createContext,
   useContext,
+  useMemo,
   type FC,
   type PropsWithChildren,
 } from 'react';
@@ -22,12 +25,28 @@ const DeckMapDefaultStylesContext = createContext<
  * individual map resources. Explicit map config styles still take precedence.
  */
 export const DeckMapDefaultStylesProvider: FC<
-  PropsWithChildren<{styles: DeckMapDefaultStyles}>
-> = ({styles, children}) => (
-  <DeckMapDefaultStylesContext.Provider value={styles}>
-    {children}
-  </DeckMapDefaultStylesContext.Provider>
-);
+  PropsWithChildren<{
+    /** Optional custom defaults, overriding the corresponding Protomaps themes. */
+    styles?: DeckMapDefaultStyles;
+    /** Browser-visible Protomaps API key; never persisted in map resources. */
+    protomapsApiKey?: string;
+  }>
+> = ({styles, protomapsApiKey, children}) => {
+  const defaults = useMemo(
+    () => ({
+      ...(protomapsApiKey?.trim()
+        ? createProtomapsDefaultStyles(protomapsApiKey.trim())
+        : {}),
+      ...styles,
+    }),
+    [protomapsApiKey, styles],
+  );
+  return (
+    <DeckMapDefaultStylesContext.Provider value={defaults}>
+      {children}
+    </DeckMapDefaultStylesContext.Provider>
+  );
+};
 
 /** Returns theme-aware host map defaults from the nearest provider, if any. */
 export function useDeckMapDefaultStyles() {
@@ -52,11 +71,20 @@ export function resolveDeckMapStyle(options: {
   mapPropsMapStyle?: MapProps['mapStyle'];
   hostDefaultStyles?: DeckMapDefaultStyles;
   resolvedTheme: ResolvedTheme;
-  fallbackStyles: Record<ResolvedTheme, string>;
+  fallbackStyles: Record<ResolvedTheme, DeckMapStyle>;
 }): DeckMapStyle {
-  return (
+  const selectedStyle =
     usableMapStyle(options.mapStyle) ??
-    usableMapStyle(options.mapPropsMapStyle) ??
+    usableMapStyle(options.mapPropsMapStyle);
+  const selectedTheme = getDeckMapStyleTheme(selectedStyle);
+  if (selectedTheme) {
+    return (
+      usableMapStyle(options.hostDefaultStyles?.[selectedTheme]) ??
+      options.fallbackStyles[selectedTheme]
+    );
+  }
+  return (
+    selectedStyle ??
     usableMapStyle(options.hostDefaultStyles?.[options.resolvedTheme]) ??
     options.fallbackStyles[options.resolvedTheme]
   );

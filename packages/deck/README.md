@@ -105,11 +105,49 @@ export function AirportsMap() {
           geometryEncodingHint: 'wkb',
         },
       }}
-      mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
     />
   );
 }
 ```
+
+## Basemaps
+
+Deck maps use Protomaps v4 vector tiles with neutral light and dark styles.
+Configure the browser-visible API key once around your maps:
+
+```tsx
+import {DeckMapDefaultStylesProvider} from '@sqlrooms/deck';
+
+<DeckMapDefaultStylesProvider protomapsApiKey={protomapsApiKey}>
+  <AirportsMap />
+</DeckMapDefaultStylesProvider>;
+```
+
+Obtain a key from [Protomaps](https://protomaps.com/api) and allow your app's
+origins. Hosts supply the key explicitly; the library does not read bundler
+environment variables. **Migrating from CARTO requires configuring a key**
+or supplying your own styles. Without either, maps show a setup message and
+continue rendering data layers against a plain background. There is no CARTO
+fallback.
+
+New map resources and dashboard panels save `mapStyle: 'protomaps-light'` or
+`'protomaps-dark'` using the app theme at creation. Changing the app theme later
+does not change existing maps. The **Basemap** dropdown in map settings selects
+Light or Dark, including for maps with custom layer configurations. The selection
+survives dataset changes, config updates, and saved-workspace reloads; keys and
+generated style objects are not stored in map resources. Applications creating
+configs outside the browser can use `getDefaultDeckMapStyle(theme)` explicitly.
+
+Bare `DeckJsonMap` instances and older saved maps without a style continue to
+follow the app theme. Choose a basemap in settings to persist it in an older map.
+Explicit custom `mapStyle` URLs and `mapProps.mapStyle` objects remain supported;
+the selector displays **Custom** until a built-in style is selected.
+
+`DeckMapDefaultStylesProvider` also accepts `styles={{light, dark}}` for host-owned
+defaults; these override the corresponding generated Protomaps styles, including
+when resolving a saved light/dark basemap ID. `createProtomapsStyle(flavor, apiKey)`
+creates a MapLibre style object, and `createProtomapsDefaultStyles(apiKey)` creates
+the light/dark pair. `DECK_MAP_BASEMAP_STYLES` lists the built-in IDs and labels.
 
 ## Auto Spec Generation
 

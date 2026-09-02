@@ -120,6 +120,12 @@ export type {
   DeckMapInteractionConfig,
 } from './mapConfig';
 export {DeckJsonMap} from './DeckJsonMap';
+export {DECK_MAP_BASEMAP_STYLES, getDefaultDeckMapStyle} from './mapStyles';
+export {
+  createProtomapsDefaultStyles,
+  createProtomapsStyle,
+  type ProtomapsFlavor,
+} from './protomapsStyles';
 export {
   DeckMapDefaultStylesProvider,
   resolveDeckMapStyle,

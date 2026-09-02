@@ -15,6 +15,21 @@ What happens:
 - Drag-and-drop CSV, TSV, JSON, Parquet, and DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
 - UI state is stored in the SQLRooms meta namespace (default `__sqlrooms`) of the selected DuckDB file.
 
+## Map basemaps
+
+Maps use Protomaps vector tiles. Set the browser-visible API key before launch:
+
+```bash
+PROTOMAPS_API_KEY=your-browser-key uvx sqlrooms ./sqlrooms.db
+```
+
+Get a key from [Protomaps](https://protomaps.com/api). The key is passed to the
+UI at runtime, without rebuilding, and is not saved in map documents. If no key
+is configured, maps show a setup message and data layers on a plain background.
+
+New maps keep the light/dark style matching the app theme at creation. Change
+the saved style through **Map settings → Basemap**.
+
 ## CLI flags
 
 - `DB_PATH` (positional): DuckDB project file to load/create (e.g. `sqlrooms ./my.db`). Required unless `--db-path` is provided.

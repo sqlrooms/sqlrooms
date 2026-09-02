@@ -44,6 +44,7 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {AlertTriangleIcon} from 'lucide-react';
+import {DeckMapBasemapSelect} from './DeckMapBasemapSelect';
 import {isDeckMapTableDatasetSource, type DeckMapConfig} from './mapConfig';
 import {
   clearDeckMapLayerColorScale,
@@ -1385,6 +1386,13 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
         closeLabel="Close map settings"
       />
 
+      <div className="px-2 pb-2">
+        <DeckMapBasemapSelect
+          config={config}
+          onConfigChange={onConfigChange}
+          readOnly={readOnly}
+        />
+      </div>
       {showCode ? (
         <DeckMapCodeViewerPanel
           value={serializedMapConfig}
