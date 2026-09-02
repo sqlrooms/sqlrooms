@@ -3,6 +3,7 @@ import {createCliAiInstructions} from '../createCliAiInstructions';
 import {
   DEFAULT_CLI_CAPABILITY_PROFILE,
   DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+  EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
 } from '../profiles';
 import type {RoomState} from '../store-types';
 
@@ -16,6 +17,35 @@ const store = {
 } as unknown as StoreApi<RoomState>;
 
 describe('createCliAiInstructions', () => {
+  it.each([
+    DEFAULT_CLI_CAPABILITY_PROFILE,
+    DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+    EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
+  ])(
+    'routes visual inspection directly to capture tools for $name',
+    (profile) => {
+      const instructions = createCliAiInstructions(store, profile);
+
+      expect(instructions).toContain('Call render_document_block_image');
+      expect(instructions).toContain('render_dashboard_panel_image');
+      expect(instructions).toContain('render_artifact_image');
+      expect(instructions).toContain(
+        'not commands discoverable through search_commands',
+      );
+      expect(instructions).toContain('use those target IDs immediately');
+      expect(instructions).toContain(
+        'read the containing Document once with block-document.get',
+      );
+      expect(instructions).toContain(
+        'do not search for map configuration or state commands first',
+      );
+      expect(instructions).toContain('use the captured pixels as evidence');
+      expect(instructions).toContain(
+        'takes precedence over document and map authoring guidance',
+      );
+    },
+  );
+
   it.each([
     DEFAULT_CLI_CAPABILITY_PROFILE,
     DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,

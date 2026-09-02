@@ -175,7 +175,7 @@ Use this after creating or updating a rendered artifact when visual appearance, 
     }),
     render_document_block_image: createTool({
       description: `Capture one rendered document block as a PNG and inspect it visually.
-Use this after creating or updating a chart, table, map, or other document block to verify its actual appearance. The containing Document must be open in the workspace. SQLRooms maps are supported. Iframe-backed content such as HTML apps is not supported. This tool requires a vision-capable model.`,
+Use this when asked what is actually rendered or visible in a chart, table, map, or other document block, and after creating or updating one to verify its appearance. Call it directly once the target IDs are known; no map configuration lookup is needed. The containing Document must be open in the workspace. SQLRooms maps are supported. Iframe-backed content such as HTML apps is not supported. This tool requires a vision-capable model.`,
       inputSchema: RenderDocumentBlockImageParameters,
       getTarget: ({blockDocumentId, blockId}) => ({
         kind: 'document-block',

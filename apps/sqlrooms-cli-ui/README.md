@@ -271,6 +271,12 @@ capability profiles:
 - `render_document_block_image`
 - `render_dashboard_panel_image`
 
+Visual-inspection requests use these tools directly. If the target block ID is
+missing, the assistant reads the Document once with `block-document.get`, then
+captures the matching block. It does not need to search for map configuration
+commands before inspecting the image. Rendering tools are separate from the
+command registry searched by `search_commands`.
+
 Each tool captures the target that is currently mounted in the workspace and
 returns a bounded PNG directly to the model. The image pixels use a small
 ephemeral cache; persisted chat history keeps only the target and capture
