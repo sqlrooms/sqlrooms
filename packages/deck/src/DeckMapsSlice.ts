@@ -6,6 +6,7 @@ import {
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
 import {z} from 'zod';
+import type {DeckMapBasemapProvider} from './basemap';
 import {
   createEmptyDeckMapConfig,
   withDefaultDeckMapStyle,
@@ -75,6 +76,8 @@ export type DeckMapRuntimeIssueReporter = {
 export type DeckMapsSliceState = {
   deckMaps: {
     config: DeckMapsSliceConfig;
+    /** Optional runtime basemap provider shared by maps in this room. */
+    basemapProvider?: DeckMapBasemapProvider;
     runtime: {issuesByMapId: Record<string, DeckMapRuntimeIssue>};
     setConfig: (config: DeckMapsSliceConfig) => void;
     ensureMap: (
@@ -100,11 +103,14 @@ export type DeckMapsSliceState = {
  */
 export function createDeckMapsSlice(props?: {
   config?: Partial<DeckMapsSliceConfig>;
+  /** Optional host-owned basemaps. The provider is not persisted in map config. */
+  basemapProvider?: DeckMapBasemapProvider;
 }) {
   type RootState = BaseRoomStoreState & DuckDbSliceState & DeckMapsSliceState;
   return createSlice<DeckMapsSliceState, RootState>((set, get) => ({
     deckMaps: {
       config: {mapsById: props?.config?.mapsById ?? {}},
+      basemapProvider: props?.basemapProvider,
       runtime: {issuesByMapId: {}},
       setConfig: (config) =>
         set((state) =>

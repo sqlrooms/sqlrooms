@@ -1,8 +1,27 @@
 import {describe, expect, test} from '@jest/globals';
 import {createStore} from 'zustand/vanilla';
 import {createDeckMapsSlice, DeckMapsSliceConfig} from '../src/DeckMapsSlice';
+import {createProtomapsBasemapProvider} from '../src/protomapsStyles';
 
 describe('DeckMapsSlice', () => {
+  test('keeps basemap providers room-scoped and outside persisted map config', () => {
+    const basemapProvider = createProtomapsBasemapProvider('test-runtime-key');
+    const store = createStore(createDeckMapsSlice({basemapProvider}));
+    const otherStore = createStore(createDeckMapsSlice());
+    store.getState().deckMaps.ensureMap('map-1');
+    const config = DeckMapsSliceConfig.parse(store.getState().deckMaps.config);
+
+    expect(store.getState().deckMaps.basemapProvider).toBe(basemapProvider);
+    expect(otherStore.getState().deckMaps.basemapProvider).toBeUndefined();
+    expect(JSON.stringify(config)).not.toContain('test-runtime-key');
+    expect(config).not.toHaveProperty('basemapProvider');
+    store.getState().deckMaps.setConfig(config);
+    expect(store.getState().deckMaps.basemapProvider).toBe(basemapProvider);
+    const restored = createStore(createDeckMapsSlice({config}));
+    expect(restored.getState().deckMaps.config).toEqual(config);
+    expect(restored.getState().deckMaps.basemapProvider).toBeUndefined();
+  });
+
   test('keeps runtime issues outside persisted config and removes both lifecycles', () => {
     const store = createStore<any>(createDeckMapsSlice() as any);
     store.getState().deckMaps.ensureMap('map-1', {title: 'Map'});

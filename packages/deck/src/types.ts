@@ -2,6 +2,7 @@ import type * as arrow from 'apache-arrow';
 import type {ComponentProps, ReactNode} from 'react';
 import type DeckGLReact from '@deck.gl/react';
 import type {MapProps} from 'react-map-gl/maplibre';
+import type {DeckMapBasemapProvider} from './basemap';
 
 type DeckProps = ComponentProps<typeof DeckGLReact>;
 import type {GeometryEncodingHint, PreparedDeckDataset} from './prepare/types';
@@ -97,6 +98,8 @@ export type DeckJsonMapProps = {
   spec: string | Record<string, unknown>;
   datasets: Record<string, DeckDatasetInput>;
   mapStyle?: string;
+  /** Overrides the room's optional basemap provider for this map instance. */
+  basemapProvider?: DeckMapBasemapProvider;
   /**
    * When true, deck.gl renders into the map's own WebGL context rather than
    * creating a separate overlay canvas. This halves the number of WebGL

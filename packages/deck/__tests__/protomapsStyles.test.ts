@@ -1,11 +1,31 @@
 import {describe, expect, test} from '@jest/globals';
 import {
+  createProtomapsBasemapProvider,
   createProtomapsDefaultStyles,
   createProtomapsStyle,
 } from '../src/protomapsStyles';
-import {resolveDeckMapStyle} from '../src/DeckMapDefaultStylesProvider';
+import {resolveDeckMapStyle} from '../src/basemap';
 
 describe('Protomaps basemaps', () => {
+  test('caches provider styles and keeps each key in its own provider', () => {
+    const provider = createProtomapsBasemapProvider('test-key');
+    expect(provider('dark')).toBe(provider('dark'));
+    expect(provider('light')).toBe(provider('light'));
+    expect(provider('dark')).not.toEqual(provider('light'));
+    expect(provider('dark')).not.toEqual(
+      createProtomapsBasemapProvider('another-key')('dark'),
+    );
+  });
+
+  test.each([undefined, '', '   '])(
+    'leaves maps unconfigured when the key is %p',
+    (key) => {
+      const provider = createProtomapsBasemapProvider(key);
+      expect(provider('dark')).toBeUndefined();
+      expect(provider('light')).toBeUndefined();
+    },
+  );
+
   test('uses the v4 vector tiles API and preserves the supplied key', () => {
     const apiKey = 'test+key&with=special?characters';
     const style = createProtomapsStyle('white', apiKey);

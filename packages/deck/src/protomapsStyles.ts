@@ -1,6 +1,7 @@
 import {layers, namedFlavor} from '@protomaps/basemaps';
 import type {ResolvedTheme} from '@sqlrooms/ui';
 import type {StyleSpecification} from 'maplibre-gl';
+import type {DeckMapBasemapProvider} from './basemap';
 
 /** Supported Protomaps basemap color palettes. */
 export type ProtomapsFlavor =
@@ -36,7 +37,7 @@ export function createProtomapsStyle(
   };
 }
 
-/** Creates neutral light/dark basemaps for DeckMapDefaultStylesProvider. */
+/** Creates neutral light/dark Protomaps basemap styles. */
 export function createProtomapsDefaultStyles(
   apiKey: string,
 ): Record<ResolvedTheme, StyleSpecification> {
@@ -44,4 +45,16 @@ export function createProtomapsDefaultStyles(
     light: createProtomapsStyle('white', apiKey),
     dark: createProtomapsStyle('black', apiKey),
   };
+}
+
+/**
+ * Creates a cached Protomaps provider for createDeckMapsSlice or DeckJsonMap.
+ * A missing/blank key leaves the basemap unconfigured, without tile requests.
+ */
+export function createProtomapsBasemapProvider(
+  apiKey?: string,
+): DeckMapBasemapProvider {
+  const key = apiKey?.trim();
+  const styles = key ? createProtomapsDefaultStyles(key) : undefined;
+  return (theme) => styles?.[theme];
 }

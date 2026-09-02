@@ -113,15 +113,24 @@ export function AirportsMap() {
 ## Basemaps
 
 Deck maps use Protomaps v4 vector tiles with neutral light and dark styles.
-Configure the browser-visible API key once around your maps:
+Configure the browser-visible API key once when creating the Deck maps slice:
 
 ```tsx
-import {DeckMapDefaultStylesProvider} from '@sqlrooms/deck';
+import {
+  createDeckMapsSlice,
+  createProtomapsBasemapProvider,
+} from '@sqlrooms/deck';
 
-<DeckMapDefaultStylesProvider protomapsApiKey={protomapsApiKey}>
-  <AirportsMap />
-</DeckMapDefaultStylesProvider>;
+createDeckMapsSlice({
+  basemapProvider: createProtomapsBasemapProvider(protomapsApiKey),
+});
 ```
+
+Document maps, dashboard maps, and `DeckJsonMap` read this optional provider from
+the existing room store. No additional React provider is needed. The callback
+lives outside `deckMaps.config`, so credentials are never persisted with maps.
+`createProtomapsBasemapProvider` creates its light/dark styles once and reuses
+them. Missing or blank keys leave maps unconfigured without making tile requests.
 
 Obtain a key from [Protomaps](https://protomaps.com/api) and allow your app's
 origins. Hosts supply the key explicitly; the library does not read bundler
@@ -143,11 +152,22 @@ follow the app theme. Choose a basemap in settings to persist it in an older map
 Explicit custom `mapStyle` URLs and `mapProps.mapStyle` objects remain supported;
 the selector displays **Custom** until a built-in style is selected.
 
-`DeckMapDefaultStylesProvider` also accepts `styles={{light, dark}}` for host-owned
-defaults; these override the corresponding generated Protomaps styles, including
-when resolving a saved light/dark basemap ID. `createProtomapsStyle(flavor, apiKey)`
-creates a MapLibre style object, and `createProtomapsDefaultStyles(apiKey)` creates
-the light/dark pair. `DECK_MAP_BASEMAP_STYLES` lists the built-in IDs and labels.
+For custom basemaps, supply a `DeckMapBasemapProvider` callback:
+
+```tsx
+createDeckMapsSlice({basemapProvider: (theme) => customStyles[theme]});
+```
+
+Return stable MapLibre style objects or URLs. Direct `DeckJsonMap` callers
+can pass `basemapProvider` as a prop, overriding the room's provider without
+requiring the Deck maps slice. The existing room store is still required for
+dataset preparation. Explicit custom map styles take precedence over
+the provider. The existing `DeckMapDefaultStylesProvider styles={{light, dark}}`
+remains supported as a fallback when the callback returns no style.
+
+`createProtomapsStyle(flavor, apiKey)` creates a MapLibre style object, and
+`createProtomapsDefaultStyles(apiKey)` creates the light/dark pair.
+`DECK_MAP_BASEMAP_STYLES` lists the built-in IDs and labels.
 
 ## Auto Spec Generation
 

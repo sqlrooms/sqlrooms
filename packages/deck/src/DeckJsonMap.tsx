@@ -1,6 +1,7 @@
 import {JSONConverter} from '@deck.gl/json';
 import {MapboxOverlay} from '@deck.gl/mapbox';
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
+import {useBaseRoomStore} from '@sqlrooms/room-store';
 import {
   cn,
   Collapsible,
@@ -26,9 +27,11 @@ import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
 import {
   resolveDeckMapStyle,
-  useDeckMapDefaultStyles,
+  type DeckMapBasemapProvider,
   type DeckMapStyle,
-} from './DeckMapDefaultStylesProvider';
+} from './basemap';
+import {useDeckMapDefaultStyles} from './DeckMapDefaultStylesProvider';
+import type {DeckMapsSliceState} from './DeckMapsSlice';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
 import {usePreparedDatasetStates} from './datasets/usePreparedDatasetStates';
 import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
@@ -338,6 +341,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       spec,
       datasets,
       mapStyle,
+      basemapProvider,
       interleaved = true,
       deckProps,
       mapProps,
@@ -603,12 +607,17 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
 
     const {resolvedTheme} = useTheme();
     const hostDefaultMapStyles = useDeckMapDefaultStyles();
+    const roomBasemapProvider = useBaseRoomStore<
+      Partial<DeckMapsSliceState>,
+      DeckMapBasemapProvider | undefined
+    >((state) => state.deckMaps?.basemapProvider);
 
     const mergedMapProps = {
       ...extraMapProps,
       mapStyle: resolveDeckMapStyle({
         mapStyle,
         mapPropsMapStyle: mapProps?.mapStyle,
+        basemapProvider: basemapProvider ?? roomBasemapProvider,
         hostDefaultStyles: hostDefaultMapStyles,
         resolvedTheme,
         fallbackStyles: UNCONFIGURED_MAP_STYLES,
