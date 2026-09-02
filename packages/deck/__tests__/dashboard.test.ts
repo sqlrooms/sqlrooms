@@ -43,7 +43,7 @@ describe('deck dashboard integration', () => {
     expect(panel.type).toBe(DECK_MAP_DASHBOARD_PANEL_TYPE);
     expect(panel.title).toBe('Earthquakes');
     expect(panel.config).toEqual({
-      mapStyle: 'protomaps-light',
+      mapStyle: 'light',
       spec: {layers: []},
       datasets: {
         earthquakes: {

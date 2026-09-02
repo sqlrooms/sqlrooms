@@ -309,7 +309,7 @@ describe('createDeckMapConfigTool', () => {
       kind: 'deck-map-config',
       type: DECK_MAP_DASHBOARD_PANEL_TYPE,
       title: 'Standalone earthquake map',
-      config: {...normalizedScatterConfig, mapStyle: 'protomaps-light'},
+      config: {...normalizedScatterConfig, mapStyle: 'light'},
     });
   });
 
@@ -440,9 +440,7 @@ describe('createDeckMapDashboardTool', () => {
           reasoning: 'create map',
         });
         expect(created.llmResult.success).toBe(true);
-        expect(created.llmResult.data.config.mapStyle).toBe(
-          `protomaps-${theme}`,
-        );
+        expect(created.llmResult.data.config.mapStyle).toBe(theme);
 
         setAppTheme(theme === 'dark' ? 'light' : 'dark');
         const updated = await (tool as any).execute({
@@ -451,9 +449,7 @@ describe('createDeckMapDashboardTool', () => {
           reasoning: 'add a density layer',
         });
         expect(updated.llmResult.success).toBe(true);
-        expect(updated.llmResult.data.config.mapStyle).toBe(
-          `protomaps-${theme}`,
-        );
+        expect(updated.llmResult.data.config.mapStyle).toBe(theme);
         expect(dashboards['dashboard-1']!.panels[0].config).toEqual(
           updated.llmResult.data.config,
         );
@@ -463,7 +459,7 @@ describe('createDeckMapDashboardTool', () => {
     const styles: Array<
       [string, Pick<DeckMapConfig, 'mapStyle' | 'mapProps'>]
     > = [
-      ['saved basemap', {mapStyle: 'protomaps-dark'}],
+      ['saved basemap', {mapStyle: 'dark'}],
       ['custom URL', {mapStyle: 'https://example.com/custom.json'}],
       [
         'map-prop URL',
@@ -522,7 +518,7 @@ describe('createDeckMapDashboardTool', () => {
           databaseAdapter,
         });
         for (const replacement of [
-          {mapStyle: 'protomaps-light'},
+          {mapStyle: 'light'},
           {mapProps: {mapStyle: customStyle}},
         ]) {
           const result = await (tool as any).execute({

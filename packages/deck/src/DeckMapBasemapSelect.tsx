@@ -23,9 +23,10 @@ export const DeckMapBasemapSelect: FC<{
 }> = ({config, onConfigChange, readOnly}) => {
   const {resolvedTheme} = useTheme();
   const style = config.mapStyle ?? config.mapProps?.mapStyle;
+  const styleTheme = getDeckMapStyleTheme(style);
   const value = style
-    ? getDeckMapStyleTheme(style)
-      ? String(style)
+    ? styleTheme
+      ? getDefaultDeckMapStyle(styleTheme)
       : 'custom'
     : getDefaultDeckMapStyle(resolvedTheme);
 

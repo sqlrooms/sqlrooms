@@ -11,7 +11,7 @@ describe('resolveDeckMapStyle', () => {
     const basemapProvider = jest.fn((theme: string) => `tiles-${theme}`);
     expect(
       resolveDeckMapStyle({
-        mapStyle: 'protomaps-dark',
+        mapStyle: 'dark',
         basemapProvider,
         hostDefaultStyles: {dark: 'context-dark'},
         resolvedTheme: 'light',
@@ -72,7 +72,7 @@ describe('resolveDeckMapStyle', () => {
   test('retains a saved basemap when the app theme changes', () => {
     expect(
       resolveDeckMapStyle({
-        mapStyle: 'protomaps-dark',
+        mapStyle: 'dark',
         hostDefaultStyles: {light: 'host-light', dark: 'host-dark'},
         resolvedTheme: 'light',
         fallbackStyles,
@@ -80,7 +80,7 @@ describe('resolveDeckMapStyle', () => {
     ).toBe('host-dark');
     expect(
       resolveDeckMapStyle({
-        mapStyle: 'protomaps-light',
+        mapStyle: 'light',
         resolvedTheme: 'dark',
         fallbackStyles,
       }),

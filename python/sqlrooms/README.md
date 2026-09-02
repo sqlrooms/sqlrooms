@@ -17,18 +17,12 @@ What happens:
 
 ## Map basemaps
 
-Maps use Protomaps vector tiles. Set the browser-visible API key before launch:
+Maps use [OpenFreeMap](https://openfreemap.org/) vector tiles with **Positron**
+for light mode and **Dark** for dark mode. No API key or registration is required.
 
-```bash
-PROTOMAPS_API_KEY=your-browser-key uvx sqlrooms ./sqlrooms.db
-```
-
-Get a key from [Protomaps](https://protomaps.com/api). The key is passed to the
-UI at runtime, without rebuilding, and is not saved in map documents. If no key
-is configured, maps show a setup message and data layers on a plain background.
-
-New maps keep the light/dark style matching the app theme at creation. Change
-the saved style through **Map settings → Basemap**.
+New maps keep the light/dark style matching the app theme at creation, including
+after theme changes and workspace reloads. Change the saved style through
+**Map settings → Basemap**. Existing custom map styles are preserved.
 
 ## CLI flags
 

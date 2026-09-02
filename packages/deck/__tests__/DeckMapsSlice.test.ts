@@ -34,7 +34,7 @@ describe('DeckMapsSlice', () => {
   );
 
   test.each([
-    {mapStyle: 'protomaps-light'},
+    {mapStyle: 'light'},
     {mapProps: {mapStyle: 'https://example.com/replacement.json'}},
   ])('honors an explicitly supplied replacement basemap: %p', (replacement) => {
     const store = createStore(createDeckMapsSlice());

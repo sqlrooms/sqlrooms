@@ -911,7 +911,6 @@ class SqlroomsHttpServer:
         ws_url = self.external_ws_url or derived_ws_url or self._ws_proxy_url()
         return {
             "wsUrl": ws_url,
-            "protomapsApiKey": os.environ.get("PROTOMAPS_API_KEY", ""),
             "wsAuthToken": self.session_token,
             "apiBaseUrl": self.external_url or "",
             "llmProvider": self.llm_provider,

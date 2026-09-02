@@ -37,11 +37,11 @@ describe('map basemap selection', () => {
     for (const theme of ['dark', 'light'] as const) {
       setAppTheme(theme);
       const config = createEmptyDeckMapConfig();
-      expect(config.mapStyle).toBe(`protomaps-${theme}`);
+      expect(config.mapStyle).toBe(theme);
       expect(
         createDeckMapDashboardPanelConfig({spec: {layers: []}, datasets: {}})
           .config.mapStyle,
-      ).toBe(`protomaps-${theme}`);
+      ).toBe(theme);
       expect(
         createDeckMapConfigForTable({
           tableName: 'points',
@@ -50,7 +50,7 @@ describe('map basemap selection', () => {
             {name: 'lat', type: 'DOUBLE'},
           ],
         }).mapStyle,
-      ).toBe(`protomaps-${theme}`);
+      ).toBe(theme);
     }
   });
 
@@ -77,24 +77,24 @@ describe('map basemap selection', () => {
     setAppTheme('light');
     maps.ensureMap('map');
     maps.updateMap('map', {config: {spec: {layers: []}, datasets: {}}});
-    expect(maps.getMap('map')?.config.mapStyle).toBe('protomaps-dark');
+    expect(maps.getMap('map')?.config.mapStyle).toBe('dark');
     maps.updateMap('map', {
-      config: {...maps.getMap('map')!.config, mapStyle: 'protomaps-light'},
+      config: {...maps.getMap('map')!.config, mapStyle: 'light'},
     });
     const saved = DeckMapsSliceConfig.parse(
       JSON.parse(JSON.stringify(store.getState().deckMaps.config)),
     );
     const restored = createStore(createDeckMapsSlice({config: saved}));
     expect(restored.getState().deckMaps.getMap('map')?.config.mapStyle).toBe(
-      'protomaps-light',
+      'light',
     );
     maps.ensureMap('new-map');
-    expect(maps.getMap('new-map')?.config.mapStyle).toBe('protomaps-light');
+    expect(maps.getMap('new-map')?.config.mapStyle).toBe('light');
   });
 
   test('keeps a selected basemap when an empty map gets its first dataset', () => {
     setAppTheme('light');
-    const config = {...createEmptyDeckMapConfig(), mapStyle: 'protomaps-dark'};
+    const config = {...createEmptyDeckMapConfig(), mapStyle: 'dark'};
     const result = regenerateMapConfigForTable(
       {config},
       {
@@ -106,7 +106,7 @@ describe('map basemap selection', () => {
         ],
       },
     );
-    expect(result.mapStyle).toBe('protomaps-dark');
+    expect(result.mapStyle).toBe('dark');
     expect(Object.keys(result.datasets as object)).toEqual(['points']);
   });
 });

@@ -69,7 +69,7 @@ export type DeckMapConfig = {
   spec: DeckJsonMapProps['spec'];
   datasets: Record<string, DeckMapDatasetConfig>;
   configMode?: DeckMapConfigMode;
-  /** Built-in basemap ID (`protomaps-light`/`protomaps-dark`) or custom style URL. */
+  /** Built-in basemap ID (`light`/`dark`) or custom style URL. */
   mapStyle?: string;
   mapProps?: Record<string, unknown>;
   showLegends?: boolean;

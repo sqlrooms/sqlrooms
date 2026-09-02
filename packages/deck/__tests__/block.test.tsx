@@ -64,7 +64,7 @@ describe('document map table selection', () => {
     const config: DeckMapConfig = {
       spec: {layers: []},
       datasets: {},
-      mapStyle: 'protomaps-dark',
+      mapStyle: 'dark',
       mapProps: {minZoom: 2, maxZoom: 12},
     };
     const map = selectTable(config);

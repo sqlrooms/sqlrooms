@@ -25,6 +25,7 @@ const {DeckJsonMap} = await import('../src/DeckJsonMap');
 function renderMapWithProviders(
   roomProvider?: DeckMapBasemapProvider,
   propProvider?: DeckMapBasemapProvider,
+  mapStyle = 'dark',
 ) {
   const store = createStore((...args) => ({
     ...createBaseRoomSlice()(...args),
@@ -42,7 +43,7 @@ function renderMapWithProviders(
           <DeckJsonMap
             spec={{layers: []}}
             datasets={{points: {sqlQuery: 'SELECT 1 AS id'}}}
-            mapStyle="protomaps-dark"
+            mapStyle={mapStyle}
             basemapProvider={propProvider}
             showLegends={false}
           />
@@ -85,10 +86,22 @@ describe('DeckJsonMap basemap providers', () => {
     expect(style).toBe('https://example.com/map.json');
   });
 
-  test('shows setup guidance when neither provider is configured', () => {
-    const {markup, style} = renderMapWithProviders();
-    expect(style).toMatchObject({version: 8, sources: {}});
-    expect(markup).toContain('role="status"');
-    expect(markup).toContain('Basemap unavailable');
+  test.each([
+    ['light', 'positron'],
+    ['dark', 'dark'],
+    ['protomaps-light', 'positron'],
+    ['protomaps-dark', 'dark'],
+  ])(
+    'loads OpenFreeMap for saved style %s without a provider or key',
+    (id, expected) => {
+      const {markup, style} = renderMapWithProviders(undefined, undefined, id);
+      expect(style).toBe(`https://tiles.openfreemap.org/styles/${expected}`);
+      expect(markup).not.toContain('Basemap unavailable');
+    },
+  );
+
+  test('falls back to OpenFreeMap when an optional provider has no style', () => {
+    const {style} = renderMapWithProviders(() => undefined);
+    expect(style).toBe('https://tiles.openfreemap.org/styles/dark');
   });
 });

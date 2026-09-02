@@ -21,11 +21,7 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
-import {
-  createDeckMapsSlice,
-  createProtomapsBasemapProvider,
-  DeckMapsSliceConfig,
-} from '@sqlrooms/deck';
+import {createDeckMapsSlice, DeckMapsSliceConfig} from '@sqlrooms/deck';
 import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck/mosaic';
 import {
   arrowTableToJson,
@@ -897,11 +893,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createDeckMapsSlice({
-          basemapProvider: createProtomapsBasemapProvider(
-            runtimeConfig.protomapsApiKey,
-          ),
-        })(set, get, store),
+        ...createDeckMapsSlice()(set, get, store),
 
         ...createDashboardFeatureSlices(
           cliCapabilityProfile.dashboard.deckMaps

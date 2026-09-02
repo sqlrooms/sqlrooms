@@ -7,7 +7,6 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-  ResolvedTheme,
   useTheme,
 } from '@sqlrooms/ui';
 import {ChevronRightIcon} from 'lucide-react';
@@ -25,11 +24,7 @@ import {forwardRef} from 'react';
 import Map, {useControl} from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
-import {
-  resolveDeckMapStyle,
-  type DeckMapBasemapProvider,
-  type DeckMapStyle,
-} from './basemap';
+import {resolveDeckMapStyle, type DeckMapBasemapProvider} from './basemap';
 import {useDeckMapDefaultStyles} from './DeckMapDefaultStylesProvider';
 import type {DeckMapsSliceState} from './DeckMapsSlice';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
@@ -45,31 +40,10 @@ import type {
   PreparedDeckDatasetState,
 } from './types';
 
-// Keep data layers usable before the host has configured its tile API key.
-const UNCONFIGURED_MAP_STYLES: Record<ResolvedTheme, DeckMapStyle> = {
-  light: {
-    version: 8,
-    sources: {},
-    layers: [
-      {
-        id: 'background',
-        type: 'background',
-        paint: {'background-color': '#fff'},
-      },
-    ],
-  },
-  dark: {
-    version: 8,
-    sources: {},
-    layers: [
-      {
-        id: 'background',
-        type: 'background',
-        paint: {'background-color': '#111'},
-      },
-    ],
-  },
-};
+const DEFAULT_MAP_STYLES = {
+  light: 'https://tiles.openfreemap.org/styles/positron',
+  dark: 'https://tiles.openfreemap.org/styles/dark',
+} as const;
 
 function parseSpec(spec: DeckJsonMapProps['spec']) {
   try {
@@ -620,7 +594,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
         basemapProvider: basemapProvider ?? roomBasemapProvider,
         hostDefaultStyles: hostDefaultMapStyles,
         resolvedTheme,
-        fallbackStyles: UNCONFIGURED_MAP_STYLES,
+        fallbackStyles: DEFAULT_MAP_STYLES,
       }),
     };
     const legends = useMemo(
@@ -653,18 +627,6 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
           <DeckOverlayControl interleaved={interleaved} {...overlayDeckProps} />
           {children}
         </Map>
-
-        {Object.values(UNCONFIGURED_MAP_STYLES).includes(
-          mergedMapProps.mapStyle,
-        ) && (
-          <div
-            role="status"
-            className="bg-background/90 text-muted-foreground absolute top-2 right-2 left-2 rounded border p-2 text-xs"
-          >
-            Basemap unavailable. Configure a Protomaps API key or provide a
-            custom map style.
-          </div>
-        )}
 
         {renderDatasetErrorOverlay(datasetStates)}
         {!hasRenderingError && showLegends ? (

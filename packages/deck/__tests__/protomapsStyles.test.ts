@@ -18,7 +18,7 @@ describe('Protomaps basemaps', () => {
   });
 
   test.each([undefined, '', '   '])(
-    'leaves maps unconfigured when the key is %p',
+    'does not generate Protomaps styles when the key is %p',
     (key) => {
       const provider = createProtomapsBasemapProvider(key);
       expect(provider('dark')).toBeUndefined();

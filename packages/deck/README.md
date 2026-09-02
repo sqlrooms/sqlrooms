@@ -112,35 +112,14 @@ export function AirportsMap() {
 
 ## Basemaps
 
-Deck maps use Protomaps v4 vector tiles with neutral light and dark styles.
-Configure the browser-visible API key once when creating the Deck maps slice:
+Deck maps use [OpenFreeMap](https://openfreemap.org/) vector tiles by default:
+**Positron** for light mode and **Dark** for dark mode. No API key or registration
+is required. The hosted styles include attribution, which MapLibre displays.
+Maps work immediately with `createDeckMapsSlice()` or `DeckJsonMap`, without
+additional configuration.
 
-```tsx
-import {
-  createDeckMapsSlice,
-  createProtomapsBasemapProvider,
-} from '@sqlrooms/deck';
-
-createDeckMapsSlice({
-  basemapProvider: createProtomapsBasemapProvider(protomapsApiKey),
-});
-```
-
-Document maps, dashboard maps, and `DeckJsonMap` read this optional provider from
-the existing room store. No additional React provider is needed. The callback
-lives outside `deckMaps.config`, so credentials are never persisted with maps.
-`createProtomapsBasemapProvider` creates its light/dark styles once and reuses
-them. Missing or blank keys leave maps unconfigured without making tile requests.
-
-Obtain a key from [Protomaps](https://protomaps.com/api) and allow your app's
-origins. Hosts supply the key explicitly; the library does not read bundler
-environment variables. **Migrating from CARTO requires configuring a key**
-or supplying your own styles. Without either, maps show a setup message and
-continue rendering data layers against a plain background. There is no CARTO
-fallback.
-
-New map resources and dashboard panels save `mapStyle: 'protomaps-light'` or
-`'protomaps-dark'` using the app theme at creation. Changing the app theme later
+New map resources and dashboard panels save `mapStyle: 'light'` or
+`'dark'` using the app theme at creation. Changing the app theme later
 does not change existing maps. The **Basemap** dropdown in map settings selects
 Light or Dark, including for maps with custom layer configurations. The selection
 survives dataset changes, config updates, and saved-workspace reloads; keys and
@@ -174,9 +153,29 @@ The context API remains functional for backward compatibility, as a fallback
 when no callback style is available. Removal is reserved for a future breaking
 release.
 
+Protomaps remains an optional provider for applications supplying their own key:
+
+```tsx
+import {
+  createDeckMapsSlice,
+  createProtomapsBasemapProvider,
+} from '@sqlrooms/deck';
+
+createDeckMapsSlice({
+  basemapProvider: createProtomapsBasemapProvider(protomapsApiKey),
+});
+```
+
+The helper creates and reuses the light/dark style objects. Its callback lives
+outside `deckMaps.config`, so its key is not persisted with maps. Obtain a
+browser-visible key from [Protomaps](https://protomaps.com/api) and configure
+allowed origins. A missing or blank key falls back to OpenFreeMap.
+Document maps, dashboard maps, and `DeckJsonMap` inherit the room's provider.
+
 `createProtomapsStyle(flavor, apiKey)` creates a MapLibre style object, and
-`createProtomapsDefaultStyles(apiKey)` creates the light/dark pair.
-`DECK_MAP_BASEMAP_STYLES` lists the built-in IDs and labels.
+`createProtomapsDefaultStyles(apiKey)` creates the Protomaps light/dark pair.
+`DECK_MAP_BASEMAP_STYLES` lists the provider-neutral IDs and labels. Existing
+`protomaps-light`/`protomaps-dark` selections are recognized as light/dark aliases.
 
 ## Auto Spec Generation
 

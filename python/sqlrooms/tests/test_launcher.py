@@ -60,19 +60,6 @@ def test_api_config(server):
     )
 
 
-@pytest.mark.parametrize("api_key", [None, "test-protomaps-key"])
-def test_api_config_protomaps_key(server, monkeypatch, api_key):
-    if api_key is None:
-        monkeypatch.delenv("PROTOMAPS_API_KEY", raising=False)
-    else:
-        monkeypatch.setenv("PROTOMAPS_API_KEY", api_key)
-
-    response = TestClient(server._build_app()).get("/api/config")
-
-    assert response.status_code == 200
-    assert response.json()["protomapsApiKey"] == (api_key or "")
-
-
 def test_auto_ws_port_reserves_explicit_mcp_port(tmp_path, monkeypatch):
     calls = []
 

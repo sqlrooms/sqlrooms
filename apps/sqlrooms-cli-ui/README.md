@@ -13,22 +13,12 @@ In production (published `sqlrooms` wheel), the UI is served as **static assets*
 
 ## Map basemaps
 
-Document and dashboard maps use Protomaps vector tiles. Set `PROTOMAPS_API_KEY`
-in the Python CLI environment before launch:
+Maps use [OpenFreeMap](https://openfreemap.org/) vector tiles with **Positron**
+for light mode and **Dark** for dark mode. No API key or registration is required.
 
-```bash
-PROTOMAPS_API_KEY=your-browser-key sqlrooms my-workspace.duckdb
-```
-
-The server passes this browser-visible key through `/api/config`, so both the
-bundled UI and the Vite development UI use it without a rebuild. Obtain a key
-from [Protomaps](https://protomaps.com/api) and configure allowed origins for any
-remote deployment. The key is not saved in map documents. Without it, maps show
-a setup message and render data layers on a plain background.
-
-A new map starts with the app's current light/dark theme and keeps that style
-when the app theme changes. Use **Map settings → Basemap** to change the saved
-selection. Existing custom map styles are preserved.
+New maps keep the light/dark style matching the app theme at creation, including
+after theme changes and workspace reloads. Change the saved style through
+**Map settings → Basemap**. Existing custom map styles are preserved.
 
 ## Local CLI smoke test
 

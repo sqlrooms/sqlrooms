@@ -2,14 +2,17 @@ import {getTheme, type ResolvedTheme} from '@sqlrooms/ui';
 
 /** Built-in basemaps offered in map settings. IDs are persisted in map configs. */
 export const DECK_MAP_BASEMAP_STYLES = [
-  {id: 'protomaps-light', label: 'Light', theme: 'light'},
-  {id: 'protomaps-dark', label: 'Dark', theme: 'dark'},
+  {id: 'light', label: 'Light', theme: 'light'},
+  {id: 'dark', label: 'Dark', theme: 'dark'},
 ] as const;
 
 /** Returns the theme variant for a built-in basemap ID, if recognized. */
 export function getDeckMapStyleTheme(
   style: unknown,
 ): ResolvedTheme | undefined {
+  // Preserve selections saved by early versions of the Protomaps defaults.
+  if (style === 'protomaps-light') return 'light';
+  if (style === 'protomaps-dark') return 'dark';
   return DECK_MAP_BASEMAP_STYLES.find((candidate) => candidate.id === style)
     ?.theme;
 }
@@ -28,5 +31,5 @@ function getCurrentTheme(): ResolvedTheme {
 export function getDefaultDeckMapStyle(
   theme: ResolvedTheme = getCurrentTheme(),
 ): string {
-  return theme === 'dark' ? 'protomaps-dark' : 'protomaps-light';
+  return theme;
 }

@@ -49,7 +49,7 @@ export function createProtomapsDefaultStyles(
 
 /**
  * Creates a cached Protomaps provider for createDeckMapsSlice or DeckJsonMap.
- * A missing/blank key leaves the basemap unconfigured, without tile requests.
+ * A missing/blank key returns no style, allowing the default basemaps to load.
  */
 export function createProtomapsBasemapProvider(
   apiKey?: string,
