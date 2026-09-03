@@ -124,7 +124,7 @@ function WorkspaceLayoutSurfaceContent({
   );
 
   useEffect(() => {
-    if (!roomStore) return;
+    if (!roomStore || !selectedWorksheetId) return;
     roomStore.getState().workspace.setCurrentWorksheet(selectedWorksheetId);
   }, [roomStore, selectedWorksheetId]);
 

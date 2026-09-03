@@ -1,9 +1,4 @@
-import {
-  Chat,
-  getAiRunContextPrimaryItem,
-  useStoreWithAi,
-  type AiSliceState,
-} from '@sqlrooms/ai';
+import {Chat, useStoreWithAi, type AiSliceState} from '@sqlrooms/ai';
 import {useRoomStoreApi, type BaseRoomStoreState} from '@sqlrooms/room-store';
 import {Button} from '@sqlrooms/ui';
 import {ArrowLeft, Bot, MessageSquarePlus, Sparkles} from 'lucide-react';
@@ -13,13 +8,16 @@ import {
   ASSISTANT_MODEL_PROVIDER,
   DEFAULT_ASSISTANT_MODEL_MODE,
 } from './modelModes';
+import {
+  DOCUMENT_CONTEXT_KIND,
+  getPrimaryDocumentRunContextItem,
+} from './documentRunContext';
 
 type AssistantPanelProps = {
   worksheetId?: string;
   worksheetTitle?: string;
 };
 
-const WORKSHEET_CONTEXT_KIND = 'document';
 type AssistantRoomState = BaseRoomStoreState & AiSliceState;
 
 export function AssistantPanel({
@@ -43,7 +41,7 @@ export function AssistantPanel({
     () =>
       worksheetId
         ? {
-            kind: WORKSHEET_CONTEXT_KIND,
+            kind: DOCUMENT_CONTEXT_KIND,
             id: worksheetId,
             title: worksheetTitle ?? 'Document',
             type: 'document',
@@ -241,8 +239,8 @@ function isWorksheetSession(
   worksheetId: string | undefined,
 ) {
   if (!worksheetId) return false;
-  const item = getAiRunContextPrimaryItem(session.runContext);
-  return item?.kind === WORKSHEET_CONTEXT_KIND && item.id === worksheetId;
+  const item = getPrimaryDocumentRunContextItem(session.runContext);
+  return item?.id === worksheetId;
 }
 
 function getSessionRecency(session: {

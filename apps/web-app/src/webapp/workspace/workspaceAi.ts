@@ -1,5 +1,6 @@
 import {AiSliceConfig} from '@sqlrooms/ai';
 import type {JsonObject} from '#/lib/json';
+import {getPrimaryDocumentRunContextItem} from '../assistant/documentRunContext';
 
 export function parseWorkspaceAiConfig(aiConfig: JsonObject) {
   const parsedConfig = AiSliceConfig.safeParse(aiConfig);
@@ -32,13 +33,7 @@ export function createAssistantChatHeaders(
 }
 
 export function createAssistantInstructions(runContext: unknown) {
-  const context =
-    runContext && typeof runContext === 'object' && 'items' in runContext
-      ? (runContext as {
-          items?: Array<{kind?: string; id?: string; title?: string}>;
-        })
-      : undefined;
-  const document = context?.items?.find((item) => item.kind === 'document');
+  const document = getPrimaryDocumentRunContextItem(runContext);
 
   return `You are the SQLRooms assistant for a browser-based data analysis workspace.
 Help the user reason about datasets, write SQL, plan documents, and design charts or dashboards.

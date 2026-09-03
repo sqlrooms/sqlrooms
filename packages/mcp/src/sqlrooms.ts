@@ -15,7 +15,10 @@ import {
   type StoreApi,
 } from '@sqlrooms/room-store';
 import type {RoomCapability, RoomCapabilityContext} from './types';
-import {filterVisibleTables} from './tableVisibility';
+import {
+  filterVisibleTables,
+  isInternalTableIdentifier,
+} from './tableVisibility';
 
 const DEFAULT_QUERY_ROWS = 200;
 const MAX_QUERY_ROWS = 1_000;
@@ -462,7 +465,6 @@ function findInternalNamespaceReference(
   statements: unknown[],
   namespace: string,
 ): 'internal' | 'dynamic' | undefined {
-  const normalizedNamespace = namespace.toLowerCase();
   let result: 'internal' | 'dynamic' | undefined;
   const visit = (value: unknown): void => {
     if (result === 'internal' || value === null || typeof value !== 'object') {
@@ -474,14 +476,12 @@ function findInternalNamespaceReference(
     }
     const node = value as Record<string, unknown>;
     if (node.type === 'BASE_TABLE') {
-      const identifiers = [node.catalog_name, node.schema_name];
-      if (
-        identifiers.some(
-          (identifier) =>
-            typeof identifier === 'string' &&
-            identifier.toLowerCase() === normalizedNamespace,
-        )
-      ) {
+      const identifiers = [
+        node.catalog_name,
+        node.schema_name,
+        node.table_name,
+      ];
+      if (identifiers.some((id) => isInternalTableIdentifier(id, namespace))) {
         result = 'internal';
         return;
       }
