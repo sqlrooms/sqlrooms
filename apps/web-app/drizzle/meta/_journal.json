@@ -15,6 +15,13 @@
       "when": 1788440341014,
       "tag": "0001_dapper_kree",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788445950138,
+      "tag": "0002_silky_madame_web",
+      "breakpoints": true
     }
   ]
 }

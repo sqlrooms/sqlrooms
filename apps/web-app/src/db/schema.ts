@@ -152,11 +152,40 @@ export const files = pgTable(
   },
   (table) => [
     uniqueIndex('files_object_key_idx').on(table.objectKey),
+    uniqueIndex('files_workspace_table_name_idx').on(
+      table.workspaceId,
+      table.tableName,
+    ),
     index('files_workspace_created_at_idx').on(
       table.workspaceId,
       table.createdAt,
     ),
     index('files_owner_created_at_idx').on(table.ownerId, table.createdAt),
+  ],
+);
+
+export const fileUploadReservations = pgTable(
+  'file_upload_reservations',
+  {
+    id: uuid().primaryKey(),
+    userId: text('user_id').notNull(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, {onDelete: 'cascade'}),
+    objectKey: text('object_key').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    replaceFileId: uuid('replace_file_id'),
+    expiresAt: timestamp('expires_at', {withTimezone: true}).notNull(),
+    createdAt: timestamp('created_at', {withTimezone: true})
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('file_upload_reservations_object_key_idx').on(table.objectKey),
+    index('file_upload_reservations_user_expires_at_idx').on(
+      table.userId,
+      table.expiresAt,
+    ),
   ],
 );
 

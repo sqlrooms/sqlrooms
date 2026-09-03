@@ -1,8 +1,13 @@
 import {env} from 'cloudflare:workers';
-import {and, eq, sql} from 'drizzle-orm';
+import {and, eq, lte, sql} from 'drizzle-orm';
 import {formatBytes as formatByteCount} from '@sqlrooms/utils';
 import {db} from '#/db/index';
-import {files, userStorageUsage, workspaceMembers} from '#/db/schema';
+import {
+  files,
+  fileUploadReservations,
+  userStorageUsage,
+  workspaceMembers,
+} from '#/db/schema';
 import {
   PARQUET_UPLOAD_LIMIT_BYTES,
   USER_STORAGE_LIMIT_BYTES,
@@ -35,29 +40,61 @@ export async function createFileUploadIntent({
   userId,
   workspaceId,
   parquetSizeBytes,
+  replaceFileId,
 }: {
   userId: string;
   workspaceId: string;
   parquetSizeBytes: number;
+  replaceFileId?: string;
 }): Promise<FileUploadIntent> {
-  await assertWorkspaceMember(userId, workspaceId);
+  await assertWorkspaceEditor(userId, workspaceId);
   assertParquetSize(parquetSizeBytes);
-  await assertStorageAvailable(userId, parquetSizeBytes);
+  await releaseExpiredReservations(userId);
+
+  if (replaceFileId) {
+    const replacement = await findWorkspaceFile(workspaceId, replaceFileId);
+    if (!replacement) {
+      throw new FileStorageError(
+        'File to replace was not found.',
+        404,
+        'NOT_FOUND',
+      );
+    }
+  }
 
   const fileId = crypto.randomUUID();
   const objectKey = createR2ObjectKey({userId, workspaceId, fileId});
-  const uploadUrl = await createR2PresignedPutUrl({
+  const expiresAt = new Date(
+    Date.now() + PRESIGNED_UPLOAD_EXPIRES_SECONDS * 1000,
+  );
+  await reserveStorage({
+    fileId,
+    userId,
+    workspaceId,
     objectKey,
-    contentLength: parquetSizeBytes,
-    expiresSeconds: PRESIGNED_UPLOAD_EXPIRES_SECONDS,
+    parquetSizeBytes,
+    replaceFileId,
+    expiresAt,
   });
+
+  let uploadUrl: string;
+  try {
+    uploadUrl = await createR2PresignedPutUrl({
+      objectKey,
+      contentLength: parquetSizeBytes,
+      expiresSeconds: PRESIGNED_UPLOAD_EXPIRES_SECONDS,
+    });
+  } catch (error) {
+    await releaseReservation(fileId, userId);
+    throw error;
+  }
 
   return {
     fileId,
     objectKey,
     uploadUrl,
     contentType: PARQUET_MIME_TYPE,
-    expiresAt: Date.now() + PRESIGNED_UPLOAD_EXPIRES_SECONDS * 1000,
+    expiresAt: expiresAt.getTime(),
   };
 }
 
@@ -84,11 +121,58 @@ export async function finalizeFileUpload({
   rowCount?: number;
   contentHash?: string;
 }) {
-  await assertWorkspaceMember(userId, workspaceId);
+  await assertWorkspaceEditor(userId, workspaceId);
   assertParquetSize(parquetSizeBytes);
   assertExpectedObjectKey({userId, workspaceId, fileId, objectKey});
   const existingFile = await findStoredFile(fileId, objectKey);
   if (existingFile) return existingFile;
+
+  const reservations = await db
+    .select()
+    .from(fileUploadReservations)
+    .where(
+      and(
+        eq(fileUploadReservations.id, fileId),
+        eq(fileUploadReservations.userId, userId),
+        eq(fileUploadReservations.workspaceId, workspaceId),
+        eq(fileUploadReservations.objectKey, objectKey),
+      ),
+    )
+    .limit(1);
+  const reservation = reservations[0];
+  if (!reservation || reservation.sizeBytes !== parquetSizeBytes) {
+    throw new FileStorageError(
+      'Upload intent was not found.',
+      404,
+      'NOT_FOUND',
+    );
+  }
+  if (reservation.expiresAt.getTime() <= Date.now()) {
+    await deleteObjectAndReleaseReservation(objectKey, fileId, userId);
+    throw new FileStorageError(
+      'Upload intent has expired.',
+      410,
+      'UPLOAD_EXPIRED',
+    );
+  }
+
+  const replacement = reservation.replaceFileId
+    ? await findWorkspaceFile(workspaceId, reservation.replaceFileId)
+    : undefined;
+  if (reservation.replaceFileId && !replacement) {
+    throw new FileStorageError(
+      'File to replace was not found.',
+      404,
+      'NOT_FOUND',
+    );
+  }
+  if (replacement && replacement.tableName !== tableName) {
+    throw new FileStorageError(
+      'A replacement upload must keep the existing table name.',
+      409,
+      'TABLE_NAME_CONFLICT',
+    );
+  }
 
   const bucket = getUserFilesBucket();
   const uploadedObject = await bucket.head(objectKey);
@@ -100,7 +184,7 @@ export async function finalizeFileUpload({
     );
   }
   if (uploadedObject.size !== parquetSizeBytes) {
-    await bucket.delete(objectKey);
+    await deleteObjectAndReleaseReservation(objectKey, fileId, userId);
     throw new FileStorageError(
       'Uploaded file size does not match the upload intent.',
       400,
@@ -112,21 +196,32 @@ export async function finalizeFileUpload({
   try {
     const result = await db.execute<{id: string}>(sql`
       with reservation as (
-        insert into ${userStorageUsage}
-          (user_id, used_bytes, limit_bytes, updated_at)
-        select
-          ${userId},
-          ${parquetSizeBytes},
-          ${USER_STORAGE_LIMIT_BYTES},
-          ${now}
-        from ${workspaceMembers}
-        where ${workspaceMembers.workspaceId} = ${workspaceId}
-          and ${workspaceMembers.userId} = ${userId}
-        on conflict (user_id) do update set
-          used_bytes = ${userStorageUsage.usedBytes} + ${parquetSizeBytes},
+        delete from ${fileUploadReservations}
+        where ${fileUploadReservations.id} = ${fileId}
+          and ${fileUploadReservations.userId} = ${userId}
+          and ${fileUploadReservations.workspaceId} = ${workspaceId}
+          and ${fileUploadReservations.objectKey} = ${objectKey}
+          and ${fileUploadReservations.sizeBytes} = ${parquetSizeBytes}
+          and ${fileUploadReservations.expiresAt} > ${now}
+        returning replace_file_id
+      ), replacement as (
+        delete from ${files}
+        where ${files.id} = (select replace_file_id from reservation)
+          and ${files.workspaceId} = ${workspaceId}
+          and ${files.tableName} = ${tableName}
+        returning owner_id, size_bytes
+      ), released_replacement as (
+        update ${userStorageUsage}
+        set
+          used_bytes = greatest(
+            ${userStorageUsage.usedBytes} - coalesce(
+              (select size_bytes from replacement where owner_id = ${userStorageUsage.userId}),
+              0
+            ),
+            0
+          ),
           updated_at = ${now}
-        where ${userStorageUsage.usedBytes} + ${parquetSizeBytes}
-          <= ${userStorageUsage.limitBytes}
+        where ${userStorageUsage.userId} in (select owner_id from replacement)
         returning user_id
       )
       insert into ${files} (
@@ -155,30 +250,42 @@ export async function finalizeFileUpload({
         ${rowCount ?? null},
         ${contentHash ?? null}
       from reservation
+      cross join (select count(*) from released_replacement) as replacement_release
       returning id
     `);
 
     if (!result.rows[0]) {
-      await bucket.delete(objectKey);
-      await assertWorkspaceMember(userId, workspaceId);
       throw new FileStorageError(
-        `This upload would exceed the ${formatBytes(USER_STORAGE_LIMIT_BYTES)} storage limit.`,
-        403,
-        'STORAGE_LIMIT_REACHED',
+        'Upload intent has expired.',
+        410,
+        'UPLOAD_EXPIRED',
       );
     }
   } catch (error) {
     if (error instanceof FileStorageError) throw error;
     const concurrentFile = await findStoredFile(fileId, objectKey);
     if (concurrentFile) return concurrentFile;
-    await bucket.delete(objectKey);
+    if (hasPostgresErrorCode(error, '23505')) {
+      await deleteObjectAndReleaseReservation(objectKey, fileId, userId);
+      throw new FileStorageError(
+        'A file with this table name already exists.',
+        409,
+        'TABLE_NAME_CONFLICT',
+      );
+    }
     throw new FileStorageError('Could not finalize upload.', 500);
   }
 
   const file = await findStoredFile(fileId, objectKey);
-  if (file) return file;
+  if (file) {
+    if (replacement) {
+      await bucket.delete(replacement.objectKey).catch((error: unknown) => {
+        console.error('Could not delete replaced file object', error);
+      });
+    }
+    return file;
+  }
 
-  await bucket.delete(objectKey);
   throw new FileStorageError('Could not finalize upload.', 500);
 }
 
@@ -239,18 +346,12 @@ export async function deleteFile({
   workspaceId: string;
   fileId: string;
 }) {
-  await assertWorkspaceMember(userId, workspaceId);
+  await assertWorkspaceEditor(userId, workspaceId);
 
   const rows = await db
     .select()
     .from(files)
-    .where(
-      and(
-        eq(files.id, fileId),
-        eq(files.workspaceId, workspaceId),
-        eq(files.ownerId, userId),
-      ),
-    )
+    .where(and(eq(files.id, fileId), eq(files.workspaceId, workspaceId)))
     .limit(1);
   const file = rows[0];
   if (!file) {
@@ -260,17 +361,11 @@ export async function deleteFile({
   await getUserFilesBucket().delete(file.objectKey);
   await db
     .delete(files)
-    .where(
-      and(
-        eq(files.id, fileId),
-        eq(files.workspaceId, workspaceId),
-        eq(files.ownerId, userId),
-      ),
-    );
+    .where(and(eq(files.id, fileId), eq(files.workspaceId, workspaceId)));
   await db
     .insert(userStorageUsage)
     .values({
-      userId,
+      userId: file.ownerId,
       usedBytes: 0,
       limitBytes: USER_STORAGE_LIMIT_BYTES,
       updatedAt: new Date(),
@@ -286,7 +381,22 @@ export async function deleteFile({
   return file;
 }
 
+async function assertWorkspaceEditor(userId: string, workspaceId: string) {
+  const role = await getWorkspaceRole(userId, workspaceId);
+  if (role === 'viewer') {
+    throw new FileStorageError(
+      'You do not have permission to modify workspace files.',
+      403,
+      'FORBIDDEN',
+    );
+  }
+}
+
 async function assertWorkspaceMember(userId: string, workspaceId: string) {
+  await getWorkspaceRole(userId, workspaceId);
+}
+
+async function getWorkspaceRole(userId: string, workspaceId: string) {
   const rows = await db
     .select({role: workspaceMembers.role})
     .from(workspaceMembers)
@@ -301,6 +411,7 @@ async function assertWorkspaceMember(userId: string, workspaceId: string) {
   if (!rows[0]) {
     throw new FileStorageError('Workspace not found.', 404, 'NOT_FOUND');
   }
+  return rows[0].role;
 }
 
 function assertParquetSize(sizeBytes: number) {
@@ -316,24 +427,108 @@ function assertParquetSize(sizeBytes: number) {
   }
 }
 
-async function assertStorageAvailable(userId: string, nextBytes: number) {
-  const rows = await db
-    .select()
-    .from(userStorageUsage)
-    .where(eq(userStorageUsage.userId, userId))
-    .limit(1);
-  const usage = rows[0] ?? {
-    usedBytes: 0,
-    limitBytes: USER_STORAGE_LIMIT_BYTES,
-  };
-
-  if (usage.usedBytes + nextBytes > usage.limitBytes) {
+async function reserveStorage({
+  fileId,
+  userId,
+  workspaceId,
+  objectKey,
+  parquetSizeBytes,
+  replaceFileId,
+  expiresAt,
+}: {
+  fileId: string;
+  userId: string;
+  workspaceId: string;
+  objectKey: string;
+  parquetSizeBytes: number;
+  replaceFileId?: string;
+  expiresAt: Date;
+}) {
+  const now = new Date();
+  const result = await db.execute<{id: string}>(sql`
+    with reserved_usage as (
+      insert into ${userStorageUsage}
+        (user_id, used_bytes, limit_bytes, updated_at)
+      values (${userId}, ${parquetSizeBytes}, ${USER_STORAGE_LIMIT_BYTES}, ${now})
+      on conflict (user_id) do update set
+        used_bytes = ${userStorageUsage.usedBytes} + ${parquetSizeBytes},
+        updated_at = ${now}
+      where ${userStorageUsage.usedBytes} + ${parquetSizeBytes}
+        <= ${userStorageUsage.limitBytes}
+      returning user_id
+    )
+    insert into ${fileUploadReservations} (
+      id, user_id, workspace_id, object_key, size_bytes, replace_file_id, expires_at
+    )
+    select
+      ${fileId}, ${userId}, ${workspaceId}, ${objectKey}, ${parquetSizeBytes},
+      ${replaceFileId ?? null}, ${expiresAt}
+    from reserved_usage
+    returning id
+  `);
+  if (!result.rows[0]) {
     throw new FileStorageError(
-      `This upload would exceed the ${formatBytes(usage.limitBytes)} storage limit.`,
+      `This upload would exceed the ${formatBytes(USER_STORAGE_LIMIT_BYTES)} storage limit.`,
       403,
       'STORAGE_LIMIT_REACHED',
     );
   }
+}
+
+async function releaseExpiredReservations(userId: string) {
+  const expired = await db
+    .select()
+    .from(fileUploadReservations)
+    .where(
+      and(
+        eq(fileUploadReservations.userId, userId),
+        lte(fileUploadReservations.expiresAt, new Date()),
+      ),
+    );
+  for (const reservation of expired) {
+    await deleteObjectAndReleaseReservation(
+      reservation.objectKey,
+      reservation.id,
+      userId,
+    );
+  }
+}
+
+async function deleteObjectAndReleaseReservation(
+  objectKey: string,
+  fileId: string,
+  userId: string,
+) {
+  await getUserFilesBucket().delete(objectKey);
+  await releaseReservation(fileId, userId);
+}
+
+async function releaseReservation(fileId: string, userId: string) {
+  await db.execute(sql`
+    with released as (
+      delete from ${fileUploadReservations}
+      where ${fileUploadReservations.id} = ${fileId}
+        and ${fileUploadReservations.userId} = ${userId}
+      returning size_bytes
+    )
+    update ${userStorageUsage}
+    set
+      used_bytes = greatest(
+        ${userStorageUsage.usedBytes} - coalesce((select size_bytes from released), 0),
+        0
+      ),
+      updated_at = ${new Date()}
+    where ${userStorageUsage.userId} = ${userId}
+  `);
+}
+
+async function findWorkspaceFile(workspaceId: string, fileId: string) {
+  const rows = await db
+    .select()
+    .from(files)
+    .where(and(eq(files.workspaceId, workspaceId), eq(files.id, fileId)))
+    .limit(1);
+  return rows[0];
 }
 
 function assertExpectedObjectKey({
@@ -351,6 +546,24 @@ function assertExpectedObjectKey({
   if (objectKey !== expected) {
     throw new FileStorageError('Invalid upload object key.', 400);
   }
+}
+
+function hasPostgresErrorCode(error: unknown, code: string) {
+  let current = error;
+  for (let depth = 0; depth < 4 && current; depth += 1) {
+    if (
+      typeof current === 'object' &&
+      'code' in current &&
+      current.code === code
+    ) {
+      return true;
+    }
+    current =
+      typeof current === 'object' && 'cause' in current
+        ? current.cause
+        : undefined;
+  }
+  return false;
 }
 
 async function createR2PresignedPutUrl({

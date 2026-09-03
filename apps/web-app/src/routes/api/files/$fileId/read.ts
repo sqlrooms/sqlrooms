@@ -1,4 +1,5 @@
 import {createFileRoute} from '@tanstack/react-router';
+import {AUTHENTICATED_FILE_CACHE_CONTROL} from '#/webapp/files/fileReadResponse';
 
 export const Route = createFileRoute('/api/files/$fileId/read')({
   server: {
@@ -32,7 +33,7 @@ async function handleFileReadRequest(fileId: string, request: Request) {
     const headers = new Headers();
     object.writeHttpMetadata(headers);
     headers.set('content-type', file.mimeType);
-    headers.set('cache-control', 'private, max-age=300');
+    headers.set('cache-control', AUTHENTICATED_FILE_CACHE_CONTROL);
     headers.set('etag', object.httpEtag ?? '');
     if (range) {
       const length = range.range.length ?? file.sizeBytes - range.range.offset;

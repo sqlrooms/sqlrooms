@@ -12,7 +12,6 @@ import {
   uploadPreparedWorkspaceFile,
   type PreparedWorkspaceFile,
 } from './fileIngestion';
-import {deleteWorkspaceFile} from '../workspace/files';
 import type {useWorkspaceDuckDbRuntime} from '../worksheet/useWorkspaceDuckDbRuntime';
 import type {WorkspaceSchemaTableItem} from '../workspace/WorkspaceSidebarSections';
 import {escapeIdentifier} from '../sql';
@@ -308,20 +307,11 @@ export function useWorkspaceFileWorkflow({
         nextPreparedFiles.push(preparedFile);
 
         if (mode === 'saved' && token && workspaceId) {
-          for (const workspaceFile of savedFilesToReplace) {
-            await deleteWorkspaceFile({
-              data: {
-                token,
-                workspaceId,
-                fileId: workspaceFile.id,
-              },
-            });
-          }
-
           await uploadPreparedWorkspaceFile({
             token,
             workspaceId,
             preparedFile,
+            replaceFileId: savedFilesToReplace[0]?.id,
           });
           await invalidateWorkspaceFiles();
         }
@@ -352,14 +342,19 @@ export function useWorkspaceFileWorkflow({
     uploadToken: string;
     targetWorkspaceId: string;
   }) => {
-    for (const preparedFile of preparedLocalFiles) {
-      await uploadPreparedWorkspaceFile({
-        token: uploadToken,
-        workspaceId: targetWorkspaceId,
-        preparedFile,
-      });
-    }
-    setPreparedLocalFiles([]);
+    await uploadPreparedFilesSequentially(
+      preparedLocalFiles,
+      (preparedFile) =>
+        uploadPreparedWorkspaceFile({
+          token: uploadToken,
+          workspaceId: targetWorkspaceId,
+          preparedFile,
+        }),
+      (preparedFile) =>
+        setPreparedLocalFiles((currentFiles) =>
+          currentFiles.filter((file) => file.id !== preparedFile.id),
+        ),
+    );
   };
 
   return {
@@ -376,6 +371,17 @@ export function useWorkspaceFileWorkflow({
     resolveFileNameConflict,
     uploadPreparedLocalFiles,
   };
+}
+
+export async function uploadPreparedFilesSequentially<T>(
+  files: T[],
+  upload: (file: T) => Promise<unknown>,
+  onUploaded: (file: T) => void,
+) {
+  for (const file of files) {
+    await upload(file);
+    onUploaded(file);
+  }
 }
 
 function removePreparedFilesByTableName(

@@ -15,11 +15,11 @@ import {
   type StoreApi,
 } from '@sqlrooms/room-store';
 import type {RoomCapability, RoomCapabilityContext} from './types';
+import {filterVisibleTables} from './tableVisibility';
 
 const DEFAULT_QUERY_ROWS = 200;
 const MAX_QUERY_ROWS = 1_000;
 const MAX_LISTED_TABLES = 1_000;
-const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms';
 const commandInvocationQueues = new WeakMap<object, Promise<void>>();
 
 /** Minimum store shape required by the standard SQLRooms capability catalog. */
@@ -455,20 +455,7 @@ async function refreshVisibleTables<TState extends SqlRoomsCapabilityState>(
   metaNamespace: string,
 ): Promise<DataTable[]> {
   await store.getState().db.refreshTableSchemas();
-  const normalizedMetaNamespace = metaNamespace.toLowerCase();
-  return store.getState().db.tables.filter((table) => {
-    const {database, schema, table: tableName} = table.table;
-    const identifiers = [database, schema, tableName].map((identifier) =>
-      identifier?.toLowerCase(),
-    );
-    return (
-      !identifiers.some((identifier) =>
-        identifier?.startsWith(INTERNAL_SQLROOMS_PREFIX),
-      ) &&
-      database?.toLowerCase() !== normalizedMetaNamespace &&
-      schema?.toLowerCase() !== normalizedMetaNamespace
-    );
-  });
+  return filterVisibleTables(store.getState().db.tables, metaNamespace);
 }
 
 function findInternalNamespaceReference(

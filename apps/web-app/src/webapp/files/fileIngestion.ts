@@ -47,10 +47,12 @@ export async function uploadPreparedWorkspaceFile({
   token,
   workspaceId,
   preparedFile,
+  replaceFileId,
 }: {
   token: string;
   workspaceId: string;
   preparedFile: PreparedWorkspaceFile;
+  replaceFileId?: string;
 }) {
   const {createFileUploadIntent, finalizeFileUpload} =
     await import('../workspace/files');
@@ -59,6 +61,7 @@ export async function uploadPreparedWorkspaceFile({
       token,
       workspaceId,
       parquetSizeBytes: preparedFile.parquetSizeBytes,
+      replaceFileId,
     },
   });
 

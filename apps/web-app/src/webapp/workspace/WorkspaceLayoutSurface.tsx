@@ -69,6 +69,7 @@ export function WorkspaceLayoutSurface({
   duckDbRuntime,
   onRoomStoreChange,
   saveRoomSnapshot,
+  onRoomError,
 }: {
   workspaceKey: string;
   layout: LayoutNode;
@@ -79,6 +80,7 @@ export function WorkspaceLayoutSurface({
   duckDbRuntime: ReturnType<typeof useWorkspaceDuckDbRuntime>;
   onRoomStoreChange: (roomStore: StoreApi<WorkspaceRoomState> | null) => void;
   saveRoomSnapshot: SaveWorkspaceRoomSnapshot | null;
+  onRoomError?: (error: unknown) => void;
 }) {
   return (
     <WorkspaceRoomProvider
@@ -91,6 +93,7 @@ export function WorkspaceLayoutSurface({
       duckDbRuntime={duckDbRuntime}
       onRoomStoreChange={onRoomStoreChange}
       saveRoomSnapshot={saveRoomSnapshot}
+      onRoomError={onRoomError}
     >
       {(roomStore) => (
         <WorkspaceLayoutSurfaceContent

@@ -9,11 +9,19 @@ import {
   deleteFile as deleteStorageFile,
   finalizeFileUpload as finalizeStorageFileUpload,
 } from '../files/fileStorage.server';
+import {BARE_TABLE_NAME_PATTERN} from '../files/tableName';
 
 const workspaceFilesInput = z.object({
   token: z.string().min(1),
   workspaceId: z.string().uuid(),
 });
+
+const tableNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(120)
+  .regex(BARE_TABLE_NAME_PATTERN, 'Table name must be a bare SQL identifier.');
 
 const serializeFile = (file: typeof files.$inferSelect) => ({
   id: file.id,
@@ -45,6 +53,7 @@ export const createFileUploadIntent = createServerFn({method: 'POST'})
   .inputValidator(
     workspaceFilesInput.extend({
       parquetSizeBytes: z.number().int().positive(),
+      replaceFileId: z.string().uuid().optional(),
     }),
   )
   .handler(async ({data}) => {
@@ -53,6 +62,7 @@ export const createFileUploadIntent = createServerFn({method: 'POST'})
       userId,
       workspaceId: data.workspaceId,
       parquetSizeBytes: data.parquetSizeBytes,
+      replaceFileId: data.replaceFileId,
     });
   });
 
@@ -62,7 +72,7 @@ export const finalizeFileUpload = createServerFn({method: 'POST'})
       fileId: z.string().uuid(),
       objectKey: z.string().min(1),
       originalName: z.string().trim().min(1).max(240),
-      tableName: z.string().trim().min(1).max(120),
+      tableName: tableNameSchema,
       parquetSizeBytes: z.number().int().positive(),
       sourceSizeBytes: z.number().int().positive().optional(),
       rowCount: z.number().int().nonnegative().optional(),

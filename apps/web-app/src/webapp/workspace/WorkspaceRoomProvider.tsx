@@ -25,6 +25,7 @@ export function WorkspaceRoomProvider({
   duckDbRuntime,
   onRoomStoreChange,
   saveRoomSnapshot,
+  onRoomError,
   children,
 }: {
   workspaceKey: string;
@@ -36,6 +37,7 @@ export function WorkspaceRoomProvider({
   duckDbRuntime: ReturnType<typeof useWorkspaceDuckDbRuntime>;
   onRoomStoreChange: (roomStore: StoreApi<WorkspaceRoomState> | null) => void;
   saveRoomSnapshot: SaveWorkspaceRoomSnapshot | null;
+  onRoomError?: (error: unknown) => void;
   children: (roomStore: StoreApi<WorkspaceRoomState> | null) => React.ReactNode;
 }) {
   const initialLayoutRef = useRef(layout);
@@ -44,12 +46,6 @@ export function WorkspaceRoomProvider({
   const hydratedRoomStoreRef = useRef<StoreApi<WorkspaceRoomState> | null>(
     null,
   );
-  const hydratedInputsRef = useRef<{
-    roomPersistence: WorkspaceRoomPersistence | null;
-    content: JsonObject | undefined;
-    layout: LayoutNode;
-    aiConfig: JsonObject;
-  } | null>(null);
   const duckDbConnector = duckDbRuntime.runtime?.connector;
   const roomStore = useMemo(() => {
     if (!duckDbConnector) return null;
@@ -61,8 +57,9 @@ export function WorkspaceRoomProvider({
       panels: initialPanelsRef.current,
       token,
       duckDbConnector,
+      captureException: onRoomError,
     });
-  }, [duckDbConnector, workspaceKey]);
+  }, [duckDbConnector, onRoomError, workspaceKey]);
 
   useEffect(() => {
     onRoomStoreChange(roomStore);
@@ -88,26 +85,13 @@ export function WorkspaceRoomProvider({
       roomStore.getState().workspace.hydrateAiConfig(aiConfig);
     };
 
-    const shouldHydrateRoomStore =
-      hydratedRoomStoreRef.current !== roomStore ||
-      hydratedInputsRef.current?.roomPersistence !== roomPersistence ||
-      hydratedInputsRef.current?.content !== content ||
-      hydratedInputsRef.current?.layout !== layout ||
-      hydratedInputsRef.current?.aiConfig !== aiConfig;
-
-    if (!shouldHydrateRoomStore) {
+    if (hydratedRoomStoreRef.current === roomStore) {
       return;
     }
 
     if (!roomPersistence) {
       hydrateFromProps();
       hydratedRoomStoreRef.current = roomStore;
-      hydratedInputsRef.current = {
-        roomPersistence,
-        content,
-        layout,
-        aiConfig,
-      };
       return;
     }
 
@@ -119,12 +103,6 @@ export function WorkspaceRoomProvider({
       .then(() => {
         if (!isCurrent) return;
         hydratedRoomStoreRef.current = roomStore;
-        hydratedInputsRef.current = {
-          roomPersistence,
-          content,
-          layout,
-          aiConfig,
-        };
         roomPersistence.markStateSnapshotSaved(roomStore.getState());
       })
       .catch((error: unknown) => {

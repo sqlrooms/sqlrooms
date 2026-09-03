@@ -100,6 +100,9 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   const [isSignInToSaveOpen, setIsSignInToSaveOpen] = useState(false);
   const [workspaceRoomStore, setWorkspaceRoomStore] =
     useState<StoreApi<WorkspaceRoomState> | null>(null);
+  const pendingCreatedWorkspaceRef = useRef<
+    Awaited<ReturnType<typeof createCloudWorkspace>> | undefined
+  >(undefined);
   const savedWorkspaceId = props.mode === 'saved' ? props.workspaceId : null;
   const activeWorkspaceId = savedWorkspaceId ?? 'unsaved-default';
   const duckDbRuntime = useWorkspaceDuckDbRuntime(activeWorkspaceId);
@@ -164,6 +167,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   const currentWorkspace =
     props.mode === 'saved' ? savedWorkspaceQuery.data : null;
   const workspaceRevisionRef = useRef<number | null>(null);
+  const revisionWorkspaceIdRef = useRef<string | null>(null);
   const {workspaceContentSnapshot, worksheets, selectedWorksheetId} =
     useWorkspaceRoomSnapshot({
       roomStore: workspaceRoomStore,
@@ -175,9 +179,8 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       if (props.mode !== 'saved' || !token || !canPersistWorkspace) return null;
 
       return async (snapshot) => {
-        const expectedRevision =
-          workspaceRevisionRef.current ?? currentWorkspace?.revision;
-        if (expectedRevision === undefined) {
+        const expectedRevision = workspaceRevisionRef.current;
+        if (expectedRevision === null) {
           throw new Error('Workspace revision is not available.');
         }
         const workspace = await saveWorkspaceSnapshot({
@@ -192,13 +195,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
         });
         workspaceRevisionRef.current = workspace.revision;
       };
-    }, [
-      canPersistWorkspace,
-      currentWorkspace?.revision,
-      props.mode,
-      props.workspaceId,
-      token,
-    ]);
+    }, [canPersistWorkspace, props.mode, props.workspaceId, token]);
   const selectedWorksheet = useMemo(
     () =>
       worksheets.find((worksheet) => worksheet.id === selectedWorksheetId) ??
@@ -223,7 +220,13 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   }, [currentWorkspace?.name]);
 
   useEffect(() => {
-    workspaceRevisionRef.current = currentWorkspace?.revision ?? null;
+    if (
+      currentWorkspace &&
+      revisionWorkspaceIdRef.current !== currentWorkspace.id
+    ) {
+      revisionWorkspaceIdRef.current = currentWorkspace.id;
+      workspaceRevisionRef.current = currentWorkspace.revision;
+    }
   }, [currentWorkspace?.id, currentWorkspace?.revision]);
 
   const initialWorkspaceLayout = useMemo(
@@ -240,6 +243,17 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
         ? (currentWorkspace?.aiConfig ?? createDefaultWorkspaceAiConfig())
         : createDefaultWorkspaceAiConfig(),
     [currentWorkspace?.aiConfig, props.mode],
+  );
+  const handleRoomError = useMemo(
+    () => (error: unknown) => {
+      const message = getErrorMessage(error, 'Workspace save failed.');
+      if (message.startsWith('Workspace changed in another session.')) {
+        window.alert(message);
+      } else {
+        console.error(error);
+      }
+    },
+    [],
   );
 
   const handleSignIn = async () => {
@@ -261,34 +275,54 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       ? createWorkspaceRoomSnapshot(workspaceRoomStore.getState())
       : null;
 
-    let workspace: Awaited<ReturnType<typeof createCloudWorkspace>>;
+    let workspace = pendingCreatedWorkspaceRef.current;
     try {
-      workspace = await createWorkspaceMutation.mutateAsync({
-        data: {
-          token,
-          name: localWorkspaceName,
-          content:
-            roomSnapshot?.content ??
-            workspaceContentSnapshot ??
-            (createDefaultWorkspaceContent() as JsonObject),
-          layout: (roomSnapshot?.layout ??
-            initialWorkspaceLayout) as unknown as JsonObject,
-          aiConfig: roomSnapshot?.aiConfig ?? initialWorkspaceAiConfig,
-        },
-      });
+      if (workspace) {
+        workspace = await saveWorkspaceSnapshot({
+          data: {
+            token,
+            workspaceId: workspace.id,
+            content:
+              roomSnapshot?.content ??
+              workspaceContentSnapshot ??
+              (createDefaultWorkspaceContent() as JsonObject),
+            layout: (roomSnapshot?.layout ??
+              initialWorkspaceLayout) as unknown as JsonObject,
+            aiConfig: roomSnapshot?.aiConfig ?? initialWorkspaceAiConfig,
+            expectedRevision: workspace.revision,
+          },
+        });
+      } else {
+        workspace = await createWorkspaceMutation.mutateAsync({
+          data: {
+            token,
+            name: localWorkspaceName,
+            content:
+              roomSnapshot?.content ??
+              workspaceContentSnapshot ??
+              (createDefaultWorkspaceContent() as JsonObject),
+            layout: (roomSnapshot?.layout ??
+              initialWorkspaceLayout) as unknown as JsonObject,
+            aiConfig: roomSnapshot?.aiConfig ?? initialWorkspaceAiConfig,
+          },
+        });
+      }
+      pendingCreatedWorkspaceRef.current = workspace;
     } catch (error) {
       window.alert(getErrorMessage(error, 'Could not save workspace.'));
       return;
     }
 
-    let uploadError: unknown;
     try {
       await fileWorkflow.uploadPreparedLocalFiles({
         uploadToken: token,
         targetWorkspaceId: workspace.id,
       });
     } catch (error) {
-      uploadError = error;
+      window.alert(
+        `Workspace saved, but files could not be uploaded: ${getErrorMessage(error, 'Unknown upload error')}. Try Save Workspace again.`,
+      );
+      return;
     }
 
     try {
@@ -304,11 +338,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       return;
     }
 
-    if (uploadError) {
-      window.alert(
-        `Workspace saved, but files could not be uploaded: ${getErrorMessage(uploadError, 'Unknown upload error')}`,
-      );
-    }
+    pendingCreatedWorkspaceRef.current = undefined;
   };
 
   const handleCreateWorksheet = () => {
@@ -367,6 +397,20 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
         currentWorkspace?.name ||
         'Loading workspace...'
       : localWorkspaceName;
+
+  if (props.mode === 'saved' && token && savedWorkspaceQuery.isPending) {
+    return <WorkspaceLoadMessage message="Loading workspace..." />;
+  }
+
+  if (
+    props.mode === 'saved' &&
+    token &&
+    (savedWorkspaceQuery.isError || savedWorkspaceQuery.data === null)
+  ) {
+    return (
+      <WorkspaceLoadMessage message="Workspace not found or unavailable." />
+    );
+  }
 
   return (
     <main className="dark app-background sqlrooms-web-root">
@@ -506,6 +550,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
               duckDbRuntime={duckDbRuntime}
               onRoomStoreChange={setWorkspaceRoomStore}
               saveRoomSnapshot={saveWorkspaceRoomSnapshot}
+              onRoomError={handleRoomError}
             />
           </SidebarInset>
         </SidebarProvider>
@@ -544,6 +589,19 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function WorkspaceLoadMessage({message}: {message: string}) {
+  return (
+    <main className="dark app-background sqlrooms-web-root grid place-items-center text-white">
+      <div className="space-y-4 text-center">
+        <p>{message}</p>
+        <Button asChild variant="secondary">
+          <Link to="/">Open a new workspace</Link>
+        </Button>
+      </div>
+    </main>
+  );
 }
 
 function SidebarBrand() {

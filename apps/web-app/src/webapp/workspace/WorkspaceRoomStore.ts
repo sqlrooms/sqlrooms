@@ -78,6 +78,7 @@ export type CreateWorkspaceRoomStoreOptions = {
   panels: Panels;
   token: string | null;
   duckDbConnector: DuckDbConnector;
+  captureException?: (error: unknown) => void;
 };
 
 export type WorkspaceRoomSnapshot = {
@@ -178,10 +179,11 @@ export function createWorkspaceRoomStore({
   panels,
   token,
   duckDbConnector,
+  captureException,
 }: CreateWorkspaceRoomStoreOptions): StoreApi<WorkspaceRoomState> {
   const {createRoomStore} = createRoomStoreCreator<WorkspaceRoomState>()(
     () => (set, get, store) => ({
-      ...createBaseRoomSlice()(set, get, store),
+      ...createBaseRoomSlice({captureException})(set, get, store),
       ...createCommandSlice()(set, get, store),
       ...createLayoutSlice({config: layout, panels})(set, get, store),
       ...createDbSlice({
