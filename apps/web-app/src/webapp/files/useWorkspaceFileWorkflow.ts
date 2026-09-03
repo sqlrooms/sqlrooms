@@ -12,7 +12,7 @@ import {
   uploadPreparedWorkspaceFile,
   type PreparedWorkspaceFile,
 } from './fileIngestion';
-import type {useWorkspaceDuckDbRuntime} from '../worksheet/useWorkspaceDuckDbRuntime';
+import type {useWorkspaceDuckDbRuntime} from '../document/useWorkspaceDuckDbRuntime';
 import type {WorkspaceSchemaTableItem} from '../workspace/WorkspaceSidebarSections';
 import {escapeIdentifier} from '../sql';
 

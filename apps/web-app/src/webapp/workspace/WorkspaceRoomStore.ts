@@ -3,6 +3,10 @@ import {
   createArtifactsSlice,
   type ArtifactsSliceState,
 } from '@sqlrooms/artifacts';
+import {
+  createArtifactAiSlice,
+  type ArtifactAiSliceState,
+} from '@sqlrooms/artifacts/ai';
 import {createDbSlice, type DbSliceState} from '@sqlrooms/db';
 import {type DuckDbConnector} from '@sqlrooms/duckdb';
 import {
@@ -43,7 +47,7 @@ import {
   type SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import type {JsonObject} from '#/lib/json';
-import {createWorkspaceBlockDocumentSliceProps} from '../worksheet/worksheetState';
+import {createWorkspaceBlockDocumentSliceProps} from '../document/documentState';
 import {
   createAssistantChatHeaders,
   createAssistantInstructions,
@@ -65,6 +69,7 @@ export type WorkspaceRoomState = BaseRoomStoreState &
   AiSliceState &
   DbSliceState &
   ArtifactsSliceState &
+  ArtifactAiSliceState &
   MosaicSliceState &
   MosaicDashboardSliceState &
   SqlEditorSliceState &
@@ -121,8 +126,8 @@ export function createDefaultWorkspaceLayout(): LayoutNode {
       },
       {
         type: 'panel',
-        id: 'worksheet-panel',
-        panel: 'worksheet',
+        id: 'document-panel',
+        panel: 'document',
         defaultSize: '75%',
         minSize: '360px',
       },
@@ -214,6 +219,7 @@ export function createWorkspaceRoomStore({
         getInstructions: (args) =>
           createAssistantInstructions(args?.runContext),
       })(set, get, store),
+      ...createArtifactAiSlice<WorkspaceRoomState>()(set, get, store),
     }),
   );
 
@@ -263,6 +269,7 @@ function didWorkspacePersistedStateChange(
   return (
     state.layout.config !== previousState.layout.config ||
     state.ai.config !== previousState.ai.config ||
+    state.artifactAi.config !== previousState.artifactAi.config ||
     state.artifacts.config !== previousState.artifacts.config ||
     state.blockDocuments.config !== previousState.blockDocuments.config ||
     state.sqlEditor.config !== previousState.sqlEditor.config ||

@@ -10,16 +10,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@sqlrooms/ui';
-import {
-  ChevronDown,
-  Database,
-  Eye,
-  FileSpreadsheet,
-  Plus,
-  Table2,
-  UploadCloud,
-} from 'lucide-react';
-import type {WorkspaceLayoutWorksheet} from './WorkspaceLayoutSurface';
+import {ChevronDown, Database, Eye, Table2, UploadCloud} from 'lucide-react';
 
 export type WorkspaceSchemaTableItem = {
   key: string;
@@ -135,94 +126,6 @@ export function DatabaseSidebarSection({
         <DropdownMenuItem onClick={onAddFile}>
           <UploadCloud className="size-4" aria-hidden />
           Add table
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-export function WorksheetsSidebarSection({
-  worksheets,
-  selectedWorksheetId,
-  onSelectWorksheet,
-  onCreateWorksheet,
-}: {
-  worksheets: WorkspaceLayoutWorksheet[];
-  selectedWorksheetId: string | undefined;
-  onSelectWorksheet: (worksheetId: string) => void;
-  onCreateWorksheet: (() => void) | undefined;
-}) {
-  const activeWorksheet = worksheets.find(
-    (worksheet) => worksheet.id === selectedWorksheetId,
-  );
-  const {state} = useSidebar();
-
-  if (state === 'expanded') {
-    return (
-      <SidebarMenu>
-        {worksheets.map((worksheet) => (
-          <SidebarMenuItem key={worksheet.id}>
-            <SidebarMenuButton
-              isActive={worksheet.id === selectedWorksheetId}
-              onClick={() => onSelectWorksheet(worksheet.id)}
-              type="button"
-            >
-              <FileSpreadsheet className="size-4" aria-hidden />
-              <span>{worksheet.title}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        ))}
-        <SidebarMenuItem>
-          <SidebarMenuButton
-            type="button"
-            disabled={!onCreateWorksheet}
-            onClick={onCreateWorksheet}
-          >
-            <Plus className="size-4" aria-hidden />
-            <span>New Document</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-    );
-  }
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <SidebarMenuButton
-          className="sidebar-nav-button"
-          type="button"
-          size="lg"
-          tooltip="Documents"
-          isActive
-        >
-          <FileSpreadsheet className="size-4" aria-hidden />
-          <span>{activeWorksheet?.title ?? 'Documents'}</span>
-          <ChevronDown className="sidebar-nav-chevron ml-auto size-4" />
-        </SidebarMenuButton>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        className="workspace-menu"
-        align="start"
-        side="right"
-      >
-        <DropdownMenuLabel>Documents</DropdownMenuLabel>
-        {worksheets.map((worksheet) => (
-          <DropdownMenuItem
-            key={worksheet.id}
-            onClick={() => onSelectWorksheet(worksheet.id)}
-          >
-            <FileSpreadsheet className="size-4" aria-hidden />
-            {worksheet.title}
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          disabled={!onCreateWorksheet}
-          onClick={onCreateWorksheet}
-        >
-          <Plus className="size-4" aria-hidden />
-          New Document
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -28,6 +28,7 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
+  ThemeSwitch,
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -49,6 +50,7 @@ import type React from 'react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {authClient, getNeonJWTToken} from '#/lib/auth-client';
 import type {JsonObject} from '#/lib/json';
+import {syncSessionDocumentRunContext} from './assistant/sessionDocumentContext';
 import {WorkspaceFileDialogs} from './files/WorkspaceFileDialogs';
 import {useWorkspaceFileWorkflow} from './files/useWorkspaceFileWorkflow';
 import {listWorkspaceFiles} from './workspace/files';
@@ -63,12 +65,11 @@ import {
   WorkspaceAssistantPanelToggle,
   WorkspaceLayoutSurface,
 } from './workspace/WorkspaceLayoutSurface';
+import {WorkspaceNavigationTabs} from './workspace/WorkspaceNavigationTabs';
+import {WorkspaceDocumentSelector} from './workspace/WorkspaceSelectors';
 import {type SaveWorkspaceRoomSnapshot} from './workspace/WorkspaceRoomProvider';
 import {useWorkspaceRoomSnapshot} from './workspace/useWorkspaceRoomSnapshot';
-import {
-  DatabaseSidebarSection,
-  WorksheetsSidebarSection,
-} from './workspace/WorkspaceSidebarSections';
+import {DatabaseSidebarSection} from './workspace/WorkspaceSidebarSections';
 import {
   createCloudWorkspace,
   getCloudWorkspace,
@@ -76,7 +77,7 @@ import {
   renameCloudWorkspace,
   saveWorkspaceSnapshot,
 } from './workspace/cloudWorkspaces';
-import {useWorkspaceDuckDbRuntime} from './worksheet/useWorkspaceDuckDbRuntime';
+import {useWorkspaceDuckDbRuntime} from './document/useWorkspaceDuckDbRuntime';
 
 type WorkspaceShellProps =
   | {
@@ -168,7 +169,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     props.mode === 'saved' ? savedWorkspaceQuery.data : null;
   const workspaceRevisionRef = useRef<number | null>(null);
   const revisionWorkspaceIdRef = useRef<string | null>(null);
-  const {workspaceContentSnapshot, worksheets, selectedWorksheetId} =
+  const {workspaceContentSnapshot, documents, selectedDocumentId} =
     useWorkspaceRoomSnapshot({
       roomStore: workspaceRoomStore,
       workspaceContent: currentWorkspace?.content,
@@ -196,11 +197,11 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
         workspaceRevisionRef.current = workspace.revision;
       };
     }, [canPersistWorkspace, props.mode, props.workspaceId, token]);
-  const selectedWorksheet = useMemo(
+  const selectedDocument = useMemo(
     () =>
-      worksheets.find((worksheet) => worksheet.id === selectedWorksheetId) ??
-      worksheets[0],
-    [selectedWorksheetId, worksheets],
+      documents.find((document) => document.id === selectedDocumentId) ??
+      documents[0],
+    [documents, selectedDocumentId],
   );
   const fileWorkflow = useWorkspaceFileWorkflow({
     mode: props.mode,
@@ -341,11 +342,26 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
     pendingCreatedWorkspaceRef.current = undefined;
   };
 
-  const handleCreateWorksheet = () => {
+  const handleCreateDocument = () => {
     if (!workspaceRoomStore) return;
     const state = workspaceRoomStore.getState();
-    const worksheetId = state.artifacts.createArtifact({type: 'document'});
-    state.workspace.setCurrentWorksheet(worksheetId);
+    const sessionId = state.ai.config.currentSessionId;
+    state.artifactAi.setSyncSuspended(true);
+    try {
+      const documentId = state.artifacts.createArtifact({type: 'document'});
+      state.workspace.setCurrentDocument(documentId);
+      if (sessionId) {
+        state.artifactAi.addSessionArtifactLink(sessionId, documentId);
+        syncSessionDocumentRunContext(
+          workspaceRoomStore.getState(),
+          sessionId,
+          documentId,
+        );
+      }
+    } finally {
+      state.artifactAi.setSyncSuspended(false);
+      state.artifactAi.syncCurrentArtifactAiSession();
+    }
   };
 
   const handleWorkspaceTitleChange = (
@@ -413,7 +429,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   }
 
   return (
-    <main className="dark app-background sqlrooms-web-root">
+    <main className="app-background sqlrooms-web-root">
       <TooltipProvider>
         <SidebarProvider defaultOpen>
           <Sidebar collapsible="icon" className="sqlrooms-sidebar">
@@ -426,7 +442,16 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
             </SidebarHeader>
 
             <SidebarContent>
-              <SidebarGroup>
+              <SidebarGroup className="min-h-44 flex-1">
+                <WorkspaceNavigationTabs
+                  roomStore={workspaceRoomStore}
+                  onCreateDocument={
+                    workspaceRoomStore ? handleCreateDocument : undefined
+                  }
+                />
+              </SidebarGroup>
+
+              <SidebarGroup className="shrink-0">
                 <SidebarGroupLabel className="text-shell-subtle">
                   Data
                 </SidebarGroupLabel>
@@ -450,30 +475,18 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                   />
                 </SidebarGroupContent>
               </SidebarGroup>
-
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-shell-subtle">
-                  Documents
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <WorksheetsSidebarSection
-                    worksheets={worksheets}
-                    selectedWorksheetId={selectedWorksheet?.id}
-                    onSelectWorksheet={(worksheetId) =>
-                      workspaceRoomStore
-                        ?.getState()
-                        .workspace.setCurrentWorksheet(worksheetId)
-                    }
-                    onCreateWorksheet={
-                      workspaceRoomStore ? handleCreateWorksheet : undefined
-                    }
-                  />
-                </SidebarGroupContent>
-              </SidebarGroup>
             </SidebarContent>
 
             <SidebarFooter>
               <SidebarMenu>
+                <SidebarMenuItem>
+                  <div className="flex items-center gap-2 px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+                    <ThemeSwitch className="data-[state=checked]:bg-primary/30 data-[state=unchecked]:bg-sidebar-accent" />
+                    <span className="text-muted-foreground text-sm group-data-[collapsible=icon]:hidden">
+                      Theme
+                    </span>
+                  </div>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={() =>
@@ -504,8 +517,6 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                   </TooltipTrigger>
                   <TooltipContent>Toggle sidebar</TooltipContent>
                 </Tooltip>
-                <WorkspaceAssistantPanelToggle roomStore={workspaceRoomStore} />
-                <div className="topbar-divider" />
                 <Input
                   id="workspace-title"
                   name="workspaceTitle"
@@ -521,7 +532,11 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                   aria-label="Workspace title"
                 />
               </div>
+              <div className="topbar-center">
+                <WorkspaceDocumentSelector roomStore={workspaceRoomStore} />
+              </div>
               <div className="topbar-right">
+                <WorkspaceAssistantPanelToggle roomStore={workspaceRoomStore} />
                 {props.mode === 'unsaved' ? (
                   <Button
                     className="save-workspace-button"
@@ -545,7 +560,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
               layout={initialWorkspaceLayout}
               aiConfig={initialWorkspaceAiConfig}
               workspaceContent={currentWorkspace?.content}
-              selectedWorksheet={selectedWorksheet}
+              selectedDocument={selectedDocument}
               token={token}
               duckDbRuntime={duckDbRuntime}
               onRoomStoreChange={setWorkspaceRoomStore}
@@ -593,7 +608,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 function WorkspaceLoadMessage({message}: {message: string}) {
   return (
-    <main className="dark app-background sqlrooms-web-root grid place-items-center text-white">
+    <main className="app-background sqlrooms-web-root text-foreground grid place-items-center">
       <div className="space-y-4 text-center">
         <p>{message}</p>
         <Button asChild variant="secondary">

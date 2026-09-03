@@ -22,14 +22,14 @@ import {
 } from '@sqlrooms/sql-editor-config';
 import type {JsonObject} from '#/lib/json';
 
-type WorksheetStatefulBlockRoomState = MosaicDashboardSliceState &
+type DocumentStatefulBlockRoomState = MosaicDashboardSliceState &
   SqlEditorSliceState;
 
 type WorkspaceBlockDocumentRoomState = BaseRoomStoreState &
   BlockDocumentsSliceState &
-  WorksheetStatefulBlockRoomState;
+  DocumentStatefulBlockRoomState;
 
-export type PersistedWorksheetState = {
+export type PersistedDocumentState = {
   sqlEditor?: SqlEditorSliceConfig;
   mosaicDashboard?: MosaicDashboardSliceConfig;
 };
@@ -46,17 +46,17 @@ type StatefulBlockConfig = {
   requireScrollModifier?: boolean;
   scrollHintLabel?: string;
   ensureState: (
-    state: WorksheetStatefulBlockRoomState,
+    state: DocumentStatefulBlockRoomState,
     blockInstanceId: string,
     options?: BlockDocumentStatefulBlockCreateNodeOptions,
   ) => void;
   deleteState: (
-    state: WorksheetStatefulBlockRoomState,
+    state: DocumentStatefulBlockRoomState,
     blockInstanceId: string,
   ) => void;
 };
 
-const WORKSHEET_STATE_KEY = '__sqlroomsWorksheetState';
+const DOCUMENT_STATE_KEY = '__sqlroomsDocumentState';
 
 const STATEFUL_BLOCK_CONFIGS: StatefulBlockConfig[] = [
   {
@@ -143,10 +143,10 @@ export function createWorkspaceBlockDocumentSliceProps<
   };
 }
 
-export function createWorksheetStatefulBlockTypes({
+export function createDocumentStatefulBlockTypes({
   getState,
 }: {
-  getState: () => WorksheetStatefulBlockRoomState;
+  getState: () => DocumentStatefulBlockRoomState;
 }): BlockDocumentStatefulBlockType[] {
   return STATEFUL_BLOCK_CONFIGS.map((config) => ({
     blockType: config.blockType,
@@ -177,10 +177,10 @@ export function createWorksheetStatefulBlockTypes({
   }));
 }
 
-export function extractPersistedWorksheetState(
+export function extractPersistedDocumentState(
   content: BlockDocumentContent,
-): PersistedWorksheetState {
-  const candidate = (content as Record<string, unknown>)[WORKSHEET_STATE_KEY];
+): PersistedDocumentState {
+  const candidate = (content as Record<string, unknown>)[DOCUMENT_STATE_KEY];
   if (!candidate || typeof candidate !== 'object') return {};
   const state = candidate as Record<string, unknown>;
   const sqlEditor = SqlEditorSliceConfig.safeParse(state.sqlEditor);
@@ -194,22 +194,22 @@ export function extractPersistedWorksheetState(
   };
 }
 
-export function serializeWorksheetContent(
+export function serializeDocumentContent(
   content: BlockDocumentContent,
-  state: PersistedWorksheetState,
+  state: PersistedDocumentState,
 ): JsonObject {
   return {
     ...(content as unknown as JsonObject),
-    [WORKSHEET_STATE_KEY]: state as unknown as JsonObject,
+    [DOCUMENT_STATE_KEY]: state as unknown as JsonObject,
   };
 }
 
-export function normalizeWorksheetBlockDocumentContent(
+export function normalizeDocumentBlockDocumentContent(
   content: BlockDocumentContent,
 ): BlockDocumentContent {
   return {
     type: 'doc',
-    content: content.content.map(normalizeWorksheetBlockDocumentNode),
+    content: content.content.map(normalizeDocumentBlockDocumentNode),
   };
 }
 
@@ -217,7 +217,7 @@ export function toBlockDocumentContent(
   content: JsonObject,
 ): BlockDocumentContent {
   if (content.type === 'doc' && Array.isArray(content.content)) {
-    return normalizeWorksheetBlockDocumentContent(
+    return normalizeDocumentBlockDocumentContent(
       content as unknown as BlockDocumentContent,
     );
   }
@@ -225,7 +225,7 @@ export function toBlockDocumentContent(
 }
 
 export function ensureStatefulBlocksForContent(
-  state: WorksheetStatefulBlockRoomState,
+  state: DocumentStatefulBlockRoomState,
   content: BlockDocumentContent,
 ) {
   for (const block of blockDocumentContentToBlocks(content)) {
@@ -259,7 +259,7 @@ export function createEmptyPersistedSqlEditorConfig(): SqlEditorSliceConfig {
 }
 
 function ensureStatefulBlockState(
-  state: WorksheetStatefulBlockRoomState,
+  state: DocumentStatefulBlockRoomState,
   {
     blockType,
     blockInstanceId,
@@ -283,7 +283,7 @@ function isOwnedStatefulBlock(
   return block.type === 'statefulBlock' && block.ownership !== 'external';
 }
 
-function normalizeWorksheetBlockDocumentNode(
+function normalizeDocumentBlockDocumentNode(
   node: BlockDocumentContent['content'][number],
 ): BlockDocumentContent['content'][number] {
   if (node.type === 'blockDocumentStatefulBlock') {
@@ -315,7 +315,7 @@ function normalizeWorksheetBlockDocumentNode(
   if (Array.isArray(node.content)) {
     return {
       ...node,
-      content: node.content.map(normalizeWorksheetBlockDocumentNode),
+      content: node.content.map(normalizeDocumentBlockDocumentNode),
     };
   }
 

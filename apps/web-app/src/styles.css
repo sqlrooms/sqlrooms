@@ -3,36 +3,38 @@
 
 @source '../index.html';
 @source './**/*.{ts,tsx}';
+@source '../../../packages/*/src/**/*.{ts,tsx}';
 @source '../node_modules/@sqlrooms/*/dist/';
 
 :root {
-  --background: 199 52% 10%;
-  --foreground: 202 44% 94%;
-  --card: 200 44% 13%;
-  --card-foreground: 202 44% 94%;
-  --popover: 200 44% 13%;
-  --popover-foreground: 202 44% 94%;
-  --primary: 198 32% 45%;
-  --primary-foreground: 202 44% 96%;
-  --secondary: 200 38% 16%;
-  --secondary-foreground: 202 44% 94%;
-  --muted: 200 36% 17%;
-  --muted-foreground: 202 22% 70%;
-  --accent: 198 38% 22%;
-  --accent-foreground: 202 44% 94%;
-  --destructive: 0 62% 48%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 199 26% 31%;
-  --input: 200 31% 24%;
-  --ring: 198 32% 60%;
-  --sidebar-background: 199 52% 10%;
-  --sidebar-foreground: 202 44% 94%;
-  --sidebar-primary: 198 32% 60%;
-  --sidebar-primary-foreground: 202 44% 96%;
-  --sidebar-accent: 198 38% 22%;
-  --sidebar-accent-foreground: 202 44% 94%;
-  --sidebar-border: 199 26% 31%;
-  --sidebar-ring: 198 32% 60%;
+  --background: 214 47% 97%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 214 42% 98%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 214 42% 98%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 214 45% 94%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 214 45% 94%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 214 45% 94%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214 38% 88%;
+  --input: 214 38% 88%;
+  --ring: 221.2 83.2% 53.3%;
+  --radius: 0.5rem;
+  --sidebar-background: 214 45% 96%;
+  --sidebar-foreground: 222.2 84% 4.9%;
+  --sidebar-primary: 221.2 83.2% 53.3%;
+  --sidebar-primary-foreground: 210 40% 98%;
+  --sidebar-accent: 214 45% 92%;
+  --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+  --sidebar-border: 214 38% 86%;
+  --sidebar-ring: 221.2 83.2% 53.3%;
 
   --shell-text: hsl(var(--foreground));
   --shell-strong: hsl(var(--foreground));
@@ -51,6 +53,38 @@
   --shell-app-background: hsl(var(--background));
 }
 
+@media screen {
+  .dark {
+    --background: 224 47% 6%;
+    --foreground: 210 40% 98%;
+    --card: 224 45% 7%;
+    --card-foreground: 210 40% 98%;
+    --popover: 224 45% 7%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 221 39% 15%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 221 39% 15%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 221 39% 15%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 221 36% 18%;
+    --input: 221 36% 18%;
+    --ring: 224.3 76.3% 48%;
+    --sidebar-background: 224 47% 7%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 221 39% 15%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 221 36% 18%;
+    --sidebar-ring: 224.3 76.3% 48%;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -67,7 +101,12 @@ body {
   background: var(--shell-app-background);
   color: var(--shell-text);
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
     sans-serif;
 }
 
@@ -91,19 +130,14 @@ input {
 
 .sqlrooms-sidebar [data-sidebar='sidebar'] {
   border-right: 1px solid var(--shell-border);
-  background:
-    linear-gradient(
-      180deg,
-      hsl(var(--background)) 0%,
-      hsl(var(--background) / 94%) 100%
-    );
+  background: hsl(var(--sidebar-background));
 }
 
 .brand-button {
   display: flex;
   width: 100%;
   min-width: 0;
-  min-height: 58px;
+  min-height: 44px;
   align-items: center;
   gap: 11px;
   border: 0;
@@ -120,8 +154,8 @@ input {
 }
 
 .brand-logo {
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   flex: 0 0 auto;
 }
@@ -133,7 +167,7 @@ input {
 .brand-title {
   overflow: hidden;
   color: var(--shell-text);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.05;
   text-overflow: ellipsis;
@@ -322,14 +356,14 @@ input {
 .sqlrooms-workspace {
   min-width: 0;
   min-height: 100vh;
-  background: hsl(200 48% 8%);
+  background: hsl(var(--background));
 }
 
 .workspace-topbar {
-  display: flex;
-  height: 44px;
+  display: grid;
+  height: 48px;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 520px) minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   border-bottom: 1px solid var(--shell-border);
   background: hsl(var(--background) / 96%);
@@ -337,27 +371,35 @@ input {
 }
 
 .topbar-left,
+.topbar-center,
 .topbar-right,
 .runtime-pill,
 .assistant-title,
 .block-type-button,
-.new-worksheet-button {
+.new-document-button {
   display: flex;
   align-items: center;
 }
 
 .topbar-left,
+.topbar-center,
 .topbar-right {
   min-width: 0;
   gap: 4px;
 }
 
 .topbar-left {
-  flex: 1 1 auto;
+  justify-self: stretch;
+}
+
+.topbar-center {
+  width: 100%;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .topbar-right {
-  flex: 0 0 auto;
+  justify-self: end;
 }
 
 .topbar-divider {
@@ -380,12 +422,12 @@ input {
 }
 
 .workspace-title-input {
-  width: min(520px, 100%);
-  height: 36px;
+  width: min(300px, 100%);
+  height: 32px;
   border-color: transparent;
   background: hsl(var(--background) / 28%);
   color: var(--shell-text);
-  font-size: 20px;
+  font-size: 14px;
   font-weight: 500;
 }
 
@@ -426,7 +468,7 @@ input {
 }
 
 .workspace-panels {
-  height: calc(100vh - 44px);
+  height: calc(100vh - 48px);
   min-width: 0;
   min-height: 0;
 }
@@ -437,14 +479,14 @@ input {
   background: hsl(var(--background) / 92%);
 }
 
-.worksheet-panel,
+.document-panel,
 .assistant-panel {
   height: 100%;
   min-width: 0;
   border-color: var(--shell-border);
 }
 
-.worksheet-panel {
+.document-panel {
   display: flex;
   flex-direction: column;
 }
@@ -454,24 +496,22 @@ input {
   color: var(--shell-text);
 }
 
-.worksheet-stage {
+.document-stage {
   flex: 1;
   min-height: 0;
-  background:
-    linear-gradient(hsl(200 45% 11% / 92%), hsl(200 45% 11% / 92%)),
-    radial-gradient(circle at top left, hsl(198 32% 26% / 28%), transparent 38%);
+  background: hsl(var(--background));
   overflow: hidden;
   padding: 0;
 }
 
-.worksheet-start {
+.document-start {
   display: grid;
   width: min(620px, 100%);
   justify-items: center;
   gap: 16px;
 }
 
-.new-worksheet-button {
+.new-document-button {
   gap: 8px;
   min-height: 38px;
 }
@@ -496,32 +536,32 @@ input {
   white-space: nowrap;
 }
 
-.worksheet-document-surface {
+.document-surface {
   min-height: 100%;
   color: var(--shell-text);
   padding: 28px clamp(18px, 4vw, 56px);
 }
 
-.worksheet-document-surface .ProseMirror {
+.document-surface .ProseMirror {
   min-height: calc(100vh - 160px);
   outline: none;
 }
 
-.worksheet-document-surface .ProseMirror > * {
+.document-surface .ProseMirror > * {
   max-width: 900px;
 }
 
-.worksheet-document-surface .ProseMirror h1 {
+.document-surface .ProseMirror h1 {
   color: var(--shell-text);
   font-size: 28px;
   line-height: 1.2;
 }
 
-.worksheet-document-surface .ProseMirror p {
+.document-surface .ProseMirror p {
   color: var(--shell-subtle);
 }
 
-.worksheet-block-frame {
+.document-block-frame {
   display: grid;
   gap: 10px;
   width: 100%;
@@ -531,7 +571,7 @@ input {
   padding: 12px;
 }
 
-.worksheet-block-header {
+.document-block-header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -540,8 +580,8 @@ input {
   font-weight: 600;
 }
 
-.worksheet-block-textarea,
-.worksheet-block-input {
+.document-block-textarea,
+.document-block-input {
   width: 100%;
   border: 1px solid var(--shell-border);
   border-radius: 7px;
@@ -549,22 +589,22 @@ input {
   color: var(--shell-text);
 }
 
-.worksheet-block-textarea {
+.document-block-textarea {
   min-height: 140px;
   resize: vertical;
   padding: 10px;
   font-family:
-    ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono",
+    ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono',
     monospace;
   line-height: 1.45;
 }
 
-.worksheet-block-input {
+.document-block-input {
   height: 36px;
   padding: 0 10px;
 }
 
-.worksheet-block-placeholder {
+.document-block-placeholder {
   min-height: 120px;
   border: 1px dashed var(--shell-border);
   border-radius: 7px;
@@ -576,7 +616,7 @@ input {
 .assistant-panel {
   display: flex;
   flex-direction: column;
-  background: hsl(var(--background) / 92%);
+  background: hsl(var(--background));
   overflow: hidden;
 }
 
@@ -813,13 +853,21 @@ input {
 
   .workspace-panels {
     height: auto;
-    min-height: calc(100vh - 44px);
+    min-height: calc(100vh - 48px);
   }
 
   .workspace-topbar {
     position: sticky;
     top: 0;
     z-index: 20;
+  }
+
+  .workspace-topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .topbar-center {
+    display: none;
   }
 
   .topbar-button {

@@ -7,7 +7,7 @@ import {
   type RoomSnapshotState,
   type WorkspaceRoomSnapshotProjection,
 } from './roomSnapshotProjection';
-import {getWorkspaceContentWorksheets} from './workspaceContent';
+import {getWorkspaceContentDocuments} from './workspaceContent';
 
 export function useWorkspaceRoomSnapshot({
   roomStore,
@@ -24,17 +24,18 @@ export function useWorkspaceRoomSnapshot({
       blockDocuments: roomSnapshotProjection.blockDocumentsConfig,
       sqlEditor: roomSnapshotProjection.sqlEditorConfig,
       mosaicDashboard: roomSnapshotProjection.mosaicDashboardConfig,
+      artifactAi: roomSnapshotProjection.artifactAiConfig,
     } as unknown as JsonObject;
   }, [roomSnapshotProjection, workspaceContent]);
-  const worksheets = useMemo(
-    () => getWorkspaceContentWorksheets(workspaceContentSnapshot),
+  const documents = useMemo(
+    () => getWorkspaceContentDocuments(workspaceContentSnapshot),
     [workspaceContentSnapshot],
   );
 
   return {
     workspaceContentSnapshot,
-    worksheets,
-    selectedWorksheetId: roomSnapshotProjection?.currentArtifactId,
+    documents,
+    selectedDocumentId: roomSnapshotProjection?.currentArtifactId,
   };
 }
 
@@ -58,7 +59,8 @@ function useRoomSnapshotProjection(
         state.artifacts.config === previousState.artifacts.config &&
         state.blockDocuments.config === previousState.blockDocuments.config &&
         state.sqlEditor.config === previousState.sqlEditor.config &&
-        state.mosaicDashboard.config === previousState.mosaicDashboard.config
+        state.mosaicDashboard.config === previousState.mosaicDashboard.config &&
+        state.artifactAi.config === previousState.artifactAi.config
       ) {
         return;
       }
@@ -82,6 +84,7 @@ function getRoomSnapshotProjection(
     blockDocumentsConfig: state.blockDocuments.config,
     sqlEditorConfig: state.sqlEditor.config,
     mosaicDashboardConfig: state.mosaicDashboard.config,
+    artifactAiConfig: state.artifactAi.config,
     currentArtifactId: state.artifacts.config.currentArtifactId,
   };
 }

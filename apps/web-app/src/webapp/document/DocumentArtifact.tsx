@@ -28,15 +28,15 @@ import {useCallback, useEffect, useMemo, useRef} from 'react';
 import type {WorkspaceRoomState} from '../workspace/WorkspaceRoomStore';
 import {
   createEmptyPersistedSqlEditorConfig,
-  createWorksheetStatefulBlockTypes,
+  createDocumentStatefulBlockTypes,
   getOwnedStatefulBlockIds,
-  serializeWorksheetContent,
-} from './worksheetState';
-import {getWorksheetChartSettingsState} from './worksheetChartSettings';
+  serializeDocumentContent,
+} from './documentState';
+import {getDocumentChartSettingsState} from './documentChartSettings';
 
 type ChartConfigType = ReturnType<typeof ChartConfig.parse>;
 
-export const WorksheetArtifactPanel: RoomPanelComponent = ({panelId, meta}) => {
+export const DocumentArtifactPanel: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId = (meta?.artifactId as string) ?? panelId;
   const artifact = useBaseRoomStore<
     WorkspaceRoomState,
@@ -61,9 +61,9 @@ export const WorksheetArtifactPanel: RoomPanelComponent = ({panelId, meta}) => {
   if (!title) return null;
 
   return (
-    <div className="worksheet-document-surface">
-      <WorksheetBlockDocument
-        worksheetId={artifactId}
+    <div className="document-surface">
+      <DocumentBlockDocument
+        documentId={artifactId}
         title={title}
         onTitleChange={handleTitleChange}
       />
@@ -71,29 +71,29 @@ export const WorksheetArtifactPanel: RoomPanelComponent = ({panelId, meta}) => {
   );
 };
 
-export function WorksheetBlockDocument({
+export function DocumentBlockDocument({
   title,
-  worksheetId,
+  documentId,
   onTitleChange,
 }: {
   title: string;
-  worksheetId: string;
+  documentId: string;
   onTitleChange: (title: string) => void;
 }) {
   const roomStore = useRoomStoreApi<WorkspaceRoomState>();
   const blockTypes = useMemo(
-    () => createWorksheetStatefulBlockTypes({getState: roomStore.getState}),
+    () => createDocumentStatefulBlockTypes({getState: roomStore.getState}),
     [roomStore],
   );
 
   return (
-    <BlockDocumentChartRendererProvider renderer={WorksheetChartRenderer}>
+    <BlockDocumentChartRendererProvider renderer={DocumentChartRenderer}>
       <BlockDocumentStatefulBlockRendererProvider
         blockTypes={blockTypes}
-        renderers={WORKSHEET_STATEFUL_BLOCK_RENDERERS}
+        renderers={DOCUMENT_STATEFUL_BLOCK_RENDERERS}
       >
         <BlockDocumentArtifact
-          artifactId={worksheetId}
+          artifactId={documentId}
           title={title}
           onTitleChange={onTitleChange}
         />
@@ -102,11 +102,11 @@ export function WorksheetBlockDocument({
   );
 }
 
-export function useSerializedWorksheetContent(worksheetId: string) {
+export function useSerializedDocumentContent(documentId: string) {
   const storedContent = useBaseRoomStore<
     WorkspaceRoomState,
     BlockDocumentContent | undefined
-  >((state) => state.blockDocuments.config.artifacts[worksheetId]?.content);
+  >((state) => state.blockDocuments.config.artifacts[documentId]?.content);
   const content = useMemo<BlockDocumentContent>(
     () => storedContent ?? {type: 'doc', content: []},
     [storedContent],
@@ -123,7 +123,7 @@ export function useSerializedWorksheetContent(worksheetId: string) {
   return useMemo(() => {
     const ownedBlockIds = getOwnedStatefulBlockIds(content);
 
-    return serializeWorksheetContent(content, {
+    return serializeDocumentContent(content, {
       sqlEditor: {
         ...createEmptyPersistedSqlEditorConfig(),
         queries: sqlEditorConfig.queries.filter((query) =>
@@ -148,7 +148,7 @@ export function useSerializedWorksheetContent(worksheetId: string) {
   }, [content, mosaicDashboardConfig, sqlEditorConfig]);
 }
 
-export function useRefreshWorksheetDbSchemas(tableNames: string[]) {
+export function useRefreshDocumentDbSchemas(tableNames: string[]) {
   const refreshTableSchemas = useBaseRoomStore<
     WorkspaceRoomState,
     WorkspaceRoomState['db']['refreshTableSchemas']
@@ -160,7 +160,7 @@ export function useRefreshWorksheetDbSchemas(tableNames: string[]) {
   }, [refreshTableSchemas, tableNamesKey]);
 }
 
-const WorksheetDataTableBlockRenderer = (
+const DocumentDataTableBlockRenderer = (
   props: BlockDocumentStatefulBlockRendererProps,
 ) => {
   const updateBlock = useBaseRoomStore<
@@ -211,7 +211,7 @@ const WorksheetDataTableBlockRenderer = (
   );
 };
 
-const WorksheetDashboardBlockRenderer = ({
+const DocumentDashboardBlockRenderer = ({
   blockInstanceId,
   blockType,
   caption,
@@ -253,7 +253,7 @@ const WorksheetDashboardBlockRenderer = ({
   );
 };
 
-const WorksheetSqlQueryBlockRenderer = ({
+const DocumentSqlQueryBlockRenderer = ({
   blockInstanceId,
   blockType,
   readOnly,
@@ -267,10 +267,10 @@ const WorksheetSqlQueryBlockRenderer = ({
   );
 };
 
-const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
-  dashboard: WorksheetDashboardBlockRenderer,
-  'data-table': WorksheetDataTableBlockRenderer,
-  [SQL_QUERY_BLOCK_TYPE]: WorksheetSqlQueryBlockRenderer,
+const DOCUMENT_STATEFUL_BLOCK_RENDERERS = {
+  dashboard: DocumentDashboardBlockRenderer,
+  'data-table': DocumentDataTableBlockRenderer,
+  [SQL_QUERY_BLOCK_TYPE]: DocumentSqlQueryBlockRenderer,
 } satisfies Record<string, BlockDocumentStatefulBlockRenderer>;
 
 function UnsupportedStatefulBlock({blockType}: {blockType: string}) {
@@ -290,15 +290,15 @@ function getBlockDocumentChartSelectionName({
   'documentId' | 'blockId' | 'selectionGroupId'
 >) {
   return selectionGroupId
-    ? `worksheet:${documentId}:chart-group:${selectionGroupId}:brush`
-    : `worksheet:${documentId}:chart-block:${blockId}:brush`;
+    ? `document:${documentId}:chart-group:${selectionGroupId}:brush`
+    : `document:${documentId}:chart-block:${blockId}:brush`;
 }
 
 function getBlockDocumentChartRuntimeKey({
   documentId,
   blockId,
 }: Pick<Parameters<BlockDocumentChartRenderer>[0], 'documentId' | 'blockId'>) {
-  return `worksheet:${documentId}:chart-block:${blockId}`;
+  return `document:${documentId}:chart-block:${blockId}`;
 }
 
 function stableStringify(value: unknown) {
@@ -326,7 +326,7 @@ function normalizeForStableStringify(value: unknown): unknown {
   return value;
 }
 
-const WorksheetChartRenderer: BlockDocumentChartRenderer = ({
+const DocumentChartRenderer: BlockDocumentChartRenderer = ({
   documentId,
   blockId,
   tableName,
@@ -361,7 +361,7 @@ const WorksheetChartRenderer: BlockDocumentChartRenderer = ({
     };
   }, [fallbackField]);
   const parsedConfig = useMemo(
-    () => parseWorksheetChartConfig(config, defaultConfig),
+    () => parseDocumentChartConfig(config, defaultConfig),
     [config, defaultConfig],
   );
   const configKey = stableStringify(config);
@@ -440,7 +440,7 @@ const WorksheetChartRenderer: BlockDocumentChartRenderer = ({
       />
     </div>
   );
-  const chartSettingsState = getWorksheetChartSettingsState(
+  const chartSettingsState = getDocumentChartSettingsState(
     readOnly,
     chartConfig.settingsOpen,
   );
@@ -488,7 +488,7 @@ const WorksheetChartRenderer: BlockDocumentChartRenderer = ({
   );
 };
 
-function parseWorksheetChartConfig(
+function parseDocumentChartConfig(
   config: unknown,
   fallbackConfig?: ChartConfigType,
 ):

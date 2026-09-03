@@ -1,6 +1,6 @@
 import {PARQUET_UPLOAD_LIMIT_BYTES} from './fileLimits';
 import {isWasmDuckDbConnector} from '@sqlrooms/duckdb';
-import type {WorkspaceDuckDbRuntime} from '../worksheet/duckdbRuntime';
+import type {WorkspaceDuckDbRuntime} from '../document/duckdbRuntime';
 import {escapeIdentifier} from '../sql';
 
 export type PreparedWorkspaceFile = {

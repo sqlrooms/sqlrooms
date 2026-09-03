@@ -4,14 +4,14 @@ import {
 } from '@sqlrooms/artifacts';
 import {FileSpreadsheet} from 'lucide-react';
 import type {WorkspaceRoomState} from './WorkspaceRoomStore';
-import {WorksheetArtifactPanel} from '../worksheet/WorksheetArtifact';
+import {DocumentArtifactPanel} from '../document/DocumentArtifact';
 
 export const WORKSPACE_ARTIFACT_TYPES = defineArtifactTypes({
   document: {
     label: 'Document',
     defaultTitle: 'Document',
     icon: FileSpreadsheet,
-    component: WorksheetArtifactPanel,
+    component: DocumentArtifactPanel,
     onCreate: ({artifactId, store}) => {
       store.getState().blockDocuments.ensureBlockDocument(artifactId);
     },
@@ -20,6 +20,7 @@ export const WORKSPACE_ARTIFACT_TYPES = defineArtifactTypes({
     },
     onDelete: ({artifactId, store}) => {
       store.getState().blockDocuments.removeBlockDocument(artifactId);
+      store.getState().artifactAi.removeAllLinksForArtifact(artifactId);
     },
   },
 } satisfies Record<'document', ArtifactTypeDefinition<WorkspaceRoomState>>);

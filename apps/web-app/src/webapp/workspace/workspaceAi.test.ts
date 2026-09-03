@@ -26,20 +26,4 @@ describe('createAssistantInstructions', () => {
 
     expect(instructions).toContain('Primary document: Document B');
   });
-
-  test('retains the title from a legacy document context', () => {
-    const instructions = createAssistantInstructions({
-      primaryItemId: 'legacy-document',
-      primaryItemKind: 'worksheet',
-      items: [
-        {
-          kind: 'worksheet',
-          id: 'legacy-document',
-          title: 'Legacy analysis',
-        },
-      ],
-    });
-
-    expect(instructions).toContain('Primary document: Legacy analysis');
-  });
 });

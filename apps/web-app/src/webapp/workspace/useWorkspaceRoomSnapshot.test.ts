@@ -16,6 +16,7 @@ describe('getActiveRoomSnapshotProjection', () => {
       blockDocumentsConfig: {artifacts: {}},
       sqlEditorConfig: {queries: [], selectedQueryId: '', openTabs: []},
       mosaicDashboardConfig: {dashboardsById: {}},
+      artifactAiConfig: {sessionArtifactLinks: []},
       currentArtifactId: 'first',
     };
 

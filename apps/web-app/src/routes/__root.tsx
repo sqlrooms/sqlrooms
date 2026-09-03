@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-router';
 import type {ErrorComponentProps} from '@tanstack/react-router';
 import type {QueryClient} from '@tanstack/react-query';
+import {ThemeProvider} from '@sqlrooms/ui';
 import * as React from 'react';
 import appCss from '../styles.css?url';
 
@@ -137,7 +138,9 @@ function RootDocument({children}: {children: React.ReactNode}) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <ThemeProvider defaultTheme="dark" storageKey="sqlrooms-web-app-theme">
+          {children}
+        </ThemeProvider>
         <Scripts />
       </body>
     </html>

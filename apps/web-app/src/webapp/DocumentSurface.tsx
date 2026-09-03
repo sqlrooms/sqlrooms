@@ -2,12 +2,12 @@ import {useBaseRoomStore} from '@sqlrooms/room-store';
 import type {JsonObject} from '#/lib/json';
 import type {WorkspaceRoomState} from './workspace/WorkspaceRoomStore';
 import {
-  useRefreshWorksheetDbSchemas,
-  WorksheetBlockDocument,
-} from './worksheet/WorksheetArtifact';
+  useRefreshDocumentDbSchemas,
+  DocumentBlockDocument,
+} from './document/DocumentArtifact';
 
-type WorksheetSurfaceProps = {
-  worksheet: {
+type DocumentSurfaceProps = {
+  document: {
     id: string;
     title: string;
     content: JsonObject;
@@ -15,16 +15,13 @@ type WorksheetSurfaceProps = {
   tableNames: string[];
 };
 
-export function WorksheetSurface({
-  worksheet,
-  tableNames,
-}: WorksheetSurfaceProps) {
-  useRefreshWorksheetDbSchemas(tableNames);
+export function DocumentSurface({document, tableNames}: DocumentSurfaceProps) {
+  useRefreshDocumentDbSchemas(tableNames);
 
   const title = useBaseRoomStore<WorkspaceRoomState, string>(
     (state) =>
-      state.artifacts.config.artifactsById[worksheet.id]?.title ??
-      worksheet.title,
+      state.artifacts.config.artifactsById[document.id]?.title ??
+      document.title,
   );
   const renameArtifact = useBaseRoomStore<
     WorkspaceRoomState,
@@ -32,12 +29,12 @@ export function WorksheetSurface({
   >((state) => state.artifacts.renameArtifact);
 
   return (
-    <div className="worksheet-document-surface">
-      <WorksheetBlockDocument
-        worksheetId={worksheet.id}
+    <div className="document-surface">
+      <DocumentBlockDocument
+        documentId={document.id}
         title={title || 'Document'}
         onTitleChange={(nextTitle) =>
-          renameArtifact(worksheet.id, nextTitle || 'Document')
+          renameArtifact(document.id, nextTitle || 'Document')
         }
       />
     </div>

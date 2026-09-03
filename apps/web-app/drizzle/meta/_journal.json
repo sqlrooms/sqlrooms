@@ -29,6 +29,13 @@
       "when": 1788447277036,
       "tag": "0003_striped_leo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788470699728,
+      "tag": "0004_wakeful_slyde",
+      "breakpoints": true
     }
   ]
 }

@@ -36,20 +36,21 @@ export const workspaces = pgTable(
       .default({
         artifacts: {
           artifactsById: {
-            'default-worksheet': {
-              id: 'default-worksheet',
+            'default-document': {
+              id: 'default-document',
               type: 'document',
               title: 'Document',
               visibility: 'workspace',
             },
           },
-          artifactOrder: ['default-worksheet'],
-          currentArtifactId: 'default-worksheet',
+          artifactOrder: ['default-document'],
+          pinnedArtifactIds: [],
+          currentArtifactId: 'default-document',
         },
         blockDocuments: {
           artifacts: {
-            'default-worksheet': {
-              id: 'default-worksheet',
+            'default-document': {
+              id: 'default-document',
               content: {type: 'doc', content: []},
               assets: {},
               updatedAt: 0,
@@ -58,6 +59,7 @@ export const workspaces = pgTable(
         },
         sqlEditor: {queries: [], selectedQueryId: '', openTabs: []},
         mosaicDashboard: {dashboardsById: {}},
+        artifactAi: {sessionArtifactLinks: []},
       }),
     aiConfig: jsonb('ai_config')
       .notNull()
@@ -81,8 +83,8 @@ export const workspaces = pgTable(
           },
           {
             type: 'panel',
-            id: 'worksheet-panel',
-            panel: 'worksheet',
+            id: 'document-panel',
+            panel: 'document',
             defaultSize: '75%',
             minSize: '360px',
           },

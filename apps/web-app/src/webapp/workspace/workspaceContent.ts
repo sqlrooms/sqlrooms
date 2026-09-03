@@ -4,6 +4,11 @@ import {
   type ArtifactsSliceConfig as ArtifactsSliceConfigType,
 } from '@sqlrooms/artifacts';
 import {
+  ArtifactAiConfig,
+  type ArtifactAiConfig as ArtifactAiConfigType,
+  type ArtifactAiSliceState,
+} from '@sqlrooms/artifacts/ai';
+import {
   BlockDocumentsSliceConfig,
   type BlockDocumentContent,
   type BlockDocumentsSliceState,
@@ -17,18 +22,17 @@ import {
 import type {SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {SqlEditorSliceConfig} from '@sqlrooms/sql-editor-config';
 import type {JsonObject} from '#/lib/json';
-import {createDefaultWorksheetContent} from '../worksheet/defaultBlockDocument';
+import {createDefaultDocumentContent} from '../document/defaultBlockDocument';
 import {
   createEmptyPersistedSqlEditorConfig,
   ensureStatefulBlocksForContent,
-} from '../worksheet/worksheetState';
+} from '../document/documentState';
 import {
   DEFAULT_DOCUMENT_TITLE,
   DOCUMENT_ARTIFACT_TYPE,
-  migrateLegacyWorksheetArtifacts,
 } from './documentTerminology';
 
-export type WorkspaceWorksheet = {
+export type WorkspaceDocument = {
   id: string;
   title: string;
   content: JsonObject;
@@ -39,34 +43,37 @@ export type WorkspaceContent = {
   blockDocuments: BlockDocumentsSliceConfigType;
   sqlEditor: SqlEditorSliceConfig;
   mosaicDashboard: MosaicDashboardSliceConfigType;
+  artifactAi: ArtifactAiConfigType;
 };
 
 export type WorkspaceContentRoomState = ArtifactsSliceState &
   BlockDocumentsSliceState &
   SqlEditorSliceState &
-  MosaicDashboardSliceState;
+  MosaicDashboardSliceState &
+  ArtifactAiSliceState;
 
-const DEFAULT_WORKSHEET_ID = 'default-worksheet';
+const DEFAULT_DOCUMENT_ID = 'default-document';
 
 export function hydrateWorkspaceContent({
   content,
-  currentWorksheetId,
+  currentDocumentId,
   store,
 }: {
   content: JsonObject | undefined;
-  currentWorksheetId?: string;
+  currentDocumentId?: string;
   store: {getState: () => WorkspaceContentRoomState};
 }) {
   const parsedContent =
     parseWorkspaceContent(content) ?? createDefaultWorkspaceContent();
   const state = store.getState();
 
+  state.artifactAi.setConfig(parsedContent.artifactAi);
   state.sqlEditor.setConfig(parsedContent.sqlEditor);
   state.mosaicDashboard.setConfig(parsedContent.mosaicDashboard);
   state.artifacts.setConfig({
     ...parsedContent.artifacts,
     currentArtifactId:
-      currentWorksheetId ??
+      currentDocumentId ??
       parsedContent.artifacts.currentArtifactId ??
       parsedContent.artifacts.artifactOrder[0],
   });
@@ -87,36 +94,37 @@ export function serializeWorkspaceRoomContent(
     blockDocuments: state.blockDocuments.config,
     sqlEditor: state.sqlEditor.config,
     mosaicDashboard: state.mosaicDashboard.config,
+    artifactAi: state.artifactAi.config,
   } as unknown as JsonObject;
 }
 
 export function createDefaultWorkspaceContent({
-  worksheetContent = createDefaultWorksheetContent() as unknown as BlockDocumentContent,
-  worksheetId = DEFAULT_WORKSHEET_ID,
-  worksheetTitle = DEFAULT_DOCUMENT_TITLE,
+  documentContent = createDefaultDocumentContent() as unknown as BlockDocumentContent,
+  documentId = DEFAULT_DOCUMENT_ID,
+  documentTitle = DEFAULT_DOCUMENT_TITLE,
 }: {
-  worksheetContent?: BlockDocumentContent;
-  worksheetId?: string;
-  worksheetTitle?: string;
+  documentContent?: BlockDocumentContent;
+  documentId?: string;
+  documentTitle?: string;
 } = {}): WorkspaceContent {
   return {
     artifacts: {
       artifactsById: {
-        [worksheetId]: {
-          id: worksheetId,
+        [documentId]: {
+          id: documentId,
           type: DOCUMENT_ARTIFACT_TYPE,
-          title: worksheetTitle,
+          title: documentTitle,
         },
       },
-      artifactOrder: [worksheetId],
+      artifactOrder: [documentId],
       pinnedArtifactIds: [],
-      currentArtifactId: worksheetId,
+      currentArtifactId: documentId,
     },
     blockDocuments: {
       artifacts: {
-        [worksheetId]: {
-          id: worksheetId,
-          content: worksheetContent,
+        [documentId]: {
+          id: documentId,
+          content: documentContent,
           assets: {},
           updatedAt: Date.now(),
         },
@@ -124,15 +132,16 @@ export function createDefaultWorkspaceContent({
     },
     sqlEditor: createEmptyPersistedSqlEditorConfig(),
     mosaicDashboard: {dashboardsById: {}},
+    artifactAi: {sessionArtifactLinks: []},
   };
 }
 
-export function getWorkspaceContentWorksheets(
+export function getWorkspaceContentDocuments(
   content: JsonObject | undefined,
-): WorkspaceWorksheet[] {
+): WorkspaceDocument[] {
   const parsedContent =
     parseWorkspaceContent(content) ?? createDefaultWorkspaceContent();
-  const orderedWorksheetIds = [
+  const orderedDocumentIds = [
     ...parsedContent.artifacts.artifactOrder,
     ...Object.keys(parsedContent.artifacts.artifactsById).filter(
       (artifactId) =>
@@ -144,13 +153,13 @@ export function getWorkspaceContentWorksheets(
       DOCUMENT_ARTIFACT_TYPE,
   );
 
-  return orderedWorksheetIds.map((worksheetId) => {
-    const artifact = parsedContent.artifacts.artifactsById[worksheetId];
+  return orderedDocumentIds.map((documentId) => {
+    const artifact = parsedContent.artifacts.artifactsById[documentId];
     const blockDocument =
-      parsedContent.blockDocuments.artifacts[worksheetId]?.content;
+      parsedContent.blockDocuments.artifacts[documentId]?.content;
 
     return {
-      id: worksheetId,
+      id: documentId,
       title: artifact?.title ?? DEFAULT_DOCUMENT_TITLE,
       content: (blockDocument ?? {type: 'doc', content: []}) as JsonObject,
     };
@@ -163,7 +172,7 @@ export function getWorkspaceHydrationKey(content: JsonObject | undefined) {
 
 export function parseWorkspaceContent(content: JsonObject | undefined) {
   if (!content) return null;
-  const record = migrateLegacyWorksheetArtifacts(content);
+  const record = content;
   const artifacts = ArtifactsSliceConfig.safeParse(record.artifacts);
   const blockDocuments = BlockDocumentsSliceConfig.safeParse(
     record.blockDocuments,
@@ -172,12 +181,17 @@ export function parseWorkspaceContent(content: JsonObject | undefined) {
   const mosaicDashboard = MosaicDashboardSliceConfig.safeParse(
     record.mosaicDashboard,
   );
+  const artifactAi = ArtifactAiConfig.safeParse(record.artifactAi);
 
   if (
     !artifacts.success ||
     !blockDocuments.success ||
     !sqlEditor.success ||
-    !mosaicDashboard.success
+    !mosaicDashboard.success ||
+    !artifactAi.success ||
+    Object.values(artifacts.data.artifactsById).some(
+      (artifact) => artifact.type !== DOCUMENT_ARTIFACT_TYPE,
+    )
   ) {
     return null;
   }
@@ -187,5 +201,6 @@ export function parseWorkspaceContent(content: JsonObject | undefined) {
     blockDocuments: blockDocuments.data,
     sqlEditor: sqlEditor.data,
     mosaicDashboard: mosaicDashboard.data,
+    artifactAi: artifactAi.data,
   } satisfies WorkspaceContent;
 }

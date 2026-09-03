@@ -6,6 +6,7 @@ export type WorkspaceRoomSnapshotProjection = {
   blockDocumentsConfig: WorkspaceRoomState['blockDocuments']['config'];
   sqlEditorConfig: WorkspaceRoomState['sqlEditor']['config'];
   mosaicDashboardConfig: WorkspaceRoomState['mosaicDashboard']['config'];
+  artifactAiConfig: WorkspaceRoomState['artifactAi']['config'];
   currentArtifactId: string | undefined;
 };
 

@@ -23,8 +23,8 @@ import {
 import type {JsonObject} from '#/lib/json';
 import {AssistantPanel} from '../assistant/AssistantPanel';
 import {WorkspaceWebMcpTools} from '../capabilities/WorkspaceWebMcpTools';
-import {WorksheetSurface} from '../WorksheetSurface';
-import type {useWorkspaceDuckDbRuntime} from '../worksheet/useWorkspaceDuckDbRuntime';
+import {DocumentSurface} from '../DocumentSurface';
+import type {useWorkspaceDuckDbRuntime} from '../document/useWorkspaceDuckDbRuntime';
 import {
   ASSISTANT_PANEL_ID,
   createDefaultWorkspaceLayout,
@@ -46,14 +46,14 @@ const WORKSPACE_PANELS: Panels = {
     icon: Sparkles,
     component: WorkspaceAssistantPanel,
   },
-  worksheet: {
+  document: {
     title: 'Document',
     icon: FileSpreadsheet,
-    component: WorkspaceWorksheetPanel,
+    component: WorkspaceDocumentPanel,
   },
 };
 
-export type WorkspaceLayoutWorksheet = {
+export type WorkspaceLayoutDocument = {
   id: string;
   title: string;
   content: JsonObject;
@@ -64,7 +64,7 @@ export function WorkspaceLayoutSurface({
   layout,
   aiConfig,
   workspaceContent,
-  selectedWorksheet,
+  selectedDocument,
   token,
   duckDbRuntime,
   onRoomStoreChange,
@@ -75,7 +75,7 @@ export function WorkspaceLayoutSurface({
   layout: LayoutNode;
   aiConfig: JsonObject;
   workspaceContent: JsonObject | undefined;
-  selectedWorksheet: WorkspaceLayoutWorksheet | undefined;
+  selectedDocument: WorkspaceLayoutDocument | undefined;
   token: string | null;
   duckDbRuntime: ReturnType<typeof useWorkspaceDuckDbRuntime>;
   onRoomStoreChange: (roomStore: StoreApi<WorkspaceRoomState> | null) => void;
@@ -99,7 +99,7 @@ export function WorkspaceLayoutSurface({
         <WorkspaceLayoutSurfaceContent
           roomStore={roomStore}
           panels={WORKSPACE_PANELS}
-          selectedWorksheetId={selectedWorksheet?.id}
+          selectedDocumentId={selectedDocument?.id}
           duckDbRuntime={duckDbRuntime}
         />
       )}
@@ -110,12 +110,12 @@ export function WorkspaceLayoutSurface({
 function WorkspaceLayoutSurfaceContent({
   roomStore,
   panels,
-  selectedWorksheetId,
+  selectedDocumentId,
   duckDbRuntime,
 }: {
   roomStore: StoreApi<WorkspaceRoomState> | null;
   panels: Panels;
-  selectedWorksheetId: string | undefined;
+  selectedDocumentId: string | undefined;
   duckDbRuntime: ReturnType<typeof useWorkspaceDuckDbRuntime>;
 }) {
   const runtimeContextValue = useMemo(
@@ -124,9 +124,9 @@ function WorkspaceLayoutSurfaceContent({
   );
 
   useEffect(() => {
-    if (!roomStore || !selectedWorksheetId) return;
-    roomStore.getState().workspace.setCurrentWorksheet(selectedWorksheetId);
-  }, [roomStore, selectedWorksheetId]);
+    if (!roomStore || !selectedDocumentId) return;
+    roomStore.getState().workspace.setCurrentDocument(selectedDocumentId);
+  }, [roomStore, selectedDocumentId]);
 
   useEffect(() => {
     if (!roomStore) return;
@@ -140,7 +140,7 @@ function WorkspaceLayoutSurfaceContent({
   if (!roomStore) {
     return (
       <div className="workspace-panels">
-        <div className="worksheet-block-placeholder">
+        <div className="document-block-placeholder">
           {duckDbRuntime.status === 'error'
             ? (duckDbRuntime.error ??
               'Could not prepare the workspace runtime.')
@@ -163,47 +163,42 @@ function WorkspaceLayoutSurfaceContent({
 }
 
 function WorkspaceAssistantPanel() {
-  const worksheetId = useCurrentWorksheetId();
-  const worksheetTitle = useCurrentWorksheetTitle(worksheetId);
-
-  return (
-    <AssistantPanel worksheetId={worksheetId} worksheetTitle={worksheetTitle} />
-  );
+  return <AssistantPanel />;
 }
 
-function WorkspaceWorksheetPanel() {
-  const worksheetId = useCurrentWorksheetId();
-  const worksheetTitle = useCurrentWorksheetTitle(worksheetId);
+function WorkspaceDocumentPanel() {
+  const documentId = useCurrentDocumentId();
+  const documentTitle = useCurrentDocumentTitle(documentId);
   const {tableNames} = useContext(WorkspaceLayoutRuntimeContext);
-  const worksheet = useMemo(
+  const document = useMemo(
     () =>
-      worksheetId
-        ? {id: worksheetId, title: worksheetTitle, content: {} as JsonObject}
+      documentId
+        ? {id: documentId, title: documentTitle, content: {} as JsonObject}
         : undefined,
-    [worksheetId, worksheetTitle],
+    [documentId, documentTitle],
   );
 
   return (
-    <section className="worksheet-panel">
-      <ScrollArea className="worksheet-stage">
-        {worksheet ? (
-          <WorksheetSurface worksheet={worksheet} tableNames={tableNames} />
+    <section className="document-panel">
+      <ScrollArea className="document-stage">
+        {document ? (
+          <DocumentSurface document={document} tableNames={tableNames} />
         ) : null}
       </ScrollArea>
     </section>
   );
 }
 
-function useCurrentWorksheetId() {
+function useCurrentDocumentId() {
   return useBaseRoomStore<WorkspaceRoomState, string | undefined>(
     (state) => state.artifacts.config.currentArtifactId,
   );
 }
 
-function useCurrentWorksheetTitle(worksheetId: string | undefined) {
+function useCurrentDocumentTitle(documentId: string | undefined) {
   return useBaseRoomStore<WorkspaceRoomState, string>((state) => {
-    if (!worksheetId) return 'Document';
-    const artifact = state.artifacts.config.artifactsById[worksheetId];
+    if (!documentId) return 'Document';
+    const artifact = state.artifacts.config.artifactsById[documentId];
     return artifact?.title || 'Document';
   });
 }
@@ -383,4 +378,18 @@ function setLayoutNodeCollapsed(
   }
 
   return node;
+}
+
+/** Opens or closes the assistant panel from workspace navigation controls. */
+export function setWorkspaceAssistantPanelOpen(
+  roomStore: StoreApi<WorkspaceRoomState>,
+  open: boolean,
+) {
+  const layout =
+    roomStore.getState().layout.config ?? createDefaultWorkspaceLayout();
+  roomStore
+    .getState()
+    .layout.setConfig(
+      setLayoutNodeCollapsed(layout, ASSISTANT_PANEL_ID, !open),
+    );
 }

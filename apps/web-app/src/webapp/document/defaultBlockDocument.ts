@@ -5,7 +5,7 @@ export type BlockDocumentContent = {
   content: JsonObject[];
 };
 
-export function createDefaultWorksheetContent(): BlockDocumentContent {
+export function createDefaultDocumentContent(): BlockDocumentContent {
   return {
     type: 'doc',
     content: [

@@ -1,4 +1,4 @@
-export function getWorksheetChartSettingsState(
+export function getDocumentChartSettingsState(
   readOnly: boolean | undefined,
   settingsOpen: boolean | undefined,
 ) {

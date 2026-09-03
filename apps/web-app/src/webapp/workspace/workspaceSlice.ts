@@ -11,11 +11,11 @@ import {
   parseWorkspaceAiConfig,
 } from './workspaceAi';
 import {
-  getWorkspaceContentWorksheets,
+  getWorkspaceContentDocuments,
   hydrateWorkspaceContent,
   serializeWorkspaceRoomContent,
   type WorkspaceContentRoomState,
-  type WorkspaceWorksheet,
+  type WorkspaceDocument,
 } from './workspaceContent';
 
 type WorkspaceSliceRootState = BaseRoomStoreState &
@@ -27,11 +27,11 @@ export type WorkspaceSliceState = {
   workspace: SliceFunctions & {
     hydrateContent: (
       content?: JsonObject,
-      currentWorksheetId?: string,
+      currentDocumentId?: string,
     ) => JsonObject;
     serializeContent: () => JsonObject;
-    getWorksheets: () => WorkspaceWorksheet[];
-    setCurrentWorksheet: (worksheetId?: string) => void;
+    getDocuments: () => WorkspaceDocument[];
+    setCurrentDocument: (documentId?: string) => void;
     hydrateLayout: (layout: LayoutNode) => void;
     hydrateAiConfig: (aiConfig: JsonObject) => void;
     serializeAiConfig: () => JsonObject;
@@ -45,24 +45,22 @@ export function createWorkspaceSlice() {
     WorkspaceSliceRootState & WorkspaceSliceState
   >((_set, get) => ({
     workspace: {
-      hydrateContent(content, currentWorksheetId) {
+      hydrateContent(content, currentDocumentId) {
         hydrateWorkspaceContent({
           store: {getState: get},
           content,
-          currentWorksheetId,
+          currentDocumentId,
         });
         return get().workspace.serializeContent();
       },
       serializeContent() {
         return serializeWorkspaceRoomContent(get());
       },
-      getWorksheets() {
-        return getWorkspaceContentWorksheets(
-          get().workspace.serializeContent(),
-        );
+      getDocuments() {
+        return getWorkspaceContentDocuments(get().workspace.serializeContent());
       },
-      setCurrentWorksheet(worksheetId) {
-        get().artifacts.setCurrentArtifact(worksheetId);
+      setCurrentDocument(documentId) {
+        get().artifacts.setCurrentArtifact(documentId);
       },
       hydrateLayout(layout) {
         get().layout.setConfig(layout);

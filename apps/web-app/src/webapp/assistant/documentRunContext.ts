@@ -5,7 +5,6 @@ import {
 } from '@sqlrooms/ai';
 
 export const DOCUMENT_CONTEXT_KIND = 'document';
-const LEGACY_DOCUMENT_CONTEXT_KIND = 'worksheet';
 
 export function getPrimaryDocumentRunContextItem(
   runContext: unknown,
@@ -19,8 +18,5 @@ export function getPrimaryDocumentRunContextItem(
 function isDocumentRunContextItem(
   item: AiRunContextItem | undefined,
 ): item is AiRunContextItem {
-  return (
-    item?.kind === DOCUMENT_CONTEXT_KIND ||
-    item?.kind === LEGACY_DOCUMENT_CONTEXT_KIND
-  );
+  return item?.kind === DOCUMENT_CONTEXT_KIND;
 }

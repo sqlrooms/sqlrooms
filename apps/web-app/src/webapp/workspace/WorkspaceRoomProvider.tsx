@@ -2,7 +2,7 @@ import type {LayoutNode, Panels} from '@sqlrooms/layout';
 import type {StoreApi} from '@sqlrooms/room-store';
 import {useEffect, useMemo, useRef} from 'react';
 import type {JsonObject} from '#/lib/json';
-import type {useWorkspaceDuckDbRuntime} from '../worksheet/useWorkspaceDuckDbRuntime';
+import type {useWorkspaceDuckDbRuntime} from '../document/useWorkspaceDuckDbRuntime';
 import {
   createWorkspaceRoomPersistence,
   createWorkspaceRoomStore,
@@ -78,11 +78,18 @@ export function WorkspaceRoomProvider({
   useEffect(() => {
     if (!roomStore) return;
     const hydrateFromProps = () => {
-      roomStore.getState().workspace.hydrateContent(content);
-
-      roomStore.getState().workspace.hydrateLayout(layout);
-
-      roomStore.getState().workspace.hydrateAiConfig(aiConfig);
+      const state = roomStore.getState();
+      state.artifactAi.setSyncSuspended(true);
+      try {
+        state.workspace.hydrateContent(content);
+        state.workspace.hydrateLayout(layout);
+        state.workspace.hydrateAiConfig(aiConfig);
+      } finally {
+        const hydratedState = roomStore.getState();
+        hydratedState.artifactAi.setSyncSuspended(false);
+        hydratedState.artifactAi.cleanupSessionArtifacts();
+        hydratedState.artifactAi.syncCurrentArtifactAiSession();
+      }
     };
 
     if (hydratedRoomStoreRef.current === roomStore) {

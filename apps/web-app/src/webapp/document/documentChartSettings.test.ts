@@ -1,16 +1,16 @@
 import {describe, expect, test} from 'vitest';
-import {getWorksheetChartSettingsState} from './worksheetChartSettings';
+import {getDocumentChartSettingsState} from './documentChartSettings';
 
-describe('getWorksheetChartSettingsState', () => {
+describe('getDocumentChartSettingsState', () => {
   test('keeps settings closed and unmounted in read-only mode', () => {
-    expect(getWorksheetChartSettingsState(true, true)).toEqual({
+    expect(getDocumentChartSettingsState(true, true)).toEqual({
       isOpen: false,
       mountSettings: false,
     });
   });
 
   test('preserves editable settings state', () => {
-    expect(getWorksheetChartSettingsState(false, true)).toEqual({
+    expect(getDocumentChartSettingsState(false, true)).toEqual({
       isOpen: true,
       mountSettings: true,
     });

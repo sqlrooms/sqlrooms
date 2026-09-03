@@ -1,268 +1,102 @@
-import {Chat, useStoreWithAi, type AiSliceState} from '@sqlrooms/ai';
-import {useRoomStoreApi, type BaseRoomStoreState} from '@sqlrooms/room-store';
+import {Chat, useStoreWithAi} from '@sqlrooms/ai';
+import {useBaseRoomStore, useRoomStoreApi} from '@sqlrooms/room-store';
 import {Button} from '@sqlrooms/ui';
-import {ArrowLeft, Bot, MessageSquarePlus, Sparkles} from 'lucide-react';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {MessageSquarePlusIcon} from 'lucide-react';
+import {useCallback} from 'react';
+import {WorkspaceChatSelector} from '../workspace/WorkspaceSelectors';
+import type {WorkspaceRoomState} from '../workspace/WorkspaceRoomStore';
 import {
   ASSISTANT_MODEL_MODES,
   ASSISTANT_MODEL_PROVIDER,
   DEFAULT_ASSISTANT_MODEL_MODE,
 } from './modelModes';
-import {
-  DOCUMENT_CONTEXT_KIND,
-  getPrimaryDocumentRunContextItem,
-} from './documentRunContext';
+import {syncSessionDocumentRunContext} from './sessionDocumentContext';
 
-type AssistantPanelProps = {
-  worksheetId?: string;
-  worksheetTitle?: string;
-};
-
-type AssistantRoomState = BaseRoomStoreState & AiSliceState;
-
-export function AssistantPanel({
-  worksheetId,
-  worksheetTitle,
-}: AssistantPanelProps) {
-  const [mode, setMode] = useState<'list' | 'session'>('session');
-  const previousWorksheetIdRef = useRef(worksheetId);
-  const roomStore = useRoomStoreApi<AssistantRoomState>();
+/** AI assistant aligned with the CLI app's current-chat surface. */
+export function AssistantPanel() {
+  const roomStore = useRoomStoreApi<WorkspaceRoomState>();
   const currentSession = useStoreWithAi((state) =>
     state.ai.getCurrentSession(),
   );
-  const sessions = useStoreWithAi((state) => state.ai.config.sessions);
-  const createSession = useStoreWithAi((state) => state.ai.createSession);
-  const switchSession = useStoreWithAi((state) => state.ai.switchSession);
-  const setSessionRunContext = useStoreWithAi(
-    (state) => state.ai.setSessionRunContext,
-  );
+  const artifactsConfig = useBaseRoomStore<
+    WorkspaceRoomState,
+    WorkspaceRoomState['artifacts']['config']
+  >((state) => state.artifacts.config);
+  const createArtifactScopedSession = useBaseRoomStore<
+    WorkspaceRoomState,
+    WorkspaceRoomState['artifactAi']['createArtifactScopedSession']
+  >((state) => state.artifactAi.createArtifactScopedSession);
+  const currentDocumentId = artifactsConfig.currentArtifactId;
+  const currentDocument = currentDocumentId
+    ? artifactsConfig.artifactsById[currentDocumentId]
+    : undefined;
 
-  const worksheetContextItem = useMemo(
-    () =>
-      worksheetId
-        ? {
-            kind: DOCUMENT_CONTEXT_KIND,
-            id: worksheetId,
-            title: worksheetTitle ?? 'Document',
-            type: 'document',
-          }
-        : undefined,
-    [worksheetId, worksheetTitle],
-  );
-  const worksheetSessions = useMemo(
-    () =>
-      sessions
-        .filter((session) => isWorksheetSession(session, worksheetId))
-        .slice()
-        .sort(
-          (left, right) => getSessionRecency(right) - getSessionRecency(left),
-        ),
-    [sessions, worksheetId],
-  );
-  const currentSessionBelongsToWorksheet = Boolean(
-    currentSession && isWorksheetSession(currentSession, worksheetId),
-  );
-  const activeSessionId =
-    mode === 'session' && currentSessionBelongsToWorksheet
-      ? currentSession?.id
-      : null;
-
-  useEffect(() => {
-    if (previousWorksheetIdRef.current === worksheetId) return;
-
-    previousWorksheetIdRef.current = worksheetId;
-    setMode('list');
-  }, [worksheetId]);
-
-  const startSession = () => {
-    if (!worksheetContextItem) return;
-    createSession(
-      'New session',
+  const startChat = useCallback(() => {
+    const sessionId = createArtifactScopedSession(
+      'New chat',
       ASSISTANT_MODEL_PROVIDER,
       DEFAULT_ASSISTANT_MODEL_MODE,
     );
-    const sessionId = roomStore.getState().ai.getCurrentSession()?.id;
     if (!sessionId) return;
-    setSessionRunContext(sessionId, {
-      items: [worksheetContextItem],
-      primaryItemId: worksheetContextItem.id,
-      primaryItemKind: worksheetContextItem.kind,
-      capturedAt: Date.now(),
-    });
-    setMode('session');
-  };
-
-  const openSession = (sessionId: string) => {
-    switchSession(sessionId);
-    setMode('session');
-  };
+    syncSessionDocumentRunContext(
+      roomStore.getState(),
+      sessionId,
+      currentDocumentId,
+    );
+  }, [createArtifactScopedSession, currentDocumentId, roomStore]);
 
   return (
     <aside className="assistant-panel">
       <Chat.Root>
         <div className="assistant-header">
-          <div className="assistant-title">
-            <Bot className="size-4" aria-hidden />
-            Assistant
+          <div className="min-w-0 flex-1">
+            <WorkspaceChatSelector />
           </div>
-          <div className="assistant-header-actions">
-            {activeSessionId ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="topbar-icon"
-                type="button"
-                onClick={() => setMode('list')}
-              >
-                <ArrowLeft className="size-4" aria-hidden />
-                <span className="sr-only">Show assistant sessions</span>
-              </Button>
-            ) : null}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="topbar-icon"
-              type="button"
-              onClick={startSession}
-              disabled={!worksheetContextItem}
-            >
-              <Sparkles className="size-4" aria-hidden />
-              <span className="sr-only">New assistant session</span>
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="topbar-icon shrink-0"
+            type="button"
+            onClick={startChat}
+            disabled={!currentDocument || currentSession?.isRunning}
+          >
+            <MessageSquarePlusIcon className="size-4" aria-hidden />
+            <span className="sr-only">New document chat</span>
+          </Button>
         </div>
 
-        {activeSessionId ? (
-          <AssistantSessionView
-            sessionId={activeSessionId}
-            worksheetTitle={worksheetTitle}
-          />
+        {currentSession ? (
+          <div className="assistant-chat">
+            <div className="assistant-chat-body">
+              <Chat.Messages key={currentSession.id} />
+            </div>
+            <Chat.PromptSuggestions>
+              <Chat.PromptSuggestions.Item text="Summarize what this document should analyze." />
+              <Chat.PromptSuggestions.Item text="Suggest a query for the selected tables." />
+              <Chat.PromptSuggestions.Item text="What chart would be useful here?" />
+            </Chat.PromptSuggestions>
+            <Chat.Composer
+              className="assistant-chat-composer"
+              placeholder={`Ask about ${currentDocument?.title ?? 'this document'}`}
+            >
+              <Chat.ModelSelector models={[...ASSISTANT_MODEL_MODES]} />
+            </Chat.Composer>
+          </div>
         ) : (
-          <AssistantSessionList
-            sessions={worksheetSessions}
-            worksheetTitle={worksheetTitle}
-            onOpenSession={openSession}
-            onStartSession={startSession}
-            canStart={Boolean(worksheetContextItem)}
-          />
+          <div className="assistant-empty-state flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+            <p>Start a chat about the selected document.</p>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={startChat}
+              disabled={!currentDocument}
+            >
+              <MessageSquarePlusIcon className="size-4" aria-hidden />
+              New chat
+            </Button>
+          </div>
         )}
       </Chat.Root>
     </aside>
   );
-}
-
-function AssistantSessionView({
-  sessionId,
-  worksheetTitle,
-}: {
-  sessionId: string;
-  worksheetTitle?: string;
-}) {
-  return (
-    <div className="assistant-chat">
-      <div className="assistant-chat-body">
-        <Chat.Messages key={sessionId} />
-      </div>
-      <Chat.PromptSuggestions>
-        <Chat.PromptSuggestions.Item text="Summarize what this document should analyze." />
-        <Chat.PromptSuggestions.Item text="Suggest a query for the selected tables." />
-        <Chat.PromptSuggestions.Item text="What chart would be useful here?" />
-      </Chat.PromptSuggestions>
-      <Chat.Composer
-        className="assistant-chat-composer"
-        placeholder={`Ask about ${worksheetTitle ?? 'this document'}`}
-      >
-        <Chat.ModelSelector models={[...ASSISTANT_MODEL_MODES]} />
-      </Chat.Composer>
-    </div>
-  );
-}
-
-function AssistantSessionList({
-  sessions,
-  worksheetTitle,
-  onOpenSession,
-  onStartSession,
-  canStart,
-}: {
-  sessions: Array<{
-    id: string;
-    name: string;
-    lastOpenedAt?: number;
-    createdAt?: Date;
-  }>;
-  worksheetTitle?: string;
-  onOpenSession: (sessionId: string) => void;
-  onStartSession: () => void;
-  canStart: boolean;
-}) {
-  return (
-    <div className="assistant-session-list">
-      <Button
-        className="assistant-new-session"
-        type="button"
-        variant="secondary"
-        onClick={onStartSession}
-        disabled={!canStart}
-      >
-        <MessageSquarePlus className="size-4" aria-hidden />
-        Start new session
-      </Button>
-
-      <div className="assistant-session-items">
-        {sessions.length ? (
-          sessions.map((session) => (
-            <button
-              className="assistant-session-item"
-              key={session.id}
-              type="button"
-              onClick={() => onOpenSession(session.id)}
-            >
-              <span className="assistant-session-name">{session.name}</span>
-              <span className="assistant-session-age">
-                {formatRelativeAge(getSessionRecency(session))}
-              </span>
-            </button>
-          ))
-        ) : (
-          <div className="assistant-empty-state">
-            No sessions for {worksheetTitle ?? 'this document'}.
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function isWorksheetSession(
-  session: {runContext?: unknown},
-  worksheetId: string | undefined,
-) {
-  if (!worksheetId) return false;
-  const item = getPrimaryDocumentRunContextItem(session.runContext);
-  return item?.id === worksheetId;
-}
-
-function getSessionRecency(session: {
-  lastOpenedAt?: number;
-  createdAt?: Date | string;
-}) {
-  if (typeof session.lastOpenedAt === 'number') return session.lastOpenedAt;
-  const createdAt = session.createdAt
-    ? new Date(session.createdAt).getTime()
-    : undefined;
-  return Number.isFinite(createdAt) ? createdAt! : 0;
-}
-
-function formatRelativeAge(timestamp: number) {
-  if (!timestamp) return '';
-  const diffMs = Math.max(0, Date.now() - timestamp);
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-
-  if (diffMs < minute) return 'now';
-  if (diffMs < hour) return `${Math.floor(diffMs / minute)}m`;
-  if (diffMs < day) return `${Math.floor(diffMs / hour)}h`;
-  return `${Math.floor(diffMs / day)}d`;
 }
