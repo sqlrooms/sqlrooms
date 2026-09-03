@@ -33,11 +33,21 @@ const RenderDashboardPanelImageParameters = z.object({
   panelId: z.string().describe('Exact dashboard panel ID to inspect.'),
 });
 
+/**
+ * Identifies a mounted artifact, Document block, or dashboard panel to capture.
+ * Block and panel IDs are scoped to their containing Document or dashboard.
+ */
 export type RenderedSurfaceImageTarget =
   | {kind: 'artifact'; artifactId: string}
   | {kind: 'document-block'; blockDocumentId: string; blockId: string}
   | {kind: 'dashboard-panel'; dashboardId: string; panelId: string};
 
+/**
+ * Persistable capture metadata or an actionable failure for the requested target.
+ * Successful results describe the PNG and reference its ephemeral pixel cache
+ * through captureId; image bytes are sent separately to the model and are never
+ * stored in this result. A missing or expired cache entry requires recapture.
+ */
 export type RenderedSurfaceImageToolOutput =
   | {
       success: true;

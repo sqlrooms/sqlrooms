@@ -57,11 +57,21 @@ When the user asks what is actually rendered or visible, or asks you to inspect 
 - This visual-inspection routing takes precedence over document and map authoring guidance for requests about existing appearance. It does not require a SQL query or a document editing agent.
 `;
 
-/** Builds the production CLI assistant instructions for a capability profile. */
+const VISUAL_INSPECTION_UNAVAILABLE_INSTRUCTIONS = `
+Visual capture is unavailable in this session. If the user asks what is actually rendered or visible, explain that you cannot visually inspect it here. Do not claim to have seen the rendering or infer its appearance from configuration or dataset names.
+`;
+
+/** Builds CLI instructions for the profile and the store's registered tools. */
 export function createCliAiInstructions(
   store: StoreApi<RoomState>,
   profile: CliCapabilityProfile,
 ): string {
+  const tools = store.getState().ai.tools;
+  const hasRenderingTools = Boolean(
+    tools.render_document_block_image &&
+    tools.render_dashboard_panel_image &&
+    tools.render_artifact_image,
+  );
   return [
     createDefaultAiInstructions(store),
     profile.name === 'document-charts-maps'
@@ -71,7 +81,9 @@ export function createCliAiInstructions(
     profile.ai.instructionSets.includes('experimental')
       ? EXPERIMENTAL_SQLROOMS_CLI_AI_INSTRUCTIONS.trim()
       : '',
-    VISUAL_INSPECTION_INSTRUCTIONS.trim(),
+    hasRenderingTools
+      ? VISUAL_INSPECTION_INSTRUCTIONS.trim()
+      : VISUAL_INSPECTION_UNAVAILABLE_INSTRUCTIONS.trim(),
   ]
     .filter(Boolean)
     .join('\n\n');

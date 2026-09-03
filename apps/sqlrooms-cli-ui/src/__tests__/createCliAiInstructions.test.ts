@@ -1,4 +1,6 @@
 import type {StoreApi} from 'zustand';
+import type {Tool} from 'ai';
+import {createRenderedSurfaceAiTools} from '../ai/createRenderedSurfaceAiTools';
 import {createCliAiInstructions} from '../createCliAiInstructions';
 import {
   DEFAULT_CLI_CAPABILITY_PROFILE,
@@ -7,14 +9,16 @@ import {
 } from '../profiles';
 import type {RoomState} from '../store-types';
 
-const store = {
-  getState: () => ({
-    db: {
-      tables: [],
-      currentDatabase: 'memory',
-    },
-  }),
-} as unknown as StoreApi<RoomState>;
+function createTestStore(tools: Record<string, Tool> = {}) {
+  return {
+    getState: () => ({
+      ai: {tools},
+      db: {tables: [], currentDatabase: 'memory'},
+    }),
+  } as unknown as StoreApi<RoomState>;
+}
+
+const store = createTestStore();
 
 describe('createCliAiInstructions', () => {
   it.each([
@@ -24,7 +28,10 @@ describe('createCliAiInstructions', () => {
   ])(
     'routes visual inspection directly to capture tools for $name',
     (profile) => {
-      const instructions = createCliAiInstructions(store, profile);
+      const instructions = createCliAiInstructions(
+        createTestStore(createRenderedSurfaceAiTools()),
+        profile,
+      );
 
       expect(instructions).toContain('Call render_document_block_image');
       expect(instructions).toContain('render_dashboard_panel_image');
@@ -43,6 +50,25 @@ describe('createCliAiInstructions', () => {
       expect(instructions).toContain(
         'takes precedence over document and map authoring guidance',
       );
+    },
+  );
+
+  it.each([
+    DEFAULT_CLI_CAPABILITY_PROFILE,
+    DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+    EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
+  ])(
+    'reports visual capture as unavailable for headless $name sessions',
+    (profile) => {
+      const instructions = createCliAiInstructions(store, profile);
+
+      expect(instructions).toContain(
+        'Visual capture is unavailable in this session',
+      );
+      expect(instructions).toContain('cannot visually inspect it here');
+      expect(instructions).not.toContain('render_document_block_image');
+      expect(instructions).not.toContain('render_dashboard_panel_image');
+      expect(instructions).not.toContain('render_artifact_image');
     },
   );
 

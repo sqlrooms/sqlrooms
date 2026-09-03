@@ -276,6 +276,9 @@ missing, the assistant reads the Document once with `block-document.get`, then
 captures the matching block. It does not need to search for map configuration
 commands before inspecting the image. Rendering tools are separate from the
 command registry searched by `search_commands`.
+Visual-inspection instructions follow the registered toolset. Headless/eval
+stores omit browser rendering tools and tell the assistant that visual capture
+is unavailable.
 
 Each tool captures the target that is currently mounted in the workspace and
 returns a bounded PNG directly to the model. The image pixels use a small
