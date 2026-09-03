@@ -1,0 +1,186 @@
+import {jest} from '@jest/globals';
+import {astToESM, parseSpec} from '@uwdata/mosaic-spec';
+import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
+import {createLineChartSpec} from '../../src/charts/chart-types/line-chart/spec';
+import {LineChartSettings} from '../../src/charts/chart-types/line-chart/schema';
+import {lineChartChartType} from '../../src/charts/chart-types/line-chart/definition';
+import {
+  createLineChartAiTool,
+  LineChartToolInput,
+} from '../../src/charts/chart-types/line-chart/tool';
+
+const events: DataTable = {
+  tableName: 'events',
+  table: makeQualifiedTableName({schema: 'main', table: 'events'}),
+  columns: [
+    {name: 'time', type: 'TIMESTAMP'},
+    {name: 'event_id', type: 'VARCHAR'},
+    {name: 'amount', type: 'DOUBLE'},
+  ],
+};
+const countSettings = {
+  x: 'time',
+  xInterval: 'month' as const,
+  metric: 'count' as const,
+};
+
+describe('line-chart row counts', () => {
+  it('does not apply the unaggregated row limit to count charts', () => {
+    expect(
+      lineChartChartType.getDataPolicy?.({
+        tableName: 'events',
+        config: {
+          chartType: 'line-chart',
+          settings: {x: 'amount', metric: 'count', showLegend: true},
+        },
+      }),
+    ).toBeNull();
+    expect(
+      lineChartChartType.getDataPolicy?.({
+        tableName: 'events',
+        config: {
+          chartType: 'line-chart',
+          settings: {
+            x: 'time',
+            yFields: [{field: 'amount', aggregate: 'sum'}],
+            showLegend: true,
+          },
+        },
+      }),
+    ).toMatchObject({maxRows: 10_000});
+  });
+  it('accepts row counts without inventing a numeric Y field', () => {
+    expect(
+      LineChartToolInput.safeParse({
+        tableName: 'events',
+        reasoning: 'Count events by month.',
+        settings: countSettings,
+      }).success,
+    ).toBe(true);
+    expect(LineChartSettings.parse(countSettings)).toMatchObject(countSettings);
+  });
+
+  it('compiles row counts to zero-argument count, including rows with null IDs', () => {
+    const spec = createLineChartSpec({
+      dataTable: events,
+      settings: {...countSettings, showLegend: false},
+    });
+    expect(spec).toMatchObject({
+      yLabel: 'Count',
+      colorDomain: ['Count'],
+      plot: [
+        {
+          mark: 'lineY',
+          data: {from: '"main"."events"', filterBy: '$brush'},
+          x: {bin: 'time', interval: 'month'},
+          y: {count: null},
+        },
+      ],
+    });
+    // Compile through Mosaic, not a hand-written evaluator of the settings.
+    const code = astToESM(parseSpec(spec));
+    expect(code).toContain('count()');
+    expect(code).not.toContain('sum(');
+    expect(code).not.toContain('event_id');
+  });
+
+  it('counts by the exact X value when no temporal interval is selected', () => {
+    const spec = createLineChartSpec({
+      dataTable: events,
+      settings: {x: 'time', metric: 'count', showLegend: false},
+    });
+    expect(spec).toMatchObject({plot: [{x: 'time', y: {count: null}}]});
+  });
+
+  it('preserves the existing numeric aggregate path when metric is omitted', () => {
+    const spec = createLineChartSpec({
+      dataTable: events,
+      settings: {
+        x: 'time',
+        xInterval: 'month',
+        yFields: [{field: 'amount', aggregate: 'avg'}],
+        showLegend: false,
+      },
+    });
+    expect(spec).toMatchObject({plot: [{y: {avg: 'amount'}}]});
+  });
+
+  it('creates a count chart with the same settings the renderer consumes', async () => {
+    const addChart = jest.fn(async () => 'chart-1');
+    const tool = createLineChartAiTool({
+      databaseAdapter: {getTables: () => [events], findTable: () => events},
+      addChart,
+      maxDataPoints: 10_000,
+    });
+    const result = await (tool as any).execute({
+      tableName: 'events',
+      settings: countSettings,
+    });
+    expect(result.success).toBe(true);
+    expect(addChart).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: {
+          chartType: 'line-chart',
+          settings: {...countSettings, showLegend: true},
+        },
+      }),
+    );
+  });
+
+  it('rejects contradictory count plus numeric series instead of ignoring them', async () => {
+    const addChart = jest.fn(async () => 'chart-1');
+    const tool = createLineChartAiTool({
+      databaseAdapter: {getTables: () => [events], findTable: () => events},
+      addChart,
+      maxDataPoints: 10_000,
+    });
+    const result = await (tool as any).execute({
+      tableName: 'events',
+      settings: {
+        ...countSettings,
+        yFields: [{field: 'amount', aggregate: 'sum'}],
+      },
+    });
+    expect(result).toMatchObject({
+      success: false,
+      errorMessage: expect.stringContaining('yFields'),
+    });
+    expect(addChart).not.toHaveBeenCalled();
+  });
+
+  it('keeps a single count legend entry and the brush interaction', () => {
+    const spec = createLineChartSpec({
+      dataTable: events,
+      settings: countSettings,
+      selectionName: 'linked-document',
+    }) as any;
+    expect(spec.vconcat[0].colorDomain).toEqual(['Count']);
+    expect(spec.vconcat[0].plot).toContainEqual({
+      select: 'intervalX',
+      as: '$brush',
+    });
+    expect(spec.vconcat[1]).toMatchObject({legend: 'color', columns: 1});
+  });
+
+  it.each([
+    {x: undefined, metric: 'count'},
+    {x: 'missing', metric: 'count'},
+    {x: 'event_id', metric: 'count'},
+    {x: 'time', metric: 'aggregate'},
+    {x: 'time', metric: 'unsupported'},
+  ])(
+    'rejects invalid settings without creating a chart: %j',
+    async (settings) => {
+      const addChart = jest.fn(async () => 'chart-1');
+      const tool = createLineChartAiTool({
+        databaseAdapter: {getTables: () => [events], findTable: () => events},
+        addChart,
+        maxDataPoints: 10_000,
+      });
+      expect(
+        await (tool as any).execute({tableName: 'events', settings}),
+      ).toMatchObject({success: false});
+      expect(addChart).not.toHaveBeenCalled();
+    },
+  );
+});

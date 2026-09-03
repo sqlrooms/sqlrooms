@@ -16,7 +16,7 @@ const AGGREGATE_FUNCTIONS = AggregateFunction.options;
 const TEMPORAL_INTERVALS = TemporalInterval.options;
 
 export const LineChartToolInput = BaseChartToolInput.extend({
-  settings: LineChartSettings.required(),
+  settings: LineChartSettings.required({x: true}),
 });
 
 export type LineChartToolInput = z.infer<typeof LineChartToolInput>;
@@ -34,7 +34,11 @@ Example queries: "population growth over time", "temperature trend by month", "s
 
 Required:
 - x: quantitative column (${QUANTITATIVE_COLUMN_TYPES.join(', ')})
-- yFields: array of {field: string (numeric: ${NUMERIC_COLUMN_TYPES.join(', ')}), aggregate?: ${AGGREGATE_FUNCTIONS.join('|')}}
+
+Metric decision:
+- For event counts/frequency over time on raw observations, set metric: "count" and omit yFields. This counts ALL rows using COUNT(*), including rows with null identifiers. Example: {x: "DateTime", xInterval: "month", metric: "count"}.
+- For numeric measures or already summarized counts, use metric: "aggregate" (the default) with yFields: array of {field: string (numeric: ${NUMERIC_COLUMN_TYPES.join(', ')}), aggregate?: ${AGGREGATE_FUNCTIONS.join('|')}}.
+- Never sum an event ID or other identifier to represent a count. Do not put aggregate: "count" in yFields; row counts use metric: "count" instead.
 
 Optional: xInterval for temporal grouping (${TEMPORAL_INTERVALS.join(', ')}) when x is temporal (${TEMPORAL_COLUMN_TYPES.join(', ')}).
 Multiple yFields create multi-line chart for comparing metrics.
@@ -46,15 +50,16 @@ Do NOT use for: single point distributions (use histogram), categorical counts (
     execute: async ({tableName, title, settings, panelId}) => {
       try {
         const dataTable = ensureTable(databaseAdapter, tableName);
+        const normalizedSettings = LineChartSettings.parse(settings);
 
         validateLineChartSettings({
           dataTable,
-          settings,
+          settings: normalizedSettings,
         });
 
         const chartConfig: LineChartConfig = {
           chartType: 'line-chart' as const,
-          settings,
+          settings: normalizedSettings,
         };
 
         await addChart({

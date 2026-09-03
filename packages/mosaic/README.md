@@ -250,6 +250,27 @@ function CodeView({value}: {value: string}) {
 }
 ```
 
+### Line Chart Row Counts
+
+Line charts support `metric: "count"` for raw observations. This emits
+`COUNT(*)`, including rows whose identifiers are null; it does not sum or count
+a selected numeric column. For example:
+
+```ts
+const settings = {x: 'DateTime', xInterval: 'month', metric: 'count'};
+```
+
+Omit `yFields` in count mode. Numeric series alongside `metric: "count"` are
+rejected, rather than silently ignored. Without `xInterval`, counts group by
+the exact X value. Counts are aggregated over the full source, not subject to
+the unaggregated line-chart source-row limit.
+
+Existing configs remain numeric line charts when `metric` is omitted or is
+`"aggregate"`. They still use `yFields` with `sum`, `avg`, `min`, or `max` for
+temporal aggregation. For already summarized counts, select that numeric
+measure instead of counting the summary rows. Both the chart settings UI and
+the AI tools expose the same metric choice, including document chart tools.
+
 ### Count Plot Settings
 
 `count-plot` chart configs support categorical counts by default and can also

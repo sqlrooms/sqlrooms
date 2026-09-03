@@ -7,7 +7,7 @@ import {LineChart} from 'lucide-react';
 import {createLineChartSpec} from './spec';
 import {DEFAULT_CHART_MAX_DATA_POINTS} from '../../../chart-runtime';
 
-const DESCRIPTION = 'Create a line chart of two fields';
+const DESCRIPTION = 'Create a line chart of numeric measures or row counts';
 
 export const lineChartChartType: SpecChartTypeDefinition<LineChartConfig> = {
   id: 'line-chart',
@@ -20,7 +20,7 @@ export const lineChartChartType: SpecChartTypeDefinition<LineChartConfig> = {
   buildTitle: titleFromDescription(DESCRIPTION),
   createTool: createLineChartAiTool,
   getDataPolicy: ({config}) =>
-    config.settings.xInterval
+    config.settings.metric === 'count' || config.settings.xInterval
       ? null
       : {
           maxRows: DEFAULT_CHART_MAX_DATA_POINTS,

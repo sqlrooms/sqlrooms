@@ -26,6 +26,7 @@ describe('Mosaic block-document AI tools', () => {
           table: String(tableName),
         }),
         columns: [
+          {name: 'DateTime', type: 'TIMESTAMP'},
           {name: 'Depth', type: 'DOUBLE'},
           {name: 'magnitude', type: 'DOUBLE'},
         ],
@@ -51,6 +52,56 @@ describe('Mosaic block-document AI tools', () => {
   it('uses block-document chart tool names', () => {
     expect(BLOCK_DOCUMENT_CHART_TOOL_PREFIX).toBe(
       'create_block_document_chart_',
+    );
+  });
+
+  it('creates and then edits row-count charts in the bound document', async () => {
+    const {blockDocumentAdapter, addedBlocks} =
+      createMockBlockDocumentAdapter();
+    const updateBlock = jest.fn();
+    blockDocumentAdapter.updateBlock = updateBlock;
+    blockDocumentAdapter.getBlocks = () =>
+      addedBlocks.map(blockDocumentBlockToNode);
+    const tools = createBlockDocumentChartTools({
+      databaseAdapter: createMockDatabaseAdapter(),
+      blockDocumentAdapter,
+      blockDocumentId: 'document-counts',
+    });
+    const tool = tools.create_block_document_chart_line_chart as any;
+    const input = {
+      tableName: 'earthquakes',
+      reasoning: 'Count earthquakes by month.',
+      settings: {x: 'DateTime', xInterval: 'month', metric: 'count'},
+    };
+    expect((await tool.execute(input)).success).toBe(true);
+    expect(addedBlocks).toHaveLength(1);
+    const block = addedBlocks[0];
+    expect(block).toMatchObject({
+      type: 'chart',
+      tableName: '"main"."earthquakes"',
+      config: {chartType: 'line-chart', settings: input.settings},
+    });
+    expect(
+      (
+        await tool.execute({
+          ...input,
+          panelId: block.id,
+          title: 'Monthly count',
+        })
+      ).success,
+    ).toBe(true);
+    expect(addedBlocks).toHaveLength(1);
+    expect(updateBlock).toHaveBeenCalledWith(
+      'document-counts',
+      block.id,
+      expect.objectContaining({
+        id: block.id,
+        caption: 'Monthly count',
+        config: {
+          chartType: 'line-chart',
+          settings: {...input.settings, showLegend: true},
+        },
+      }),
     );
   });
 
