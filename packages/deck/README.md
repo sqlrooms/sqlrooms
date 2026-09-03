@@ -475,6 +475,24 @@ layers (e.g. render points under map labels) and reduces WebGL context usage.
 Set `interleaved` to `false` to render deck layers in a separate overlay canvas
 on top of all basemap layers (uses an additional WebGL context per map).
 
+MapLibre's drawing buffer is preserved by default so DOM image capture can
+include the basemap and interleaved deck layers after a frame finishes.
+In separate-overlay mode, deck.gl/luma.gl also preserves its drawing buffer by
+default. Both map canvases are identified for capture validation, including
+overlays with a custom deck ID. A lost context or disabled preservation on
+either canvas causes the CLI rendering tools to return an actionable error.
+Capture readiness also tracks dataset preparation, MapLibre tile rendering,
+and deck layers' asynchronous resources. While any map in the requested surface
+is still loading, the CLI rendering tools return an error asking the caller to
+wait and retry, instead of returning an incomplete image.
+Preserving the buffer can increase GPU memory use and reduce rendering
+performance. Hosts that do not need image capture can opt out by setting
+`mapProps.canvasContextAttributes.preserveDrawingBuffer` to `false`.
+Changing this context option requires remounting the map.
+To opt out for a separate deck overlay, set
+`deckProps.deviceProps.webgl.preserveDrawingBuffer` to `false` and remount
+the map; DOM image capture will then be unavailable.
+
 ```tsx
 {
   /* Default (interleaved): */

@@ -113,6 +113,11 @@ export type DeckJsonMapProps = {
    */
   interleaved?: boolean;
   deckProps?: Partial<DeckProps>;
+  /**
+   * MapLibre runtime props. Drawing-buffer preservation defaults to true so
+   * DOM image capture includes the basemap and interleaved deck layers.
+   * Set canvasContextAttributes.preserveDrawingBuffer to false to opt out.
+   */
   mapProps?: Partial<MapProps>;
   showLegends?: boolean;
   className?: string;

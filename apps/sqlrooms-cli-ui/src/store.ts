@@ -97,6 +97,7 @@ import {formatRunContextInstructions} from './context/formatRunContextInstructio
 import {getRunContext} from './context/getRunContext';
 import {createCliAiInstructions} from './createCliAiInstructions';
 import {createCliAiTools} from './createCliAiTools';
+import {createRenderedSurfaceAiToolkit} from './ai/createRenderedSurfaceAiToolkit';
 import {dashboardAgentTool} from './createDashboardAgent';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {getDefaultScaffoldTree} from './helpers';
@@ -1004,6 +1005,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...(() => {
           const webContainerToolkit = createWebContainerToolkit(store);
+          const renderedSurfaceToolkit = createRenderedSurfaceAiToolkit();
           const tools = createCliAiTools({
             store,
             profile: cliCapabilityProfile,
@@ -1012,6 +1014,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             createHtmlAppAgentTool: htmlAppAgentTool,
             createStandaloneChartTool: createVegaChartTool,
             createChartImageTool: createChartImageForMarkdownTool,
+            createRenderedSurfaceImageTools: () => renderedSurfaceToolkit.tools,
           });
           return createAiSlice({
             config: AiSliceConfig.parse({sessions: []}),
@@ -1034,6 +1037,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             toolRenderers: {
               ...createDefaultAiToolRenderers(),
               ...webContainerToolkit.toolRenderers,
+              ...renderedSurfaceToolkit.toolRenderers,
               chart: VegaChartToolResult,
             },
             devtools: {

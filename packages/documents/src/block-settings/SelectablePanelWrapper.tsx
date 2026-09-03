@@ -132,6 +132,10 @@ export const SelectablePanelWrapper: FC<SelectablePanelWrapperProps> = ({
       )}
       onClick={handleClick}
       data-selectable-panel
+      data-dashboard-id={dashboardId}
+      data-dashboard-panel-id={
+        blockType === 'dashboard-panel' ? panelId : undefined
+      }
     >
       {children}
     </div>

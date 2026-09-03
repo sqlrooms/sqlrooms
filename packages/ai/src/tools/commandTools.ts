@@ -277,7 +277,8 @@ export function createCommandTools<RS extends BaseRoomStoreState>(
   return {
     [searchToolName]: tool({
       description: `Search available room commands by intent or command ID.
-Use this for routine command discovery before calling ${getToolName} for the selected command schema and ${executeToolName} to run it.`,
+This searches the command registry, not the separately available AI tools; call a matching AI tool directly.
+Keep includeInputSchema false for discovery. Use ${getToolName} only when you need the selected command's input schema, then ${executeToolName} to run it. Commands with requiresInput false can be run with default input without a schema lookup.`,
       inputSchema: SearchCommandsToolParameters,
       execute: async (
         params: SearchCommandsToolParameters,
@@ -628,32 +629,67 @@ function rankCommandDescriptors(
     params.resourceType ? normalizeSearchText(params.resourceType) : '',
     params.action ? normalizeSearchText(params.action) : '',
   ].filter(Boolean);
-  const tokens = tokenizeSearchText([query, ...hints].join(' '));
+  const tokens = tokenizeSearchText(query);
+  const hintTokens = tokenizeSearchText(hints.join(' '));
   const hasSearchTerms = Boolean(query || hints.length > 0);
+  const preferReadOnly = isReadCommandSearch(params);
 
-  return descriptors
-    .filter((descriptor) =>
-      params.riskLevel ? descriptor.riskLevel === params.riskLevel : true,
-    )
-    .map((descriptor) => ({
-      descriptor,
-      score: scoreCommandDescriptor(
+  return (
+    descriptors
+      .filter((descriptor) =>
+        params.riskLevel ? descriptor.riskLevel === params.riskLevel : true,
+      )
+      .map((descriptor) => ({
         descriptor,
-        query,
-        tokens,
-        params.riskLevel,
-      ),
-    }))
-    .filter(({score}) => !hasSearchTerms || score > 0)
-    .sort(compareRankedCommandDescriptors);
+        score: scoreCommandDescriptor(
+          descriptor,
+          query,
+          query ? tokens : hintTokens,
+        ),
+      }))
+      .filter(({score}) => !hasSearchTerms || score > 0)
+      // Hints and availability can improve a match, but cannot create one.
+      .map(({descriptor, score}) => ({
+        descriptor,
+        score:
+          score +
+          (query ? scoreCommandDescriptor(descriptor, '', hintTokens) : 0) +
+          (preferReadOnly && descriptor.readOnly ? 200 : 0) +
+          (params.riskLevel ? 20 : 0) +
+          (descriptor.enabled ? 10 : 0) +
+          (descriptor.visible ? 5 : 0),
+      }))
+      .sort(compareRankedCommandDescriptors)
+  );
+}
+
+function isReadCommandSearch(params: SearchCommandsToolParameters): boolean {
+  const tokens = tokenizeSearchText(params.action?.trim() || params.query);
+  const readActions = ['get', 'read', 'list', 'show', 'inspect'];
+  const writeActions = [
+    'create',
+    'add',
+    'update',
+    'edit',
+    'rename',
+    'remove',
+    'delete',
+    'insert',
+    'append',
+    'move',
+  ];
+  return (
+    tokens.some((token) => readActions.includes(token)) &&
+    !tokens.some((token) => writeActions.includes(token))
+  );
 }
 
 function scoreCommandDescriptor(
   descriptor: RoomCommandDescriptor,
   query: string,
   tokens: string[],
-  riskLevel?: RoomCommandRiskLevel,
 ): number {
+  if (tokens.length === 0) return 0;
   let score = 0;
   const id = normalizeSearchText(descriptor.id);
   const name = normalizeSearchText(descriptor.name);
@@ -661,28 +697,33 @@ function scoreCommandDescriptor(
   const group = normalizeSearchText(descriptor.group);
   const keywords = (descriptor.keywords ?? []).map(normalizeSearchText);
   const shortcut = normalizeSearchText(descriptor.shortcut);
+  const idTokens = tokenizeSearchText(id);
+  const nameTokens = tokenizeSearchText(name);
+  const descriptionTokens = tokenizeSearchText(description);
+  const groupTokens = tokenizeSearchText(group);
+  const keywordTokens = keywords.flatMap(tokenizeSearchText);
 
   if (query) {
     if (id === query) {
       score += 1000;
-    } else if (id.includes(query)) {
+    } else if (containsSearchPhrase(id, query)) {
       score += 300;
     }
     if (name === query) {
       score += 500;
-    } else if (name.includes(query)) {
+    } else if (containsSearchPhrase(name, query)) {
       score += 220;
     }
     if (keywords.includes(query)) {
       score += 180;
     }
-    if (description.includes(query)) {
+    if (containsSearchPhrase(description, query)) {
       score += 80;
     }
-    if (group.includes(query)) {
+    if (containsSearchPhrase(group, query)) {
       score += 60;
     }
-    if (shortcut && shortcut.includes(query)) {
+    if (shortcut && containsSearchPhrase(shortcut, query)) {
       score += 40;
     }
   }
@@ -690,36 +731,23 @@ function scoreCommandDescriptor(
   for (const token of tokens) {
     if (id === token) {
       score += 120;
-    } else if (id.includes(token)) {
+    } else if (idTokens.includes(token)) {
       score += 50;
     }
-    if (name.includes(token)) {
+    if (nameTokens.includes(token)) {
       score += 45;
     }
     if (keywords.some((keyword) => keyword === token)) {
       score += 40;
-    } else if (keywords.some((keyword) => keyword.includes(token))) {
+    } else if (keywordTokens.includes(token)) {
       score += 20;
     }
-    if (description.includes(token)) {
+    if (descriptionTokens.includes(token)) {
       score += 15;
     }
-    if (group.includes(token)) {
+    if (groupTokens.includes(token)) {
       score += 10;
     }
-  }
-
-  if (riskLevel && descriptor.riskLevel === riskLevel) {
-    score += 20;
-  }
-  if (descriptor.enabled) {
-    score += 10;
-  }
-  if (descriptor.visible) {
-    score += 5;
-  }
-  if (descriptor.requiresInput) {
-    score += 1;
   }
 
   return score;
@@ -769,15 +797,15 @@ function createCommandMatchReason(
     const group = normalizeSearchText(descriptor.group);
     if (id === query) {
       matches.push('exact command ID match');
-    } else if (id.includes(query)) {
+    } else if (containsSearchPhrase(id, query)) {
       matches.push('command ID match');
-    } else if (name.includes(query)) {
+    } else if (containsSearchPhrase(name, query)) {
       matches.push('name match');
     } else if (keywords.includes(query)) {
       matches.push('keyword match');
-    } else if (description.includes(query)) {
+    } else if (containsSearchPhrase(description, query)) {
       matches.push('description match');
-    } else if (group.includes(query)) {
+    } else if (containsSearchPhrase(group, query)) {
       matches.push('group match');
     }
   }
@@ -790,6 +818,9 @@ function createCommandMatchReason(
   }
   if (params.riskLevel && descriptor.riskLevel === params.riskLevel) {
     matches.push(`risk ${params.riskLevel}`);
+  }
+  if (descriptor.readOnly && isReadCommandSearch(params)) {
+    matches.push('read-only command');
   }
   if (descriptor.enabled) {
     matches.push('enabled');
@@ -843,9 +874,33 @@ function compareRankedCommandDescriptors(
   return first.descriptor.id.localeCompare(second.descriptor.id);
 }
 
-function tokenizeSearchText(value: string): string[] {
+const SEARCH_STOP_WORDS = new Set([
+  'a',
+  'an',
+  'the',
+  'in',
+  'on',
+  'of',
+  'for',
+  'to',
+  'with',
+  'and',
+  'or',
+]);
+
+function containsSearchPhrase(text: string, query: string): boolean {
+  const words = text.replace(/[._:-]+/g, ' ');
+  const phrase = query.replace(/[._:-]+/g, ' ');
+  return ` ${words} `.includes(` ${phrase} `);
+}
+
+function tokenizeSearchText(value: string | undefined): string[] {
   return Array.from(
-    new Set(normalizeSearchText(value).split(' ').filter(Boolean)),
+    new Set(
+      normalizeSearchText(value)
+        .split(/[\s._:-]+/)
+        .filter((token) => token && !SEARCH_STOP_WORDS.has(token)),
+    ),
   );
 }
 

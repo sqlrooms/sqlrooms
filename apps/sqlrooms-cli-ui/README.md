@@ -270,3 +270,36 @@ an explicit `artifactId`; if omitted, dashboard chart tools only use an
 unambiguous primary dashboard. Reference artifacts are not implicit mutation
 targets. `set_primary_context_artifact` updates the current run and session
 context when the assistant creates or switches to a new primary artifact.
+
+## AI Rendering Tools
+
+The CLI UI always makes three read-only rendering tools available across all
+capability profiles:
+
+- `render_artifact_image`
+- `render_document_block_image`
+- `render_dashboard_panel_image`
+
+Visual-inspection requests use these tools directly. If the target block ID is
+missing, the assistant reads the Document once with `block-document.get`, then
+captures the matching block. It does not need to search for map configuration
+commands before inspecting the image. Rendering tools are separate from the
+command registry searched by `search_commands`.
+Visual-inspection instructions follow the registered toolset. Headless/eval
+stores omit browser rendering tools and tell the assistant that visual capture
+is unavailable.
+
+Each tool captures the target that is currently mounted in the workspace and
+returns a bounded PNG directly to the model. The image pixels use a small
+ephemeral cache; persisted chat history keeps only the target and capture
+metadata. Using the image results requires a vision-capable model and a provider
+that supports image tool results.
+Each rendering tool result includes a **View captured image** button showing
+the exact cached PNG, dimensions, and capture time. The preview never recaptures
+the current view. After a reload or eviction from the six-image cache, it
+explains that the capture is unavailable and must be run again.
+SQLRooms maps preserve their WebGL drawing buffer so captures include the
+basemap and interleaved deck.gl layers. Separate deck overlays preserve their
+buffer through deck.gl/luma.gl's default and are checked as well. Maps with an unavailable context or
+explicitly disabled buffer preservation return an actionable error.
+Iframe-backed content is still unsupported.

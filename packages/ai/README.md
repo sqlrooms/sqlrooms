@@ -30,8 +30,21 @@ has a command registry:
 - `list_commands` for broad command-registry debugging.
 
 Model-facing flows should prefer
-`search_commands -> get_command -> execute_command` instead of repeatedly
-listing the full command catalog. `execute_command` refuses high-risk or
+`search_commands -> get_command (when input schema is needed) -> execute_command`
+instead of repeatedly listing the full command catalog. Keep schemas out of
+search results by default; commands with `requiresInput: false` can run with
+default input without a schema lookup. Search covers registered commands only;
+other directly available AI tools should be called directly.
+
+Search requires text relevance before applying resource/action hints or
+availability bonuses. It ignores common filler words and matches query tokens
+as words or command-ID segments. Read requests (`get`, `read`, `list`, `show`,
+`inspect`) favor relevant read-only commands; exact command IDs retain priority.
+Resource and action parameters remain ranking hints, while `riskLevel` is a
+filter. Unmatched queries return zero commands; an empty query can still browse
+the catalog. The reported match count is computed before the result limit.
+
+`execute_command` refuses high-risk or
 confirmation-required commands until the caller sets `confirmed: true` after an
 explicit user confirmation. Skill runtimes can pass `skillId`, `toolCallId`,
 `traceId`, and metadata through tool execution options; the command invocation

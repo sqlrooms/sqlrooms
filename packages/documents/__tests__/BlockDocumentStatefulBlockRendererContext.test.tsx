@@ -197,6 +197,9 @@ describe('disabled persisted stateful block interactions', () => {
     });
 
     try {
+      expect(
+        container.querySelector('[data-block-document-block-id="dashboard-1"]'),
+      ).not.toBeNull();
       expect(rendererProps?.readOnly).toBe(true);
       expect(renderHeaderActions).not.toHaveBeenCalled();
       expect(container.textContent).not.toContain('Header action');

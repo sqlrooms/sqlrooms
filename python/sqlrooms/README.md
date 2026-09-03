@@ -46,6 +46,10 @@ after theme changes and workspace reloads. Change the saved style through
 - `--config`: Path to a SQLRooms TOML config file. Defaults to `~/.config/sqlrooms/config.toml` (`%APPDATA%\sqlrooms\config.toml` on Windows).
 - `--no-config`: Disable config file loading.
 
+Read-only artifact, document-block, and dashboard-panel image tools are always
+available in the CLI UI. Using their image results requires a vision-capable
+model and a provider that supports image tool results.
+
 `--host 0.0.0.0` is an advanced local-network mode. Only use it on trusted
 networks; it exposes the SQLRooms UI/API bind address beyond your loopback
 interface. The DuckDB websocket backend still enforces local-only connections
