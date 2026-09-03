@@ -1,11 +1,15 @@
 import {type BaseRoomStoreState, useRoomStoreApi} from '@sqlrooms/room-store';
 import {Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
-import type {UIMessage} from 'ai';
+import type {FileUIPart, UIMessage} from 'ai';
 import {useCallback, useMemo, useRef} from 'react';
 import {type AiSliceState, useStoreWithAi} from '../AiSlice';
+import {textAttachmentToModelText} from '../chatAttachments';
 import type {AssistantMessageMetadata} from '../types';
+import {buildConversationText} from '../utils';
 
 const DEFAULT_CONTEXT_WINDOW = 200_000;
+// Cross-provider fallback when image dimensions and tokenizer usage are absent.
+const FALLBACK_IMAGE_TOKEN_ESTIMATE = 4_096;
 const USAGE_WARNING_THRESHOLD = 60;
 const USAGE_CRITICAL_THRESHOLD = 80;
 
@@ -23,20 +27,6 @@ function estimateTokenCount(text: string): number {
   const normalized = text.trim();
   if (!normalized) return 0;
   return Math.ceil(normalized.length / 4);
-}
-
-function buildConversationText(messages: UIMessage[]): string {
-  return messages
-    .map((msg) => {
-      const role = msg.role === 'user' ? 'User' : 'Assistant';
-      const text = msg.parts
-        .filter((p) => p.type === 'text')
-        .map((p) => (p as {text: string}).text)
-        .join('');
-      return `${role}: ${text}`;
-    })
-    .filter((line) => line.length > 6)
-    .join('\n\n');
 }
 
 function getStrokeColor(percentage: number): string {
@@ -106,13 +96,21 @@ function computeTokenUsage(
   return {contextTokens, cumulativeTokens};
 }
 
-function estimateMessageTokens(msg: UIMessage): number {
+/** Estimates one persisted message when provider-reported usage is absent. */
+export function estimateMessageTokens(msg: UIMessage): number {
   let tokens = 4; // per-message overhead
   for (const part of msg.parts) {
     if (part.type === 'text') {
       tokens += estimateTokenCount((part as {text: string}).text);
     } else if (part.type === 'reasoning') {
       tokens += estimateTokenCount((part as {text?: string}).text ?? '');
+    } else if (part.type === 'file') {
+      const attachmentText = textAttachmentToModelText(part as FileUIPart);
+      if (attachmentText !== undefined) {
+        tokens += estimateTokenCount(attachmentText);
+      } else if ((part as FileUIPart).mediaType.startsWith('image/')) {
+        tokens += FALLBACK_IMAGE_TOKEN_ESTIMATE;
+      }
     } else if (
       typeof part.type === 'string' &&
       (part.type.startsWith('tool-') || part.type === 'dynamic-tool')
@@ -128,6 +126,23 @@ type ContextUsageIndicatorProps = {
   modelProvider?: string;
   modelName?: string;
 };
+
+/** Summary prompt and visual evidence used to seed a continuation session. */
+export function createConversationContinuationSeed(
+  summary: string,
+  messages: UIMessage[],
+): {prompt: string; attachments: FileUIPart[]} {
+  const attachments = messages.flatMap((message) =>
+    message.parts.filter(
+      (part): part is FileUIPart =>
+        part.type === 'file' && part.mediaType.startsWith('image/'),
+    ),
+  );
+  return {
+    prompt: `Please use the following context from a previous session and only respond "Got it" to this message:\n\n${summary}`,
+    attachments,
+  };
+}
 
 export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
   contextWindow = DEFAULT_CONTEXT_WINDOW,
@@ -182,10 +197,15 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
       const newSessionId = state.ai.config.currentSessionId;
       if (!newSessionId) return;
 
-      const contextMessage = `Please use the following context from a previous session and only respond "Got it" to this message:\n\n${summary}`;
-      state.ai.setPrompt(newSessionId, contextMessage);
+      const continuation = createConversationContinuationSeed(
+        summary,
+        uiMessages,
+      );
+      state.ai.setPrompt(newSessionId, continuation.prompt);
 
-      await storeApi.getState().ai.startAnalysisWhenReady(newSessionId);
+      await storeApi
+        .getState()
+        .ai.startAnalysisWhenReady(newSessionId, continuation.attachments);
     } catch (error) {
       console.error('Failed to summarize conversation:', error);
     } finally {

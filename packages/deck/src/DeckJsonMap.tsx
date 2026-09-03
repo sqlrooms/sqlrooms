@@ -2,12 +2,12 @@ import type {Layer} from '@deck.gl/core';
 import {JSONConverter} from '@deck.gl/json';
 import {MapboxOverlay} from '@deck.gl/mapbox';
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
+import {useBaseRoomStore} from '@sqlrooms/room-store';
 import {
   cn,
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-  ResolvedTheme,
   useTheme,
 } from '@sqlrooms/ui';
 import {ChevronRightIcon} from 'lucide-react';
@@ -26,10 +26,9 @@ import {forwardRef} from 'react';
 import Map, {useControl} from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
-import {
-  resolveDeckMapStyle,
-  useDeckMapDefaultStyles,
-} from './DeckMapDefaultStylesProvider';
+import {resolveDeckMapStyle, type DeckMapBasemapProvider} from './basemap';
+import {useDeckMapDefaultStyles} from './DeckMapDefaultStylesProvider';
+import type {DeckMapsSliceState} from './DeckMapsSlice';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
 import {usePreparedDatasetStates} from './datasets/usePreparedDatasetStates';
 import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
@@ -43,10 +42,10 @@ import type {
   PreparedDeckDatasetState,
 } from './types';
 
-const DEFAULT_MAP_STYLES: Record<ResolvedTheme, string> = {
-  light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-};
+const DEFAULT_MAP_STYLES = {
+  light: 'https://tiles.openfreemap.org/styles/positron',
+  dark: 'https://tiles.openfreemap.org/styles/dark',
+} as const;
 
 function parseSpec(spec: DeckJsonMapProps['spec']) {
   try {
@@ -349,6 +348,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       spec,
       datasets,
       mapStyle,
+      basemapProvider,
       interleaved = true,
       deckProps,
       mapProps,
@@ -618,6 +618,10 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
 
     const {resolvedTheme} = useTheme();
     const hostDefaultMapStyles = useDeckMapDefaultStyles();
+    const roomBasemapProvider = useBaseRoomStore<
+      Partial<DeckMapsSliceState>,
+      DeckMapBasemapProvider | undefined
+    >((state) => state.deckMaps?.basemapProvider);
 
     const mergedMapProps = {
       ...extraMapProps,
@@ -630,6 +634,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       mapStyle: resolveDeckMapStyle({
         mapStyle,
         mapPropsMapStyle: mapProps?.mapStyle,
+        basemapProvider: basemapProvider ?? roomBasemapProvider,
         hostDefaultStyles: hostDefaultMapStyles,
         resolvedTheme,
         fallbackStyles: DEFAULT_MAP_STYLES,

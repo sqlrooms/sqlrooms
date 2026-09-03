@@ -6,7 +6,6 @@ import {
   ThemeProvider,
   useDisclosure,
 } from '@sqlrooms/ui';
-import {CliWorkspaceTopbar} from './workspace/CliWorkspaceTopbar';
 import {CliWorkspaceSidebar} from './workspace/sidebar';
 import {roomStore} from './store';
 import {CliDuckDbConnectionLostDialog} from './components/CliDuckDbConnectionLostDialog';
@@ -21,7 +20,6 @@ export const Room = () => {
         <SidebarProvider defaultOpen>
           <CliWorkspaceSidebar onToggleSqlEditor={sqlEditor.onToggle} />
           <SidebarInset className="h-svh min-w-0 overflow-hidden">
-            <CliWorkspaceTopbar />
             <RoomShell.LayoutComposer className="min-h-0 flex-1 overflow-hidden [&_[data-slot=resizable-handle][aria-controls=assistant-sidebar][aria-valuenow='0']]:hidden" />
             <RoomShell.LoadingProgress />
             <RoomShell.CommandPalette />

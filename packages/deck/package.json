@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/deck",
-  "version": "0.29.0-rc.11",
+  "version": "0.29.0-rc.12",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sqlrooms/sqlrooms.git"
@@ -49,6 +49,7 @@
     "@loaders.gl/gis": "^4.4.1",
     "@loaders.gl/wkt": "^4.4.1",
     "@paralleldrive/cuid2": "^3.0.0",
+    "@protomaps/basemaps": "^5.7.2",
     "@sqlrooms/color-scales": "workspace:*",
     "@sqlrooms/documents": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",

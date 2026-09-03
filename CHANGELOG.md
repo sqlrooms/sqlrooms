@@ -3,6 +3,35 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.12](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.11...v0.29.0-rc.12) (2026-08-28)
+
+### Bug Fixes
+
+* **ai:** keep chat content responsive when panels shrink ([#867](https://github.com/sqlrooms/sqlrooms/issues/867)) ([e92217e](https://github.com/sqlrooms/sqlrooms/commit/e92217ea702caeed598d4e1414d54d045875bfc9))
+* **artifacts,ai-config:** give Node consumers a React-free entry point ([#866](https://github.com/sqlrooms/sqlrooms/issues/866)) ([a00bc27](https://github.com/sqlrooms/sqlrooms/commit/a00bc27510efd3bb9b1c44dd4fcfb0b3d09ece9b))
+* CLI DuckDB WebSocket startup ([#880](https://github.com/sqlrooms/sqlrooms/issues/880)) ([844c512](https://github.com/sqlrooms/sqlrooms/commit/844c5123ea0745ce8e478dbf9908cb716d89f479))
+* **deck:** generate canonical point map transforms ([#881](https://github.com/sqlrooms/sqlrooms/issues/881)) ([4072550](https://github.com/sqlrooms/sqlrooms/commit/4072550b9b5687d36f23bf9cf3d87d5f536065c1))
+* **deck:** keep map sliders interactive ([#855](https://github.com/sqlrooms/sqlrooms/issues/855)) ([701cf33](https://github.com/sqlrooms/sqlrooms/commit/701cf33937fe5ff2d53bd8c6019c33597e029144))
+* **deck:** sync heatmap color scale with settings UI ([#870](https://github.com/sqlrooms/sqlrooms/issues/870)) ([ac27e14](https://github.com/sqlrooms/sqlrooms/commit/ac27e143260bc2ce7ca06c1c56b538bbcd00a105))
+* **documents:** distinguish missing block documents ([#886](https://github.com/sqlrooms/sqlrooms/issues/886)) ([aa0911a](https://github.com/sqlrooms/sqlrooms/commit/aa0911a3d1d9b898ae34c7e93d78d3a1cd205f29))
+* **duckdb-core:** handle DuckDB SQL statement syntax ([#888](https://github.com/sqlrooms/sqlrooms/issues/888)) ([63e6621](https://github.com/sqlrooms/sqlrooms/commit/63e6621046678fd95da3a4ac20eb13df73c4f112))
+* **duckdb-core:** preserve string numeric values ([#883](https://github.com/sqlrooms/sqlrooms/issues/883)) ([01a20b3](https://github.com/sqlrooms/sqlrooms/commit/01a20b37aaaad4a29c857963fb32f3701d6df47c))
+* **evals:** support production chart and map bindings in nightly scenarios ([#877](https://github.com/sqlrooms/sqlrooms/issues/877)) ([545306c](https://github.com/sqlrooms/sqlrooms/commit/545306c61e8e30eca0731c2545b9e849e0ad2ad1))
+* **examples:** sync DataFusion demo ([#851](https://github.com/sqlrooms/sqlrooms/issues/851)) ([d5e7fd4](https://github.com/sqlrooms/sqlrooms/commit/d5e7fd4d81529f378bd72e89763f44d3390d02f7))
+* **preset-jest:** transform workspace package ESM ([#875](https://github.com/sqlrooms/sqlrooms/issues/875)) ([ef86783](https://github.com/sqlrooms/sqlrooms/commit/ef8678383d6c748d0d7bb99e9c7d05ef9afb485b))
+
+### Features
+
+* Add MCP capability runtime ([#845](https://github.com/sqlrooms/sqlrooms/issues/845)) ([7c3d3fe](https://github.com/sqlrooms/sqlrooms/commit/7c3d3feb87785c3ddbf198eb1a16fa74cad3632e))
+* **ai-core:** expose active status rendering ([#856](https://github.com/sqlrooms/sqlrooms/issues/856)) ([6aca750](https://github.com/sqlrooms/sqlrooms/commit/6aca75007734f1db6568560bc7486e2e4f7ce8d1))
+* **cli:** add in-process eval target ([#863](https://github.com/sqlrooms/sqlrooms/issues/863)) ([6f6b9c6](https://github.com/sqlrooms/sqlrooms/commit/6f6b9c6dc48d916875d76d78a51cf189b66a1fb0))
+* **cli:** add named capability profiles ([#859](https://github.com/sqlrooms/sqlrooms/issues/859)) ([7a27df8](https://github.com/sqlrooms/sqlrooms/commit/7a27df83a8444501311f762a44d4a8152af1986e))
+* **cli:** add worksheet charts maps profile ([#860](https://github.com/sqlrooms/sqlrooms/issues/860)) ([b1dfa94](https://github.com/sqlrooms/sqlrooms/commit/b1dfa943776bb53c861d8d609341d2086bcc36de))
+* **deck:** improve map settings appearance controls ([#841](https://github.com/sqlrooms/sqlrooms/issues/841)) ([d0f6503](https://github.com/sqlrooms/sqlrooms/commit/d0f65036e1d108ff5ff60b8d33a059564e01dcbd))
+* **evals:** add behavioral evaluation core ([#862](https://github.com/sqlrooms/sqlrooms/issues/862)) ([87b7df8](https://github.com/sqlrooms/sqlrooms/commit/87b7df883a9ccccd389040df557767aee88e4900))
+* **evals:** add nightly suite and run observatory ([#864](https://github.com/sqlrooms/sqlrooms/issues/864)) ([690a332](https://github.com/sqlrooms/sqlrooms/commit/690a3324a3fbafc3f978a4c73844a73a9ab465ad))
+* **evals:** add trajectory comparison ([#865](https://github.com/sqlrooms/sqlrooms/issues/865)) ([66b6c12](https://github.com/sqlrooms/sqlrooms/commit/66b6c12dd9acb3778e1c86f8c7eccdcde8438f16))
+
 # [0.29.0-rc.11](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.10...v0.29.0-rc.11) (2026-08-18)
 
 ### Bug Fixes

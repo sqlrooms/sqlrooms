@@ -60,6 +60,26 @@ agent tool policy for future skill runtimes. Hosts with product-specific agent
 tool names can call `createSkillRuntimeToolPolicy()` to substitute names such
 as their own block document agent while keeping the package defaults generic.
 
+Hosts can scope a command tool instance with `commandGuard`. Denied descriptors
+are omitted from `search_commands`, `list_commands`, and `get_command`, and
+`execute_command` refuses them before validation, confirmation, or invocation.
+The refusal uses `command-not-available-to-caller` unless the guard supplies a
+custom code; a custom message can direct the model to an owning agent tool.
+Direct `store.commands.invokeCommand` calls are unaffected.
+
+```tsx
+const commandTools = createCommandTools(store, {
+  commandGuard: (descriptor) =>
+    descriptor.id.startsWith('block-document.') && !descriptor.readOnly
+      ? {
+          allowed: false,
+          code: 'use-document-agent',
+          message: 'Use the document agent tool for document edits.',
+        }
+      : {allowed: true},
+});
+```
+
 ## Installation
 
 ```bash
@@ -141,12 +161,18 @@ function AiPanel() {
             updateProvider(provider, {apiKey});
           }}
         />
+        <Chat.Composer.Attachments />
         <Chat.ModelSelector />
       </Chat.Composer>
     </Chat>
   );
 }
 ```
+
+`Chat.Composer.Attachments` is opt-in. It accepts images plus plain-text and
+Markdown files through explicit choices in the paperclip menu, shows removable
+previews before sending, and renders posted attachments as clickable previews
+that open in a larger dialog.
 
 ### Customize chat presentation
 

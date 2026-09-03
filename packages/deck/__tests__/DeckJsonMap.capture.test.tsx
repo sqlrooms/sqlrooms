@@ -6,9 +6,11 @@ import {
   jest,
   test,
 } from '@jest/globals';
-import {act} from 'react';
+import {createBaseRoomSlice, RoomStateProvider} from '@sqlrooms/room-store';
+import {act, useState} from 'react';
 import {createRoot, type Root} from 'react-dom/client';
 import type {MapProps} from 'react-map-gl/maplibre';
+import {createStore} from 'zustand/vanilla';
 import type {DeckJsonMapProps, PreparedDeckDatasetState} from '../src/types';
 
 let renderedMapProps: MapProps | undefined;
@@ -43,6 +45,15 @@ jest.unstable_mockModule('../src/datasets/usePreparedDatasetStates', () => ({
 
 const {DeckJsonMap} = await import('../src/DeckJsonMap');
 
+function TestMap(props: DeckJsonMapProps) {
+  const [store] = useState(() => createStore(createBaseRoomSlice()));
+  return (
+    <RoomStateProvider roomStore={store}>
+      <DeckJsonMap {...props} />
+    </RoomStateProvider>
+  );
+}
+
 let container: HTMLDivElement;
 let root: Root;
 
@@ -53,7 +64,7 @@ async function renderMap(
 ) {
   await act(async () =>
     root.render(
-      <DeckJsonMap
+      <TestMap
         spec={{layers: []}}
         datasets={{points: {arrowTable: undefined}}}
         mapProps={mapProps}
@@ -152,7 +163,7 @@ describe('DeckJsonMap image capture', () => {
     async function render(layers: unknown[], interleaved: boolean) {
       await act(async () =>
         root.render(
-          <DeckJsonMap
+          <TestMap
             spec={spec}
             datasets={datasets}
             showLegends={false}
@@ -220,7 +231,7 @@ describe('DeckJsonMap image capture', () => {
       const onAfterRender = jest.fn();
       await act(async () =>
         root.render(
-          <DeckJsonMap
+          <TestMap
             spec={spec}
             datasets={datasets}
             showLegends={false}

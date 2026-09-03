@@ -164,16 +164,20 @@ export function DeckMapBlockRenderer({
         Boolean(findLongitudeLatitudeColumns(table)) ||
         Boolean(findGeometryColumn(table));
       updateMap(mapId, {
-        config: hasGeo
-          ? createDeckMapConfigForTable({
-              tableName: table.tableName,
-              columns: table.columns,
-              tableReference: table.table,
-            })
-          : createEmptyDeckMapConfig(),
+        config: {
+          ...(hasGeo
+            ? createDeckMapConfigForTable({
+                tableName: table.tableName,
+                columns: table.columns,
+                tableReference: table.table,
+              })
+            : createEmptyDeckMapConfig()),
+          mapStyle: map?.config.mapStyle,
+          mapProps: map?.config.mapProps,
+        },
       });
     },
-    [mapId, setSelectedTable, updateMap],
+    [map, mapId, setSelectedTable, updateMap],
   );
 
   if (!map) {

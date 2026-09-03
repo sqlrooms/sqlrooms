@@ -120,13 +120,23 @@ export type {
   DeckMapInteractionConfig,
 } from './mapConfig';
 export {DeckJsonMap} from './DeckJsonMap';
+export {DECK_MAP_BASEMAP_STYLES, getDefaultDeckMapStyle} from './mapStyles';
+export {
+  createProtomapsBasemapProvider,
+  createProtomapsDefaultStyles,
+  createProtomapsStyle,
+  type ProtomapsFlavor,
+} from './protomapsStyles';
 export {
   DeckMapDefaultStylesProvider,
-  resolveDeckMapStyle,
   useDeckMapDefaultStyles,
+} from './DeckMapDefaultStylesProvider';
+export {
+  resolveDeckMapStyle,
+  type DeckMapBasemapProvider,
   type DeckMapDefaultStyles,
   type DeckMapStyle,
-} from './DeckMapDefaultStylesProvider';
+} from './basemap';
 export {
   ColorScaleFunction,
   GeometryEncodingHint as DeckGeometryEncodingHint,

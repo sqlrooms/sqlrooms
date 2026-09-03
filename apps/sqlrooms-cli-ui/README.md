@@ -11,6 +11,15 @@ In production (published `sqlrooms` wheel), the UI is served as **static assets*
 
 - `python/sqlrooms/sqlrooms/web/static/`
 
+## Map basemaps
+
+Maps use [OpenFreeMap](https://openfreemap.org/) vector tiles with **Positron**
+for light mode and **Dark** for dark mode. No API key or registration is required.
+
+New maps keep the light/dark style matching the app theme at creation, including
+after theme changes and workspace reloads. Change the saved style through
+**Map settings → Basemap**. Existing custom map styles are preserved.
+
 ## Local CLI smoke test
 
 For local pre-publish testing, run the workspace package directly rather than

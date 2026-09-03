@@ -360,6 +360,157 @@ describe('command tools', () => {
     });
   });
 
+  it('omits denied commands from search, list, and command details', async () => {
+    const guardedDescriptors = [
+      commandDescriptors[0],
+      {
+        ...commandDescriptors[1],
+        id: 'block-document.hidden-mutation',
+        visible: false,
+      },
+      commandDescriptors[2],
+    ] as const;
+    const commandGuard = jest.fn((descriptor: {id: string}) => ({
+      allowed: descriptor.id === 'artifact.rename',
+    }));
+    const tools = createCommandState(jest.fn(), guardedDescriptors, {
+      commandGuard,
+    });
+
+    const searchResult = await (tools.search_commands as any).execute({
+      query: '',
+      includeHidden: true,
+      includeDisabled: true,
+      limit: 50,
+    });
+    const listResult = await (tools.list_commands as any).execute({
+      includeInvisible: true,
+      includeDisabled: true,
+      includeInputSchema: true,
+    });
+    const hiddenGetResult = await (tools.get_command as any).execute({
+      commandId: 'block-document.hidden-mutation',
+      includeHidden: true,
+      includeDisabled: true,
+    });
+    const disabledGetResult = await (tools.get_command as any).execute({
+      commandId: 'artifact.delete',
+      includeHidden: true,
+      includeDisabled: true,
+    });
+
+    expect(searchResult.commands.map((command: any) => command.id)).toEqual([
+      'artifact.rename',
+    ]);
+    expect(listResult.commands.map((command: any) => command.id)).toEqual([
+      'artifact.rename',
+    ]);
+    expect(hiddenGetResult).toEqual({
+      success: false,
+      errorMessage: 'Unknown command ID "block-document.hidden-mutation".',
+    });
+    expect(disabledGetResult).toEqual({
+      success: false,
+      errorMessage: 'Unknown command ID "artifact.delete".',
+    });
+    expect(commandGuard).toHaveBeenCalledWith(
+      expect.objectContaining({visible: false}),
+    );
+    expect(commandGuard).toHaveBeenCalledWith(
+      expect.objectContaining({enabled: false}),
+    );
+  });
+
+  it('returns a custom guard refusal before confirmation or invocation', async () => {
+    invokeCommandWithPolicy.mockClear();
+    const invokeCommand = jest.fn(async () => ({
+      success: true,
+      commandId: 'artifact.delete',
+    }));
+    const tools = createCommandState(invokeCommand, commandDescriptors, {
+      commandGuard: (descriptor: {id: string}) =>
+        descriptor.id === 'artifact.delete'
+          ? {
+              allowed: false,
+              code: 'use-artifact-agent',
+              message: 'Use the artifact agent to delete artifacts.',
+            }
+          : {allowed: true},
+    });
+
+    const result = await (tools.execute_command as any).execute({
+      commandId: 'artifact.delete',
+      input: {artifactId: 'artifact-1'},
+    });
+
+    expect(result).toEqual({
+      success: false,
+      commandId: 'artifact.delete',
+      errorMessage: 'Use the artifact agent to delete artifacts.',
+      result: {
+        code: 'use-artifact-agent',
+        message: 'Use the artifact agent to delete artifacts.',
+      },
+    });
+    expect(invokeCommandWithPolicy).not.toHaveBeenCalled();
+    expect(invokeCommand).not.toHaveBeenCalled();
+
+    await invokeCommand('artifact.delete', {artifactId: 'artifact-1'});
+    expect(invokeCommand).toHaveBeenCalledWith('artifact.delete', {
+      artifactId: 'artifact-1',
+    });
+  });
+
+  it('uses the default guard refusal when no reason is supplied', async () => {
+    invokeCommandWithPolicy.mockClear();
+    const invokeCommand = jest.fn();
+    const tools = createCommandState(invokeCommand, commandDescriptors, {
+      commandGuard: (descriptor: {id: string}) => ({
+        allowed: descriptor.id !== 'block-document.add-dashboard-block',
+      }),
+    });
+
+    const result = await (tools.execute_command as any).execute({
+      commandId: 'block-document.add-dashboard-block',
+    });
+
+    expect(result).toEqual({
+      success: false,
+      commandId: 'block-document.add-dashboard-block',
+      errorMessage:
+        'Command "block-document.add-dashboard-block" is not available to this caller.',
+      result: {
+        code: 'command-not-available-to-caller',
+        message:
+          'Command "block-document.add-dashboard-block" is not available to this caller.',
+      },
+    });
+    expect(invokeCommandWithPolicy).not.toHaveBeenCalled();
+    expect(invokeCommand).not.toHaveBeenCalled();
+  });
+
+  it('preserves command behavior when the guard is omitted', async () => {
+    const invokeCommand = jest.fn(async () => ({
+      success: true,
+      commandId: 'artifact.rename',
+    }));
+    const tools = createCommandState(invokeCommand, commandDescriptors);
+
+    const listResult = await (tools.list_commands as any).execute({
+      includeInvisible: true,
+      includeDisabled: true,
+      includeInputSchema: true,
+    });
+    const executionResult = await (tools.execute_command as any).execute({
+      commandId: 'artifact.rename',
+      input: {title: 'Renamed'},
+    });
+
+    expect(listResult.commands).toEqual(commandDescriptors);
+    expect(executionResult.success).toBe(true);
+    expect(invokeCommand).toHaveBeenCalled();
+  });
+
   it('honors the configured default surface for parsed discovery inputs', async () => {
     const invokeCommand = jest.fn();
     const listCommands = jest.fn(

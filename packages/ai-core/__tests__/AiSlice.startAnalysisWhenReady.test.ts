@@ -58,6 +58,27 @@ describe('startAnalysisWhenReady', () => {
     expect(sendMessage).toHaveBeenCalledWith({text: 'hello world'});
   });
 
+  it('starts an attachment-only session message', async () => {
+    const store = createTestStore();
+    store.getState().ai.setPrompt('session-1', '');
+    const chat = store.getState().ai.getSessionChat('session-1')!;
+    const sendMessage = jest
+      .spyOn(chat, 'sendMessage')
+      .mockResolvedValue(undefined);
+    const attachment = {
+      type: 'file' as const,
+      filename: 'chart.png',
+      mediaType: 'image/png',
+      url: 'data:image/png;base64,aW1hZ2U=',
+    };
+
+    await store.getState().ai.startAnalysis('session-1', [attachment]);
+
+    expect(sendMessage).toHaveBeenCalledWith({
+      files: [attachment],
+    });
+  });
+
   it('returns false for an unknown session', async () => {
     const store = createTestStore();
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
