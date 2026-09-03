@@ -250,6 +250,48 @@ function CodeView({value}: {value: string}) {
 }
 ```
 
+### Line Chart Row Counts
+
+Line charts support `metric: "count"` for raw observations. This emits
+`COUNT(*)`, including rows whose identifiers are null; it does not sum or count
+a selected numeric column. For example:
+
+```ts
+const settings = {x: 'DateTime', xInterval: 'month', metric: 'count'};
+```
+
+Omit `yFields` in count mode. Numeric series alongside `metric: "count"` are
+rejected, rather than silently ignored. Without `xInterval`, counts group by
+the exact X value. Counts aggregate the full source without truncation, but
+retain the default **10,000 result-point limit**, including binned counts:
+distinct timestamps or overly fine bins can still produce too many points.
+Use a coarser temporal interval or reduce the distinct X values when the limit
+is exceeded. This limits rendered results, not the number of rows counted. AI
+tools persist the host-configured result limit in the chart config, so custom
+limits remain effective when the chart renders.
+
+Existing configs remain numeric line charts when `metric` is omitted or is
+`"aggregate"`. They still use `yFields` with `sum`, `avg`, `min`, or `max` for
+temporal aggregation. For already summarized counts, select that numeric
+measure instead of counting the summary rows. Both the chart settings UI and
+the AI tools expose the same metric choice, including document chart tools.
+
+Switching a populated chart to Row count preserves its numeric series in the
+chart-local `lastAggregateYFields` config field, outside active `settings`.
+Switching back to Numeric fields restores their fields, aggregations, and
+colors, even after saving and reopening the chart. The saved series are removed
+from that field on restoration and are never rendered or passed as count-mode
+Y fields. Count charts created without prior numeric series still require a Y
+selection when first switched to Numeric fields.
+
+`xInterval` is valid only with a temporal X column. Numeric X columns group by
+their exact values and reject temporal intervals rather than silently ignoring
+the requested grouping.
+
+The chart builder retains chart-local config options separately from active
+field values and carries them into the created chart. Resetting the builder or
+selecting another chart type clears those options.
+
 ### Count Plot Settings
 
 `count-plot` chart configs support categorical counts by default and can also

@@ -6,6 +6,7 @@ import {CreateSpecOptions, getChartTableReference} from '../base-types';
 import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
 import {validateLineChartSettings} from './validation';
 
+/** Include the aggregation in a numeric-series legend only when it is applied. */
 function getLegendLabel(
   yColumn: {field: string; aggregate?: AggregateFunction},
   hasAggregation: boolean,
@@ -16,16 +17,39 @@ function getLegendLabel(
   return yColumn.field;
 }
 
+/**
+ * Compile validated settings into a brushable Mosaic line chart. Count mode
+ * uses COUNT(*) per X value/bin; numeric mode retains the configured Y series.
+ * @throws When required fields, column types, or metric settings are invalid.
+ */
 export function createLineChartSpec(
   options: CreateSpecOptions<LineChartSettings>,
 ): Spec {
   const {dataTable, selectionName, settings} = options;
 
-  const {xColumn, yColumns, xInterval} = validateLineChartSettings(options);
+  const {metric, xColumn, yColumns, xInterval} =
+    validateLineChartSettings(options);
 
   const isXTemporal = isTemporalType(xColumn.type);
 
-  const plotMarks: unknown[] = [];
+  const hasTemporalAggregation = Boolean(isXTemporal && xInterval);
+  const series =
+    metric === 'count'
+      ? [
+          {
+            y: {count: null},
+            label: 'Count',
+            color: DEFAULT_CHART_FALLBACK_COLOR,
+          },
+        ]
+      : yColumns.map(({color, column, aggregate}) => ({
+          y: hasTemporalAggregation ? {[aggregate]: column.name} : column.name,
+          label: getLegendLabel(
+            {field: column.name, aggregate},
+            hasTemporalAggregation,
+          ),
+          color,
+        }));
 
   // Data source always includes filterBy for brush
   const dataSource = {
@@ -33,29 +57,15 @@ export function createLineChartSpec(
     filterBy: '$brush',
   };
 
-  // Generate lineY marks for each Y field
-  yColumns.forEach(({color, column, aggregate}) => {
-    // When temporal aggregation is active, use bin for X and aggregation for Y
-    if (isXTemporal && xInterval) {
-      // Use bin syntax for temporal aggregation
-      plotMarks.push({
-        mark: 'lineY',
-        data: dataSource,
-        x: {bin: xColumn.name, interval: xInterval},
-        y: {[aggregate]: column.name},
-        stroke: color,
-      });
-    } else {
-      // No aggregation - direct field references
-      plotMarks.push({
-        mark: 'lineY',
-        data: dataSource,
-        x: xColumn.name,
-        y: column.name,
-        stroke: color,
-      });
-    }
-  });
+  const plotMarks: unknown[] = series.map(({y, color}) => ({
+    mark: 'lineY',
+    data: dataSource,
+    x: hasTemporalAggregation
+      ? {bin: xColumn.name, interval: xInterval}
+      : xColumn.name,
+    y,
+    stroke: color,
+  }));
 
   // Add brush control only if selectionName is provided
   if (selectionName) {
@@ -68,22 +78,15 @@ export function createLineChartSpec(
     plot: plotMarks,
     name: 'lineChart',
     xLabel: xColumn.name,
-    yLabel: undefined,
+    yLabel: metric === 'count' ? 'Count' : undefined,
     margins: {
       left: 50,
       right: 20,
       top: 20,
       bottom: 50,
     },
-    colorDomain: yColumns.map((yColumn) =>
-      getLegendLabel(
-        {field: yColumn.column.name, aggregate: yColumn.aggregate},
-        Boolean(isXTemporal && xInterval),
-      ),
-    ),
-    colorRange: yColumns.map(
-      (yColumn) => yColumn.color ?? DEFAULT_CHART_FALLBACK_COLOR,
-    ),
+    colorDomain: series.map(({label}) => label),
+    colorRange: series.map(({color}) => color),
   };
 
   if (!showLegend) {
@@ -99,7 +102,7 @@ export function createLineChartSpec(
       {
         legend: 'color',
         for: 'lineChart',
-        columns: yColumns.length,
+        columns: series.length,
       },
     ],
     params: {brush: {select: 'crossfilter'}},

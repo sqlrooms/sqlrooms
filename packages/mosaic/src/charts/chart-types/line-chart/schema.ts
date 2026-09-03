@@ -13,6 +13,12 @@ export const YFieldConfig = z.object({
 export type YFieldConfig = z.infer<typeof YFieldConfig>;
 
 export const LineChartSettings = z.object({
+  metric: z
+    .enum(['aggregate', 'count'])
+    .optional()
+    .describe(
+      'Use count for row counts (COUNT(*)) with no yFields, or aggregate for numeric Y fields. Omission preserves existing numeric-series behavior.',
+    ),
   x: z
     .string()
     .optional()
@@ -36,6 +42,8 @@ export type LineChartSettings = z.infer<typeof LineChartSettings>;
 export const LineChartConfig = z.object({
   chartType: z.literal('line-chart'),
   settings: LineChartSettings,
+  /** Chart-local UI memory, kept outside the active count-series settings. */
+  lastAggregateYFields: z.array(YFieldConfig).optional(),
   settingsOpen: z.boolean().optional(),
   dataPolicy: ChartDataPolicyOverrideConfig.optional(),
 });
