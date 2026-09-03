@@ -229,6 +229,20 @@ function assertCaptureSupported(
       `${formatTarget(target)} contains iframe-backed content, which cannot be included in the generated image. Use the target's source and runtime diagnostics instead, or inspect it directly in the workspace.`,
     );
   }
+  const mapLoadingSelector = '[data-sqlrooms-map-loading]';
+  const mapStatuses = [
+    ...(element.matches(mapLoadingSelector) ? [element] : []),
+    ...element.querySelectorAll<HTMLElement>(mapLoadingSelector),
+  ];
+  if (
+    mapStatuses.some(
+      (status) => status.getAttribute('data-sqlrooms-map-loading') !== 'false',
+    )
+  ) {
+    throw new Error(
+      `${formatTarget(target)} contains a map that is still loading data, tiles, or layers. Wait for the map to finish rendering, then retry.`,
+    );
+  }
   const mapCanvases = element.matches(MAP_CANVAS_SELECTOR)
     ? [element as HTMLCanvasElement]
     : Array.from(

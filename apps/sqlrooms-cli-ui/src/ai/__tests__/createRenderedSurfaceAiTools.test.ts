@@ -333,6 +333,57 @@ describe('createRenderedSurfaceAiTools', () => {
     expect(captureElement).not.toHaveBeenCalled();
   });
 
+  it.each(['surface', 'nested map', 'deck layers'])(
+    'rejects an incomplete %s and allows a retry after rendering settles',
+    async (loadingPart) => {
+      const surfaceAttributes = {
+        'data-artifact-id': 'document-1',
+        'data-sqlrooms-map-loading': String(loadingPart === 'surface'),
+      };
+      const mapAttributes = {
+        'data-sqlrooms-map-loading': String(loadingPart === 'nested map'),
+      };
+      const deckAttributes = {
+        'data-sqlrooms-map-loading': String(loadingPart === 'deck layers'),
+      };
+      const artifact = createElement(surfaceAttributes, [
+        createElement({'data-sqlrooms-map-loading': 'false'}),
+        createElement(mapAttributes, [createElement(deckAttributes)]),
+      ]);
+      const captureElement = jest.fn(async () => ({
+        base64: 'complete-map',
+        width: 640,
+        height: 480,
+      }));
+      const tools = createRenderedSurfaceAiTools({
+        document: createDocument([artifact]),
+        captureElement,
+        prepareCapture: async () => {},
+      });
+      const input = {artifactId: 'document-1'};
+      const output = await executeTool(tools.render_artifact_image, input);
+      expect(output).toMatchObject({
+        success: false,
+        error: expect.stringContaining(
+          'Wait for the map to finish rendering, then retry',
+        ),
+      });
+      expect(captureElement).not.toHaveBeenCalled();
+
+      for (const attributes of [
+        surfaceAttributes,
+        mapAttributes,
+        deckAttributes,
+      ]) {
+        attributes['data-sqlrooms-map-loading'] = 'false';
+      }
+      expect(
+        await executeTool(tools.render_artifact_image, input),
+      ).toMatchObject({success: true});
+      expect(captureElement).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it.each([
     {preserved: true, lost: false, available: true, success: true},
     {preserved: false, lost: false, available: true, success: false},
