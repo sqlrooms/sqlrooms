@@ -11,6 +11,7 @@ import {TableColumn} from '@sqlrooms/duckdb';
 import {AggregateFunction, TemporalInterval} from '../../../schemas';
 import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
 
+/** Resolved X/Y columns and metric used by the line-chart spec compiler. */
 export type ValidatedLineChartSettings = {
   metric: 'aggregate' | 'count';
   xColumn: TableColumn;
@@ -23,6 +24,13 @@ export type ValidatedLineChartSettings = {
   xInterval?: TemporalInterval;
 };
 
+/**
+ * Resolve chart fields against the source table and enforce the metric contract.
+ * Count mode requires quantitative X and no numeric Y series; numeric mode
+ * requires at least one numeric Y field and defaults to sum aggregation.
+ * @throws When fields are missing, column types are unsuitable, or count mode
+ * also supplies numeric Y series.
+ */
 export function validateLineChartSettings({
   dataTable,
   settings: {x, yFields = [], xInterval, metric = 'aggregate'},

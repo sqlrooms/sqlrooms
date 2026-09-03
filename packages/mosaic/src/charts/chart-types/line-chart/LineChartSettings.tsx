@@ -7,7 +7,8 @@ import {LineChartXFieldSelector} from './LineChartXFieldSelector';
 
 /**
  * Explicit settings component for line chart.
- * Composes primitive and compound components for full control over the UI.
+ * Numeric series are saved in the chart config while count mode is active, so
+ * switching back restores aggregations and colors even after reopening it.
  */
 export const LineChartSettingsComponent: FC = () => {
   const {onChange, onChangeConfig, config} =
@@ -25,12 +26,20 @@ export const LineChartSettingsComponent: FC = () => {
           value={metric}
           onChange={(value) => {
             if (value !== 'count' && value !== 'aggregate') return;
+            if (value === metric) return;
+            const {lastAggregateYFields, ...chartConfig} = config;
             onChange({
-              ...config,
+              ...chartConfig,
+              ...(value === 'count'
+                ? {lastAggregateYFields: config.settings.yFields}
+                : {}),
               settings: {
                 ...config.settings,
                 metric: value,
-                ...(value === 'count' ? {yFields: []} : {}),
+                yFields:
+                  value === 'count'
+                    ? []
+                    : (lastAggregateYFields ?? config.settings.yFields),
               },
             });
           }}

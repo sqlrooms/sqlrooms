@@ -4,6 +4,8 @@ import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 import {createLineChartSpec} from '../../src/charts/chart-types/line-chart/spec';
 import {LineChartSettings} from '../../src/charts/chart-types/line-chart/schema';
 import {lineChartChartType} from '../../src/charts/chart-types/line-chart/definition';
+import {assertChartDataPolicy} from '../../src/chart-runtime';
+import {DataPointLimitError} from '../../src/DataPointLimitError';
 import {
   createLineChartAiTool,
   LineChartToolInput,
@@ -25,16 +27,33 @@ const countSettings = {
 };
 
 describe('line-chart row counts', () => {
-  it('does not apply the unaggregated row limit to count charts', () => {
-    expect(
-      lineChartChartType.getDataPolicy?.({
-        tableName: 'events',
-        config: {
-          chartType: 'line-chart',
-          settings: {x: 'amount', metric: 'count', showLegend: true},
-        },
-      }),
-    ).toBeNull();
+  it.each([
+    {x: 'time'},
+    {x: 'amount'},
+    {x: 'time', xInterval: 'month' as const},
+    {x: 'amount', xInterval: 'month' as const},
+  ])('limits count result points, not source rows: %j', (settings) => {
+    const policy = lineChartChartType.getDataPolicy?.({
+      tableName: 'events',
+      config: {
+        chartType: 'line-chart',
+        settings: {...settings, metric: 'count', showLegend: true},
+      },
+    });
+    expect(policy).toMatchObject({maxRows: 10_000});
+    expect(() => assertChartDataPolicy(policy, {numRows: 10_001})).toThrow(
+      DataPointLimitError,
+    );
+    expect(() =>
+      assertChartDataPolicy(policy, {numRows: 10_000}),
+    ).not.toThrow();
+    // Any number of source observations can aggregate into a small result.
+    expect(() =>
+      assertChartDataPolicy(policy, [{x: 1, y: 100_000}]),
+    ).not.toThrow();
+  });
+
+  it('preserves the legacy numeric-series data policies', () => {
     expect(
       lineChartChartType.getDataPolicy?.({
         tableName: 'events',
@@ -48,6 +67,20 @@ describe('line-chart row counts', () => {
         },
       }),
     ).toMatchObject({maxRows: 10_000});
+    expect(
+      lineChartChartType.getDataPolicy?.({
+        tableName: 'events',
+        config: {
+          chartType: 'line-chart',
+          settings: {
+            x: 'time',
+            xInterval: 'month',
+            yFields: [{field: 'amount', aggregate: 'sum'}],
+            showLegend: true,
+          },
+        },
+      }),
+    ).toBeNull();
   });
   it('accepts row counts without inventing a numeric Y field', () => {
     expect(

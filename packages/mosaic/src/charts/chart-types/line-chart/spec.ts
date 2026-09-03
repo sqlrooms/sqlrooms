@@ -6,6 +6,7 @@ import {CreateSpecOptions, getChartTableReference} from '../base-types';
 import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
 import {validateLineChartSettings} from './validation';
 
+/** Include the aggregation in a numeric-series legend only when it is applied. */
 function getLegendLabel(
   yColumn: {field: string; aggregate?: AggregateFunction},
   hasAggregation: boolean,
@@ -16,6 +17,11 @@ function getLegendLabel(
   return yColumn.field;
 }
 
+/**
+ * Compile validated settings into a brushable Mosaic line chart. Count mode
+ * uses COUNT(*) per X value/bin; numeric mode retains the configured Y series.
+ * @throws When required fields, column types, or metric settings are invalid.
+ */
 export function createLineChartSpec(
   options: CreateSpecOptions<LineChartSettings>,
 ): Spec {

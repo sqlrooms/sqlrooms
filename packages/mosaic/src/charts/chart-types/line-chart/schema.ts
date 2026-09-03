@@ -42,6 +42,8 @@ export type LineChartSettings = z.infer<typeof LineChartSettings>;
 export const LineChartConfig = z.object({
   chartType: z.literal('line-chart'),
   settings: LineChartSettings,
+  /** Chart-local UI memory, kept outside the active count-series settings. */
+  lastAggregateYFields: z.array(YFieldConfig).optional(),
   settingsOpen: z.boolean().optional(),
   dataPolicy: ChartDataPolicyOverrideConfig.optional(),
 });

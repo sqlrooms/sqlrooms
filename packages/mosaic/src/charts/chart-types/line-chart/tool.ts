@@ -21,6 +21,11 @@ export const LineChartToolInput = BaseChartToolInput.extend({
 
 export type LineChartToolInput = z.infer<typeof LineChartToolInput>;
 
+/**
+ * Create an AI tool that validates count/numeric settings before invoking the
+ * host's chart callback. Existing panel targets are forwarded for in-place
+ * editing; validation or host failures are returned as unsuccessful results.
+ */
 export function createLineChartAiTool({
   databaseAdapter,
   addChart,
@@ -37,6 +42,7 @@ Required:
 
 Metric decision:
 - For event counts/frequency over time on raw observations, set metric: "count" and omit yFields. This counts ALL rows using COUNT(*), including rows with null identifiers. Example: {x: "DateTime", xInterval: "month", metric: "count"}.
+- Count charts retain the ${maxDataPoints.toLocaleString()} result-point limit. An interval groups source rows but may still yield too many points; use a coarser temporal interval or fewer distinct X values if needed.
 - For numeric measures or already summarized counts, use metric: "aggregate" (the default) with yFields: array of {field: string (numeric: ${NUMERIC_COLUMN_TYPES.join(', ')}), aggregate?: ${AGGREGATE_FUNCTIONS.join('|')}}.
 - Never sum an event ID or other identifier to represent a count. Do not put aggregate: "count" in yFields; row counts use metric: "count" instead.
 
