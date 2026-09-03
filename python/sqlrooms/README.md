@@ -15,6 +15,15 @@ What happens:
 - Drag-and-drop CSV, TSV, JSON, Parquet, and DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
 - UI state is stored in the SQLRooms meta namespace (default `__sqlrooms`) of the selected DuckDB file.
 
+## Map basemaps
+
+Maps use [OpenFreeMap](https://openfreemap.org/) vector tiles with **Positron**
+for light mode and **Dark** for dark mode. No API key or registration is required.
+
+New maps keep the light/dark style matching the app theme at creation, including
+after theme changes and workspace reloads. Change the saved style through
+**Map settings → Basemap**. Existing custom map styles are preserved.
+
 ## CLI flags
 
 - `DB_PATH` (positional): DuckDB project file to load/create (e.g. `sqlrooms ./my.db`). Required unless `--db-path` is provided.

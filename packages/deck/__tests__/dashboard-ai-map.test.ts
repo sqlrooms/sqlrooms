@@ -18,6 +18,7 @@ import {
   quoteDeckMapSqlTableReference,
 } from '../src/mapConfigUtils';
 import type {MosaicDashboardEntry} from '@sqlrooms/mosaic';
+import type {DeckMapConfig} from '../src/mapConfig';
 
 const scatterConfig = {
   spec: {
@@ -308,7 +309,7 @@ describe('createDeckMapConfigTool', () => {
       kind: 'deck-map-config',
       type: DECK_MAP_DASHBOARD_PANEL_TYPE,
       title: 'Standalone earthquake map',
-      config: normalizedScatterConfig,
+      config: {...normalizedScatterConfig, mapStyle: 'light'},
     });
   });
 
@@ -400,6 +401,146 @@ describe('createDeckMapConfigTool', () => {
 });
 
 describe('createDeckMapDashboardTool', () => {
+  describe('basemap persistence', () => {
+    const originalDocument = Object.getOwnPropertyDescriptor(
+      globalThis,
+      'document',
+    );
+    const customStyle = {version: 8, sources: {}, layers: []};
+
+    function setAppTheme(theme: 'light' | 'dark') {
+      Object.defineProperty(globalThis, 'document', {
+        configurable: true,
+        value: {
+          documentElement: {
+            classList: {contains: (value: string) => value === theme},
+          },
+        },
+      });
+    }
+
+    afterEach(() => {
+      if (originalDocument)
+        Object.defineProperty(globalThis, 'document', originalDocument);
+      else Reflect.deleteProperty(globalThis, 'document');
+    });
+
+    it.each(['dark', 'light'] as const)(
+      'snapshots %s only when creating a new panel',
+      async (theme) => {
+        const {dashboards, dashboardAdapter, databaseAdapter} =
+          createTestAdapters();
+        const tool = createDeckMapDashboardTool({
+          dashboardAdapter,
+          databaseAdapter,
+        });
+        setAppTheme(theme);
+        const created = await (tool as any).execute({
+          config: scatterConfig,
+          reasoning: 'create map',
+        });
+        expect(created.llmResult.success).toBe(true);
+        expect(created.llmResult.data.config.mapStyle).toBe(theme);
+
+        setAppTheme(theme === 'dark' ? 'light' : 'dark');
+        const updated = await (tool as any).execute({
+          panelId: created.llmResult.data.panelId,
+          config: multiLayerConfig,
+          reasoning: 'add a density layer',
+        });
+        expect(updated.llmResult.success).toBe(true);
+        expect(updated.llmResult.data.config.mapStyle).toBe(theme);
+        expect(dashboards['dashboard-1']!.panels[0].config).toEqual(
+          updated.llmResult.data.config,
+        );
+      },
+    );
+
+    const styles: Array<
+      [string, Pick<DeckMapConfig, 'mapStyle' | 'mapProps'>]
+    > = [
+      ['saved basemap', {mapStyle: 'dark'}],
+      ['custom URL', {mapStyle: 'https://example.com/custom.json'}],
+      [
+        'map-prop URL',
+        {mapProps: {mapStyle: 'https://example.com/custom.json'}},
+      ],
+      ['map-prop object', {mapProps: {mapStyle: customStyle}}],
+      ['legacy theme-following map', {}],
+    ];
+    it.each(styles)(
+      'preserves a %s when the update omits style fields',
+      async (_name, style) => {
+        const {dashboards, dashboardAdapter, databaseAdapter} =
+          createTestAdapters();
+        const panelId = await dashboardAdapter.addPanel({
+          id: 'existing-map',
+          type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+          title: 'Existing map',
+          config: {...scatterConfig, ...style},
+        });
+        setAppTheme('light');
+        const tool = createDeckMapDashboardTool({
+          dashboardAdapter,
+          databaseAdapter,
+        });
+        const result = await (tool as any).execute({
+          panelId,
+          config: {...multiLayerConfig, mapProps: {attributionControl: false}},
+          reasoning: 'add a density layer',
+        });
+        expect(result.llmResult.success).toBe(true);
+        const config = result.llmResult.data.config;
+        expect(config.mapStyle).toBe(style.mapStyle);
+        expect(config.mapProps).toEqual({
+          attributionControl: false,
+          ...style.mapProps,
+        });
+        expect(config.datasets).toEqual(multiLayerConfig.datasets);
+        expect(config.spec.layers).toHaveLength(2);
+        expect(dashboards['dashboard-1']!.panels[0].config).toEqual(config);
+      },
+    );
+
+    it.each(styles.slice(0, 4))(
+      'allows an explicit style to replace a %s',
+      async (_name, style) => {
+        const {dashboards, dashboardAdapter, databaseAdapter} =
+          createTestAdapters();
+        const panelId = await dashboardAdapter.addPanel({
+          id: 'existing-map',
+          type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+          title: 'Existing map',
+          config: {...scatterConfig, ...style},
+        });
+        const tool = createDeckMapDashboardTool({
+          dashboardAdapter,
+          databaseAdapter,
+        });
+        for (const replacement of [
+          {mapStyle: 'light'},
+          {mapProps: {mapStyle: customStyle}},
+        ]) {
+          const result = await (tool as any).execute({
+            panelId,
+            config: {...multiLayerConfig, ...replacement},
+            reasoning: 'change basemap',
+          });
+          expect(result.llmResult.success).toBe(true);
+          expect(result.llmResult.data.config.mapStyle).toBe(
+            replacement.mapStyle,
+          );
+          expect(result.llmResult.data.config.mapProps).toEqual(
+            replacement.mapProps,
+          );
+          expect(dashboards['dashboard-1']!.panels[0].config).toEqual(
+            result.llmResult.data.config,
+          );
+        }
+      },
+    );
+  });
+
   it('registers the dashboard map tool under the shared map tool key', () => {
     const {dashboardAdapter, databaseAdapter} = createTestAdapters();
     const tools = createDeckMapDashboardAiTools({

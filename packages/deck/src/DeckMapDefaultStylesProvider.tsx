@@ -1,5 +1,4 @@
-import type {ResolvedTheme} from '@sqlrooms/ui';
-import type {MapProps} from 'react-map-gl/maplibre';
+import type {DeckMapDefaultStyles} from './basemap';
 import {
   createContext,
   useContext,
@@ -7,19 +6,17 @@ import {
   type PropsWithChildren,
 } from 'react';
 
-/** A MapLibre-compatible style accepted by the Deck map renderer. */
-export type DeckMapStyle = NonNullable<MapProps['mapStyle']>;
-
-/** Optional host-provided basemap defaults keyed by resolved UI theme. */
-export type DeckMapDefaultStyles = Partial<Record<ResolvedTheme, DeckMapStyle>>;
-
 const DeckMapDefaultStylesContext = createContext<
   DeckMapDefaultStyles | undefined
 >(undefined);
 
 /**
  * Supplies host-owned, theme-aware basemap defaults without persisting them in
- * individual map resources. Explicit map config styles still take precedence.
+ * individual map resources. The required `styles` object is keyed by `light`
+ * and/or `dark`. Explicit map styles and basemap callbacks take precedence.
+ *
+ * @deprecated Configure `basemapProvider` on `createDeckMapsSlice` or pass it
+ * directly to `DeckJsonMap` instead. Retained for backward compatibility.
  */
 export const DeckMapDefaultStylesProvider: FC<
   PropsWithChildren<{styles: DeckMapDefaultStyles}>
@@ -29,35 +26,12 @@ export const DeckMapDefaultStylesProvider: FC<
   </DeckMapDefaultStylesContext.Provider>
 );
 
-/** Returns theme-aware host map defaults from the nearest provider, if any. */
+/**
+ * Returns theme-aware host map defaults from the nearest provider, if any.
+ *
+ * @deprecated Use the room's `deckMaps.basemapProvider` or an explicitly supplied
+ * basemap callback instead. Retained for backward compatibility.
+ */
 export function useDeckMapDefaultStyles() {
   return useContext(DeckMapDefaultStylesContext);
-}
-
-/** True for `mapbox://` style URLs (MapLibre cannot load them without a token). */
-export function isMapboxStyleUrl(style: unknown): boolean {
-  return typeof style === 'string' && /^mapbox:/i.test(style.trim());
-}
-
-function usableMapStyle(
-  style: string | MapProps['mapStyle'] | undefined,
-): DeckMapStyle | undefined {
-  if (style == null || isMapboxStyleUrl(style)) return undefined;
-  return style as DeckMapStyle;
-}
-
-/** Resolve map style; skips `mapbox://` so the map can still load. */
-export function resolveDeckMapStyle(options: {
-  mapStyle?: string;
-  mapPropsMapStyle?: MapProps['mapStyle'];
-  hostDefaultStyles?: DeckMapDefaultStyles;
-  resolvedTheme: ResolvedTheme;
-  fallbackStyles: Record<ResolvedTheme, string>;
-}): DeckMapStyle {
-  return (
-    usableMapStyle(options.mapStyle) ??
-    usableMapStyle(options.mapPropsMapStyle) ??
-    usableMapStyle(options.hostDefaultStyles?.[options.resolvedTheme]) ??
-    options.fallbackStyles[options.resolvedTheme]
-  );
 }

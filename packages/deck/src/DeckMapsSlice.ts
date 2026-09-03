@@ -6,7 +6,13 @@ import {
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
 import {z} from 'zod';
-import {createEmptyDeckMapConfig, type DeckMapConfig} from './mapConfig';
+import type {DeckMapBasemapProvider} from './basemap';
+import {
+  createEmptyDeckMapConfig,
+  withDefaultDeckMapStyle,
+  withPreservedDeckMapStyle,
+  type DeckMapConfig,
+} from './mapConfig';
 
 const DeckMapConfigSchema = z.object({
   spec: z.union([z.string(), z.record(z.string(), z.unknown())]),
@@ -71,6 +77,8 @@ export type DeckMapRuntimeIssueReporter = {
 export type DeckMapsSliceState = {
   deckMaps: {
     config: DeckMapsSliceConfig;
+    /** Optional runtime basemap provider shared by maps in this room. */
+    basemapProvider?: DeckMapBasemapProvider;
     runtime: {issuesByMapId: Record<string, DeckMapRuntimeIssue>};
     setConfig: (config: DeckMapsSliceConfig) => void;
     ensureMap: (
@@ -96,11 +104,14 @@ export type DeckMapsSliceState = {
  */
 export function createDeckMapsSlice(props?: {
   config?: Partial<DeckMapsSliceConfig>;
+  /** Optional host-owned basemaps. The provider is not persisted in map config. */
+  basemapProvider?: DeckMapBasemapProvider;
 }) {
   type RootState = BaseRoomStoreState & DuckDbSliceState & DeckMapsSliceState;
   return createSlice<DeckMapsSliceState, RootState>((set, get) => ({
     deckMaps: {
       config: {mapsById: props?.config?.mapsById ?? {}},
+      basemapProvider: props?.basemapProvider,
       runtime: {issuesByMapId: {}},
       setConfig: (config) =>
         set((state) =>
@@ -115,7 +126,9 @@ export function createDeckMapsSlice(props?: {
               draft.deckMaps.config.mapsById[id] = {
                 id,
                 title: options?.title ?? 'Map',
-                config: options?.config ?? createEmptyDeckMapConfig(),
+                config: withDefaultDeckMapStyle(
+                  options?.config ?? createEmptyDeckMapConfig(),
+                ),
               };
             }
           }),
@@ -133,7 +146,10 @@ export function createDeckMapsSlice(props?: {
           produce(state, (draft) => {
             const map = draft.deckMaps.config.mapsById[id];
             if (!map) throw new Error(`Deck map ${id} was not found`);
-            Object.assign(map, patch, {id});
+            const config =
+              patch.config &&
+              withPreservedDeckMapStyle({...patch.config}, map.config);
+            Object.assign(map, patch, {id}, config ? {config} : {});
             if (patch.config) {
               const issue = draft.deckMaps.runtime.issuesByMapId[id];
               if (
