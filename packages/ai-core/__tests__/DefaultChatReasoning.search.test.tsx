@@ -118,6 +118,45 @@ function setQuery(query: string) {
   });
 }
 
+const TWO_MATCH_TEXT = 'design first then design again';
+
+function TwoMatchBlockRegistrar() {
+  useRegisterChatSearchBlocks('turn-1', [
+    {
+      id: REASONING_BLOCK_ID,
+      resultId: 'result-1',
+      text: TWO_MATCH_TEXT,
+    },
+  ]);
+  return null;
+}
+
+function renderReasoningWithTwoMatchesInOneBlock() {
+  latestSearchRef.current = undefined;
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const store = createTestStore();
+
+  act(() => {
+    root.render(
+      <RoomStateProvider roomStore={store}>
+        <ChatSearchProvider>
+          <TwoMatchBlockRegistrar />
+          <DefaultChatReasoning
+            text={TWO_MATCH_TEXT}
+            isRunning={false}
+            searchBlockId={REASONING_BLOCK_ID}
+          />
+          <SearchController />
+        </ChatSearchProvider>
+      </RoomStateProvider>,
+    );
+  });
+
+  return {container, root, store};
+}
+
 describe('DefaultChatReasoning search auto-open', () => {
   it('starts closed with no search query', () => {
     const {container, root} = renderReasoning();
@@ -162,6 +201,38 @@ describe('DefaultChatReasoning search auto-open', () => {
 
     // Active match moved off this block, but the details element must not
     // re-close itself.
+    expect(details.open).toBe(true);
+
+    cleanup(container, root);
+  });
+
+  it('reopens for the second match in the same block after being closed manually', () => {
+    const {container, root} = renderReasoningWithTwoMatchesInOneBlock();
+
+    setQuery('design');
+    const details = container.querySelector('details') as HTMLDetailsElement;
+    expect(latestSearchRef.current?.matches).toHaveLength(2);
+    expect(details.open).toBe(true);
+
+    // Simulate the user collapsing the disclosure by hand.
+    act(() => {
+      details.open = false;
+    });
+    expect(details.open).toBe(false);
+
+    act(() => {
+      latestSearchRef.current?.goToNextMatch();
+    });
+    expect(latestSearchRef.current?.matches[1]?.blockId).toBe(
+      REASONING_BLOCK_ID,
+    );
+    expect(latestSearchRef.current?.activeMatchId).toBe(
+      latestSearchRef.current?.matches[1]?.id,
+    );
+
+    // Both matches belong to this same block, so a boolean "has active
+    // match" signal never changes and would leave the disclosure closed.
+    // Navigating to the second match must still reopen it.
     expect(details.open).toBe(true);
 
     cleanup(container, root);

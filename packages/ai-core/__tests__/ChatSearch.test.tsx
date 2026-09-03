@@ -22,7 +22,7 @@ const {
   findChatSearchMatches,
   HighlightedChatSearchText,
   useChatSearch,
-  useHasActiveChatSearchMatch,
+  useActiveChatSearchMatchId,
   useRegisterChatSearchBlocks,
   useReportRenderedChatSearchBlock,
 } = await import('../src/components/ChatSearch');
@@ -58,8 +58,14 @@ function createTestStore(sessionId = 'session-1') {
   ) as any;
 }
 
-function RenderedBlockReporter({blockId}: {blockId: string}) {
-  useReportRenderedChatSearchBlock(blockId);
+function RenderedBlockReporter({
+  blockId,
+  text,
+}: {
+  blockId: string;
+  text?: string;
+}) {
+  useReportRenderedChatSearchBlock(blockId, text);
   return null;
 }
 
@@ -539,6 +545,65 @@ describe('Chat.Search rendered-set intersection', () => {
     cleanup(container, root);
   });
 
+  it("falls back to the remaining reporter's text when the reporter that reported last unmounts", () => {
+    latestSearchRef.current = undefined;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+    const blockId = 'session-1:result-1:multi';
+    const registeredBlocks: ChatSearchBlock[] = [
+      {id: blockId, resultId: 'result-1', text: 'placeholder'},
+    ];
+
+    // The first reporter paints its own text, so a match against it also
+    // shows up as a real <mark>. The second reporter mounts after the first
+    // and only reports text, so it becomes the more recently reported one.
+    function Scene({secondMounted}: {secondMounted: boolean}) {
+      return (
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <BlockRegistrar blocks={registeredBlocks} renderedIds={[]} />
+            <HighlightedChatSearchText blockId={blockId} text="alpha content" />
+            {secondMounted ? (
+              <RenderedBlockReporter blockId={blockId} text="beta content" />
+            ) : null}
+            <ChatSearch />
+            <SearchController />
+          </ChatSearchProvider>
+        </RoomStateProvider>
+      );
+    }
+
+    act(() => {
+      root.render(<Scene secondMounted />);
+    });
+
+    act(() => {
+      latestSearchRef.current?.setQuery('beta');
+    });
+    // The most recently reported live reporter's text is matched against.
+    expect(container.textContent).toContain('1/1');
+
+    act(() => {
+      root.render(<Scene secondMounted={false} />);
+    });
+    // The reporter that reported last unmounted, so its text must no longer
+    // be matched against.
+    expect(container.textContent).toContain('0/0');
+
+    act(() => {
+      latestSearchRef.current?.setQuery('alpha');
+    });
+    // Matching falls back to the remaining reporter's text, not the departed
+    // one's.
+    expect(container.textContent).toContain('1/1');
+    const mark = container.querySelector('mark');
+    expect(mark?.textContent).toBe('alpha');
+
+    cleanup(container, root);
+  });
+
   it('drops matches when a rendered block unmounts', () => {
     latestSearchRef.current = undefined;
     const container = document.createElement('div');
@@ -678,7 +743,7 @@ describe('Chat.Search rendered-set intersection', () => {
   });
 });
 
-describe('useHasActiveChatSearchMatch', () => {
+describe('useActiveChatSearchMatchId', () => {
   function ActiveMatchProbe({
     blockId,
     label,
@@ -686,11 +751,11 @@ describe('useHasActiveChatSearchMatch', () => {
     blockId?: string;
     label: string;
   }) {
-    const hasActiveMatch = useHasActiveChatSearchMatch(blockId);
-    return <div data-testid={label}>{String(hasActiveMatch)}</div>;
+    const activeMatchId = useActiveChatSearchMatchId(blockId);
+    return <div data-testid={label}>{activeMatchId ?? ''}</div>;
   }
 
-  it('returns false with no provider', () => {
+  it('returns undefined with no provider', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const root = createRoot(container);
@@ -702,13 +767,13 @@ describe('useHasActiveChatSearchMatch', () => {
     });
 
     expect(container.querySelector('[data-testid="probe"]')?.textContent).toBe(
-      'false',
+      '',
     );
 
     cleanup(container, root);
   });
 
-  it('returns false when the block has matches but none is the active match, and true when navigation lands on it', () => {
+  it('returns undefined when the block has matches but none is the active match, and the match id when navigation lands on it', () => {
     latestSearchRef.current = undefined;
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -739,11 +804,12 @@ describe('useHasActiveChatSearchMatch', () => {
 
     // The prompt match ("Show me design trends") comes first, so it starts
     // active. The text block has a match of its own, but it is not active yet.
-    expect(container.querySelector('[data-testid="prompt"]')?.textContent).toBe(
-      'true',
-    );
+    const promptId = container.querySelector(
+      '[data-testid="prompt"]',
+    )?.textContent;
+    expect(promptId).toMatch(/^session-1:result-1:prompt:/);
     expect(container.querySelector('[data-testid="text"]')?.textContent).toBe(
-      'false',
+      '',
     );
 
     act(() => {
@@ -752,13 +818,14 @@ describe('useHasActiveChatSearchMatch', () => {
         ?.dispatchEvent(new MouseEvent('click', {bubbles: true}));
     });
 
-    // Advancing to the next match flips which block reports the active match.
+    // Advancing to the next match flips which block reports the active match,
+    // and the reported id changes with it.
     expect(container.querySelector('[data-testid="prompt"]')?.textContent).toBe(
-      'false',
+      '',
     );
-    expect(container.querySelector('[data-testid="text"]')?.textContent).toBe(
-      'true',
-    );
+    const textId = container.querySelector('[data-testid="text"]')?.textContent;
+    expect(textId).toMatch(/^session-1:result-1:text:0:/);
+    expect(textId).not.toBe(promptId);
 
     cleanup(container, root);
   });

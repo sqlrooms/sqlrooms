@@ -303,7 +303,7 @@ export {
   HighlightedChatSearchText,
   markdownToPlainText,
   normalizeChatSearchQuery,
-  useHasActiveChatSearchMatch,
+  useActiveChatSearchMatchId,
   useOptionalChatSearch,
   useReportRenderedChatSearchBlock,
 } from './components/ChatSearch';

@@ -270,7 +270,7 @@ export {
   HighlightedChatSearchText,
   markdownToPlainText,
   normalizeChatSearchQuery,
-  useHasActiveChatSearchMatch,
+  useActiveChatSearchMatchId,
   useOptionalChatSearch,
   useReportRenderedChatSearchBlock,
 } from '@sqlrooms/ai-core';

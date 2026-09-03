@@ -293,9 +293,9 @@ A slot that paints its own matches instead of rendering through
 `HighlightedChatSearchText` must call `useReportRenderedChatSearchBlock(blockId)`
 itself, or its block never counts as rendered and contributes no matches.
 
-A slot that hides its content behind a disclosure or a toggle can call
-`useHasActiveChatSearchMatch(blockId)` to reveal that content when it holds the
-active match, so scrolling to it doesn't land on something still hidden. This is
+A slot that hides its content behind a disclosure or a toggle can key an effect
+on `useActiveChatSearchMatchId(blockId)` to reveal that content for each match
+it holds in turn, so scrolling never lands on something still hidden. This is
 what the default reasoning disclosure does to open itself.
 
 ## Chat Session Types
