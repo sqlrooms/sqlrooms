@@ -58,14 +58,17 @@ Do NOT use for: single point distributions (use histogram), categorical counts (
         const dataTable = ensureTable(databaseAdapter, tableName);
         const normalizedSettings = LineChartSettings.parse(settings);
 
-        validateLineChartSettings({
+        const validatedSettings = validateLineChartSettings({
           dataTable,
           settings: normalizedSettings,
         });
+        const shouldLimitResults =
+          validatedSettings.metric === 'count' || !validatedSettings.xInterval;
 
         const chartConfig: LineChartConfig = {
           chartType: 'line-chart' as const,
           settings: normalizedSettings,
+          ...(shouldLimitResults ? {dataPolicy: {maxRows: maxDataPoints}} : {}),
         };
 
         await addChart({

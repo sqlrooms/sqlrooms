@@ -2,6 +2,7 @@ import {produce} from 'immer';
 import {createStore} from 'zustand/vanilla';
 import {ChartConfig, ChartType} from '../charts/chart-types';
 
+/** State and actions for a chart-builder draft. */
 export type ChartBuilderStoreState = {
   selectedTemplateId?: ChartType;
   fieldValues: Record<string, unknown>;

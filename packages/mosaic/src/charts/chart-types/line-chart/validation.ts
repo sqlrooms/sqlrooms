@@ -6,7 +6,11 @@ import {
   MissingColumnsError,
   RequiredFieldsError,
 } from '../errors';
-import {isNumericType, isQuantitativeType} from '../../../column-types-utils';
+import {
+  isNumericType,
+  isQuantitativeType,
+  isTemporalType,
+} from '../../../column-types-utils';
 import {TableColumn} from '@sqlrooms/duckdb';
 import {AggregateFunction, TemporalInterval} from '../../../schemas';
 import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
@@ -48,6 +52,11 @@ export function validateLineChartSettings({
   if (!xColumn) throw new MissingColumnsError(['X-axis']);
   if (!isQuantitativeType(xColumn.type)) {
     throw new InvalidColumnTypeError(xColumn.name, 'quantitative');
+  }
+  if (xInterval && !isTemporalType(xColumn.type)) {
+    throw new ChartSpecError(
+      `xInterval requires a temporal X-axis column; ${xColumn.name} has type ${xColumn.type}.`,
+    );
   }
   if (metric === 'count') {
     if (yFields.length > 0) {

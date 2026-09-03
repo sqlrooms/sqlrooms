@@ -100,6 +100,7 @@ describe('Mosaic block-document AI tools', () => {
         config: {
           chartType: 'line-chart',
           settings: {...input.settings, showLegend: true},
+          dataPolicy: {maxRows: 10_000},
         },
       }),
     );

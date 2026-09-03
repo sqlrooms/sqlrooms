@@ -88,6 +88,32 @@ async function selectMetric(from: string, to: string): Promise<void> {
   fireEvent.click(await screen.findByRole('option', {name: to}));
 }
 
+async function selectXAxis(from: string, to: string): Promise<void> {
+  fireEvent.click(screen.getByText(from));
+  fireEvent.click(
+    await screen.findByRole('option', {name: new RegExp(to, 'i')}),
+  );
+}
+
+it('clears a temporal interval when switching to a numeric X field', async () => {
+  const onChange = jest.fn<(config: LineChartConfig) => void>();
+  render(<Settings initialConfig={numericConfig} onChange={onChange} />);
+  await selectXAxis('time', 'amount');
+  const changed = onChange.mock.calls.at(-1)![0];
+  expect(changed.settings).toMatchObject({x: 'amount'});
+  expect(changed.settings).not.toHaveProperty('xInterval');
+  expect(() =>
+    validateLineChartSettings({
+      dataTable: {
+        tableName: 'events',
+        table: makeQualifiedTableName({schema: 'main', table: 'events'}),
+        columns,
+      },
+      settings: changed.settings,
+    }),
+  ).not.toThrow();
+});
+
 it('restores all numeric series after count mode and a serialized settings remount', async () => {
   const onChange = jest.fn<(config: LineChartConfig) => void>();
   const view = render(

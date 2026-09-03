@@ -266,7 +266,9 @@ the exact X value. Counts aggregate the full source without truncation, but
 retain the default **10,000 result-point limit**, including binned counts:
 distinct timestamps or overly fine bins can still produce too many points.
 Use a coarser temporal interval or reduce the distinct X values when the limit
-is exceeded. This limits rendered results, not the number of rows counted.
+is exceeded. This limits rendered results, not the number of rows counted. AI
+tools persist the host-configured result limit in the chart config, so custom
+limits remain effective when the chart renders.
 
 Existing configs remain numeric line charts when `metric` is omitted or is
 `"aggregate"`. They still use `yFields` with `sum`, `avg`, `min`, or `max` for
@@ -281,6 +283,10 @@ colors, even after saving and reopening the chart. The saved series are removed
 from that field on restoration and are never rendered or passed as count-mode
 Y fields. Count charts created without prior numeric series still require a Y
 selection when first switched to Numeric fields.
+
+`xInterval` is valid only with a temporal X column. Numeric X columns group by
+their exact values and reject temporal intervals rather than silently ignoring
+the requested grouping.
 
 The chart builder retains chart-local config options separately from active
 field values and carries them into the created chart. Resetting the builder or

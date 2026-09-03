@@ -4,7 +4,10 @@ import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 import {createLineChartSpec} from '../../src/charts/chart-types/line-chart/spec';
 import {LineChartSettings} from '../../src/charts/chart-types/line-chart/schema';
 import {lineChartChartType} from '../../src/charts/chart-types/line-chart/definition';
-import {assertChartDataPolicy} from '../../src/chart-runtime';
+import {
+  assertChartDataPolicy,
+  resolveChartDataPolicy,
+} from '../../src/chart-runtime';
 import {DataPointLimitError} from '../../src/DataPointLimitError';
 import {
   createLineChartAiTool,
@@ -31,7 +34,6 @@ describe('line-chart row counts', () => {
     {x: 'time'},
     {x: 'amount'},
     {x: 'time', xInterval: 'month' as const},
-    {x: 'amount', xInterval: 'month' as const},
   ])('limits count result points, not source rows: %j', (settings) => {
     const policy = lineChartChartType.getDataPolicy?.({
       tableName: 'events',
@@ -155,9 +157,85 @@ describe('line-chart row counts', () => {
         config: {
           chartType: 'line-chart',
           settings: {...countSettings, showLegend: true},
+          dataPolicy: {maxRows: 10_000},
         },
       }),
     );
+  });
+
+  it.each([500, 25_000])(
+    'persists the host count-result limit in the rendered config: %i',
+    async (maxDataPoints) => {
+      const addChart = jest.fn(async () => 'chart-1');
+      const tool = createLineChartAiTool({
+        databaseAdapter: {getTables: () => [events], findTable: () => events},
+        addChart,
+        maxDataPoints,
+      });
+      const result = await (tool as any).execute({
+        tableName: 'events',
+        settings: countSettings,
+      });
+      expect(result).toMatchObject({
+        success: true,
+        data: {dataPolicy: {maxRows: maxDataPoints}},
+      });
+      const config = addChart.mock.calls[0]![0].config;
+      const defaultPolicy = lineChartChartType.getDataPolicy?.({
+        tableName: 'events',
+        config,
+      });
+      const resolvedPolicy = resolveChartDataPolicy(
+        defaultPolicy,
+        config.dataPolicy,
+      );
+      expect(resolvedPolicy).toMatchObject({
+        maxRows: maxDataPoints,
+      });
+      expect(() =>
+        assertChartDataPolicy(resolvedPolicy, {numRows: maxDataPoints}),
+      ).not.toThrow();
+      expect(() =>
+        assertChartDataPolicy(resolvedPolicy, {numRows: maxDataPoints + 1}),
+      ).toThrow(DataPointLimitError);
+    },
+  );
+
+  it.each([
+    {x: 'amount', xInterval: 'month' as const, metric: 'count' as const},
+    {
+      x: 'amount',
+      xInterval: 'month' as const,
+      metric: 'aggregate' as const,
+      yFields: [{field: 'amount', aggregate: 'sum' as const}],
+    },
+  ])('rejects a temporal interval on a numeric axis: %j', (settings) => {
+    expect(() => createLineChartSpec({dataTable: events, settings})).toThrow(
+      'xInterval',
+    );
+  });
+
+  it('rejects a temporal interval on a numeric count axis through the tool', async () => {
+    const addChart = jest.fn(async () => 'chart-1');
+    const tool = createLineChartAiTool({
+      databaseAdapter: {getTables: () => [events], findTable: () => events},
+      addChart,
+      maxDataPoints: 10_000,
+    });
+    expect(
+      await (tool as any).execute({
+        tableName: 'events',
+        settings: {
+          x: 'amount',
+          xInterval: 'month',
+          metric: 'count',
+        },
+      }),
+    ).toMatchObject({
+      success: false,
+      errorMessage: expect.stringContaining('xInterval'),
+    });
+    expect(addChart).not.toHaveBeenCalled();
   });
 
   it('rejects contradictory count plus numeric series instead of ignoring them', async () => {
