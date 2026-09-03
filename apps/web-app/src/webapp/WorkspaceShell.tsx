@@ -46,7 +46,7 @@ import {
   Settings,
 } from 'lucide-react';
 import type React from 'react';
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {authClient, getNeonJWTToken} from '#/lib/auth-client';
 import type {JsonObject} from '#/lib/json';
 import {WorkspaceFileDialogs} from './files/WorkspaceFileDialogs';
@@ -163,6 +163,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   });
   const currentWorkspace =
     props.mode === 'saved' ? savedWorkspaceQuery.data : null;
+  const workspaceRevisionRef = useRef<number | null>(null);
   const {workspaceContentSnapshot, worksheets, selectedWorksheetId} =
     useWorkspaceRoomSnapshot({
       roomStore: workspaceRoomStore,
@@ -174,17 +175,30 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       if (props.mode !== 'saved' || !token || !canPersistWorkspace) return null;
 
       return async (snapshot) => {
-        await saveWorkspaceSnapshot({
+        const expectedRevision =
+          workspaceRevisionRef.current ?? currentWorkspace?.revision;
+        if (expectedRevision === undefined) {
+          throw new Error('Workspace revision is not available.');
+        }
+        const workspace = await saveWorkspaceSnapshot({
           data: {
             token,
             workspaceId: props.workspaceId,
             content: snapshot.content,
             layout: snapshot.layout as unknown as JsonObject,
             aiConfig: snapshot.aiConfig,
+            expectedRevision,
           },
         });
+        workspaceRevisionRef.current = workspace.revision;
       };
-    }, [canPersistWorkspace, props.mode, props.workspaceId, token]);
+    }, [
+      canPersistWorkspace,
+      currentWorkspace?.revision,
+      props.mode,
+      props.workspaceId,
+      token,
+    ]);
   const selectedWorksheet = useMemo(
     () =>
       worksheets.find((worksheet) => worksheet.id === selectedWorksheetId) ??
@@ -207,6 +221,10 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       setSavedWorkspaceNameDraft(currentWorkspace.name);
     }
   }, [currentWorkspace?.name]);
+
+  useEffect(() => {
+    workspaceRevisionRef.current = currentWorkspace?.revision ?? null;
+  }, [currentWorkspace?.id, currentWorkspace?.revision]);
 
   const initialWorkspaceLayout = useMemo(
     () =>
@@ -243,30 +261,61 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       ? createWorkspaceRoomSnapshot(workspaceRoomStore.getState())
       : null;
 
-    const workspace = await createWorkspaceMutation.mutateAsync({
-      data: {
-        token,
-        name: localWorkspaceName,
-        content:
-          roomSnapshot?.content ??
-          workspaceContentSnapshot ??
-          (createDefaultWorkspaceContent() as JsonObject),
-        layout: (roomSnapshot?.layout ??
-          initialWorkspaceLayout) as unknown as JsonObject,
-        aiConfig: roomSnapshot?.aiConfig ?? initialWorkspaceAiConfig,
-      },
-    });
+    let workspace: Awaited<ReturnType<typeof createCloudWorkspace>>;
+    try {
+      workspace = await createWorkspaceMutation.mutateAsync({
+        data: {
+          token,
+          name: localWorkspaceName,
+          content:
+            roomSnapshot?.content ??
+            workspaceContentSnapshot ??
+            (createDefaultWorkspaceContent() as JsonObject),
+          layout: (roomSnapshot?.layout ??
+            initialWorkspaceLayout) as unknown as JsonObject,
+          aiConfig: roomSnapshot?.aiConfig ?? initialWorkspaceAiConfig,
+        },
+      });
+    } catch (error) {
+      window.alert(getErrorMessage(error, 'Could not save workspace.'));
+      return;
+    }
 
-    await fileWorkflow.uploadPreparedLocalFiles({
-      uploadToken: token,
-      targetWorkspaceId: workspace.id,
-    });
+    let uploadError: unknown;
+    try {
+      await fileWorkflow.uploadPreparedLocalFiles({
+        uploadToken: token,
+        targetWorkspaceId: workspace.id,
+      });
+    } catch (error) {
+      uploadError = error;
+    }
 
-    await queryClient.invalidateQueries({queryKey: cloudWorkspacesQueryKey});
-    await navigate({
-      to: '/workspaces/$workspaceId',
-      params: {workspaceId: workspace.id},
-    });
+    try {
+      await queryClient.invalidateQueries({queryKey: cloudWorkspacesQueryKey});
+      await navigate({
+        to: '/workspaces/$workspaceId',
+        params: {workspaceId: workspace.id},
+      });
+    } catch (error) {
+      window.alert(
+        getErrorMessage(error, 'Workspace saved, but could not be opened.'),
+      );
+      return;
+    }
+
+    if (uploadError) {
+      window.alert(
+        `Workspace saved, but files could not be uploaded: ${getErrorMessage(uploadError, 'Unknown upload error')}`,
+      );
+    }
+  };
+
+  const handleCreateWorksheet = () => {
+    if (!workspaceRoomStore) return;
+    const state = workspaceRoomStore.getState();
+    const worksheetId = state.artifacts.createArtifact({type: 'worksheet'});
+    state.workspace.setCurrentWorksheet(worksheetId);
   };
 
   const handleWorkspaceTitleChange = (
@@ -370,6 +419,9 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
                       workspaceRoomStore
                         ?.getState()
                         .workspace.setCurrentWorksheet(worksheetId)
+                    }
+                    onCreateWorksheet={
+                      workspaceRoomStore ? handleCreateWorksheet : undefined
                     }
                   />
                 </SidebarGroupContent>
@@ -488,6 +540,10 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
       />
     </main>
   );
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
 }
 
 function SidebarBrand() {

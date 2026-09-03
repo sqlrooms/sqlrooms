@@ -10,7 +10,6 @@ import {
   type WorkspaceRoomSnapshot,
   type WorkspaceRoomState,
 } from './WorkspaceRoomStore';
-import {getWorkspaceHydrationKey} from './workspaceContent';
 
 export type SaveWorkspaceRoomSnapshot = (
   snapshot: WorkspaceRoomSnapshot,
@@ -45,12 +44,13 @@ export function WorkspaceRoomProvider({
   const hydratedRoomStoreRef = useRef<StoreApi<WorkspaceRoomState> | null>(
     null,
   );
-  const hydratedPersistenceRef = useRef<WorkspaceRoomPersistence | null>(null);
+  const hydratedInputsRef = useRef<{
+    roomPersistence: WorkspaceRoomPersistence | null;
+    content: JsonObject | undefined;
+    layout: LayoutNode;
+    aiConfig: JsonObject;
+  } | null>(null);
   const duckDbConnector = duckDbRuntime.runtime?.connector;
-  const workspaceHydrationKey = useMemo(
-    () => getWorkspaceHydrationKey(content),
-    [content],
-  );
   const roomStore = useMemo(() => {
     if (!duckDbConnector) return null;
 
@@ -90,9 +90,10 @@ export function WorkspaceRoomProvider({
 
     const shouldHydrateRoomStore =
       hydratedRoomStoreRef.current !== roomStore ||
-      Boolean(
-        roomPersistence && hydratedPersistenceRef.current !== roomPersistence,
-      );
+      hydratedInputsRef.current?.roomPersistence !== roomPersistence ||
+      hydratedInputsRef.current?.content !== content ||
+      hydratedInputsRef.current?.layout !== layout ||
+      hydratedInputsRef.current?.aiConfig !== aiConfig;
 
     if (!shouldHydrateRoomStore) {
       return;
@@ -101,27 +102,39 @@ export function WorkspaceRoomProvider({
     if (!roomPersistence) {
       hydrateFromProps();
       hydratedRoomStoreRef.current = roomStore;
+      hydratedInputsRef.current = {
+        roomPersistence,
+        content,
+        layout,
+        aiConfig,
+      };
       return;
     }
 
+    let isCurrent = true;
     void roomPersistence.controller
-      .pause(hydrateFromProps)
+      .pause(() => {
+        if (isCurrent) hydrateFromProps();
+      })
       .then(() => {
+        if (!isCurrent) return;
         hydratedRoomStoreRef.current = roomStore;
-        hydratedPersistenceRef.current = roomPersistence;
+        hydratedInputsRef.current = {
+          roomPersistence,
+          content,
+          layout,
+          aiConfig,
+        };
         roomPersistence.markStateSnapshotSaved(roomStore.getState());
       })
       .catch((error: unknown) => {
         roomStore.getState().room.captureException(error);
       });
-  }, [
-    aiConfig,
-    content,
-    layout,
-    roomStore,
-    roomPersistence,
-    workspaceHydrationKey,
-  ]);
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [aiConfig, content, layout, roomStore, roomPersistence]);
 
   useEffect(() => {
     if (!roomStore) return;

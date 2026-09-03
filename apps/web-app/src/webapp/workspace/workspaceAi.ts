@@ -2,7 +2,14 @@ import {AiSliceConfig} from '@sqlrooms/ai';
 import type {JsonObject} from '#/lib/json';
 
 export function parseWorkspaceAiConfig(aiConfig: JsonObject) {
-  return AiSliceConfig.parse(aiConfig);
+  const parsedConfig = AiSliceConfig.safeParse(aiConfig);
+  return parsedConfig.success
+    ? parsedConfig.data
+    : AiSliceConfig.parse({sessions: [], openSessionTabs: []});
+}
+
+export function isWorkspaceAiConfig(aiConfig: unknown): aiConfig is JsonObject {
+  return AiSliceConfig.safeParse(aiConfig).success;
 }
 
 export function getAiConfigSyncKey(aiConfig: unknown) {

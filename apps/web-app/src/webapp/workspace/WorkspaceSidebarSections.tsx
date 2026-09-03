@@ -145,10 +145,12 @@ export function WorksheetsSidebarSection({
   worksheets,
   selectedWorksheetId,
   onSelectWorksheet,
+  onCreateWorksheet,
 }: {
   worksheets: WorkspaceLayoutWorksheet[];
   selectedWorksheetId: string | undefined;
   onSelectWorksheet: (worksheetId: string) => void;
+  onCreateWorksheet: (() => void) | undefined;
 }) {
   const activeWorksheet = worksheets.find(
     (worksheet) => worksheet.id === selectedWorksheetId,
@@ -171,7 +173,11 @@ export function WorksheetsSidebarSection({
           </SidebarMenuItem>
         ))}
         <SidebarMenuItem>
-          <SidebarMenuButton type="button">
+          <SidebarMenuButton
+            type="button"
+            disabled={!onCreateWorksheet}
+            onClick={onCreateWorksheet}
+          >
             <Plus className="size-4" aria-hidden />
             <span>New Worksheet</span>
           </SidebarMenuButton>
@@ -211,7 +217,10 @@ export function WorksheetsSidebarSection({
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={!onCreateWorksheet}
+          onClick={onCreateWorksheet}
+        >
           <Plus className="size-4" aria-hidden />
           New Worksheet
         </DropdownMenuItem>

@@ -11,7 +11,7 @@ export const Route = createFileRoute('/api/files/$fileId/read')({
 async function handleFileReadRequest(fileId: string, request: Request) {
   const url = new URL(request.url);
   const workspaceId = url.searchParams.get('workspaceId');
-  const token = url.searchParams.get('token');
+  const token = readBearerToken(request);
 
   if (!workspaceId || !token) {
     return jsonError('Missing file read fields.', 400);
@@ -50,6 +50,11 @@ async function handleFileReadRequest(fileId: string, request: Request) {
     console.error('Could not read file', error);
     return jsonError('Could not read file.', 500);
   }
+}
+
+function readBearerToken(request: Request) {
+  const authorization = request.headers.get('authorization') ?? '';
+  return authorization.match(/^Bearer\s+(.+)$/i)?.[1] ?? null;
 }
 
 function jsonError(message: string, status: number, code = 'ERROR') {

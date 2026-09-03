@@ -2,13 +2,14 @@ import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {
   convertToModelMessages,
   streamText,
+  validateUIMessages,
   type LanguageModelUsage,
   type UIMessage,
 } from 'ai';
-import {and, count, eq, gte} from 'drizzle-orm';
+import {and, eq, sql} from 'drizzle-orm';
 import {z} from 'zod';
 import {db} from '#/db/index';
-import {aiUsageEvents} from '#/db/schema';
+import {aiUsageCounters, aiUsageEvents} from '#/db/schema';
 import {verifyAuthToken} from '#/lib/auth-token';
 import {requireEnv} from '#/lib/env';
 import type {AssistantModelMode} from './modelModes';
@@ -20,15 +21,20 @@ const OPENROUTER_MODELS_BY_MODE = {
 const DEFAULT_DAILY_MESSAGE_LIMIT = 60;
 
 const assistantChatInput = z.object({
-  messages: z.array(z.custom<UIMessage>()).min(1).max(80),
+  messages: z.array(z.unknown()).min(1).max(80),
   model: z.enum(['fast', 'deep']).optional(),
   instructions: z.string().trim().max(12000).optional(),
 });
 
 export async function runAssistantChat(request: Request) {
-  const data = assistantChatInput.parse(await request.json());
   const {userId} = await verifyAuthToken(readBearerToken(request));
-  await assertCanUseAssistant(userId);
+  const data = await parseAssistantChatInput(request);
+  let messages: UIMessage[];
+  try {
+    messages = await validateUIMessages({messages: data.messages});
+  } catch {
+    throw invalidAssistantRequest();
+  }
 
   const modelId = resolveOpenRouterModel(data.model);
   const openrouter = createOpenAICompatible({
@@ -40,22 +46,42 @@ export async function runAssistantChat(request: Request) {
       'X-Title': process.env.OPENROUTER_APP_NAME ?? 'SQLRooms',
     },
   });
+  const usageEventId = await reserveAssistantUsage(userId, modelId);
 
   const result = streamText({
     model: openrouter.chatModel(modelId),
     system: data.instructions || createSystemPrompt(),
-    messages: await convertToModelMessages(data.messages),
+    messages: await convertToModelMessages(messages),
     temperature: 0.2,
+    abortSignal: request.signal,
     onFinish: async ({usage}) => {
-      await recordAiUsage({
-        userId,
-        model: modelId,
-        usage,
-      });
+      try {
+        await recordAiUsage({usageEventId, userId, usage});
+      } catch (error) {
+        console.error('Could not record assistant usage', error);
+      }
     },
   });
 
   return result.toUIMessageStreamResponse();
+}
+
+async function parseAssistantChatInput(request: Request) {
+  try {
+    const parsed = assistantChatInput.safeParse(await request.json());
+    if (parsed.success) return parsed.data;
+  } catch {
+    // Fall through to the same intentionally generic client error.
+  }
+  throw invalidAssistantRequest();
+}
+
+function invalidAssistantRequest() {
+  return new AssistantError(
+    'Invalid assistant request.',
+    400,
+    'ASSISTANT_INVALID_REQUEST',
+  );
 }
 
 function resolveOpenRouterModel(modelMode: AssistantModelMode = 'fast') {
@@ -81,55 +107,73 @@ function readBearerToken(request: Request) {
   return match[1];
 }
 
-async function assertCanUseAssistant(userId: string) {
+async function reserveAssistantUsage(userId: string, model: string) {
   const dailyLimit = Number.parseInt(
     process.env.AI_DAILY_MESSAGE_LIMIT || '',
     10,
   );
-  const limit = Number.isFinite(dailyLimit)
-    ? dailyLimit
-    : DEFAULT_DAILY_MESSAGE_LIMIT;
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const limit =
+    Number.isFinite(dailyLimit) && dailyLimit > 0
+      ? dailyLimit
+      : DEFAULT_DAILY_MESSAGE_LIMIT;
+  const now = new Date();
+  const windowCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const reservation = await db.execute<{id: string}>(sql`
+    with quota as (
+      insert into ${aiUsageCounters}
+        (user_id, provider, window_started_at, message_count, updated_at)
+      values (${userId}, 'openrouter', ${now}, 1, ${now})
+      on conflict (user_id, provider) do update set
+        window_started_at = case
+          when ${aiUsageCounters.windowStartedAt} < ${windowCutoff} then ${now}
+          else ${aiUsageCounters.windowStartedAt}
+        end,
+        message_count = case
+          when ${aiUsageCounters.windowStartedAt} < ${windowCutoff} then 1
+          else ${aiUsageCounters.messageCount} + 1
+        end,
+        updated_at = ${now}
+      where ${aiUsageCounters.windowStartedAt} < ${windowCutoff}
+        or ${aiUsageCounters.messageCount} < ${limit}
+      returning user_id
+    )
+    insert into ${aiUsageEvents}
+      (user_id, provider, model, purpose)
+    select ${userId}, 'openrouter', ${model}, 'chat' from quota
+    returning id
+  `);
 
-  const rows = await db
-    .select({value: count()})
-    .from(aiUsageEvents)
-    .where(
-      and(
-        eq(aiUsageEvents.userId, userId),
-        eq(aiUsageEvents.provider, 'openrouter'),
-        gte(aiUsageEvents.createdAt, since),
-      ),
-    );
-
-  if ((rows[0]?.value ?? 0) >= limit) {
+  const usageEventId = reservation.rows[0]?.id;
+  if (!usageEventId) {
     throw new AssistantError(
       `Daily assistant limit reached (${limit} messages).`,
       429,
       'ASSISTANT_LIMIT_REACHED',
     );
   }
+  return usageEventId;
 }
 
 async function recordAiUsage({
+  usageEventId,
   userId,
-  model,
   usage,
 }: {
+  usageEventId: string;
   userId: string;
-  model: string;
   usage: LanguageModelUsage | undefined;
 }) {
-  await db.insert(aiUsageEvents).values({
-    userId,
-    provider: 'openrouter',
-    model,
-    purpose: 'chat',
-    inputTokens: usage?.inputTokens,
-    outputTokens: usage?.outputTokens,
-    reasoningTokens: usage?.outputTokenDetails?.reasoningTokens,
-    cachedInputTokens: usage?.inputTokenDetails?.cacheReadTokens,
-  });
+  await db
+    .update(aiUsageEvents)
+    .set({
+      inputTokens: usage?.inputTokens,
+      outputTokens: usage?.outputTokens,
+      reasoningTokens: usage?.outputTokenDetails?.reasoningTokens,
+      cachedInputTokens: usage?.inputTokenDetails?.cacheReadTokens,
+    })
+    .where(
+      and(eq(aiUsageEvents.id, usageEventId), eq(aiUsageEvents.userId, userId)),
+    );
 }
 
 export class AssistantError extends Error {

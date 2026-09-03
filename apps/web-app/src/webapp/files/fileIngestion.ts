@@ -1,5 +1,7 @@
 import {PARQUET_UPLOAD_LIMIT_BYTES} from './fileLimits';
+import {isWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import type {WorkspaceDuckDbRuntime} from '../worksheet/duckdbRuntime';
+import {escapeIdentifier} from '../sql';
 
 export type PreparedWorkspaceFile = {
   id: string;
@@ -100,10 +102,10 @@ export async function loadSavedWorkspaceFile({
 }) {
   const url = `/api/files/${encodeURIComponent(
     fileId,
-  )}/read?workspaceId=${encodeURIComponent(
-    workspaceId,
-  )}&token=${encodeURIComponent(token)}`;
-  const response = await fetch(url);
+  )}/read?workspaceId=${encodeURIComponent(workspaceId)}`;
+  const response = await fetch(url, {
+    headers: {Authorization: `Bearer ${token}`},
+  });
   if (!response.ok) {
     throw new Error('Could not load saved file.');
   }
@@ -144,12 +146,10 @@ async function exportTableToParquet(
   tableName: string,
 ) {
   const outputFileName = `${tableName}_${crypto.randomUUID()}.parquet`;
-  const wasmConnector = runtime.connector as unknown as {
-    getDb(): {
-      copyFileToBuffer(name: string): Promise<Uint8Array>;
-      dropFile(name: string): Promise<unknown>;
-    };
-  };
+  if (!isWasmDuckDbConnector(runtime.connector)) {
+    throw new Error('Parquet export requires the browser DuckDB runtime.');
+  }
+  const wasmConnector = runtime.connector;
   await runtime.connector.execute(
     `copy ${escapeIdentifier(tableName)} to '${outputFileName}' (format parquet)`,
   );
@@ -175,8 +175,4 @@ export function createTableName(fileName: string) {
     .slice(0, 63);
   const baseName = sanitized || 'uploaded_file';
   return /^\d/.test(baseName) ? `_${baseName}` : baseName;
-}
-
-function escapeIdentifier(identifier: string) {
-  return `"${identifier.replaceAll('"', '""')}"`;
 }

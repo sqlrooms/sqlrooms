@@ -1,10 +1,11 @@
-import {and, desc, eq, sql} from 'drizzle-orm';
+import {and, desc, eq, exists, inArray, sql} from 'drizzle-orm';
 import {createServerFn} from '@tanstack/react-start';
 import {z} from 'zod';
 import {db} from '#/db/index';
 import {workspaceMembers, workspaces} from '#/db/schema';
 import {verifyAuthToken} from '#/lib/auth-token';
 import {isJsonObject, type JsonObject} from '#/lib/json';
+import {isWorkspaceAiConfig} from './workspaceAi';
 
 const authInput = z.object({
   token: z.string().min(1),
@@ -16,7 +17,9 @@ const workspaceInput = authInput.extend({
 
 const workspaceContentInput = z.custom<JsonObject>(isJsonObject);
 const workspaceLayoutInput = z.custom<JsonObject>(isJsonObject);
-const workspaceAiConfigInput = z.custom<JsonObject>(isJsonObject);
+const workspaceAiConfigInput = z
+  .custom<JsonObject>(isJsonObject)
+  .refine(isWorkspaceAiConfig, 'Invalid workspace AI configuration');
 
 const serializeWorkspace = (workspace: typeof workspaces.$inferSelect) => ({
   id: workspace.id,
@@ -24,6 +27,7 @@ const serializeWorkspace = (workspace: typeof workspaces.$inferSelect) => ({
   content: workspace.content as JsonObject,
   aiConfig: workspace.aiConfig as JsonObject,
   layout: workspace.layout as JsonObject,
+  revision: workspace.revision,
   createdAt: workspace.createdAt.getTime(),
   updatedAt: workspace.updatedAt.getTime(),
   lastOpenedAt: workspace.lastOpenedAt?.getTime(),
@@ -52,12 +56,20 @@ export const getCloudWorkspace = createServerFn({method: 'POST'})
   .inputValidator(workspaceInput)
   .handler(async ({data}) => {
     const {userId} = await verifyAuthToken(data.token);
-    await assertWorkspaceMember(userId, data.workspaceId);
 
     const workspaceRows = await db
       .update(workspaces)
       .set({lastOpenedAt: new Date()})
-      .where(eq(workspaces.id, data.workspaceId))
+      .where(
+        and(
+          eq(workspaces.id, data.workspaceId),
+          hasWorkspaceRole(userId, data.workspaceId, [
+            'owner',
+            'editor',
+            'viewer',
+          ]),
+        ),
+      )
       .returning();
 
     const workspace = workspaceRows[0];
@@ -79,27 +91,28 @@ export const createCloudWorkspace = createServerFn({method: 'POST'})
     const {userId} = await verifyAuthToken(data.token);
     const now = new Date();
 
-    const workspaceRows = await db
-      .insert(workspaces)
-      .values({
-        ownerId: userId,
-        name: data.name,
-        content: data.content,
-        layout: data.layout,
-        aiConfig: data.aiConfig,
-        lastOpenedAt: now,
-      })
-      .returning();
+    const workspaceId = crypto.randomUUID();
+    const [workspaceRows] = await db.batch([
+      db
+        .insert(workspaces)
+        .values({
+          id: workspaceId,
+          ownerId: userId,
+          name: data.name,
+          content: data.content,
+          layout: data.layout,
+          aiConfig: data.aiConfig,
+          lastOpenedAt: now,
+        })
+        .returning(),
+      db.insert(workspaceMembers).values({
+        workspaceId,
+        userId,
+        role: 'owner',
+      }),
+    ]);
 
-    const workspace = workspaceRows[0];
-
-    await db.insert(workspaceMembers).values({
-      workspaceId: workspace.id,
-      userId,
-      role: 'owner',
-    });
-
-    return serializeWorkspace(workspace);
+    return serializeWorkspace(workspaceRows[0]);
   });
 
 export const saveWorkspaceSnapshot = createServerFn({method: 'POST'})
@@ -108,24 +121,35 @@ export const saveWorkspaceSnapshot = createServerFn({method: 'POST'})
       content: workspaceContentInput,
       layout: workspaceLayoutInput,
       aiConfig: workspaceAiConfigInput,
+      expectedRevision: z.number().int().nonnegative(),
     }),
   )
   .handler(async ({data}) => {
     const {userId} = await verifyAuthToken(data.token);
-    await assertWorkspaceRole(userId, data.workspaceId, ['owner', 'editor']);
-
     const rows = await db
       .update(workspaces)
       .set({
         content: data.content,
         layout: data.layout,
         aiConfig: data.aiConfig,
+        revision: sql`${workspaces.revision} + 1`,
         updatedAt: new Date(),
       })
-      .where(eq(workspaces.id, data.workspaceId))
+      .where(
+        and(
+          eq(workspaces.id, data.workspaceId),
+          eq(workspaces.revision, data.expectedRevision),
+          hasWorkspaceRole(userId, data.workspaceId, ['owner', 'editor']),
+        ),
+      )
       .returning();
 
-    return rows[0] ? serializeWorkspace(rows[0]) : null;
+    if (rows[0]) return serializeWorkspace(rows[0]);
+
+    await assertWorkspaceRole(userId, data.workspaceId, ['owner', 'editor']);
+    throw new Error(
+      'Workspace changed in another session. Reload before saving again.',
+    );
   });
 
 export const renameCloudWorkspace = createServerFn({method: 'POST'})
@@ -136,29 +160,55 @@ export const renameCloudWorkspace = createServerFn({method: 'POST'})
   )
   .handler(async ({data}) => {
     const {userId} = await verifyAuthToken(data.token);
-    await assertWorkspaceRole(userId, data.workspaceId, ['owner', 'editor']);
-
     const rows = await db
       .update(workspaces)
       .set({name: data.name, updatedAt: new Date()})
-      .where(eq(workspaces.id, data.workspaceId))
+      .where(
+        and(
+          eq(workspaces.id, data.workspaceId),
+          hasWorkspaceRole(userId, data.workspaceId, ['owner', 'editor']),
+        ),
+      )
       .returning();
 
-    return rows[0] ? serializeWorkspace(rows[0]) : null;
+    if (!rows[0]) throw new Error('Workspace not found');
+    return serializeWorkspace(rows[0]);
   });
 
 export const deleteCloudWorkspace = createServerFn({method: 'POST'})
   .inputValidator(workspaceInput)
   .handler(async ({data}) => {
     const {userId} = await verifyAuthToken(data.token);
-    await assertWorkspaceRole(userId, data.workspaceId, ['owner']);
-
-    await db.delete(workspaces).where(eq(workspaces.id, data.workspaceId));
+    const rows = await db
+      .delete(workspaces)
+      .where(
+        and(
+          eq(workspaces.id, data.workspaceId),
+          hasWorkspaceRole(userId, data.workspaceId, ['owner']),
+        ),
+      )
+      .returning({id: workspaces.id});
+    if (!rows[0]) throw new Error('Workspace not found');
     return {ok: true};
   });
 
-async function assertWorkspaceMember(userId: string, workspaceId: string) {
-  await assertWorkspaceRole(userId, workspaceId, ['owner', 'editor', 'viewer']);
+function hasWorkspaceRole(
+  userId: string,
+  workspaceId: string,
+  roles: string[],
+) {
+  return exists(
+    db
+      .select({workspaceId: workspaceMembers.workspaceId})
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspaceId),
+          eq(workspaceMembers.userId, userId),
+          inArray(workspaceMembers.role, roles),
+        ),
+      ),
+  );
 }
 
 async function assertWorkspaceRole(

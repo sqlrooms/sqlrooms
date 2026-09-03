@@ -70,6 +70,18 @@ const state = {
         columns: [{name: 'snapshot', type: 'BLOB'}],
         rowCount: 1,
       },
+      {
+        table: {database: 'main', schema: '__SQLRooms_Private', table: 'mixed'},
+        isView: false,
+        columns: [{name: 'payload', type: 'JSON'}],
+        rowCount: 1,
+      },
+      {
+        table: {database: 'CUSTOM_META', schema: 'main', table: 'mixed_meta'},
+        isView: false,
+        columns: [{name: 'payload', type: 'JSON'}],
+        rowCount: 1,
+      },
     ],
     sqlSelectToJson,
     getConnector: jest.fn(async () => ({query})),

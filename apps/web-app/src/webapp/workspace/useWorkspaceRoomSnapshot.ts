@@ -2,15 +2,12 @@ import type {StoreApi} from '@sqlrooms/room-store';
 import {useEffect, useMemo, useState} from 'react';
 import type {JsonObject} from '#/lib/json';
 import type {WorkspaceRoomState} from './WorkspaceRoomStore';
+import {
+  getActiveRoomSnapshotProjection,
+  type RoomSnapshotState,
+  type WorkspaceRoomSnapshotProjection,
+} from './roomSnapshotProjection';
 import {getWorkspaceContentWorksheets} from './workspaceContent';
-
-type WorkspaceRoomSnapshotProjection = {
-  artifactsConfig: WorkspaceRoomState['artifacts']['config'];
-  blockDocumentsConfig: WorkspaceRoomState['blockDocuments']['config'];
-  sqlEditorConfig: WorkspaceRoomState['sqlEditor']['config'];
-  mosaicDashboardConfig: WorkspaceRoomState['mosaicDashboard']['config'];
-  currentArtifactId: string | undefined;
-};
 
 export function useWorkspaceRoomSnapshot({
   roomStore,
@@ -44,18 +41,18 @@ export function useWorkspaceRoomSnapshot({
 function useRoomSnapshotProjection(
   roomStore: StoreApi<WorkspaceRoomState> | null,
 ) {
-  const [snapshot, setSnapshot] =
-    useState<WorkspaceRoomSnapshotProjection | null>(() =>
-      roomStore ? getRoomSnapshotProjection(roomStore) : null,
-    );
+  const [snapshot, setSnapshot] = useState<RoomSnapshotState>(() => ({
+    roomStore,
+    projection: roomStore ? getRoomSnapshotProjection(roomStore) : null,
+  }));
 
   useEffect(() => {
     if (!roomStore) {
-      setSnapshot(null);
+      setSnapshot({roomStore: null, projection: null});
       return;
     }
 
-    setSnapshot(getRoomSnapshotProjection(roomStore));
+    setSnapshot({roomStore, projection: getRoomSnapshotProjection(roomStore)});
     return roomStore.subscribe((state, previousState) => {
       if (
         state.artifacts.config === previousState.artifacts.config &&
@@ -66,11 +63,14 @@ function useRoomSnapshotProjection(
         return;
       }
 
-      setSnapshot(getRoomSnapshotProjection(roomStore));
+      setSnapshot({
+        roomStore,
+        projection: getRoomSnapshotProjection(roomStore),
+      });
     });
   }, [roomStore]);
 
-  return snapshot;
+  return getActiveRoomSnapshotProjection(snapshot, roomStore);
 }
 
 function getRoomSnapshotProjection(

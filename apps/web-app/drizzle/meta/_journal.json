@@ -8,6 +8,13 @@
       "when": 1780403386917,
       "tag": "0000_elite_madrox",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788440341014,
+      "tag": "0001_dapper_kree",
+      "breakpoints": true
     }
   ]
 }

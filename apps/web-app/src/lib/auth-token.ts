@@ -41,6 +41,11 @@ async function getAuthJwks() {
     throw new Error('NEON_AUTH_JWKS_URL is required');
   }
 
-  remoteJwks ??= createRemoteJWKSet(new URL(process.env.NEON_AUTH_JWKS_URL));
+  const remoteJwksUrl = new URL(process.env.NEON_AUTH_JWKS_URL);
+  if (remoteJwksUrl.protocol !== 'https:') {
+    throw new Error('NEON_AUTH_JWKS_URL must use HTTPS');
+  }
+
+  remoteJwks ??= createRemoteJWKSet(remoteJwksUrl);
   return remoteJwks;
 }

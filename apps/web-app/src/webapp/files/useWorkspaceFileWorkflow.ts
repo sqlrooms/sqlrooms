@@ -1,4 +1,7 @@
-import {generateUniqueName} from '@sqlrooms/utils';
+import {
+  formatBytes as formatByteCount,
+  generateUniqueName,
+} from '@sqlrooms/utils';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type React from 'react';
 import {
@@ -12,6 +15,7 @@ import {
 import {deleteWorkspaceFile} from '../workspace/files';
 import type {useWorkspaceDuckDbRuntime} from '../worksheet/useWorkspaceDuckDbRuntime';
 import type {WorkspaceSchemaTableItem} from '../workspace/WorkspaceSidebarSections';
+import {escapeIdentifier} from '../sql';
 
 export type FileConflictResolution =
   | {action: 'replace'}
@@ -127,19 +131,21 @@ export function useWorkspaceFileWorkflow({
     let isCurrent = true;
     const runtime = duckDbRuntime.runtime;
     const loadedTables = new Set(duckDbRuntime.tableNames);
+    const filesToLoad = workspaceFiles.filter(
+      (file) => !loadedTables.has(file.tableName),
+    );
+    if (filesToLoad.length === 0) return;
 
     Promise.all(
-      workspaceFiles
-        .filter((file) => !loadedTables.has(file.tableName))
-        .map((file) =>
-          loadSavedWorkspaceFile({
-            runtime,
-            token,
-            workspaceId,
-            fileId: file.id,
-            tableName: file.tableName,
-          }),
-        ),
+      filesToLoad.map((file) =>
+        loadSavedWorkspaceFile({
+          runtime,
+          token,
+          workspaceId,
+          fileId: file.id,
+          tableName: file.tableName,
+        }),
+      ),
     )
       .then(() => {
         if (isCurrent) return duckDbRuntime.refreshTables();
@@ -390,20 +396,7 @@ function hasTableName(tableNames: string[], tableName: string) {
   );
 }
 
-function escapeIdentifier(identifier: string) {
-  return `"${identifier.replaceAll('"', '""')}"`;
-}
-
 function formatBytes(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
-
-  const units = ['B', 'KB', 'MB', 'GB'] as const;
-  let value = bytes;
-  let unitIndex = 0;
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex += 1;
-  }
-
-  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+  return formatByteCount(bytes);
 }

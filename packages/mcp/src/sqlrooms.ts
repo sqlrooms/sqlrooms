@@ -455,15 +455,18 @@ async function refreshVisibleTables<TState extends SqlRoomsCapabilityState>(
   metaNamespace: string,
 ): Promise<DataTable[]> {
   await store.getState().db.refreshTableSchemas();
+  const normalizedMetaNamespace = metaNamespace.toLowerCase();
   return store.getState().db.tables.filter((table) => {
     const {database, schema, table: tableName} = table.table;
-    const identifiers = [database, schema, tableName];
+    const identifiers = [database, schema, tableName].map((identifier) =>
+      identifier?.toLowerCase(),
+    );
     return (
       !identifiers.some((identifier) =>
         identifier?.startsWith(INTERNAL_SQLROOMS_PREFIX),
       ) &&
-      database !== metaNamespace &&
-      schema !== metaNamespace
+      database?.toLowerCase() !== normalizedMetaNamespace &&
+      schema?.toLowerCase() !== normalizedMetaNamespace
     );
   });
 }

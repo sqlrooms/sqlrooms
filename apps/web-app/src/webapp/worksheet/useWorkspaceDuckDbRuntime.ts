@@ -59,18 +59,37 @@ export function useWorkspaceDuckDbRuntime(workspaceId: string) {
   }, [workspaceKey]);
 
   const refreshTables = useCallback(async () => {
-    if (!runtime) {
-      setTableNames([]);
-      return;
-    }
-    setTableNames(await runtime.listTables());
-  }, [runtime]);
+    if (!runtime || runtime.workspaceKey !== workspaceKey) return;
+    const nextTableNames = await runtime.listTables();
+    setTableNames((currentTableNames) =>
+      areTableNamesEqual(currentTableNames, nextTableNames)
+        ? currentTableNames
+        : nextTableNames,
+    );
+  }, [runtime, workspaceKey]);
+
+  const isCurrentWorkspace = isWorkspaceRuntimeCurrent(runtime, workspaceKey);
+  const hasStaleRuntime = runtime !== null && !isCurrentWorkspace;
 
   return {
-    runtime,
-    tableNames,
-    status,
-    error,
+    runtime: isCurrentWorkspace ? runtime : null,
+    tableNames: hasStaleRuntime ? [] : tableNames,
+    status: hasStaleRuntime ? 'initializing' : status,
+    error: hasStaleRuntime ? null : error,
     refreshTables,
   } satisfies WorkspaceDuckDbRuntimeState;
+}
+
+export function areTableNamesEqual(left: string[], right: string[]) {
+  return (
+    left.length === right.length &&
+    left.every((tableName, index) => tableName === right[index])
+  );
+}
+
+export function isWorkspaceRuntimeCurrent(
+  runtime: WorkspaceDuckDbRuntime | null,
+  workspaceKey: string,
+) {
+  return runtime?.workspaceKey === workspaceKey;
 }

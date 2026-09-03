@@ -1,4 +1,5 @@
 import type {DuckDbConnector} from '@sqlrooms/duckdb';
+import {escapeIdentifier} from '../sql';
 
 export type WorkspaceDuckDbRuntime = {
   workspaceKey: string;
@@ -17,10 +18,6 @@ export function createWorkspaceDuckDbConnector(workspaceKey: string) {
       ].join(';'),
     }),
   );
-}
-
-function escapeIdentifier(identifier: string) {
-  return `"${identifier.replaceAll('"', '""')}"`;
 }
 
 export async function createWorkspaceDuckDbRuntime(

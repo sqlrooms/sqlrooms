@@ -88,6 +88,7 @@ export const workspaces = pgTable(
           },
         ],
       }),
+    revision: integer().default(0).notNull(),
     createdAt: timestamp('created_at', {withTimezone: true})
       .defaultNow()
       .notNull(),
@@ -191,6 +192,31 @@ export const aiUsageEvents = pgTable(
     index('ai_usage_events_user_created_at_idx').on(
       table.userId,
       table.createdAt,
+    ),
+  ],
+);
+
+export const aiUsageCounters = pgTable(
+  'ai_usage_counters',
+  {
+    userId: text('user_id').notNull(),
+    provider: text().notNull(),
+    windowStartedAt: timestamp('window_started_at', {withTimezone: true})
+      .defaultNow()
+      .notNull(),
+    messageCount: integer('message_count').default(0).notNull(),
+    updatedAt: timestamp('updated_at', {withTimezone: true})
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.userId, table.provider],
+      name: 'ai_usage_counters_user_provider_pk',
+    }),
+    check(
+      'ai_usage_counters_message_count_check',
+      sql`${table.messageCount} >= 0`,
     ),
   ],
 );

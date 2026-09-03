@@ -1,5 +1,6 @@
 import {env} from 'cloudflare:workers';
 import {and, eq, sql} from 'drizzle-orm';
+import {formatBytes as formatByteCount} from '@sqlrooms/utils';
 import {db} from '#/db/index';
 import {files, userStorageUsage, workspaceMembers} from '#/db/schema';
 import {
@@ -47,6 +48,7 @@ export async function createFileUploadIntent({
   const objectKey = createR2ObjectKey({userId, workspaceId, fileId});
   const uploadUrl = await createR2PresignedPutUrl({
     objectKey,
+    contentLength: parquetSizeBytes,
     expiresSeconds: PRESIGNED_UPLOAD_EXPIRES_SECONDS,
   });
 
@@ -85,9 +87,11 @@ export async function finalizeFileUpload({
   await assertWorkspaceMember(userId, workspaceId);
   assertParquetSize(parquetSizeBytes);
   assertExpectedObjectKey({userId, workspaceId, fileId, objectKey});
-  await assertStorageAvailable(userId, parquetSizeBytes);
+  const existingFile = await findStoredFile(fileId, objectKey);
+  if (existingFile) return existingFile;
 
-  const uploadedObject = await getUserFilesBucket().head(objectKey);
+  const bucket = getUserFilesBucket();
+  const uploadedObject = await bucket.head(objectKey);
   if (!uploadedObject) {
     throw new FileStorageError(
       'Uploaded file was not found.',
@@ -96,6 +100,7 @@ export async function finalizeFileUpload({
     );
   }
   if (uploadedObject.size !== parquetSizeBytes) {
+    await bucket.delete(objectKey);
     throw new FileStorageError(
       'Uploaded file size does not match the upload intent.',
       400,
@@ -104,54 +109,86 @@ export async function finalizeFileUpload({
   }
 
   const now = new Date();
-  const rows = await db
-    .insert(files)
-    .values({
-      id: fileId,
-      ownerId: userId,
-      workspaceId,
-      originalName,
-      tableName,
-      objectKey,
-      mimeType: PARQUET_MIME_TYPE,
-      sizeBytes: parquetSizeBytes,
-      sourceSizeBytes,
-      rowCount,
-      contentHash,
-    })
-    .onConflictDoNothing()
-    .returning();
+  try {
+    const result = await db.execute<{id: string}>(sql`
+      with reservation as (
+        insert into ${userStorageUsage}
+          (user_id, used_bytes, limit_bytes, updated_at)
+        select
+          ${userId},
+          ${parquetSizeBytes},
+          ${USER_STORAGE_LIMIT_BYTES},
+          ${now}
+        from ${workspaceMembers}
+        where ${workspaceMembers.workspaceId} = ${workspaceId}
+          and ${workspaceMembers.userId} = ${userId}
+        on conflict (user_id) do update set
+          used_bytes = ${userStorageUsage.usedBytes} + ${parquetSizeBytes},
+          updated_at = ${now}
+        where ${userStorageUsage.usedBytes} + ${parquetSizeBytes}
+          <= ${userStorageUsage.limitBytes}
+        returning user_id
+      )
+      insert into ${files} (
+        id,
+        owner_id,
+        workspace_id,
+        original_name,
+        table_name,
+        object_key,
+        mime_type,
+        size_bytes,
+        source_size_bytes,
+        row_count,
+        content_hash
+      )
+      select
+        ${fileId},
+        ${userId},
+        ${workspaceId},
+        ${originalName},
+        ${tableName},
+        ${objectKey},
+        ${PARQUET_MIME_TYPE},
+        ${parquetSizeBytes},
+        ${sourceSizeBytes ?? null},
+        ${rowCount ?? null},
+        ${contentHash ?? null}
+      from reservation
+      returning id
+    `);
 
-  const file = rows[0];
-  if (!file) {
-    const existing = await db
-      .select()
-      .from(files)
-      .where(eq(files.objectKey, objectKey))
-      .limit(1);
-    if (!existing[0]) {
-      throw new FileStorageError('Could not finalize upload.', 500);
+    if (!result.rows[0]) {
+      await bucket.delete(objectKey);
+      await assertWorkspaceMember(userId, workspaceId);
+      throw new FileStorageError(
+        `This upload would exceed the ${formatBytes(USER_STORAGE_LIMIT_BYTES)} storage limit.`,
+        403,
+        'STORAGE_LIMIT_REACHED',
+      );
     }
-    return existing[0];
+  } catch (error) {
+    if (error instanceof FileStorageError) throw error;
+    const concurrentFile = await findStoredFile(fileId, objectKey);
+    if (concurrentFile) return concurrentFile;
+    await bucket.delete(objectKey);
+    throw new FileStorageError('Could not finalize upload.', 500);
   }
 
-  await db
-    .insert(userStorageUsage)
-    .values({
-      userId,
-      usedBytes: parquetSizeBytes,
-      limitBytes: USER_STORAGE_LIMIT_BYTES,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: userStorageUsage.userId,
-      set: {
-        usedBytes: sql`${userStorageUsage.usedBytes} + ${parquetSizeBytes}`,
-        updatedAt: now,
-      },
-    });
+  const file = await findStoredFile(fileId, objectKey);
+  if (file) return file;
 
-  return file;
+  await bucket.delete(objectKey);
+  throw new FileStorageError('Could not finalize upload.', 500);
+}
+
+async function findStoredFile(fileId: string, objectKey: string) {
+  const rows = await db
+    .select()
+    .from(files)
+    .where(and(eq(files.id, fileId), eq(files.objectKey, objectKey)))
+    .limit(1);
+  return rows[0];
 }
 
 export async function getFileObjectForRead({
@@ -318,9 +355,11 @@ function assertExpectedObjectKey({
 
 async function createR2PresignedPutUrl({
   objectKey,
+  contentLength,
   expiresSeconds,
 }: {
   objectKey: string;
+  contentLength: number;
   expiresSeconds: number;
 }) {
   const accountId = getRequiredEnv('R2_ACCOUNT_ID');
@@ -343,16 +382,17 @@ async function createR2PresignedPutUrl({
     'X-Amz-Credential': `${accessKeyId}/${credentialScope}`,
     'X-Amz-Date': date,
     'X-Amz-Expires': String(expiresSeconds),
-    'X-Amz-SignedHeaders': 'host',
+    'X-Amz-SignedHeaders': 'content-length;host',
   });
   const canonicalQuery = canonicalizeQuery(query);
   const canonicalRequest = [
     'PUT',
     canonicalUri,
     canonicalQuery,
+    `content-length:${contentLength}`,
     `host:${host}`,
     '',
-    'host',
+    'content-length;host',
     'UNSIGNED-PAYLOAD',
   ].join('\n');
   const stringToSign = [
@@ -475,12 +515,6 @@ function bytesToHex(bytes: Uint8Array) {
 }
 
 function formatBytes(bytes: number) {
-  const units = ['B', 'KB', 'MB', 'GB'] as const;
-  let value = bytes;
-  let unitIndex = 0;
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex += 1;
-  }
-  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  return formatByteCount(bytes);
 }

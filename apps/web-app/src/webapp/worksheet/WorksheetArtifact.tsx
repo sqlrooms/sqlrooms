@@ -32,16 +32,19 @@ import {
   getOwnedStatefulBlockIds,
   serializeWorksheetContent,
 } from './worksheetState';
+import {getWorksheetChartSettingsState} from './worksheetChartSettings';
 
 type ChartConfigType = ReturnType<typeof ChartConfig.parse>;
 
 export const WorksheetArtifactPanel: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId = (meta?.artifactId as string) ?? panelId;
-  const artifact = useBaseRoomStore<WorkspaceRoomState, {title: string} | null>(
-    (state) => {
-      const candidate = state.artifacts.getArtifact(artifactId);
-      return candidate?.type === 'worksheet' ? {title: candidate.title} : null;
-    },
+  const artifact = useBaseRoomStore<
+    WorkspaceRoomState,
+    ReturnType<WorkspaceRoomState['artifacts']['getArtifact']>
+  >((state) => state.artifacts.config.artifactsById[artifactId]);
+  const title = useMemo(
+    () => (artifact?.type === 'worksheet' ? artifact.title : null),
+    [artifact],
   );
   const renameArtifact = useBaseRoomStore<
     WorkspaceRoomState,
@@ -55,13 +58,13 @@ export const WorksheetArtifactPanel: RoomPanelComponent = ({panelId, meta}) => {
     [artifactId, renameArtifact],
   );
 
-  if (!artifact) return null;
+  if (!title) return null;
 
   return (
     <div className="worksheet-document-surface">
       <WorksheetBlockDocument
         worksheetId={artifactId}
-        title={artifact.title}
+        title={title}
         onTitleChange={handleTitleChange}
       />
     </div>
@@ -100,12 +103,13 @@ export function WorksheetBlockDocument({
 }
 
 export function useSerializedWorksheetContent(worksheetId: string) {
-  const content = useBaseRoomStore<WorkspaceRoomState, BlockDocumentContent>(
-    (state) =>
-      state.blockDocuments.config.artifacts[worksheetId]?.content ?? {
-        type: 'doc',
-        content: [],
-      },
+  const storedContent = useBaseRoomStore<
+    WorkspaceRoomState,
+    BlockDocumentContent | undefined
+  >((state) => state.blockDocuments.config.artifacts[worksheetId]?.content);
+  const content = useMemo<BlockDocumentContent>(
+    () => storedContent ?? {type: 'doc', content: []},
+    [storedContent],
   );
   const sqlEditorConfig = useBaseRoomStore<
     WorkspaceRoomState,
@@ -437,6 +441,10 @@ const WorksheetChartRenderer: BlockDocumentChartRenderer = ({
       />
     </div>
   );
+  const chartSettingsState = getWorksheetChartSettingsState(
+    readOnly,
+    chartConfig.settingsOpen,
+  );
 
   return (
     <div className="flex h-[420px] min-h-[320px] flex-col">
@@ -471,9 +479,9 @@ const WorksheetChartRenderer: BlockDocumentChartRenderer = ({
       </div>
       <div className="min-h-0 flex-1">
         <MosaicDashboardPanelLayout
-          isOpen={Boolean(chartConfig.settingsOpen)}
-          onIsOpenChange={handleSettingsOpenChange}
-          settings={settings}
+          isOpen={chartSettingsState.isOpen}
+          onIsOpenChange={readOnly ? undefined : handleSettingsOpenChange}
+          settings={chartSettingsState.mountSettings ? settings : undefined}
           content={content}
         />
       </div>
