@@ -91,6 +91,20 @@ function areChatSearchBlocksEqual(
   return true;
 }
 
+/**
+ * State and actions shared by `Chat.Root`'s search provider.
+ *
+ * `registerBlocks`/`unregisterBlocks` declare which text exists to search
+ * (per turn group), independent of whether anything painted it on screen.
+ * `reportRenderedBlock`/`clearRenderedBlock` are the rendered-set half: a
+ * slot calls `reportRenderedBlock(blockId, text)` while it is mounted and
+ * `clearRenderedBlock(blockId)` on unmount (ref-counted, so a block stays
+ * indexed as long as at least one mounted instance reports it). The `text`
+ * passed to `reportRenderedBlock` becomes the string that offsets are
+ * matched and sliced against, replacing the text the block was registered
+ * with. A block that registered but was never reported as rendered is
+ * excluded from search entirely.
+ */
 export type ChatSearchContextValue = {
   query: string;
   setQuery: (query: string) => void;
@@ -103,7 +117,7 @@ export type ChatSearchContextValue = {
   goToNextMatch: () => void;
   goToPreviousMatch: () => void;
   clearSearch: () => void;
-  reportRenderedBlock: (blockId: string) => void;
+  reportRenderedBlock: (blockId: string, text?: string) => void;
   clearRenderedBlock: (blockId: string) => void;
 };
 
@@ -153,8 +167,10 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
   >({});
   // Ref-counted (not a Set) so StrictMode's double mount/unmount, and fast
   // remounts during streaming, never drop a block that is still on screen.
-  const [renderedBlockCounts, setRenderedBlockCounts] = useState<
-    Record<string, number>
+  // `text` is the last string a mounted instance reported painting, which
+  // is what match offsets get computed against.
+  const [renderedBlocks, setRenderedBlocks] = useState<
+    Record<string, {count: number; text?: string}>
   >({});
 
   // reset active index during render when session or query changes
@@ -173,11 +189,19 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       : allBlocks;
     // Rendered-set intersection: only blocks a presentation recipe actually
     // mounted are indexable, so highlights and navigation never point at
-    // content the user cannot see.
-    return sessionBlocks.filter(
-      (block) => (renderedBlockCounts[block.id] ?? 0) > 0,
-    );
-  }, [blockGroups, currentSessionId, renderedBlockCounts]);
+    // content the user cannot see. When a rendered instance reported its own
+    // painted text, that text replaces the registered text so offsets are
+    // always computed against what is actually on screen.
+    const result: ChatSearchBlock[] = [];
+    for (const block of sessionBlocks) {
+      const rendered = renderedBlocks[block.id];
+      if (!rendered || rendered.count <= 0) continue;
+      result.push(
+        rendered.text !== undefined ? {...block, text: rendered.text} : block,
+      );
+    }
+    return result;
+  }, [blockGroups, currentSessionId, renderedBlocks]);
   const matches = useMemo(
     () => findChatSearchMatches(blocks, query),
     [blocks, query],
@@ -236,24 +260,30 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
     });
   }, []);
 
-  const reportRenderedBlock = useCallback((blockId: string) => {
-    setRenderedBlockCounts((current) => ({
-      ...current,
-      [blockId]: (current[blockId] ?? 0) + 1,
-    }));
+  const reportRenderedBlock = useCallback((blockId: string, text?: string) => {
+    setRenderedBlocks((current) => {
+      const existing = current[blockId];
+      // Always increment. The count tracks how many slots have this block
+      // mounted, so skipping a repeat report would let the first unmount drop
+      // a block another slot is still showing.
+      return {
+        ...current,
+        [blockId]: {count: (existing?.count ?? 0) + 1, text},
+      };
+    });
   }, []);
 
   const clearRenderedBlock = useCallback((blockId: string) => {
-    setRenderedBlockCounts((current) => {
-      const count = current[blockId];
+    setRenderedBlocks((current) => {
+      const existing = current[blockId];
       // Bail out with the same reference when there is nothing to decrement,
       // matching registerBlocks's equality guard against update-depth loops.
-      if (!count) return current;
+      if (!existing) return current;
       const next = {...current};
-      if (count <= 1) {
+      if (existing.count <= 1) {
         delete next[blockId];
       } else {
-        next[blockId] = count - 1;
+        next[blockId] = {count: existing.count - 1, text: existing.text};
       }
       return next;
     });
@@ -345,6 +375,7 @@ export function useChatSearch(): ChatSearchContextValue {
   return context;
 }
 
+/** Returns the enclosing `Chat.Root` search context, or `null` when rendered outside one. */
 export function useOptionalChatSearch(): ChatSearchContextValue | null {
   return useContext(ChatSearchContext);
 }
@@ -462,18 +493,36 @@ export const ChatSearch: React.FC<ChatSearchProps> = ({
   );
 };
 
-export function useReportRenderedChatSearchBlock(blockId?: string): void {
+/**
+ * Marks `blockId` as on screen for the lifetime of the calling component, so
+ * it joins the search index's rendered-set intersection. Reports on mount
+ * and whenever `text` changes, clears on unmount. When `text` is given, it
+ * becomes the string search offsets are computed against for this block,
+ * replacing whatever text the block was registered with; omit it when the
+ * slot's own highlighting mechanism (e.g. a rehype plugin) already matches
+ * offsets to the registered text itself.
+ */
+export function useReportRenderedChatSearchBlock(
+  blockId?: string,
+  text?: string,
+): void {
   const search = useOptionalChatSearch();
   const reportRenderedBlock = search?.reportRenderedBlock;
   const clearRenderedBlock = search?.clearRenderedBlock;
 
   useEffect(() => {
     if (!blockId || !reportRenderedBlock || !clearRenderedBlock) return;
-    reportRenderedBlock(blockId);
+    reportRenderedBlock(blockId, text);
     return () => clearRenderedBlock(blockId);
-  }, [blockId, reportRenderedBlock, clearRenderedBlock]);
+  }, [blockId, text, reportRenderedBlock, clearRenderedBlock]);
 }
 
+/**
+ * True when `blockId` currently holds the active search match. Useful for a
+ * slot that hides its content behind a disclosure or toggle: it can reveal
+ * itself when this returns true so the active match is never scrolled to
+ * while still hidden.
+ */
 export function useHasActiveChatSearchMatch(blockId?: string): boolean {
   const search = useOptionalChatSearch();
   if (!search || !blockId || !search.activeMatchId) return false;
@@ -482,6 +531,13 @@ export function useHasActiveChatSearchMatch(blockId?: string): boolean {
     .some((match) => match.id === search.activeMatchId);
 }
 
+/**
+ * Renders `text` with search matches wrapped in `<mark>`. `text` must be the
+ * exact string this call reports as rendered for `blockId`: it both supplies
+ * the offsets are matched against and the characters that get sliced, so a
+ * caller showing a transformed or shortened string is searched by that
+ * string, not by whatever the block was originally registered with.
+ */
 export function HighlightedChatSearchText({
   text,
   blockId,
@@ -489,14 +545,10 @@ export function HighlightedChatSearchText({
   text: string;
   blockId: string;
 }) {
-  useReportRenderedChatSearchBlock(blockId);
+  useReportRenderedChatSearchBlock(blockId, text);
   const search = useOptionalChatSearch();
   const matches = search?.getMatchesForBlock(blockId) ?? EMPTY_SEARCH_MATCHES;
   if (matches.length === 0) return <>{text}</>;
-  // Offsets belong to the text registered for this block. A caller passing a
-  // different string would highlight the wrong characters, so render plain
-  // rather than paint marks at positions that do not fit.
-  if (matches.some((match) => match.end > text.length)) return <>{text}</>;
 
   const parts: React.ReactNode[] = [];
   let cursor = 0;

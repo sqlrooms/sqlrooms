@@ -130,15 +130,11 @@ export const AgentToolActivityLogLine: React.FC<{
     (isPending ? 'Thinking...' : toolCall.toolName);
   const label =
     typeof rawLabel === 'string' ? stripTrailingEllipsis(rawLabel) : rawLabel;
-  // Match offsets are computed against the indexed block text, which is the
-  // tool name. A reasoning/custom/pending label is a different string, so
-  // highlighting it would slice at the wrong positions.
-  const labelNode =
-    searchBlockId && label === toolCall.toolName ? (
-      <HighlightedChatSearchText blockId={searchBlockId} text={label} />
-    ) : (
-      label
-    );
+  const labelNode = searchBlockId ? (
+    <HighlightedChatSearchText blockId={searchBlockId} text={label} />
+  ) : (
+    label
+  );
 
   return (
     <div
@@ -701,15 +697,11 @@ const OrchestratorLogLineInner: React.FC<{
     (isPending ? 'Thinking...' : toolCall.toolName);
   const label =
     typeof rawLabel === 'string' ? stripTrailingEllipsis(rawLabel) : rawLabel;
-  // Match offsets are computed against the indexed block text, which is the
-  // tool name. A reasoning/custom/pending label is a different string, so
-  // highlighting it would slice at the wrong positions.
-  const labelNode =
-    searchBlockId && label === toolCall.toolName ? (
-      <HighlightedChatSearchText blockId={searchBlockId} text={label} />
-    ) : (
-      label
-    );
+  const labelNode = searchBlockId ? (
+    <HighlightedChatSearchText blockId={searchBlockId} text={label} />
+  ) : (
+    label
+  );
 
   return (
     <div

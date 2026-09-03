@@ -284,7 +284,10 @@ component rendered away from `Chat.Root` degrades instead of throwing.
 Indexing follows what actually rendered, not just what got registered. A slot
 that returns `null`, or a region hidden behind a user preference, never mounts
 `HighlightedChatSearchText` and so contributes no matches. Nothing is indexed
-without something on screen to highlight.
+without something on screen to highlight. The text a slot renders is also the
+text that gets indexed: a slot showing a transformed or shortened string is
+searchable by what it actually displays, not by whatever text the block was
+originally registered with.
 
 A slot that paints its own matches instead of rendering through
 `HighlightedChatSearchText` must call `useReportRenderedChatSearchBlock(blockId)`

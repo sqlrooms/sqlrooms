@@ -724,6 +724,10 @@ Indexing follows what actually rendered, not just what got registered. A block
 that a slot returns `null` for, or that stays hidden behind a user preference,
 never mounts `HighlightedChatSearchText` (or the equivalent reporting) and so
 contributes no matches. Search never points at content the user can't see.
+The text a slot renders is also the text that gets indexed: `HighlightedChatSearchText`
+matches and highlights against the `text` prop it was given, so a slot showing
+a transformed or shortened string is searchable by what it actually displays,
+not by whatever text the block was originally registered with.
 
 A slot that paints its own matches instead of rendering through
 `HighlightedChatSearchText` must call `useReportRenderedChatSearchBlock(blockId)`

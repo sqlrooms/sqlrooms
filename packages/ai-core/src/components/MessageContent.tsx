@@ -144,6 +144,10 @@ export const MessageContent = React.memo(function MessageContent(
   props: MessageContentProps,
 ) {
   const {content, isAnswer, searchBlockId, customMarkdownComponents} = props;
+  // No text argument: highlighting here goes through
+  // createChatSearchRehypePlugin, whose offsets are computed against the
+  // registered markdownToPlainText projection of `content`, not a string
+  // this component holds. Reporting raw markdown would corrupt those offsets.
   useReportRenderedChatSearchBlock(searchBlockId);
   const search = useOptionalChatSearch();
   const getMatchesForBlock = search?.getMatchesForBlock;

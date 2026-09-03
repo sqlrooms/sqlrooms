@@ -17,25 +17,10 @@ Object.assign(globalThis, {
 
 const {AgentToolActivityLogLine} =
   await import('../src/components/FlatAgentRenderer');
-const {
-  ChatSearchProvider,
-  useChatSearch,
-  useRegisterChatSearchBlocks,
-  useReportRenderedChatSearchBlock,
-} = await import('../src/components/ChatSearch');
+const {ChatSearchProvider, useChatSearch, useRegisterChatSearchBlocks} =
+  await import('../src/components/ChatSearch');
 
 const TOOL_BLOCK_ID = 'session-1:result-1:tool:0';
-
-// When the label is a reasoning string, AgentToolActivityLogLine never
-// mounts HighlightedChatSearchText for this block, so nothing reports it
-// as rendered and it is excluded from the search index entirely. Force it
-// into the rendered set here to isolate the slicing guard itself: given
-// matches that exist for this block, the component must still refuse to
-// highlight a label string the offsets do not belong to.
-function ForceRenderedReporter({blockId}: {blockId: string}) {
-  useReportRenderedChatSearchBlock(blockId);
-  return null;
-}
 
 function createTestStore(sessionId = 'session-1') {
   return createStore<AiSliceState>(
@@ -74,10 +59,7 @@ function SearchController() {
   return null;
 }
 
-function renderLogLine(
-  toolCall: AgentToolCall,
-  options?: {forceRendered?: boolean},
-) {
+function renderLogLine(toolCall: AgentToolCall) {
   latestSearchRef.current = undefined;
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -89,9 +71,6 @@ function renderLogLine(
       <RoomStateProvider roomStore={store}>
         <ChatSearchProvider>
           <BlockRegistrar toolName={toolCall.toolName} />
-          {options?.forceRendered && (
-            <ForceRenderedReporter blockId={TOOL_BLOCK_ID} />
-          )}
           <AgentToolActivityLogLine
             toolCall={toolCall}
             searchBlockId={TOOL_BLOCK_ID}
@@ -138,43 +117,40 @@ describe('AgentToolActivityLogLine search highlighting', () => {
     cleanup(container, root);
   });
 
-  it('does not highlight a reasoning label even though the query matches the tool name', () => {
+  it('highlights a reasoning label by its own text, and does not match the tool name', () => {
     const toolCall: AgentToolCall = {
       toolCallId: 'call-2',
       toolName: 'run-query',
       state: 'success',
       input: {reasoning: 'Looking things up'},
     };
-    const {container, root} = renderLogLine(toolCall, {forceRendered: true});
+    const {container, root} = renderLogLine(toolCall);
+
+    setQuery('looking');
+    expect(container.querySelector('mark')?.textContent).toBe('Looking');
+    expect(container.textContent).toContain('Looking things up');
 
     setQuery('query');
-
-    // Forced into the rendered set above so a match exists for this block,
-    // but the rendered label is the reasoning string and must not be sliced
-    // using offsets computed against the tool name.
-    expect(latestSearchRef.current?.matches.length).toBeGreaterThan(0);
+    expect(latestSearchRef.current?.matches).toHaveLength(0);
     expect(container.querySelectorAll('mark')).toHaveLength(0);
-    expect(container.textContent).toContain('Looking things up');
-    expect(container.textContent).not.toContain('run-query');
 
     cleanup(container, root);
   });
 
-  it('never reports the block as rendered when the label is a reasoning string, so it is excluded from the index', () => {
+  it('highlights a tool name with a trailing ellipsis', () => {
     const toolCall: AgentToolCall = {
-      toolCallId: 'call-3',
-      toolName: 'run-query',
+      toolCallId: 'call-4',
+      toolName: 'run-query...',
       state: 'success',
-      input: {reasoning: 'Looking things up'},
     };
     const {container, root} = renderLogLine(toolCall);
 
     setQuery('query');
 
-    // With no HighlightedChatSearchText mounted for this label, nothing
-    // reports the block as rendered, so it never enters the search index.
-    expect(latestSearchRef.current?.matches).toHaveLength(0);
-    expect(container.querySelectorAll('mark')).toHaveLength(0);
+    const mark = container.querySelector('mark');
+    expect(mark).not.toBeNull();
+    expect(mark?.textContent).toBe('query');
+    expect(container.textContent).toContain('run-query');
 
     cleanup(container, root);
   });

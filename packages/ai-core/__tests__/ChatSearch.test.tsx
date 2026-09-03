@@ -429,7 +429,7 @@ describe('Chat.Search rendered-set intersection', () => {
     cleanup(container, root);
   });
 
-  it('paints no marks when the given text does not fit the block offsets', () => {
+  it('contributes no match when the painted text does not contain the query', () => {
     latestSearchRef.current = undefined;
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -453,8 +453,88 @@ describe('Chat.Search rendered-set intersection', () => {
     });
 
     setDesignQuery();
+    expect(container.textContent).toContain('0/0');
     expect(container.querySelectorAll('mark')).toHaveLength(0);
     expect(container.textContent).toContain('Show');
+
+    cleanup(container, root);
+  });
+
+  it('matches the reported text rather than the registered text', () => {
+    latestSearchRef.current = undefined;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <BlockRegistrar blocks={blocks} renderedIds={[]} />
+            <HighlightedChatSearchText
+              blockId="session-1:result-1:prompt"
+              text="Show me travel trends"
+            />
+            <ChatSearch />
+            <SearchController />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    act(() => {
+      if (!latestSearchRef.current) {
+        throw new Error('Search context was not captured.');
+      }
+      latestSearchRef.current.setQuery('travel');
+    });
+    expect(container.textContent).toContain('1/1');
+    const mark = container.querySelector('mark');
+    expect(mark?.textContent).toBe('travel');
+
+    act(() => {
+      latestSearchRef.current?.setQuery('design');
+    });
+    expect(container.textContent).toContain('0/0');
+
+    cleanup(container, root);
+  });
+
+  it('keeps a block indexed while a second reporter still has it mounted', () => {
+    latestSearchRef.current = undefined;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+
+    function Scene({bothReporters}: {bothReporters: boolean}) {
+      return (
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <BlockRegistrar blocks={blocks} renderedIds={[]} />
+            <RenderedBlockReporter blockId="session-1:result-1:prompt" />
+            {bothReporters ? (
+              <RenderedBlockReporter blockId="session-1:result-1:prompt" />
+            ) : null}
+            <ChatSearch />
+            <SearchController />
+          </ChatSearchProvider>
+        </RoomStateProvider>
+      );
+    }
+
+    act(() => {
+      root.render(<Scene bothReporters />);
+    });
+    setDesignQuery();
+    expect(container.textContent).toContain('1/1');
+
+    // Dropping one of two reporters must not evict a block the other still shows.
+    act(() => {
+      root.render(<Scene bothReporters={false} />);
+    });
+    expect(container.textContent).toContain('1/1');
 
     cleanup(container, root);
   });
