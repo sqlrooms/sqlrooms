@@ -6,13 +6,16 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {SplitIcon} from 'lucide-react';
-import React from 'react';
+import React, {useEffect, useRef} from 'react';
 import type {Components} from 'react-markdown';
 import {TOOL_CALL_CANCELLED} from '../constants';
 import type {AgentToolCall} from '../types';
 import {isReasoningPart, isTextPart} from '../utils';
 import {ActivityBox} from './ActivityBox';
-import {HighlightedChatSearchText} from './ChatSearch';
+import {
+  HighlightedChatSearchText,
+  useHasActiveChatSearchMatch,
+} from './ChatSearch';
 import type {
   ChatActionsProps,
   ChatActivityItem,
@@ -99,22 +102,41 @@ export const DefaultChatReasoning: React.FC<ChatReasoningProps> = ({
   text,
   isRunning,
   searchBlockId,
-}) => (
-  <details className="border-border bg-muted/30 text-muted-foreground group rounded-md border text-xs">
-    <summary className="hover:bg-muted/50 flex cursor-pointer items-center justify-between gap-2 px-3 py-2 font-medium select-none">
-      <span>{isRunning ? 'Thinking...' : 'Thinking'}</span>
-      <span className="text-muted-foreground/70 text-[11px] font-normal group-open:hidden">
-        show
-      </span>
-      <span className="text-muted-foreground/70 hidden text-[11px] font-normal group-open:inline">
-        hide
-      </span>
-    </summary>
-    <div className="border-border/70 max-h-64 overflow-auto border-t px-3 py-2 leading-relaxed whitespace-pre-wrap">
-      <HighlightedChatSearchText blockId={searchBlockId} text={text} />
-    </div>
-  </details>
-);
+}) => {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const hasActiveMatch = useHasActiveChatSearchMatch(searchBlockId);
+
+  // `<details>` stays uncontrolled so a user's own toggle is never fought by
+  // this effect. We only ever force it open, never closed, when it holds the
+  // active search match.
+  useEffect(() => {
+    if (!hasActiveMatch) return;
+    const element = detailsRef.current;
+    if (element && !element.open) {
+      element.open = true;
+    }
+  }, [hasActiveMatch]);
+
+  return (
+    <details
+      ref={detailsRef}
+      className="border-border bg-muted/30 text-muted-foreground group rounded-md border text-xs"
+    >
+      <summary className="hover:bg-muted/50 flex cursor-pointer items-center justify-between gap-2 px-3 py-2 font-medium select-none">
+        <span>{isRunning ? 'Thinking...' : 'Thinking'}</span>
+        <span className="text-muted-foreground/70 text-[11px] font-normal group-open:hidden">
+          show
+        </span>
+        <span className="text-muted-foreground/70 hidden text-[11px] font-normal group-open:inline">
+          hide
+        </span>
+      </summary>
+      <div className="border-border/70 max-h-64 overflow-auto border-t px-3 py-2 leading-relaxed whitespace-pre-wrap">
+        <HighlightedChatSearchText blockId={searchBlockId} text={text} />
+      </div>
+    </details>
+  );
+};
 
 /** SQLRooms default assistant markdown presentation. */
 export const DefaultChatTextOutput: React.FC<ChatTextOutputProps> = ({
@@ -149,7 +171,10 @@ export const DefaultChatToolActivity: React.FC<ChatToolActivityProps> = ({
         toolCall={toolCall}
       />
     ) : (
-      <AgentToolActivityLogLine toolCall={toolCall} />
+      <AgentToolActivityLogLine
+        toolCall={toolCall}
+        searchBlockId={searchBlockId}
+      />
     );
   }
 

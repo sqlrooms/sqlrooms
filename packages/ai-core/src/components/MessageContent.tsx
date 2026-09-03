@@ -10,6 +10,7 @@ import type {PluggableList} from 'unified';
 import {
   createChatSearchRehypePlugin,
   useOptionalChatSearch,
+  useReportRenderedChatSearchBlock,
   type ChatSearchMatch,
 } from './ChatSearch';
 
@@ -143,6 +144,7 @@ export const MessageContent = React.memo(function MessageContent(
   props: MessageContentProps,
 ) {
   const {content, isAnswer, searchBlockId, customMarkdownComponents} = props;
+  useReportRenderedChatSearchBlock(searchBlockId);
   const search = useOptionalChatSearch();
   const getMatchesForBlock = search?.getMatchesForBlock;
   const activeMatchId = search?.activeMatchId;

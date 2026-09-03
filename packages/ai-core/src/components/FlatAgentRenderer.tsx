@@ -19,6 +19,7 @@ import {
 } from './ChatRenderingContextBase';
 import {useHoistedRenderers} from './HoistedRenderersContext';
 import {ActivityBox} from './ActivityBox';
+import {HighlightedChatSearchText} from './ChatSearch';
 import {
   canHoistAgentToolCall,
   type HoistableToolCall,
@@ -109,7 +110,8 @@ function stripTrailingEllipsis(text: string): string {
 /** SQLRooms' built-in presentation for a normalized nested tool call. */
 export const AgentToolActivityLogLine: React.FC<{
   toolCall: AgentToolCall;
-}> = ({toolCall}) => {
+  searchBlockId?: string;
+}> = ({toolCall, searchBlockId}) => {
   const showDetails = useShowToolCallDetails();
   const {getActivityLabel} = useToolRenderBehavior();
   const isSuccess = toolCall.state === 'success';
@@ -128,6 +130,15 @@ export const AgentToolActivityLogLine: React.FC<{
     (isPending ? 'Thinking...' : toolCall.toolName);
   const label =
     typeof rawLabel === 'string' ? stripTrailingEllipsis(rawLabel) : rawLabel;
+  // Match offsets are computed against the indexed block text, which is the
+  // tool name. A reasoning/custom/pending label is a different string, so
+  // highlighting it would slice at the wrong positions.
+  const labelNode =
+    searchBlockId && label === toolCall.toolName ? (
+      <HighlightedChatSearchText blockId={searchBlockId} text={label} />
+    ) : (
+      label
+    );
 
   return (
     <div
@@ -154,7 +165,7 @@ export const AgentToolActivityLogLine: React.FC<{
           reasoning && 'italic',
         )}
       >
-        {label}
+        {labelNode}
       </span>
       {toolCall.startedAt != null ? (
         <LogLineElapsed
@@ -690,6 +701,15 @@ const OrchestratorLogLineInner: React.FC<{
     (isPending ? 'Thinking...' : toolCall.toolName);
   const label =
     typeof rawLabel === 'string' ? stripTrailingEllipsis(rawLabel) : rawLabel;
+  // Match offsets are computed against the indexed block text, which is the
+  // tool name. A reasoning/custom/pending label is a different string, so
+  // highlighting it would slice at the wrong positions.
+  const labelNode =
+    searchBlockId && label === toolCall.toolName ? (
+      <HighlightedChatSearchText blockId={searchBlockId} text={label} />
+    ) : (
+      label
+    );
 
   return (
     <div
@@ -716,7 +736,7 @@ const OrchestratorLogLineInner: React.FC<{
           reasoning && 'italic',
         )}
       >
-        {label}
+        {labelNode}
       </span>
       {elapsed ? (
         <span className="text-muted-foreground/60 shrink-0 text-[10px]">

@@ -20,8 +20,11 @@ const {
   ChatSearchProvider,
   createChatSearchRehypePlugin,
   findChatSearchMatches,
+  HighlightedChatSearchText,
   useChatSearch,
+  useHasActiveChatSearchMatch,
   useRegisterChatSearchBlocks,
+  useReportRenderedChatSearchBlock,
 } = await import('../src/components/ChatSearch');
 
 const blocks: ChatSearchBlock[] = [
@@ -55,15 +58,32 @@ function createTestStore(sessionId = 'session-1') {
   ) as any;
 }
 
+function RenderedBlockReporter({blockId}: {blockId: string}) {
+  useReportRenderedChatSearchBlock(blockId);
+  return null;
+}
+
+// Registers blocks like ChatTurnView does, and also mounts a reporter for
+// each rendered id so tests can control which blocks actually "rendered"
+// versus merely indexed.
 function BlockRegistrar({
   groupId = 'group',
   blocks,
+  renderedIds,
 }: {
   groupId?: string;
   blocks: ChatSearchBlock[];
+  renderedIds?: string[];
 }) {
   useRegisterChatSearchBlocks(groupId, blocks);
-  return null;
+  const idsToRender = renderedIds ?? blocks.map((block) => block.id);
+  return (
+    <>
+      {idsToRender.map((id) => (
+        <RenderedBlockReporter key={id} blockId={id} />
+      ))}
+    </>
+  );
 }
 
 // Mirrors ChatTurnView: search blocks are only built while a query is active,
@@ -82,7 +102,13 @@ function QueryAwareBlockRegistrar({
     [hasQuery, blocks],
   );
   useRegisterChatSearchBlocks(groupId, activeBlocks);
-  return null;
+  return (
+    <>
+      {activeBlocks.map((block) => (
+        <RenderedBlockReporter key={block.id} blockId={block.id} />
+      ))}
+    </>
+  );
 }
 
 const latestSearchRef: {
@@ -100,6 +126,7 @@ function SearchController() {
 function renderSearchUi(options?: {
   blocks?: ChatSearchBlock[];
   sessionId?: string;
+  renderedIds?: string[];
 }) {
   latestSearchRef.current = undefined;
   const container = document.createElement('div');
@@ -111,7 +138,10 @@ function renderSearchUi(options?: {
     root.render(
       <RoomStateProvider roomStore={store}>
         <ChatSearchProvider>
-          <BlockRegistrar blocks={options?.blocks ?? blocks} />
+          <BlockRegistrar
+            blocks={options?.blocks ?? blocks}
+            renderedIds={options?.renderedIds}
+          />
           <ChatSearch />
           <SearchController />
         </ChatSearchProvider>
@@ -341,6 +371,314 @@ describe('Chat.Search', () => {
     // React's max update depth. Keep consumer renders bounded.
     expect(consumerRenderCount).toBeLessThan(afterMount + 10);
     expect(consumerRenderCount).toBeLessThan(50);
+
+    cleanup(container, root);
+  });
+});
+
+describe('Chat.Search rendered-set intersection', () => {
+  it('excludes a registered block that never renders from the match count', () => {
+    const {container, root} = renderSearchUi({renderedIds: []});
+
+    setDesignQuery();
+    expect(container.textContent).toContain('0/0');
+
+    cleanup(container, root);
+  });
+
+  it('includes a registered block once it renders', () => {
+    const {container, root} = renderSearchUi({
+      renderedIds: ['session-1:result-1:prompt'],
+    });
+
+    setDesignQuery();
+    expect(container.textContent).toContain('1/1');
+    expect(
+      latestSearchRef.current?.matches.map((match) => match.blockId),
+    ).toEqual(['session-1:result-1:prompt']);
+
+    cleanup(container, root);
+  });
+
+  it('renders and reports a block through HighlightedChatSearchText', () => {
+    latestSearchRef.current = undefined;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <BlockRegistrar blocks={blocks} renderedIds={[]} />
+            <HighlightedChatSearchText
+              blockId="session-1:result-1:prompt"
+              text="Show me design trends"
+            />
+            <ChatSearch />
+            <SearchController />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    setDesignQuery();
+    expect(container.textContent).toContain('1/1');
+
+    cleanup(container, root);
+  });
+
+  it('paints no marks when the given text does not fit the block offsets', () => {
+    latestSearchRef.current = undefined;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <BlockRegistrar blocks={blocks} renderedIds={[]} />
+            <HighlightedChatSearchText
+              blockId="session-1:result-1:prompt"
+              text="Show"
+            />
+            <ChatSearch />
+            <SearchController />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    setDesignQuery();
+    expect(container.querySelectorAll('mark')).toHaveLength(0);
+    expect(container.textContent).toContain('Show');
+
+    cleanup(container, root);
+  });
+
+  it('drops matches when a rendered block unmounts', () => {
+    latestSearchRef.current = undefined;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+
+    function Scene({renderBoth}: {renderBoth: boolean}) {
+      return (
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <BlockRegistrar
+              blocks={blocks}
+              renderedIds={
+                renderBoth
+                  ? ['session-1:result-1:prompt', 'session-1:result-1:text:0']
+                  : ['session-1:result-1:prompt']
+              }
+            />
+            <ChatSearch />
+            <SearchController />
+          </ChatSearchProvider>
+        </RoomStateProvider>
+      );
+    }
+
+    act(() => {
+      root.render(<Scene renderBoth />);
+    });
+    setDesignQuery();
+    expect(container.textContent).toContain('1/2');
+
+    act(() => {
+      root.render(<Scene renderBoth={false} />);
+    });
+    expect(container.textContent).toContain('1/1');
+    expect(
+      latestSearchRef.current?.matches.map((match) => match.blockId),
+    ).toEqual(['session-1:result-1:prompt']);
+
+    cleanup(container, root);
+  });
+
+  it('preserves the relative order of remaining blocks when an unrendered middle block is filtered out', () => {
+    const orderedBlocks: ChatSearchBlock[] = [
+      {id: 'session-1:result-1:a', resultId: 'result-1', text: 'design alpha'},
+      {id: 'session-1:result-1:b', resultId: 'result-1', text: 'design beta'},
+      {
+        id: 'session-1:result-1:c',
+        resultId: 'result-1',
+        text: 'design gamma',
+      },
+    ];
+    const {container, root} = renderSearchUi({
+      blocks: orderedBlocks,
+      renderedIds: ['session-1:result-1:a', 'session-1:result-1:c'],
+    });
+
+    setDesignQuery();
+    expect(
+      latestSearchRef.current?.matches.map((match) => match.blockId),
+    ).toEqual(['session-1:result-1:a', 'session-1:result-1:c']);
+    expect(container.textContent).toContain('1/2');
+
+    act(() => {
+      container
+        .querySelector('button[aria-label="Next chat search match"]')
+        ?.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+    });
+    expect(latestSearchRef.current?.activeMatchId).toBe(
+      latestSearchRef.current?.matches[1]?.id,
+    );
+    expect(container.textContent).toContain('2/2');
+
+    cleanup(container, root);
+  });
+
+  it('does not loop when a rendered block re-reports an unchanged id', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+    let consumerRenderCount = 0;
+
+    function SearchConsumer() {
+      useChatSearch();
+      React.useEffect(() => {
+        consumerRenderCount += 1;
+      });
+      return null;
+    }
+
+    function RerenderingRenderedBlock({nonce}: {nonce: number}) {
+      // Fresh render each time, same blockId — mirrors a block re-rendering
+      // on every streamed token while it stays mounted.
+      void nonce;
+      useReportRenderedChatSearchBlock('session-1:result-1:prompt');
+      return <SearchConsumer />;
+    }
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <RerenderingRenderedBlock nonce={0} />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    const afterMount = consumerRenderCount;
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <RerenderingRenderedBlock nonce={1} />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <RerenderingRenderedBlock nonce={2} />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    expect(consumerRenderCount).toBeLessThan(afterMount + 10);
+    expect(consumerRenderCount).toBeLessThan(50);
+
+    cleanup(container, root);
+  });
+});
+
+describe('useHasActiveChatSearchMatch', () => {
+  function ActiveMatchProbe({
+    blockId,
+    label,
+  }: {
+    blockId?: string;
+    label: string;
+  }) {
+    const hasActiveMatch = useHasActiveChatSearchMatch(blockId);
+    return <div data-testid={label}>{String(hasActiveMatch)}</div>;
+  }
+
+  it('returns false with no provider', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    act(() => {
+      root.render(
+        <ActiveMatchProbe blockId="session-1:result-1:prompt" label="probe" />,
+      );
+    });
+
+    expect(container.querySelector('[data-testid="probe"]')?.textContent).toBe(
+      'false',
+    );
+
+    cleanup(container, root);
+  });
+
+  it('returns false when the block has matches but none is the active match, and true when navigation lands on it', () => {
+    latestSearchRef.current = undefined;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <BlockRegistrar blocks={blocks} />
+            <ActiveMatchProbe
+              blockId="session-1:result-1:prompt"
+              label="prompt"
+            />
+            <ActiveMatchProbe
+              blockId="session-1:result-1:text:0"
+              label="text"
+            />
+            <ChatSearch />
+            <SearchController />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    setDesignQuery();
+
+    // The prompt match ("Show me design trends") comes first, so it starts
+    // active. The text block has a match of its own, but it is not active yet.
+    expect(container.querySelector('[data-testid="prompt"]')?.textContent).toBe(
+      'true',
+    );
+    expect(container.querySelector('[data-testid="text"]')?.textContent).toBe(
+      'false',
+    );
+
+    act(() => {
+      container
+        .querySelector('button[aria-label="Next chat search match"]')
+        ?.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+    });
+
+    // Advancing to the next match flips which block reports the active match.
+    expect(container.querySelector('[data-testid="prompt"]')?.textContent).toBe(
+      'false',
+    );
+    expect(container.querySelector('[data-testid="text"]')?.textContent).toBe(
+      'true',
+    );
 
     cleanup(container, root);
   });

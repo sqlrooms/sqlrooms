@@ -103,6 +103,8 @@ export type ChatSearchContextValue = {
   goToNextMatch: () => void;
   goToPreviousMatch: () => void;
   clearSearch: () => void;
+  reportRenderedBlock: (blockId: string) => void;
+  clearRenderedBlock: (blockId: string) => void;
 };
 
 const ChatSearchContext = createContext<ChatSearchContextValue | null>(null);
@@ -149,6 +151,11 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
   const [blockGroups, setBlockGroups] = useState<
     Record<string, ChatSearchBlock[]>
   >({});
+  // Ref-counted (not a Set) so StrictMode's double mount/unmount, and fast
+  // remounts during streaming, never drop a block that is still on screen.
+  const [renderedBlockCounts, setRenderedBlockCounts] = useState<
+    Record<string, number>
+  >({});
 
   // reset active index during render when session or query changes
   // (avoids cascading effect/setState round-trip)
@@ -161,11 +168,16 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
 
   const blocks = useMemo(() => {
     const allBlocks = Object.values(blockGroups).flat();
-    if (!currentSessionId) return allBlocks;
-    return allBlocks.filter((block) =>
-      block.id.startsWith(`${currentSessionId}:`),
+    const sessionBlocks = currentSessionId
+      ? allBlocks.filter((block) => block.id.startsWith(`${currentSessionId}:`))
+      : allBlocks;
+    // Rendered-set intersection: only blocks a presentation recipe actually
+    // mounted are indexable, so highlights and navigation never point at
+    // content the user cannot see.
+    return sessionBlocks.filter(
+      (block) => (renderedBlockCounts[block.id] ?? 0) > 0,
     );
-  }, [blockGroups, currentSessionId]);
+  }, [blockGroups, currentSessionId, renderedBlockCounts]);
   const matches = useMemo(
     () => findChatSearchMatches(blocks, query),
     [blocks, query],
@@ -224,6 +236,29 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
     });
   }, []);
 
+  const reportRenderedBlock = useCallback((blockId: string) => {
+    setRenderedBlockCounts((current) => ({
+      ...current,
+      [blockId]: (current[blockId] ?? 0) + 1,
+    }));
+  }, []);
+
+  const clearRenderedBlock = useCallback((blockId: string) => {
+    setRenderedBlockCounts((current) => {
+      const count = current[blockId];
+      // Bail out with the same reference when there is nothing to decrement,
+      // matching registerBlocks's equality guard against update-depth loops.
+      if (!count) return current;
+      const next = {...current};
+      if (count <= 1) {
+        delete next[blockId];
+      } else {
+        next[blockId] = count - 1;
+      }
+      return next;
+    });
+  }, []);
+
   const matchesByBlock = useMemo(() => {
     const grouped = new Map<string, ChatSearchMatch[]>();
     for (const match of matches) {
@@ -276,10 +311,13 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       goToNextMatch,
       goToPreviousMatch,
       clearSearch,
+      reportRenderedBlock,
+      clearRenderedBlock,
     }),
     [
       activeMatchId,
       activeMatchNumber,
+      clearRenderedBlock,
       clearSearch,
       getMatchesForBlock,
       goToNextMatch,
@@ -287,6 +325,7 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       matches,
       query,
       registerBlocks,
+      reportRenderedBlock,
       unregisterBlocks,
     ],
   );
@@ -423,6 +462,26 @@ export const ChatSearch: React.FC<ChatSearchProps> = ({
   );
 };
 
+export function useReportRenderedChatSearchBlock(blockId?: string): void {
+  const search = useOptionalChatSearch();
+  const reportRenderedBlock = search?.reportRenderedBlock;
+  const clearRenderedBlock = search?.clearRenderedBlock;
+
+  useEffect(() => {
+    if (!blockId || !reportRenderedBlock || !clearRenderedBlock) return;
+    reportRenderedBlock(blockId);
+    return () => clearRenderedBlock(blockId);
+  }, [blockId, reportRenderedBlock, clearRenderedBlock]);
+}
+
+export function useHasActiveChatSearchMatch(blockId?: string): boolean {
+  const search = useOptionalChatSearch();
+  if (!search || !blockId || !search.activeMatchId) return false;
+  return search
+    .getMatchesForBlock(blockId)
+    .some((match) => match.id === search.activeMatchId);
+}
+
 export function HighlightedChatSearchText({
   text,
   blockId,
@@ -430,9 +489,14 @@ export function HighlightedChatSearchText({
   text: string;
   blockId: string;
 }) {
+  useReportRenderedChatSearchBlock(blockId);
   const search = useOptionalChatSearch();
   const matches = search?.getMatchesForBlock(blockId) ?? EMPTY_SEARCH_MATCHES;
   if (matches.length === 0) return <>{text}</>;
+  // Offsets belong to the text registered for this block. A caller passing a
+  // different string would highlight the wrong characters, so render plain
+  // rather than paint marks at positions that do not fit.
+  if (matches.some((match) => match.end > text.length)) return <>{text}</>;
 
   const parts: React.ReactNode[] = [];
   let cursor = 0;

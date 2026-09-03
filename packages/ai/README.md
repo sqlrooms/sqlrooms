@@ -281,6 +281,20 @@ same state directly (`activeMatchId`, `getMatchesForBlock`) for slots that need
 to do their own anchoring. It returns `null` outside a `ChatSearchProvider`, so a
 component rendered away from `Chat.Root` degrades instead of throwing.
 
+Indexing follows what actually rendered, not just what got registered. A slot
+that returns `null`, or a region hidden behind a user preference, never mounts
+`HighlightedChatSearchText` and so contributes no matches. Nothing is indexed
+without something on screen to highlight.
+
+A slot that paints its own matches instead of rendering through
+`HighlightedChatSearchText` must call `useReportRenderedChatSearchBlock(blockId)`
+itself, or its block never counts as rendered and contributes no matches.
+
+A slot that hides its content behind a disclosure or a toggle can call
+`useHasActiveChatSearchMatch(blockId)` to reveal that content when it holds the
+active match, so scrolling to it doesn't land on something still hidden. This is
+what the default reasoning disclosure does to open itself.
+
 ## Chat Session Types
 
 Use `ChatSessionSchema` for persisted chat session validation and

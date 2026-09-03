@@ -270,7 +270,9 @@ export {
   HighlightedChatSearchText,
   markdownToPlainText,
   normalizeChatSearchQuery,
+  useHasActiveChatSearchMatch,
   useOptionalChatSearch,
+  useReportRenderedChatSearchBlock,
 } from '@sqlrooms/ai-core';
 export type {
   ChatMessageMetadata,

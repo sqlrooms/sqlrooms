@@ -720,6 +720,20 @@ same state directly (`activeMatchId`, `getMatchesForBlock`) for slots that need
 to do their own anchoring. It returns `null` outside a `ChatSearchProvider`, so a
 component rendered away from `Chat.Root` degrades instead of throwing.
 
+Indexing follows what actually rendered, not just what got registered. A block
+that a slot returns `null` for, or that stays hidden behind a user preference,
+never mounts `HighlightedChatSearchText` (or the equivalent reporting) and so
+contributes no matches. Search never points at content the user can't see.
+
+A slot that paints its own matches instead of rendering through
+`HighlightedChatSearchText` must call `useReportRenderedChatSearchBlock(blockId)`
+itself, or its block never counts as rendered and contributes no matches.
+
+A slot that hides its content behind a disclosure or a toggle can call
+`useHasActiveChatSearchMatch(blockId)` to reveal that content when it holds the
+active match, so scrolling to it doesn't land on something still hidden. This is
+what the default reasoning disclosure does to open itself.
+
 ## Devtools
 
 `@sqlrooms/ai-core/devtools` exposes development-only inspection helpers and UI
