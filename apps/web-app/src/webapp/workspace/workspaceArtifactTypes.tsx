@@ -7,9 +7,9 @@ import type {WorkspaceRoomState} from './WorkspaceRoomStore';
 import {WorksheetArtifactPanel} from '../worksheet/WorksheetArtifact';
 
 export const WORKSPACE_ARTIFACT_TYPES = defineArtifactTypes({
-  worksheet: {
-    label: 'Worksheet',
-    defaultTitle: 'Worksheet',
+  document: {
+    label: 'Document',
+    defaultTitle: 'Document',
     icon: FileSpreadsheet,
     component: WorksheetArtifactPanel,
     onCreate: ({artifactId, store}) => {
@@ -22,4 +22,4 @@ export const WORKSPACE_ARTIFACT_TYPES = defineArtifactTypes({
       store.getState().blockDocuments.removeBlockDocument(artifactId);
     },
   },
-} satisfies Record<'worksheet', ArtifactTypeDefinition<WorkspaceRoomState>>);
+} satisfies Record<'document', ArtifactTypeDefinition<WorkspaceRoomState>>);

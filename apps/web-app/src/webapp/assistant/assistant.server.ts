@@ -90,7 +90,7 @@ function resolveOpenRouterModel(modelMode: AssistantModelMode = 'fast') {
 
 function createSystemPrompt() {
   return `You are the SQLRooms assistant for a browser-based data analysis workspace.
-Help the user reason about datasets, write SQL, plan worksheets, and design charts or dashboards.
+Help the user reason about datasets, write SQL, plan documents, and design charts or dashboards.
 Be concise, practical, and explicit about assumptions. Do not claim to inspect data unless the user has provided it in the chat.`;
 }
 

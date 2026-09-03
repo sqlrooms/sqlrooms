@@ -38,8 +38,8 @@ export const workspaces = pgTable(
           artifactsById: {
             'default-worksheet': {
               id: 'default-worksheet',
-              type: 'worksheet',
-              title: 'Worksheet',
+              type: 'document',
+              title: 'Document',
               visibility: 'workspace',
             },
           },

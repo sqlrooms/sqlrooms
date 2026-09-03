@@ -43,7 +43,7 @@ export const WorksheetArtifactPanel: RoomPanelComponent = ({panelId, meta}) => {
     ReturnType<WorkspaceRoomState['artifacts']['getArtifact']>
   >((state) => state.artifacts.config.artifactsById[artifactId]);
   const title = useMemo(
-    () => (artifact?.type === 'worksheet' ? artifact.title : null),
+    () => (artifact?.type === 'document' ? artifact.title : null),
     [artifact],
   );
   const renameArtifact = useBaseRoomStore<
@@ -410,8 +410,7 @@ const WorksheetChartRenderer: BlockDocumentChartRenderer = ({
       <div className="p-4">
         <div className="text-sm font-medium">Invalid chart configuration</div>
         <div className="text-muted-foreground mt-1 text-sm">
-          This worksheet chart block could not be parsed as a Mosaic
-          ChartConfig.
+          This document chart block could not be parsed as a Mosaic ChartConfig.
         </div>
         {!parsedConfig.success ? (
           <div className="text-muted-foreground mt-2 text-xs">

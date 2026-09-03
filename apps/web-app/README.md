@@ -2,22 +2,22 @@
 
 Hosted SQLRooms app for browser-based data analysis. It opens into a default
 unsaved workspace, initializes an ephemeral in-browser SQL runtime per
-workspace, and persists authenticated workspaces, worksheets, normalized
+workspace, and persists authenticated workspaces, documents, normalized
 Parquet files, and assistant usage through Neon/Cloudflare/OpenRouter.
 
 ## Current Milestone
 
 - TanStack Start app scaffolded in `apps/web-app`.
-- `/` opens an unsaved workspace with a default worksheet.
+- `/` opens an unsaved workspace with a default document.
 - Neon Auth client is wired, but the app remains usable when auth env vars are
   absent.
-- Drizzle schema covers workspaces, workspace members, worksheets, files,
+- Drizzle schema covers workspaces, workspace members, documents, files,
   storage usage, and AI usage events.
 - Authenticated workspace CRUD server functions are scaffolded.
 - Workspace file ingestion loads source files locally, exports Parquet, uploads
   directly to private R2 with presigned `PUT` URLs, and reloads saved files
   through Worker-authorized reads.
-- Worksheets use `@sqlrooms/documents` `BlockDocument` with query, dashboard,
+- Documents use `@sqlrooms/documents` `BlockDocument` with query, dashboard,
   data table, and chart blocks backed by the current SQLRooms room store.
 - The assistant calls OpenRouter from a server route and records token usage in
   `ai_usage_events`.
@@ -204,7 +204,7 @@ OpenRouter key, R2 credentials, and final app/domain values.
 - File reads are Worker-mediated and currently stream full objects; byte-range
   handling still needs to be added before large Parquet restores.
 - The assistant is context-aware and usage-tracked, but it does not yet mutate
-  worksheet blocks through normal UI commands.
+  document blocks through normal UI commands.
 - The WebMCP adapter is available only while the page is open and initialized;
   it is not a hosted or durable remote execution session.
 - Storage quota reconciliation, orphan R2 cleanup, delete flows, and usage

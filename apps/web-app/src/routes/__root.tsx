@@ -15,7 +15,7 @@ type RouterContext = {
 const APP_NAME = 'SQLRooms';
 const APP_TITLE = 'SQLRooms | Local-first data analysis workspace';
 const APP_DESCRIPTION =
-  'Explore files with DuckDB, worksheets, dashboards, charts, and AI-assisted data analysis.';
+  'Explore files with DuckDB, documents, dashboards, charts, and AI-assisted data analysis.';
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   errorComponent: RootErrorComponent,

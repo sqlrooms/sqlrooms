@@ -47,7 +47,7 @@ const WORKSPACE_PANELS: Panels = {
     component: WorkspaceAssistantPanel,
   },
   worksheet: {
-    title: 'Worksheet',
+    title: 'Document',
     icon: FileSpreadsheet,
     component: WorkspaceWorksheetPanel,
   },
@@ -202,9 +202,9 @@ function useCurrentWorksheetId() {
 
 function useCurrentWorksheetTitle(worksheetId: string | undefined) {
   return useBaseRoomStore<WorkspaceRoomState, string>((state) => {
-    if (!worksheetId) return 'Worksheet';
+    if (!worksheetId) return 'Document';
     const artifact = state.artifacts.config.artifactsById[worksheetId];
-    return artifact?.title || 'Worksheet';
+    return artifact?.title || 'Document';
   });
 }
 

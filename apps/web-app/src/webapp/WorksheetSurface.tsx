@@ -35,9 +35,9 @@ export function WorksheetSurface({
     <div className="worksheet-document-surface">
       <WorksheetBlockDocument
         worksheetId={worksheet.id}
-        title={title || 'Worksheet'}
+        title={title || 'Document'}
         onTitleChange={(nextTitle) =>
-          renameArtifact(worksheet.id, nextTitle || 'Worksheet')
+          renameArtifact(worksheet.id, nextTitle || 'Document')
         }
       />
     </div>

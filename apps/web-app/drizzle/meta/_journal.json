@@ -22,6 +22,13 @@
       "when": 1788445950138,
       "tag": "0002_silky_madame_web",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788447277036,
+      "tag": "0003_striped_leo",
+      "breakpoints": true
     }
   ]
 }

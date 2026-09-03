@@ -22,6 +22,11 @@ import {
   createEmptyPersistedSqlEditorConfig,
   ensureStatefulBlocksForContent,
 } from '../worksheet/worksheetState';
+import {
+  DEFAULT_DOCUMENT_TITLE,
+  DOCUMENT_ARTIFACT_TYPE,
+  migrateLegacyWorksheetArtifacts,
+} from './documentTerminology';
 
 export type WorkspaceWorksheet = {
   id: string;
@@ -88,7 +93,7 @@ export function serializeWorkspaceRoomContent(
 export function createDefaultWorkspaceContent({
   worksheetContent = createDefaultWorksheetContent() as unknown as BlockDocumentContent,
   worksheetId = DEFAULT_WORKSHEET_ID,
-  worksheetTitle = 'Worksheet',
+  worksheetTitle = DEFAULT_DOCUMENT_TITLE,
 }: {
   worksheetContent?: BlockDocumentContent;
   worksheetId?: string;
@@ -99,7 +104,7 @@ export function createDefaultWorkspaceContent({
       artifactsById: {
         [worksheetId]: {
           id: worksheetId,
-          type: 'worksheet',
+          type: DOCUMENT_ARTIFACT_TYPE,
           title: worksheetTitle,
         },
       },
@@ -135,7 +140,8 @@ export function getWorkspaceContentWorksheets(
     ),
   ].filter(
     (artifactId) =>
-      parsedContent.artifacts.artifactsById[artifactId]?.type === 'worksheet',
+      parsedContent.artifacts.artifactsById[artifactId]?.type ===
+      DOCUMENT_ARTIFACT_TYPE,
   );
 
   return orderedWorksheetIds.map((worksheetId) => {
@@ -145,7 +151,7 @@ export function getWorkspaceContentWorksheets(
 
     return {
       id: worksheetId,
-      title: artifact?.title ?? 'Worksheet',
+      title: artifact?.title ?? DEFAULT_DOCUMENT_TITLE,
       content: (blockDocument ?? {type: 'doc', content: []}) as JsonObject,
     };
   });
@@ -157,7 +163,7 @@ export function getWorkspaceHydrationKey(content: JsonObject | undefined) {
 
 export function parseWorkspaceContent(content: JsonObject | undefined) {
   if (!content) return null;
-  const record = content as Record<string, unknown>;
+  const record = migrateLegacyWorksheetArtifacts(content);
   const artifacts = ArtifactsSliceConfig.safeParse(record.artifacts);
   const blockDocuments = BlockDocumentsSliceConfig.safeParse(
     record.blockDocuments,

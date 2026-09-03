@@ -179,7 +179,7 @@ export function WorksheetsSidebarSection({
             onClick={onCreateWorksheet}
           >
             <Plus className="size-4" aria-hidden />
-            <span>New Worksheet</span>
+            <span>New Document</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -193,11 +193,11 @@ export function WorksheetsSidebarSection({
           className="sidebar-nav-button"
           type="button"
           size="lg"
-          tooltip="Worksheets"
+          tooltip="Documents"
           isActive
         >
           <FileSpreadsheet className="size-4" aria-hidden />
-          <span>{activeWorksheet?.title ?? 'Worksheets'}</span>
+          <span>{activeWorksheet?.title ?? 'Documents'}</span>
           <ChevronDown className="sidebar-nav-chevron ml-auto size-4" />
         </SidebarMenuButton>
       </DropdownMenuTrigger>
@@ -206,7 +206,7 @@ export function WorksheetsSidebarSection({
         align="start"
         side="right"
       >
-        <DropdownMenuLabel>Worksheets</DropdownMenuLabel>
+        <DropdownMenuLabel>Documents</DropdownMenuLabel>
         {worksheets.map((worksheet) => (
           <DropdownMenuItem
             key={worksheet.id}
@@ -222,7 +222,7 @@ export function WorksheetsSidebarSection({
           onClick={onCreateWorksheet}
         >
           <Plus className="size-4" aria-hidden />
-          New Worksheet
+          New Document
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

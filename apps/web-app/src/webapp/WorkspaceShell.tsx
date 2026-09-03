@@ -344,7 +344,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
   const handleCreateWorksheet = () => {
     if (!workspaceRoomStore) return;
     const state = workspaceRoomStore.getState();
-    const worksheetId = state.artifacts.createArtifact({type: 'worksheet'});
+    const worksheetId = state.artifacts.createArtifact({type: 'document'});
     state.workspace.setCurrentWorksheet(worksheetId);
   };
 
@@ -453,7 +453,7 @@ export function WorkspaceShell(props: WorkspaceShellProps) {
 
               <SidebarGroup>
                 <SidebarGroupLabel className="text-shell-subtle">
-                  Worksheets
+                  Documents
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <WorksheetsSidebarSection

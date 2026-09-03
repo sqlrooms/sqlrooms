@@ -222,13 +222,13 @@ export function createWorkspaceRoomStore({
   });
   registerCommandsForOwner(
     roomStore,
-    '@sqlrooms/web-app/worksheet',
+    '@sqlrooms/web-app/document',
     createBlockDocumentCommands<WorkspaceRoomState>({
-      artifactType: 'worksheet',
-      artifactLabel: 'Worksheet',
-      commandNamespace: 'worksheet',
-      commandGroup: 'Worksheet',
-      defaultTitle: 'Worksheet',
+      artifactType: 'document',
+      artifactLabel: 'Document',
+      commandNamespace: 'document',
+      commandGroup: 'Document',
+      defaultTitle: 'Document',
       statefulBlockTypes: [
         {
           blockType: 'dashboard',

@@ -19,7 +19,7 @@ type AssistantPanelProps = {
   worksheetTitle?: string;
 };
 
-const WORKSHEET_CONTEXT_KIND = 'worksheet';
+const WORKSHEET_CONTEXT_KIND = 'document';
 type AssistantRoomState = BaseRoomStoreState & AiSliceState;
 
 export function AssistantPanel({
@@ -45,8 +45,8 @@ export function AssistantPanel({
         ? {
             kind: WORKSHEET_CONTEXT_KIND,
             id: worksheetId,
-            title: worksheetTitle ?? 'Worksheet',
-            type: 'worksheet',
+            title: worksheetTitle ?? 'Document',
+            type: 'document',
           }
         : undefined,
     [worksheetId, worksheetTitle],
@@ -166,13 +166,13 @@ function AssistantSessionView({
         <Chat.Messages key={sessionId} />
       </div>
       <Chat.PromptSuggestions>
-        <Chat.PromptSuggestions.Item text="Summarize what this worksheet should analyze." />
+        <Chat.PromptSuggestions.Item text="Summarize what this document should analyze." />
         <Chat.PromptSuggestions.Item text="Suggest a query for the selected tables." />
         <Chat.PromptSuggestions.Item text="What chart would be useful here?" />
       </Chat.PromptSuggestions>
       <Chat.Composer
         className="assistant-chat-composer"
-        placeholder={`Ask about ${worksheetTitle ?? 'this worksheet'}`}
+        placeholder={`Ask about ${worksheetTitle ?? 'this document'}`}
       >
         <Chat.ModelSelector models={[...ASSISTANT_MODEL_MODES]} />
       </Chat.Composer>
@@ -228,7 +228,7 @@ function AssistantSessionList({
           ))
         ) : (
           <div className="assistant-empty-state">
-            No sessions for {worksheetTitle ?? 'this worksheet'}.
+            No sessions for {worksheetTitle ?? 'this document'}.
           </div>
         )}
       </div>

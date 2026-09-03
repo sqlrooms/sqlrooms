@@ -38,11 +38,11 @@ export function createAssistantInstructions(runContext: unknown) {
           items?: Array<{kind?: string; id?: string; title?: string}>;
         })
       : undefined;
-  const worksheet = context?.items?.find((item) => item.kind === 'worksheet');
+  const document = context?.items?.find((item) => item.kind === 'document');
 
   return `You are the SQLRooms assistant for a browser-based data analysis workspace.
-Help the user reason about datasets, write SQL, plan worksheets, and design charts or dashboards.
+Help the user reason about datasets, write SQL, plan documents, and design charts or dashboards.
 Be concise, practical, and explicit about assumptions. Do not claim to inspect data unless the user has provided it in the chat.
 
-Primary worksheet: ${worksheet?.title ?? 'Unknown worksheet'}`;
+Primary document: ${document?.title ?? 'Unknown document'}`;
 }
