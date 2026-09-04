@@ -1,5 +1,7 @@
 # @sqlrooms/pivot
 
+> **Experimental:** This package's API and behavior may change between releases.
+
 Slice-driven pivot table UI for SQLRooms, inspired by `react-pivottable` and backed by DuckDB SQL plus Vega-Lite charts.
 
 ## Setup

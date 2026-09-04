@@ -1,5 +1,7 @@
 # @sqlrooms/cells
 
+> **Experimental:** This package's API and behavior may change between releases.
+
 Shared cells model and UI primitives used by notebook and canvas views.
 
 The package owns:

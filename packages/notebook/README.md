@@ -1,5 +1,7 @@
 # @sqlrooms/notebook
 
+> **Experimental:** This package's API and behavior may change between releases.
+
 Artifact-scoped notebook UI and Zustand slice for SQL/text/markdown/vega/input cells in SQLRooms apps.
 
 - NotebookSlice stores per-artifact notebook metadata under `config.artifacts`

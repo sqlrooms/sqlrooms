@@ -1,5 +1,7 @@
 # @sqlrooms/webcontainer
 
+> **Experimental:** This package's API and behavior may change between releases.
+
 WebContainer state slice and runtime helpers for SQLRooms stores.
 
 This package provides a ready-to-use Zustand slice for managing:

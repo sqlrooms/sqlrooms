@@ -1,5 +1,7 @@
 # @sqlrooms/db-settings
 
+> **Experimental:** This package's API and behavior may change between releases.
+
 State and UI components for editing SQLRooms database connections and reporting
 connector-driver availability.
 
