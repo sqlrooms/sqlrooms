@@ -110,13 +110,13 @@ const BlockDocumentPanel: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId =
     typeof meta?.artifactId === 'string' ? meta.artifactId : panelId;
   const artifact = useRoomStore((state) =>
-    state.artifacts.getArtifact(artifactId),
+    artifactId ? state.artifacts.getArtifact(artifactId) : undefined,
   );
   const renameArtifact = useRoomStore(
     (state) => state.artifacts.renameArtifact,
   );
 
-  if (!artifact) return null;
+  if (!artifactId || !artifact) return null;
 
   return (
     <BlockDocumentStatefulBlockRendererProvider

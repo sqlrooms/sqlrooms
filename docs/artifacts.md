@@ -57,6 +57,8 @@ type RoomState = RoomShellSliceState & ArtifactsSliceState & PivotSliceState;
 const PivotArtifactPanel: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId =
     typeof meta?.artifactId === 'string' ? meta.artifactId : panelId;
+  if (!artifactId) return null;
+
   return <PivotView pivotId={artifactId} />;
 };
 

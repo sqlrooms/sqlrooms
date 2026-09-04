@@ -516,11 +516,12 @@ try {
 
 ## Examples
 
-See the [examples/ai](https://github.com/sqlrooms/examples/tree/main/ai) directory for complete examples:
+See the [AI RAG example](https://github.com/sqlrooms/examples/tree/main/ai-rag)
+for a complete integration:
 
 - `src/embeddings.ts` - OpenAI embedding provider implementations
-- `src/rag-example.ts` - Comprehensive usage examples
 - `src/store.ts` - Store configuration with RAG
+- `src/components/RagSearchDialog.tsx` - Search UI and result handling
 
 ## License
 

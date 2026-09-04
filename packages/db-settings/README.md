@@ -33,10 +33,23 @@ const {roomStore} = createRoomStore((set, get, store) => ({
 }));
 
 syncConnectionsToDb(roomStore);
+
+const unsubscribe = roomStore.subscribe((state, previousState) => {
+  const config = state.dbSettings.config;
+  const previousConfig = previousState.dbSettings.config;
+  if (
+    config.connections !== previousConfig.connections ||
+    config.diagnostics !== previousConfig.diagnostics
+  ) {
+    syncConnectionsToDb(roomStore);
+  }
+});
+
+// Call unsubscribe() when the store is disposed.
 ```
 
-Call `syncConnectionsToDb()` after initialization and after replacing settings
-from an external source. Connections whose matching diagnostic has
+Keep the subscription while the settings UI is active so edits immediately
+update the execution registry. Connections whose matching diagnostic has
 `available: false` are not registered for execution.
 
 Connection `config` may contain credentials, so the example intentionally does

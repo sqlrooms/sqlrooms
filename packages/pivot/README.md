@@ -12,6 +12,7 @@ persist `PivotSliceConfig`, ensure a pivot instance, then render it by ID:
 ```tsx
 import {PivotSliceConfig, PivotView, createPivotSlice} from '@sqlrooms/pivot';
 import {
+  RoomStateProvider,
   createRoomShellSlice,
   createRoomStore,
   persistSliceConfigs,
@@ -39,7 +40,9 @@ roomStore.getState().pivot.ensurePivot('sales-pivot', {
 ```
 
 ```tsx
-<PivotView pivotId="sales-pivot" />
+<RoomStateProvider roomStore={roomStore}>
+  <PivotView pivotId="sales-pivot" />
+</RoomStateProvider>
 ```
 
 The table must be available in the room database catalog before `PivotView`

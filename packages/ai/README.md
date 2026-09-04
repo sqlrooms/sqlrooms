@@ -374,10 +374,8 @@ createAiSlice({
         text: z.string(),
       }),
       execute: async ({text}) => ({
-        llmResult: {
-          success: true,
-          details: `Echo: ${text}`,
-        },
+        success: true,
+        details: `Echo: ${text}`,
       }),
     }),
   },

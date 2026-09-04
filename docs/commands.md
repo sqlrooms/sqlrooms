@@ -46,15 +46,51 @@ import {
   createBaseRoomSlice,
   createCommandSlice,
   createRoomStore,
+  createSlice,
   type BaseRoomStoreState,
   type CommandSliceState,
 } from '@sqlrooms/room-store';
 
-interface RoomState extends BaseRoomStoreState, CommandSliceState<RoomState> {}
+type Report = {title: string};
+
+type ReportsSliceState = {
+  reports: {
+    byId: Record<string, Report>;
+    getReport: (reportId: string) => Report | undefined;
+    renameReport: (reportId: string, title: string) => void;
+  };
+};
+
+interface RoomState
+  extends BaseRoomStoreState, ReportsSliceState, CommandSliceState<RoomState> {}
+
+const createReportsSlice = createSlice<ReportsSliceState, RoomState>(
+  (set, get) => ({
+    reports: {
+      byId: {'quarterly-sales': {title: 'Quarterly sales'}},
+      getReport: (reportId) => get().reports.byId[reportId],
+      renameReport: (reportId, title) => {
+        const report = get().reports.byId[reportId];
+        if (!report) return;
+
+        set((state) => ({
+          reports: {
+            ...state.reports,
+            byId: {
+              ...state.reports.byId,
+              [reportId]: {...report, title},
+            },
+          },
+        }));
+      },
+    },
+  }),
+);
 
 export const {roomStore} = createRoomStore<RoomState>((set, get, store) => ({
   ...createBaseRoomSlice()(set, get, store),
   ...createCommandSlice<RoomState>()(set, get, store),
+  ...createReportsSlice(set, get, store),
 }));
 ```
 
@@ -206,10 +242,25 @@ whole store.
 ## Add the command palette
 
 Mount the palette once inside `RoomShell`. The optional compound button opens
-the same palette and fits naturally in the shell sidebar:
+the same palette and fits naturally in the shell sidebar. Because the low-level
+store above intentionally omits layout and database state, use a RoomShell-backed
+store for this UI:
 
 ```tsx
-<RoomShell roomStore={roomStore}>
+import {
+  RoomShell,
+  createRoomShellSlice,
+  createRoomStore,
+  type RoomShellSliceState,
+} from '@sqlrooms/room-shell';
+
+const {roomStore: shellRoomStore} = createRoomStore<RoomShellSliceState>(
+  (set, get, store) => ({
+    ...createRoomShellSlice({})(set, get, store),
+  }),
+);
+
+<RoomShell roomStore={shellRoomStore}>
   <RoomShell.SidebarContainer>
     <RoomShell.TabButtons />
     <RoomShell.CommandPalette.Button />
@@ -217,7 +268,7 @@ the same palette and fits naturally in the shell sidebar:
 
   <RoomShell.LayoutComposer />
   <RoomShell.CommandPalette />
-</RoomShell>
+</RoomShell>;
 ```
 
 Users can also open it with <kbd>Cmd</kbd>+<kbd>K</kbd> on macOS or
@@ -295,7 +346,8 @@ The same registry can drive several adapters:
 | AI              | `createDefaultAiTools()` or `createCommandTools()` |
 | CLI             | `createCommandCliAdapter()`                        |
 | MCP             | `createCommandMcpAdapter()`                        |
-| Custom API/UI   | `invokeCommandWithPolicy()` or `invokeCommand()`   |
+| Custom API      | `invokeCommandWithPolicy()`                        |
+| Custom UI       | `invokeCommand()`                                  |
 
 The default AI tools expose `search_commands`, `get_command`,
 `execute_command`, and `list_commands`. Model-facing flows should normally use
