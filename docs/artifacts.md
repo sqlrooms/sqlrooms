@@ -210,5 +210,6 @@ Use the smallest package entry point that fits the caller:
   artifact-owned AI sessions.
 
 See the [`@sqlrooms/artifacts` API reference](/api/artifacts/) for the complete
-API and [Blocks and Block Documents](/blocks-and-documents) for embedding
-feature state inside structured documents.
+API, [Blocks and Block Documents](/blocks-and-documents) for embedding feature
+state inside structured documents, and [Commands](/commands) for exposing
+artifact actions across UI and agent surfaces.

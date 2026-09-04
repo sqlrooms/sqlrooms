@@ -335,4 +335,6 @@ and loop prevention.
 
 See the [`@sqlrooms/blocks` API reference](/api/blocks/), the
 [`@sqlrooms/documents` API reference](/api/documents/), and
-[Artifacts](/artifacts) for the top-level workspace model.
+[Artifacts](/artifacts) for the top-level workspace model. See
+[Commands](/commands) for exposing the same document mutations to palettes,
+agents, and external integrations.
