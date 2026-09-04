@@ -41,6 +41,7 @@ Compose both artifact and block-document state, and persist both configs:
 
 ```tsx
 import {
+  ArtifactTabs,
   ArtifactsSliceConfig,
   createArtifactPanelDefinition,
   createArtifactsSlice,
@@ -87,6 +88,14 @@ const BlockDocumentPanel: RoomPanelComponent = ({panelId, meta}) => {
   );
 };
 
+const DocumentWorkspacePanel: RoomPanelComponent = () => (
+  <ArtifactTabs types={['block-document']} panelKey="artifact">
+    <ArtifactTabs.SearchDropdown />
+    <ArtifactTabs.Tabs />
+    <ArtifactTabs.NewButton artifactType="block-document" />
+  </ArtifactTabs>
+);
+
 const artifactTypes = defineArtifactTypes({
   'block-document': {
     label: 'Document',
@@ -116,7 +125,18 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     (set, get, store) => ({
       ...createRoomShellSlice({
         layout: {
+          config: {
+            id: 'workspace',
+            type: 'tabs',
+            panel: 'workspace',
+            children: [],
+            activeTabIndex: 0,
+          },
           panels: {
+            workspace: {
+              title: 'Documents',
+              component: DocumentWorkspacePanel,
+            },
             artifact: createArtifactPanelDefinition(artifactTypes, store),
           },
         },

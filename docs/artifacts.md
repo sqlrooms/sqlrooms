@@ -29,6 +29,7 @@ metadata is persisted.
 
 ```tsx
 import {
+  ArtifactTabs,
   ArtifactsSliceConfig,
   createArtifactPanelDefinition,
   createArtifactsSlice,
@@ -58,6 +59,14 @@ const PivotArtifactPanel: RoomPanelComponent = ({panelId, meta}) => {
     typeof meta?.artifactId === 'string' ? meta.artifactId : panelId;
   return <PivotView pivotId={artifactId} />;
 };
+
+const PivotWorkspacePanel: RoomPanelComponent = () => (
+  <ArtifactTabs types={['pivot']} panelKey="artifact">
+    <ArtifactTabs.SearchDropdown />
+    <ArtifactTabs.Tabs />
+    <ArtifactTabs.NewButton artifactType="pivot" />
+  </ArtifactTabs>
+);
 
 const artifactTypes = defineArtifactTypes({
   pivot: {
@@ -96,7 +105,19 @@ export const {roomStore} = createRoomStore<RoomState>(
     (set, get, store) => ({
       ...createRoomShellSlice({
         layout: {
+          config: {
+            id: 'workspace',
+            type: 'tabs',
+            panel: 'workspace',
+            children: [],
+            activeTabIndex: 0,
+          },
           panels: {
+            workspace: {
+              title: 'Pivots',
+              icon: TablePropertiesIcon,
+              component: PivotWorkspacePanel,
+            },
             artifact: createArtifactPanelDefinition(artifactTypes, store),
           },
         },
@@ -138,21 +159,10 @@ See [Persistence](/persistence) for storage adapters, hydration, and autosave.
 ## Render an artifact workspace
 
 `ArtifactTabs` is the standard layout adapter. Its compound API keeps custom
-controls and tab content on one shared workspace model:
-
-```tsx
-import {ArtifactTabs} from '@sqlrooms/artifacts';
-
-export function PivotWorkspace() {
-  return (
-    <ArtifactTabs types={['pivot']} panelKey="artifact">
-      <ArtifactTabs.SearchDropdown />
-      <ArtifactTabs.Tabs />
-      <ArtifactTabs.NewButton artifactType="pivot" />
-    </ArtifactTabs>
-  );
-}
-```
+controls and tab content on one shared workspace model. It must render inside a
+layout node with `type: 'tabs'`; the setup above mounts `PivotWorkspacePanel`
+as the fallback panel for the `workspace` tabs node. `ArtifactTabs` then adds
+and removes artifact panel children in that container.
 
 For a sidebar, home screen, or other surface that does not use layout tabs,
 use `useArtifactWorkspace()` directly:
