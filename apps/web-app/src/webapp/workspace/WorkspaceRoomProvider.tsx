@@ -66,6 +66,19 @@ export function WorkspaceRoomProvider({
     return () => onRoomStoreChange(null);
   }, [onRoomStoreChange, roomStore]);
 
+  useEffect(
+    () => () => {
+      if (!roomStore) return;
+      void roomStore
+        .getState()
+        .room.destroy()
+        .catch((error: unknown) => {
+          roomStore.getState().room.captureException(error);
+        });
+    },
+    [roomStore],
+  );
+
   const roomPersistence = useMemo<WorkspaceRoomPersistence | null>(() => {
     if (!roomStore || !saveRoomSnapshot) return null;
 

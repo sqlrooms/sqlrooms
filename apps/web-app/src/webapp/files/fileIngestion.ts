@@ -1,4 +1,7 @@
-import {PARQUET_UPLOAD_LIMIT_BYTES} from './fileLimits';
+import {
+  PARQUET_UPLOAD_LIMIT_BYTES,
+  SOURCE_FILE_LIMIT_BYTES,
+} from './fileLimits';
 import {isWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import type {WorkspaceDuckDbRuntime} from '../document/duckdbRuntime';
 import {escapeIdentifier} from '../sql';
@@ -23,6 +26,10 @@ export async function prepareWorkspaceFile({
   file: File;
   tableName?: string;
 }): Promise<PreparedWorkspaceFile> {
+  if (file.size > SOURCE_FILE_LIMIT_BYTES) {
+    throw new Error('Source file is too large. Choose a file up to 50 MB.');
+  }
+
   const targetTableName = tableName ?? createTableName(file.name);
   await runtime.connector.loadFile(file, targetTableName);
   const rowCount = await getTableRowCount(runtime, targetTableName);
@@ -41,6 +48,39 @@ export async function prepareWorkspaceFile({
     rowCount,
     contentHash: await hashBlob(parquetBlob),
   };
+}
+
+export async function prepareReplacementWorkspaceFile({
+  runtime,
+  file,
+  tableName,
+}: {
+  runtime: WorkspaceDuckDbRuntime;
+  file: File;
+  tableName: string;
+}): Promise<PreparedWorkspaceFile> {
+  const stagingTableName = `__sqlrooms_upload_${crypto
+    .randomUUID()
+    .replaceAll('-', '_')}`;
+
+  try {
+    const preparedFile = await prepareWorkspaceFile({
+      runtime,
+      file,
+      tableName: stagingTableName,
+    });
+    await replaceWorkspaceTable({
+      runtime,
+      stagingTableName,
+      tableName,
+    });
+    return {...preparedFile, tableName};
+  } catch (error) {
+    await dropWorkspaceTable({runtime, tableName: stagingTableName}).catch(
+      () => undefined,
+    );
+    throw error;
+  }
 }
 
 export async function uploadPreparedWorkspaceFile({
@@ -153,14 +193,43 @@ async function exportTableToParquet(
     throw new Error('Parquet export requires the browser DuckDB runtime.');
   }
   const wasmConnector = runtime.connector;
-  await runtime.connector.execute(
-    `copy ${escapeIdentifier(tableName)} to '${outputFileName}' (format parquet)`,
-  );
-  const bytes = await wasmConnector.getDb().copyFileToBuffer(outputFileName);
-  await wasmConnector.getDb().dropFile(outputFileName);
+  let bytes: Uint8Array;
+  try {
+    await runtime.connector.execute(
+      `copy ${escapeIdentifier(tableName)} to '${outputFileName}' (format parquet)`,
+    );
+    bytes = await wasmConnector.getDb().copyFileToBuffer(outputFileName);
+  } finally {
+    await wasmConnector
+      .getDb()
+      .dropFile(outputFileName)
+      .catch(() => undefined);
+  }
   const copiedBytes = new Uint8Array(bytes.byteLength);
   copiedBytes.set(bytes);
   return new Blob([copiedBytes], {type: 'application/vnd.apache.parquet'});
+}
+
+async function replaceWorkspaceTable({
+  runtime,
+  stagingTableName,
+  tableName,
+}: {
+  runtime: WorkspaceDuckDbRuntime;
+  stagingTableName: string;
+  tableName: string;
+}) {
+  await runtime.connector.execute('begin transaction');
+  try {
+    await dropWorkspaceTable({runtime, tableName});
+    await runtime.connector.execute(
+      `alter table ${escapeIdentifier(stagingTableName)} rename to ${escapeIdentifier(tableName)}`,
+    );
+    await runtime.connector.execute('commit');
+  } catch (error) {
+    await runtime.connector.execute('rollback').catch(() => undefined);
+    throw error;
+  }
 }
 
 async function hashBlob(blob: Blob) {

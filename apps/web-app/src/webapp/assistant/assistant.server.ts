@@ -12,12 +12,8 @@ import {db} from '#/db/index';
 import {aiUsageCounters, aiUsageEvents} from '#/db/schema';
 import {verifyAuthToken} from '#/lib/auth-token';
 import {requireEnv} from '#/lib/env';
-import type {AssistantModelMode} from './modelModes';
-
-const OPENROUTER_MODELS_BY_MODE = {
-  fast: 'deepseek/deepseek-v4-flash',
-  deep: 'deepseek/deepseek-v4-pro',
-} satisfies Record<AssistantModelMode, string>;
+import {AssistantError, authenticateAssistantRequest} from './assistantRequest';
+import {resolveOpenRouterModel} from './openRouterModel';
 const DEFAULT_DAILY_MESSAGE_LIMIT = 60;
 
 const assistantChatInput = z.object({
@@ -27,7 +23,7 @@ const assistantChatInput = z.object({
 });
 
 export async function runAssistantChat(request: Request) {
-  const {userId} = await verifyAuthToken(readBearerToken(request));
+  const {userId} = await authenticateAssistantRequest(request, verifyAuthToken);
   const data = await parseAssistantChatInput(request);
   let messages: UIMessage[];
   try {
@@ -84,27 +80,10 @@ function invalidAssistantRequest() {
   );
 }
 
-function resolveOpenRouterModel(modelMode: AssistantModelMode = 'fast') {
-  return OPENROUTER_MODELS_BY_MODE[modelMode];
-}
-
 function createSystemPrompt() {
   return `You are the SQLRooms assistant for a browser-based data analysis workspace.
 Help the user reason about datasets, write SQL, plan documents, and design charts or dashboards.
 Be concise, practical, and explicit about assumptions. Do not claim to inspect data unless the user has provided it in the chat.`;
-}
-
-function readBearerToken(request: Request) {
-  const authorization = request.headers.get('authorization') ?? '';
-  const match = authorization.match(/^Bearer\s+(.+)$/i);
-  if (!match?.[1]) {
-    throw new AssistantError(
-      'Sign in to use the assistant.',
-      401,
-      'ASSISTANT_AUTH_REQUIRED',
-    );
-  }
-  return match[1];
 }
 
 async function reserveAssistantUsage(userId: string, model: string) {
@@ -174,14 +153,4 @@ async function recordAiUsage({
     .where(
       and(eq(aiUsageEvents.id, usageEventId), eq(aiUsageEvents.userId, userId)),
     );
-}
-
-export class AssistantError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-    readonly code: string,
-  ) {
-    super(message);
-  }
 }

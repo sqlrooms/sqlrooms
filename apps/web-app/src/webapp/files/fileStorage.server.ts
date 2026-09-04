@@ -14,6 +14,7 @@ import {
   createR2ObjectKey,
 } from './fileLimits';
 import {parseByteRangeHeader} from './fileReadRange';
+import {areWorkspaceTableNamesEqual} from './tableName';
 
 const PARQUET_MIME_TYPE = 'application/vnd.apache.parquet';
 const PRESIGNED_UPLOAD_EXPIRES_SECONDS = 10 * 60;
@@ -166,7 +167,10 @@ export async function finalizeFileUpload({
       'NOT_FOUND',
     );
   }
-  if (replacement && replacement.tableName !== tableName) {
+  if (
+    replacement &&
+    !areWorkspaceTableNamesEqual(replacement.tableName, tableName)
+  ) {
     throw new FileStorageError(
       'A replacement upload must keep the existing table name.',
       409,
@@ -208,7 +212,7 @@ export async function finalizeFileUpload({
         delete from ${files}
         where ${files.id} = (select replace_file_id from reservation)
           and ${files.workspaceId} = ${workspaceId}
-          and ${files.tableName} = ${tableName}
+          and lower(${files.tableName}) = lower(${tableName})
         returning owner_id, size_bytes
       ), released_replacement as (
         update ${userStorageUsage}

@@ -6,8 +6,8 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import type React from 'react';
 import {
   createTableName,
-  dropWorkspaceTable,
   loadSavedWorkspaceFile,
+  prepareReplacementWorkspaceFile,
   prepareWorkspaceFile,
   uploadPreparedWorkspaceFile,
   type PreparedWorkspaceFile,
@@ -15,6 +15,7 @@ import {
 import type {useWorkspaceDuckDbRuntime} from '../document/useWorkspaceDuckDbRuntime';
 import type {WorkspaceSchemaTableItem} from '../workspace/WorkspaceSidebarSections';
 import {escapeIdentifier} from '../sql';
+import {areWorkspaceTableNamesEqual, findWorkspaceTableName} from './tableName';
 
 export type FileConflictResolution =
   | {action: 'replace'}
@@ -260,6 +261,7 @@ export function useWorkspaceFileWorkflow({
       const nextPreparedFiles: PreparedWorkspaceFile[] = [];
       for (const file of files) {
         let tableName = createTableName(file.name);
+        let isReplacement = false;
         let savedFilesToReplace: {id: string; tableName: string}[] = [];
         const existingTableNames = [
           ...workspaceTableNames,
@@ -280,30 +282,44 @@ export function useWorkspaceFileWorkflow({
           if (resolution.action === 'keep-both') {
             tableName = resolution.tableName;
           } else {
-            await dropWorkspaceTable({
-              runtime: duckDbRuntime.runtime,
-              tableName,
-            });
-            removePreparedFilesByTableName(nextPreparedFiles, tableName);
-            setPreparedLocalFiles((currentFiles) =>
-              currentFiles.filter(
-                (currentFile) => currentFile.tableName !== tableName,
-              ),
-            );
+            isReplacement = true;
+            tableName =
+              findWorkspaceTableName(existingTableNames, tableName) ??
+              tableName;
 
             if (mode === 'saved' && token) {
               savedFilesToReplace = (workspaceFiles ?? []).filter(
-                (workspaceFile) => workspaceFile.tableName === tableName,
+                (workspaceFile) =>
+                  areWorkspaceTableNamesEqual(
+                    workspaceFile.tableName,
+                    tableName,
+                  ),
               );
             }
           }
         }
 
-        const preparedFile = await prepareWorkspaceFile({
-          runtime: duckDbRuntime.runtime,
-          file,
-          tableName,
-        });
+        const preparedFile = isReplacement
+          ? await prepareReplacementWorkspaceFile({
+              runtime: duckDbRuntime.runtime,
+              file,
+              tableName,
+            })
+          : await prepareWorkspaceFile({
+              runtime: duckDbRuntime.runtime,
+              file,
+              tableName,
+            });
+
+        if (isReplacement) {
+          removePreparedFilesByTableName(nextPreparedFiles, tableName);
+          setPreparedLocalFiles((currentFiles) =>
+            currentFiles.filter(
+              (currentFile) =>
+                !areWorkspaceTableNamesEqual(currentFile.tableName, tableName),
+            ),
+          );
+        }
         nextPreparedFiles.push(preparedFile);
 
         if (mode === 'saved' && token && workspaceId) {
@@ -389,17 +405,14 @@ function removePreparedFilesByTableName(
   tableName: string,
 ) {
   for (let index = files.length - 1; index >= 0; index -= 1) {
-    if (files[index].tableName === tableName) {
+    if (areWorkspaceTableNamesEqual(files[index].tableName, tableName)) {
       files.splice(index, 1);
     }
   }
 }
 
 function hasTableName(tableNames: string[], tableName: string) {
-  return tableNames.some(
-    (existingTableName) =>
-      existingTableName.toLowerCase() === tableName.toLowerCase(),
-  );
+  return findWorkspaceTableName(tableNames, tableName) !== undefined;
 }
 
 function formatBytes(bytes: number) {

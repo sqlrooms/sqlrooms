@@ -2,17 +2,23 @@ import {sql} from 'drizzle-orm';
 import {createLocalJWKSet, createRemoteJWKSet, jwtVerify} from 'jose';
 import type {JWK} from 'jose';
 import {db} from '#/db/index';
+import {AuthTokenVerificationError} from './authTokenError';
 
 let remoteJwks: ReturnType<typeof createRemoteJWKSet> | undefined;
 let localJwks: ReturnType<typeof createLocalJWKSet> | undefined;
 
 export async function verifyAuthToken(token: string) {
   const authJwks = await getAuthJwks();
-  const {payload} = await jwtVerify(token, authJwks);
+  let payload;
+  try {
+    ({payload} = await jwtVerify(token, authJwks));
+  } catch (error) {
+    throw new AuthTokenVerificationError({cause: error});
+  }
   const userId = payload.sub;
 
   if (!userId) {
-    throw new Error('Auth token is missing a subject');
+    throw new AuthTokenVerificationError();
   }
 
   return {userId};

@@ -156,7 +156,7 @@ export const files = pgTable(
     uniqueIndex('files_object_key_idx').on(table.objectKey),
     uniqueIndex('files_workspace_table_name_idx').on(
       table.workspaceId,
-      table.tableName,
+      sql`lower(${table.tableName})`,
     ),
     index('files_workspace_created_at_idx').on(
       table.workspaceId,
