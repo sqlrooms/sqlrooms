@@ -26,6 +26,19 @@ export type MessageContentProps = {
   customMarkdownComponents?: Partial<Components>;
 };
 
+/**
+ * Returns Markdown element names whose text chat search must ignore because a
+ * custom renderer owns their final output. Returns `null` when `mark` itself
+ * is overridden, because automatic highlights can no longer be guaranteed to
+ * reach the DOM.
+ */
+export function getChatSearchExcludedMarkdownTags(
+  customMarkdownComponents?: Partial<Components>,
+): readonly string[] | null {
+  const tagNames = Object.keys(customMarkdownComponents ?? {});
+  return tagNames.includes('mark') ? null : tagNames;
+}
+
 type ThinkContent = {
   content: string;
   isComplete: boolean;
@@ -144,11 +157,17 @@ export const MessageContent = React.memo(function MessageContent(
   props: MessageContentProps,
 ) {
   const {content, isAnswer, searchBlockId, customMarkdownComponents} = props;
+  const excludedSearchTags = useMemo(
+    () => getChatSearchExcludedMarkdownTags(customMarkdownComponents),
+    [customMarkdownComponents],
+  );
   // No text argument: highlighting here goes through
   // createChatSearchRehypePlugin, whose offsets are computed against the
   // registered markdownToPlainText projection of `content`, not a string
   // this component holds. Reporting raw markdown would corrupt those offsets.
-  useReportRenderedChatSearchBlock(searchBlockId);
+  useReportRenderedChatSearchBlock(
+    excludedSearchTags ? searchBlockId : undefined,
+  );
   const search = useOptionalChatSearch();
   const getMatchesForBlock = search?.getMatchesForBlock;
   const activeMatchId = search?.activeMatchId;
@@ -185,17 +204,18 @@ export const MessageContent = React.memo(function MessageContent(
       rehypeRaw,
       [rehypeSanitize, markdownSanitizeSchema],
     ];
-    if (searchBlockId && searchMatches.length > 0) {
+    if (searchBlockId && excludedSearchTags && searchMatches.length > 0) {
       plugins.push(
         createChatSearchRehypePlugin({
           blockId: searchBlockId,
           matches: searchMatches,
           activeMatchId,
+          excludedTagNames: excludedSearchTags,
         }),
       );
     }
     return plugins;
-  }, [activeMatchId, searchBlockId, searchMatches]);
+  }, [activeMatchId, excludedSearchTags, searchBlockId, searchMatches]);
 
   // Memoize the think-block component to prevent unnecessary re-renders
   const thinkBlockComponent = useCallback(

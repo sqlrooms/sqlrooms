@@ -170,6 +170,7 @@ export const DefaultChatToolActivity: React.FC<ChatToolActivityProps> = ({
         startedAt={toolCall.startedAt}
         completedAt={toolCall.completedAt}
         toolCall={toolCall}
+        searchBlockId={searchBlockId}
       />
     ) : (
       <AgentToolActivityLogLine
@@ -189,6 +190,7 @@ export const DefaultChatToolActivity: React.FC<ChatToolActivityProps> = ({
         startedAt={toolCall.startedAt}
         completedAt={toolCall.completedAt}
         toolCall={toolCall}
+        searchBlockId={searchBlockId}
       />
     );
   }

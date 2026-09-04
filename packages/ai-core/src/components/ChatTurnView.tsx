@@ -32,7 +32,10 @@ import {
 } from './ChatSearch';
 import type {ErrorMessageComponentProps} from './ErrorMessage';
 import {HoistedRenderersProvider} from './HoistedRenderersContext';
-import {processMessageContent} from './MessageContent';
+import {
+  getChatSearchExcludedMarkdownTags,
+  processMessageContent,
+} from './MessageContent';
 import {createChatTurnPresentation} from './defaultChatRendering';
 import {useChatTurnContentBinder} from './useChatTurnContentBinder';
 
@@ -140,6 +143,10 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
   const search = useOptionalChatSearch();
   const hasActiveQuery =
     !!search && normalizeChatSearchQuery(search.query).length > 0;
+  const excludedMarkdownSearchTags = useMemo(
+    () => getChatSearchExcludedMarkdownTags(customMarkdownComponents),
+    [customMarkdownComponents],
+  );
 
   const searchBlocks = useMemo<ChatSearchBlock[]>(() => {
     // Stable empty reference when search is idle — a fresh [] on every
@@ -162,9 +169,12 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
         blocks.push({
           id: `${searchBlockPrefix}:text:${index}`,
           resultId: turnId,
-          text: markdownToPlainText(
-            processMessageContent(part.text).processedContent,
-          ),
+          text: excludedMarkdownSearchTags
+            ? markdownToPlainText(
+                processMessageContent(part.text).processedContent,
+                excludedMarkdownSearchTags,
+              )
+            : '',
         });
       } else if (isReasoningPart(part)) {
         blocks.push({
@@ -192,6 +202,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
     searchBlockPrefix,
     uiMessageParts,
     model.textItems,
+    excludedMarkdownSearchTags,
   ]);
 
   useRegisterChatSearchBlocks(searchBlockPrefix, searchBlocks);

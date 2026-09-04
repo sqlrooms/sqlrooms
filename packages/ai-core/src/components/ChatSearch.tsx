@@ -25,29 +25,55 @@ const markdownHastProcessor = unified()
   .use(rehypeRaw)
   .use(rehypeSanitize, markdownSanitizeSchema);
 
-function collectHastText(node: any): string {
+// Keeps searchable text on either side of an opaque custom-renderer subtree
+// in separate regions while preserving one virtual offset for later text.
+const OPAQUE_MARKDOWN_BOUNDARY = '\u0000';
+
+function collectHastText(
+  node: any,
+  excludedTagNames: ReadonlySet<string>,
+): string {
   if (!node) return '';
+  if (
+    node.type === 'element' &&
+    typeof node.tagName === 'string' &&
+    excludedTagNames.has(node.tagName)
+  ) {
+    return OPAQUE_MARKDOWN_BOUNDARY;
+  }
   if (node.type === 'text' && typeof node.value === 'string') {
     return node.value;
   }
   if (Array.isArray(node.children)) {
     let out = '';
     for (const child of node.children) {
-      out += collectHastText(child);
+      out += collectHastText(child, excludedTagNames);
     }
     return out;
   }
   return '';
 }
 
-export function markdownToPlainText(markdown: string): string {
+/**
+ * Extracts the sanitized text projection used by chat search. Subtrees rooted
+ * at `excludedTagNames` become non-searchable boundaries so opaque custom
+ * Markdown renderers cannot contribute text or join searchable text across
+ * content they may replace or hide.
+ */
+export function markdownToPlainText(
+  markdown: string,
+  excludedTagNames: readonly string[] = [],
+): string {
   if (!markdown) return '';
   try {
     const mdast = markdownHastProcessor.parse(markdown);
     const hast = markdownHastProcessor.runSync(mdast);
-    return collectHastText(hast);
+    return collectHastText(hast, new Set(excludedTagNames));
   } catch {
-    return markdown;
+    // Raw markdown is a useful fallback only when every element uses the
+    // default renderer. With opaque custom renderers it could reintroduce text
+    // that never reaches the DOM, so fail closed for search instead.
+    return excludedTagNames.length > 0 ? '' : markdown;
   }
 }
 
@@ -134,7 +160,9 @@ export function findChatSearchMatches(
   query: string,
 ): ChatSearchMatch[] {
   const normalizedQuery = normalizeChatSearchQuery(query);
-  if (!normalizedQuery) return EMPTY_SEARCH_MATCHES;
+  if (!normalizedQuery || normalizedQuery.includes(OPAQUE_MARKDOWN_BOUNDARY)) {
+    return EMPTY_SEARCH_MATCHES;
+  }
 
   const matches: ChatSearchMatch[] = [];
   for (const block of blocks) {
@@ -608,11 +636,14 @@ export function createChatSearchRehypePlugin({
   blockId,
   matches,
   activeMatchId,
+  excludedTagNames = [],
 }: {
   blockId: string;
   matches: ChatSearchMatch[];
   activeMatchId?: string;
+  excludedTagNames?: readonly string[];
 }) {
+  const excludedTags = new Set(excludedTagNames);
   return () => (tree: unknown) => {
     if (matches.length === 0) return;
 
@@ -683,6 +714,14 @@ export function createChatSearchRehypePlugin({
 
     const visit = (node: any) => {
       if (!node) return;
+      if (
+        node.type === 'element' &&
+        typeof node.tagName === 'string' &&
+        excludedTags.has(node.tagName)
+      ) {
+        textOffset += OPAQUE_MARKDOWN_BOUNDARY.length;
+        return;
+      }
 
       if (node.type === 'text' && typeof node.value === 'string') {
         transformTextNode(node);

@@ -21,6 +21,7 @@ const {
   createChatSearchRehypePlugin,
   findChatSearchMatches,
   HighlightedChatSearchText,
+  markdownToPlainText,
   useChatSearch,
   useActiveChatSearchMatchKey,
   useRegisterChatSearchBlocks,
@@ -254,6 +255,49 @@ describe('chat search helpers', () => {
     expect(paragraph.children[1].tagName).toBe('a');
     expect(paragraph.children[3].tagName).toBe('code');
     expect(JSON.stringify(tree)).toContain('"tagName":"mark"');
+  });
+
+  it('keeps offsets aligned when custom-rendered element subtrees are excluded', () => {
+    const markdown = '`hidden design` visible design';
+    const text = markdownToPlainText(markdown, ['code']);
+    expect(text).toBe('\u0000 visible design');
+
+    const tree: any = {
+      type: 'root',
+      children: [
+        {
+          type: 'element',
+          tagName: 'p',
+          children: [
+            {
+              type: 'element',
+              tagName: 'code',
+              children: [{type: 'text', value: 'hidden design'}],
+            },
+            {type: 'text', value: ' visible design'},
+          ],
+        },
+      ],
+    };
+    const matches = findChatSearchMatches(
+      [{id: 'block', resultId: 'result', text}],
+      'design',
+    );
+
+    createChatSearchRehypePlugin({
+      blockId: 'block',
+      matches,
+      excludedTagNames: ['code'],
+    })()(tree);
+
+    expect(JSON.stringify(tree.children[0].children[0])).not.toContain(
+      '"tagName":"mark"',
+    );
+    const marks = tree.children[0].children.filter(
+      (child: any) => child.tagName === 'mark',
+    );
+    expect(marks).toHaveLength(1);
+    expect(marks[0].children[0].value).toBe('design');
   });
 });
 

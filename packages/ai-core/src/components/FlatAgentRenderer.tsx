@@ -209,7 +209,8 @@ export const AgentToolSummaryLine: React.FC<{
   startedAt?: number;
   completedAt?: number;
   toolCall?: AgentToolCall;
-}> = ({toolCall}) => {
+  searchBlockId?: string;
+}> = ({toolCall, searchBlockId}) => {
   const inputObj =
     toolCall?.input && typeof toolCall.input === 'object'
       ? (toolCall.input as Record<string, unknown>)
@@ -222,7 +223,11 @@ export const AgentToolSummaryLine: React.FC<{
 
   return (
     <div className="min-w-0 py-1 text-xs leading-4 break-words whitespace-normal italic">
-      {reasoning}
+      {searchBlockId ? (
+        <HighlightedChatSearchText blockId={searchBlockId} text={reasoning} />
+      ) : (
+        reasoning
+      )}
     </div>
   );
 };

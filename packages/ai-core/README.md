@@ -729,6 +729,12 @@ matches and highlights against the `text` prop it was given, so a slot showing
 a transformed or shortened string is searchable by what it actually displays,
 not by whatever text the block was originally registered with.
 
+Custom Markdown components are opaque rendering boundaries. Text beneath an
+overridden Markdown element is excluded from automatic search because the
+component may replace or hide its children; other default-rendered text in the
+same message stays searchable. Overriding `mark` disables automatic search for
+that message because generated highlights may never reach the DOM.
+
 A slot that paints its own matches instead of rendering through
 `HighlightedChatSearchText` must call `useReportRenderedChatSearchBlock(blockId)`
 itself, or its block never counts as rendered and contributes no matches.

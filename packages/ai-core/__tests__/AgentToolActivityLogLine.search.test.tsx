@@ -9,6 +9,7 @@ import {RoomStateProvider} from '@sqlrooms/room-store';
 import {TransformStream} from 'node:stream/web';
 import type {AiSliceState} from '../src/AiSlice';
 import type {AgentToolCall} from '../src/types';
+import type {ToolPartWithId} from '../src/components/buildChatTurnModel';
 
 Object.assign(globalThis, {
   TransformStream,
@@ -17,6 +18,8 @@ Object.assign(globalThis, {
 
 const {AgentToolActivityLogLine} =
   await import('../src/components/FlatAgentRenderer');
+const {DefaultChatToolActivity} =
+  await import('../src/components/defaultChatRendering');
 const {ChatSearchProvider, useChatSearch, useRegisterChatSearchBlocks} =
   await import('../src/components/ChatSearch');
 
@@ -59,7 +62,7 @@ function SearchController() {
   return null;
 }
 
-function renderLogLine(toolCall: AgentToolCall) {
+function renderSearchableTool(toolName: string, content: React.ReactNode) {
   latestSearchRef.current = undefined;
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -70,11 +73,8 @@ function renderLogLine(toolCall: AgentToolCall) {
     root.render(
       <RoomStateProvider roomStore={store}>
         <ChatSearchProvider>
-          <BlockRegistrar toolName={toolCall.toolName} />
-          <AgentToolActivityLogLine
-            toolCall={toolCall}
-            searchBlockId={TOOL_BLOCK_ID}
-          />
+          <BlockRegistrar toolName={toolName} />
+          {content}
           <SearchController />
         </ChatSearchProvider>
       </RoomStateProvider>,
@@ -82,6 +82,16 @@ function renderLogLine(toolCall: AgentToolCall) {
   });
 
   return {container, root, store};
+}
+
+function renderLogLine(toolCall: AgentToolCall) {
+  return renderSearchableTool(
+    toolCall.toolName,
+    <AgentToolActivityLogLine
+      toolCall={toolCall}
+      searchBlockId={TOOL_BLOCK_ID}
+    />,
+  );
 }
 
 function cleanup(container: HTMLElement, root: Root) {
@@ -151,6 +161,51 @@ describe('AgentToolActivityLogLine search highlighting', () => {
     expect(mark).not.toBeNull();
     expect(mark?.textContent).toBe('query');
     expect(container.textContent).toContain('run-query');
+
+    cleanup(container, root);
+  });
+});
+
+describe('AgentToolSummaryLine search highlighting', () => {
+  it('indexes the reasoning shown for a top-level agent tool', () => {
+    const toolCall: AgentToolCall = {
+      toolCallId: 'agent-1',
+      toolName: 'delegate-task',
+      state: 'success',
+      input: {reasoning: 'Inspecting the available datasets'},
+      agentToolCalls: [
+        {
+          toolCallId: 'nested-1',
+          toolName: 'list-datasets',
+          state: 'success',
+        },
+      ],
+    };
+    const part = {
+      type: 'tool-delegate-task',
+      toolCallId: toolCall.toolCallId,
+      state: 'output-available',
+      input: toolCall.input,
+      output: {agentToolCalls: toolCall.agentToolCalls},
+    } as ToolPartWithId;
+    const {container, root} = renderSearchableTool(
+      toolCall.toolName,
+      <DefaultChatToolActivity
+        toolCall={toolCall}
+        part={part}
+        isAgent
+        isHoisted={false}
+        searchBlockId={TOOL_BLOCK_ID}
+      />,
+    );
+
+    setQuery('available');
+    expect(container.querySelector('mark')?.textContent).toBe('available');
+    expect(latestSearchRef.current?.matches).toHaveLength(1);
+
+    setQuery('delegate');
+    expect(container.querySelectorAll('mark')).toHaveLength(0);
+    expect(latestSearchRef.current?.matches).toHaveLength(0);
 
     cleanup(container, root);
   });
