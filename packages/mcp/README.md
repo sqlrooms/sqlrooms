@@ -12,6 +12,10 @@ Public entry points:
 - `@sqlrooms/mcp` exports the transport-neutral runtime and capability types.
 - `@sqlrooms/mcp/browser` registers the authenticated browser bridge.
 - `@sqlrooms/mcp/protocol` exports the versioned internal bridge schemas.
+- `@sqlrooms/mcp/sqlrooms` exports the injected-store SQLRooms query, table,
+  and command capability catalog shared by native and browser hosts.
+- `@sqlrooms/mcp/webmcp` progressively registers a live runtime through the
+  browser's WebMCP imperative API.
 
 The browser entry point adapts the runtime to SQLRooms' authenticated host-to-
 page WebSocket. That WebSocket is application plumbing: public MCP requests
@@ -28,6 +32,8 @@ The internal browser bridge protocol is version `1` in both TypeScript
 change must update both definitions together. This is separate from the public
 MCP Streamable HTTP protocol negotiated by the official MCP SDK.
 
-WebMCP is not implemented. A future adapter can map portable capability
-definitions to `document.modelContext.registerTool()` without changing the
-runtime or capability handlers.
+The WebMCP adapter feature-detects `document.modelContext`, maps the portable
+capability catalog to `registerTool()`, forwards cancellation to runtime calls,
+and unregisters tools through an `AbortSignal`. It does not expose tools across
+origins unless the host supplies an explicit trusted `exposedTo` list. Browsers
+without WebMCP continue to run the ordinary application unchanged.

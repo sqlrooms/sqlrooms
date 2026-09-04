@@ -785,6 +785,11 @@ export function createRemoteChatTransportFactory(params: {
       // Make the request with enhanced body
       return fetch(input, {
         ...init,
+        headers: mergeRemoteChatHeaders(
+          headers,
+          state.ai.chatHeaders,
+          init?.headers,
+        ),
         signal: abortSignal,
         body: JSON.stringify(enhancedBody),
       });
@@ -793,10 +798,24 @@ export function createRemoteChatTransportFactory(params: {
     return new DefaultChatTransport({
       api: endpoint,
       credentials: 'include',
-      headers,
       fetch: fetchImpl,
     });
   };
+}
+
+export function mergeRemoteChatHeaders(
+  configuredHeaders: Record<string, string> | undefined,
+  currentHeaders: Record<string, string>,
+  requestHeaders: HeadersInit | undefined,
+) {
+  const mergedHeaders = new Headers(configuredHeaders);
+  new Headers(requestHeaders).forEach((value, name) => {
+    mergedHeaders.set(name, value);
+  });
+  for (const [name, value] of Object.entries(currentHeaders)) {
+    mergedHeaders.set(name, value);
+  }
+  return Object.fromEntries(mergedHeaders);
 }
 
 function selectErrorSourceMessages({

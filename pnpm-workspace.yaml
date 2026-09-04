@@ -91,10 +91,12 @@ allowBuilds:
   '@mongodb-js/zstd': false
   '@swc/core': true
   '@vaadin/vaadin-usage-statistics': false
+  core-js: false
   esbuild: true
   node-liblzma: true
   sharp: false
   unrs-resolver: true
+  workerd: true
 minimumReleaseAgeExclude:
   - '@ai-sdk/provider-utils@3.0.26'
   - '@ai-sdk/provider-utils@4.0.29'

@@ -57,6 +57,9 @@
     "examples/*": {
       "entry": ["src/main.{ts,tsx}"]
     },
+    "apps/web-app": {
+      "ignoreDependencies": ["cloudflare"]
+    },
     "apps/*": {},
     "apps/sqlrooms-cli-ui": {
       "entry": ["src/main.{ts,tsx}", "src/evals/promptfooProvider.ts"],
