@@ -91,6 +91,44 @@ const commandDescriptors = [
   },
 ] as const;
 
+// Metadata from the command-discovery trace for the earthquake map.
+const documentCommandDescriptors = [
+  {
+    id: 'block-document.insert-blocks',
+    name: 'Insert document blocks',
+    description: 'Insert top-level blocks into a Document artifact',
+    keywords: ['document', 'insert', 'blocks'],
+    readOnly: false,
+  },
+  {
+    id: 'block-document.list',
+    name: 'List documents',
+    description: 'List Document artifacts in the room',
+    keywords: ['document', 'document', 'blocks', 'list'],
+    readOnly: true,
+  },
+  {
+    id: 'block-document.get',
+    name: 'Get document',
+    description:
+      'Read blocks from a Document artifact. Defaults to the current document artifact.',
+    keywords: ['document', 'read', 'get', 'blocks'],
+    readOnly: true,
+  },
+  {
+    id: 'block-document.add-map-block',
+    name: 'Add or update block document map block',
+    description: 'Create or update a direct block document map block.',
+    keywords: ['block document', 'map', 'deck', 'block', 'add', 'update'],
+    readOnly: false,
+  },
+].map((descriptor) => ({
+  ...commandDescriptors[0],
+  group: 'Document',
+  ...descriptor,
+  requiresInput: !descriptor.readOnly,
+}));
+
 function createCommandState(
   invokeCommand: any,
   descriptors: readonly any[] = [],
@@ -128,6 +166,128 @@ function createCommandState(
 }
 
 describe('command tools', () => {
+  it.each([
+    {query: 'nonexistent'},
+    {query: 'nonexistent', resourceType: 'artifact', riskLevel: 'low'},
+    {query: 'in'},
+  ])('does not count unrelated commands as matches for %j', async (params) => {
+    const tools = createCommandState(jest.fn(), commandDescriptors);
+    const result = await (tools.search_commands as any).execute(
+      SearchCommandsToolParameters.parse(params),
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      commands: [],
+      details: 'Found 0 matching commands.',
+    });
+  });
+
+  it('reports the relevant count before limiting search results', async () => {
+    const tools = createCommandState(jest.fn(), commandDescriptors);
+    const result = await (tools.search_commands as any).execute(
+      SearchCommandsToolParameters.parse({query: 'dashboard', limit: 1}),
+    );
+
+    expect(result.commands).toHaveLength(1);
+    expect(result.details).toBe('Found 2 matching commands.');
+  });
+
+  it('matches whole words rather than unrelated substrings', async () => {
+    const tools = createCommandState(jest.fn(), [
+      {
+        ...commandDescriptors[0],
+        id: 'bitmap.export',
+        name: 'Export bitmap',
+        description: 'Export a bitmap image.',
+        keywords: ['bitmap', 'export'],
+      },
+    ]);
+    const result = await (tools.search_commands as any).execute(
+      SearchCommandsToolParameters.parse({query: 'map'}),
+    );
+
+    expect(result.commands).toEqual([]);
+  });
+
+  it('supports empty searches and searches using only hints', async () => {
+    const tools = createCommandState(jest.fn(), commandDescriptors);
+    const all = await (tools.search_commands as any).execute(
+      SearchCommandsToolParameters.parse({}),
+    );
+    const hinted = await (tools.search_commands as any).execute(
+      SearchCommandsToolParameters.parse({resourceType: 'dashboard'}),
+    );
+
+    expect(all.commands).toHaveLength(3);
+    expect(hinted.commands).toHaveLength(2);
+    expect(hinted.commands.map((command: any) => command.id)).not.toContain(
+      'artifact.delete',
+    );
+  });
+
+  it.each([
+    {query: 'get map block', resourceType: 'block-document', action: 'get'},
+    {query: 'read map'},
+    {query: 'map get'},
+  ])(
+    'ranks reading the document ahead of map mutations for %j',
+    async (params) => {
+      const tools = createCommandState(jest.fn(), [
+        ...documentCommandDescriptors,
+        ...commandDescriptors,
+      ]);
+      const result = await (tools.search_commands as any).execute(
+        SearchCommandsToolParameters.parse(params),
+      );
+
+      expect(result.commands[0].id).toBe('block-document.get');
+      expect(result.commands[0].matchReason).toContain('read-only command');
+      expect(result.commands.map((command: any) => command.id)).not.toContain(
+        'artifact.delete',
+      );
+    },
+  );
+
+  it('ranks document reads ahead of insertion for a natural-language list request', async () => {
+    const tools = createCommandState(jest.fn(), documentCommandDescriptors);
+    const result = await (tools.search_commands as any).execute(
+      SearchCommandsToolParameters.parse({
+        query: 'list blocks in document',
+        resourceType: 'block-document',
+        action: 'list',
+      }),
+    );
+
+    expect(
+      result.commands.slice(0, 2).map((command: any) => command.id),
+    ).toEqual(['block-document.list', 'block-document.get']);
+  });
+
+  it('keeps exact command IDs first even with a conflicting read hint', async () => {
+    const tools = createCommandState(jest.fn(), documentCommandDescriptors);
+    const result = await (tools.search_commands as any).execute(
+      SearchCommandsToolParameters.parse({
+        query: 'block-document.add-map-block',
+        action: 'get',
+      }),
+    );
+
+    expect(result.commands[0].id).toBe('block-document.add-map-block');
+  });
+
+  it('keeps map authoring discoverable with an explicit write action', async () => {
+    const tools = createCommandState(jest.fn(), documentCommandDescriptors);
+    const result = await (tools.search_commands as any).execute(
+      SearchCommandsToolParameters.parse({
+        query: 'get map block',
+        action: 'add',
+      }),
+    );
+
+    expect(result.commands[0].id).toBe('block-document.add-map-block');
+  });
+
   it('searches commands by intent with deterministic ranking', async () => {
     const tools = createCommandState(jest.fn(), commandDescriptors);
 
@@ -198,6 +358,157 @@ describe('command tools', () => {
         inputSchema,
       },
     });
+  });
+
+  it('omits denied commands from search, list, and command details', async () => {
+    const guardedDescriptors = [
+      commandDescriptors[0],
+      {
+        ...commandDescriptors[1],
+        id: 'block-document.hidden-mutation',
+        visible: false,
+      },
+      commandDescriptors[2],
+    ] as const;
+    const commandGuard = jest.fn((descriptor: {id: string}) => ({
+      allowed: descriptor.id === 'artifact.rename',
+    }));
+    const tools = createCommandState(jest.fn(), guardedDescriptors, {
+      commandGuard,
+    });
+
+    const searchResult = await (tools.search_commands as any).execute({
+      query: '',
+      includeHidden: true,
+      includeDisabled: true,
+      limit: 50,
+    });
+    const listResult = await (tools.list_commands as any).execute({
+      includeInvisible: true,
+      includeDisabled: true,
+      includeInputSchema: true,
+    });
+    const hiddenGetResult = await (tools.get_command as any).execute({
+      commandId: 'block-document.hidden-mutation',
+      includeHidden: true,
+      includeDisabled: true,
+    });
+    const disabledGetResult = await (tools.get_command as any).execute({
+      commandId: 'artifact.delete',
+      includeHidden: true,
+      includeDisabled: true,
+    });
+
+    expect(searchResult.commands.map((command: any) => command.id)).toEqual([
+      'artifact.rename',
+    ]);
+    expect(listResult.commands.map((command: any) => command.id)).toEqual([
+      'artifact.rename',
+    ]);
+    expect(hiddenGetResult).toEqual({
+      success: false,
+      errorMessage: 'Unknown command ID "block-document.hidden-mutation".',
+    });
+    expect(disabledGetResult).toEqual({
+      success: false,
+      errorMessage: 'Unknown command ID "artifact.delete".',
+    });
+    expect(commandGuard).toHaveBeenCalledWith(
+      expect.objectContaining({visible: false}),
+    );
+    expect(commandGuard).toHaveBeenCalledWith(
+      expect.objectContaining({enabled: false}),
+    );
+  });
+
+  it('returns a custom guard refusal before confirmation or invocation', async () => {
+    invokeCommandWithPolicy.mockClear();
+    const invokeCommand = jest.fn(async () => ({
+      success: true,
+      commandId: 'artifact.delete',
+    }));
+    const tools = createCommandState(invokeCommand, commandDescriptors, {
+      commandGuard: (descriptor: {id: string}) =>
+        descriptor.id === 'artifact.delete'
+          ? {
+              allowed: false,
+              code: 'use-artifact-agent',
+              message: 'Use the artifact agent to delete artifacts.',
+            }
+          : {allowed: true},
+    });
+
+    const result = await (tools.execute_command as any).execute({
+      commandId: 'artifact.delete',
+      input: {artifactId: 'artifact-1'},
+    });
+
+    expect(result).toEqual({
+      success: false,
+      commandId: 'artifact.delete',
+      errorMessage: 'Use the artifact agent to delete artifacts.',
+      result: {
+        code: 'use-artifact-agent',
+        message: 'Use the artifact agent to delete artifacts.',
+      },
+    });
+    expect(invokeCommandWithPolicy).not.toHaveBeenCalled();
+    expect(invokeCommand).not.toHaveBeenCalled();
+
+    await invokeCommand('artifact.delete', {artifactId: 'artifact-1'});
+    expect(invokeCommand).toHaveBeenCalledWith('artifact.delete', {
+      artifactId: 'artifact-1',
+    });
+  });
+
+  it('uses the default guard refusal when no reason is supplied', async () => {
+    invokeCommandWithPolicy.mockClear();
+    const invokeCommand = jest.fn();
+    const tools = createCommandState(invokeCommand, commandDescriptors, {
+      commandGuard: (descriptor: {id: string}) => ({
+        allowed: descriptor.id !== 'block-document.add-dashboard-block',
+      }),
+    });
+
+    const result = await (tools.execute_command as any).execute({
+      commandId: 'block-document.add-dashboard-block',
+    });
+
+    expect(result).toEqual({
+      success: false,
+      commandId: 'block-document.add-dashboard-block',
+      errorMessage:
+        'Command "block-document.add-dashboard-block" is not available to this caller.',
+      result: {
+        code: 'command-not-available-to-caller',
+        message:
+          'Command "block-document.add-dashboard-block" is not available to this caller.',
+      },
+    });
+    expect(invokeCommandWithPolicy).not.toHaveBeenCalled();
+    expect(invokeCommand).not.toHaveBeenCalled();
+  });
+
+  it('preserves command behavior when the guard is omitted', async () => {
+    const invokeCommand = jest.fn(async () => ({
+      success: true,
+      commandId: 'artifact.rename',
+    }));
+    const tools = createCommandState(invokeCommand, commandDescriptors);
+
+    const listResult = await (tools.list_commands as any).execute({
+      includeInvisible: true,
+      includeDisabled: true,
+      includeInputSchema: true,
+    });
+    const executionResult = await (tools.execute_command as any).execute({
+      commandId: 'artifact.rename',
+      input: {title: 'Renamed'},
+    });
+
+    expect(listResult.commands).toEqual(commandDescriptors);
+    expect(executionResult.success).toBe(true);
+    expect(invokeCommand).toHaveBeenCalled();
   });
 
   it('honors the configured default surface for parsed discovery inputs', async () => {

@@ -404,6 +404,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
       )}
       contentEditable={false}
       data-block-document-widget-node-view=""
+      data-block-document-block-id={blockId}
       style={wrapperStyle}
       onClick={handleClick}
     >

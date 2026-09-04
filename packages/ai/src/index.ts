@@ -26,6 +26,7 @@ export {
 export type {
   CommandToolDescriptor,
   CommandToolSearchDescriptor,
+  CommandGuardResult,
   CommandToolsOptions,
   DefaultCommandTools,
   ExecuteCommandToolLlmResult,
@@ -196,6 +197,22 @@ export {PromptSuggestions} from '@sqlrooms/ai-core';
 export {ModelSelector} from '@sqlrooms/ai-core';
 export {SessionControls} from '@sqlrooms/ai-core';
 export {QueryControls} from '@sqlrooms/ai-core';
+export {
+  fileToChatAttachmentPart,
+  getChatAttachmentMediaType,
+  getChatAttachmentText,
+  getChatMessageAttachments,
+  isMarkdownAttachment,
+  isSupportedChatAttachment,
+  isTextAttachmentFilename,
+  isTextAttachmentMediaType,
+  useChatAttachments,
+} from '@sqlrooms/ai-core';
+export type {
+  ChatAttachmentPart,
+  ChatAttachmentsState,
+  ChatComposerAttachmentsProps,
+} from '@sqlrooms/ai-core';
 export {
   BlockAiPromptPopover,
   type BlockAiPromptPopoverProps,

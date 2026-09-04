@@ -23,6 +23,7 @@ import {
   UIMessage,
   DefaultChatTransport,
   LanguageModel,
+  FileUIPart,
   generateText,
   lastAssistantMessageIsCompleteWithApprovalResponses,
   lastAssistantMessageIsCompleteWithToolCalls,
@@ -185,9 +186,15 @@ export type AiSliceState = {
         sessionId?: string;
       },
     ) => Promise<string>;
-    startAnalysis: (sessionId: string) => Promise<void>;
+    startAnalysis: (
+      sessionId: string,
+      attachments?: FileUIPart[],
+    ) => Promise<void>;
     /** Compatibility entry point; session controllers are ready synchronously. */
-    startAnalysisWhenReady: (sessionId: string) => Promise<boolean>;
+    startAnalysisWhenReady: (
+      sessionId: string,
+      attachments?: FileUIPart[],
+    ) => Promise<boolean>;
     startNewSession: (name: string, prompt: string) => Promise<void>;
     cancelAnalysis: (sessionId: string) => void;
     setAiModel: (modelProvider: string, model: string) => void;
@@ -1716,6 +1723,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return instructions;
         },
 
+        /**
+         * Run a one-shot `generateText` call outside the chat transport.
+         *
+         * A model from `getCustomModel` wins over the settings-built one, and
+         * over any explicit `modelProvider`/`modelName`/`baseUrl` passed here.
+         */
         sendPrompt: async (
           prompt: string,
           options: {
@@ -1772,12 +1785,41 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             Object.entries(tools).filter(([, tool]) => !tool.execute),
           );
 
-          const model = createOpenAICompatible({
-            apiKey: state.ai.getApiKeyFromSettings(provider, modelId),
-            name: provider,
-            baseURL,
-            includeUsage: true,
-          }).chatModel(modelId);
+          // Resolved per request, not through `customModelProbe`: that cache
+          // exists for selectors that re-run per token, and only retires on a
+          // new settings object, so a host that swaps its model at runtime
+          // would keep getting the stale one here.
+          let customModel: LanguageModel | undefined;
+          try {
+            customModel = getCustomModel?.();
+          } catch (error) {
+            console.error(
+              'getCustomModel threw; falling back to settings:',
+              error,
+            );
+          }
+
+          const model =
+            customModel ??
+            createOpenAICompatible({
+              apiKey: state.ai.getApiKeyFromSettings(provider, modelId),
+              name: provider,
+              baseURL,
+              includeUsage: true,
+            }).chatModel(modelId);
+
+          // Diagnostics follow the model actually invoked, which is not the
+          // selection when a custom model wins. A string is a model id the AI
+          // SDK resolves through the global provider, so only the id is known.
+          let diagnosticProvider = provider;
+          let diagnosticModelId = modelId;
+          if (typeof customModel === 'string') {
+            diagnosticProvider = 'global-provider';
+            diagnosticModelId = customModel;
+          } else if (customModel) {
+            diagnosticProvider = customModel.provider;
+            diagnosticModelId = customModel.modelId;
+          }
 
           const diagnosticsByStep: string[] = [];
           let completedStep = 0;
@@ -1798,8 +1840,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 }
                 const diagnostic = await tryMeasureProviderContext({
                   role,
-                  provider,
-                  model: modelId,
+                  provider: diagnosticProvider,
+                  model: diagnosticModelId,
                   sessionId: sessionId ?? currentSession?.id,
                   step: stepNumber,
                   instructions: resolvedInstructions,
@@ -1842,7 +1884,10 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         /**
          * Start the analysis for a specific session
          */
-        startAnalysis: async (sessionId: string) => {
+        startAnalysis: async (
+          sessionId: string,
+          attachments: FileUIPart[] = [],
+        ) => {
           const state = get();
           const session = state.ai.config.sessions.find(
             (s: ChatSessionSchema) => s.id === sessionId,
@@ -1913,15 +1958,27 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
             }),
           );
-          void chat.sendMessage({text: promptText});
+          void chat.sendMessage(
+            promptText
+              ? {
+                  text: promptText,
+                  ...(attachments.length > 0 ? {files: attachments} : {}),
+                }
+              : attachments.length > 0
+                ? {files: attachments}
+                : {text: promptText},
+          );
         },
 
-        startAnalysisWhenReady: async (sessionId: string) => {
+        startAnalysisWhenReady: async (
+          sessionId: string,
+          attachments: FileUIPart[] = [],
+        ) => {
           if (!get().ai.getSessionChat(sessionId)) {
             console.error('Session not found:', sessionId);
             return false;
           }
-          await get().ai.startAnalysis(sessionId);
+          await get().ai.startAnalysis(sessionId, attachments);
           return true;
         },
 

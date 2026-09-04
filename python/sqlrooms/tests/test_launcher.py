@@ -45,6 +45,7 @@ def test_api_config(server):
     assert "dbBridge" in data
     assert "aiProviders" in data
     assert data["aiDevtools"] is False
+    assert "aiRenderingTools" not in data
     assert data["capabilityProfile"] == "default"
     assert data["experimentalEnabled"] is False
     assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"

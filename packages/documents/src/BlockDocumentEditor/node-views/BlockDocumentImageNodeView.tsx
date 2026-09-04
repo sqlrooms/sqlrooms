@@ -35,6 +35,7 @@ export const BlockDocumentImageNodeView: FC<
         selected && 'ring-ring ring-2',
       )}
       contentEditable={false}
+      data-block-document-block-id={optionalString(attrs.id)}
     >
       <figure className="m-0">
         {src ? (

@@ -9,6 +9,7 @@ export function getDeckMapSharedAiContractRules(): string {
 - Never write SELECT *, ST_AsWKB(col) AS col — DuckDB keeps the original column and the WKB alias collides. Use SELECT * EXCLUDE (col), ST_AsWKB(...) AS col, or omit transformSql when geom already exists. Bare ST_Point(...) / table GEOMETRY columns are projected to WKB by the dataset pipeline; prefer explicit ST_AsWKB when practical.
 - GeoArrowHeatmapLayer: omit colorRange (UI scheme selector owns it) and omit getWeight (default uniform density). Do not bind getWeight to a column — basic mode has no weight-column control.
 - Never set mapStyle to a mapbox:// URL — MapLibre cannot load that scheme. Omit mapStyle for the host basemap, or use a token-free MapLibre https:// style URL.
+- Built-in mapStyle IDs are light and dark. New maps default to the app theme at creation; omit mapStyle on updates to preserve the saved selection. Never put tile API keys in map configs.
 - GeoArrowH3HexagonLayer: set getHexagon to "@@=h3_column" (or _sqlroomsBinding.hexagonColumn). When aggregating lon/lat, prefer h3_h3_to_string(h3_latlng_to_cell(lat, lon, res)) AS h3_cell (lat before lon).
 - GeoArrowArcLayer: bind WKB via _sqlroomsBinding.sourceGeometryColumn / targetGeometryColumn only (do not set getSourcePosition/getTargetPosition). Use ST_AsWKB(ST_Point(...)); set geometryEncodingHint to "wkb".
 - GeoArrowTripsLayer = animated path over time; GeoArrowArcLayer = static OD curve. Prefer TripsLayer for animated/trips/moving routes.

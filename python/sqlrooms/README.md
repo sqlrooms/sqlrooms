@@ -15,6 +15,15 @@ What happens:
 - Drag-and-drop CSV, TSV, JSON, Parquet, and DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
 - UI state is stored in the SQLRooms meta namespace (default `__sqlrooms`) of the selected DuckDB file.
 
+## Map basemaps
+
+Maps use [OpenFreeMap](https://openfreemap.org/) vector tiles with **Positron**
+for light mode and **Dark** for dark mode. No API key or registration is required.
+
+New maps keep the light/dark style matching the app theme at creation, including
+after theme changes and workspace reloads. Change the saved style through
+**Map settings → Basemap**. Existing custom map styles are preserved.
+
 ## CLI flags
 
 - `DB_PATH` (positional): DuckDB project file to load/create (e.g. `sqlrooms ./my.db`). Required unless `--db-path` is provided.
@@ -36,6 +45,10 @@ What happens:
 - `--mcp-port`: Select the loopback MCP port (defaults to 42100 or the next free port).
 - `--config`: Path to a SQLRooms TOML config file. Defaults to `~/.config/sqlrooms/config.toml` (`%APPDATA%\sqlrooms\config.toml` on Windows).
 - `--no-config`: Disable config file loading.
+
+Read-only artifact, document-block, and dashboard-panel image tools are always
+available in the CLI UI. Using their image results requires a vision-capable
+model and a provider that supports image tool results.
 
 `--host 0.0.0.0` is an advanced local-network mode. Only use it on trusted
 networks; it exposes the SQLRooms UI/API bind address beyond your loopback

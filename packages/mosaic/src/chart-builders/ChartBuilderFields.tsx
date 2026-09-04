@@ -1,5 +1,5 @@
 import {cn} from '@sqlrooms/ui';
-import {FC, useCallback, useMemo} from 'react';
+import {FC, useMemo} from 'react';
 import {
   useChartBuilderContext,
   useChartBuilderStore,
@@ -19,23 +19,12 @@ export const ChartBuilderFields: FC<ChartBuilderFieldsProps> = ({
     (state) => state.selectedTemplateId,
   );
   const fieldValues = useChartBuilderStore((state) => state.fieldValues);
-  const setFieldValue = useChartBuilderStore((state) => state.setFieldValue);
+  const chartOptions = useChartBuilderStore((state) => state.chartOptions);
+  const setConfig = useChartBuilderStore((state) => state.setConfig);
 
   const chartTypeDefinition = useMemo(
     () => templates.find((template) => template.id === chartTypeDefinitionId),
     [templates, chartTypeDefinitionId],
-  );
-
-  const handleChange = useCallback(
-    (config: ChartConfig) => {
-      // Update all changed values from settings
-      Object.entries(config.settings).forEach(([key, value]) => {
-        if (fieldValues[key] !== value) {
-          setFieldValue(key, value);
-        }
-      });
-    },
-    [fieldValues, setFieldValue],
   );
 
   // Create a config object for the context
@@ -47,10 +36,11 @@ export const ChartBuilderFields: FC<ChartBuilderFieldsProps> = ({
       };
     }
     return {
+      ...chartOptions,
       chartType: chartTypeDefinition.id,
       settings: fieldValues,
     } as ChartConfig;
-  }, [chartTypeDefinition, fieldValues]);
+  }, [chartTypeDefinition, fieldValues, chartOptions]);
 
   if (!chartTypeDefinition) {
     return null;
@@ -62,7 +52,7 @@ export const ChartBuilderFields: FC<ChartBuilderFieldsProps> = ({
       <MosaicChartSettingsProvider
         config={config}
         columns={columns}
-        onChange={handleChange}
+        onChange={setConfig}
       >
         <SettingsComponent />
       </MosaicChartSettingsProvider>

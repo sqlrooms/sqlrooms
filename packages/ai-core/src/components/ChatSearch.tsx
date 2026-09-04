@@ -256,7 +256,7 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
   useEffect(() => {
     if (!activeMatchId) return;
     const scrollToActiveMatch = () => {
-      document.getElementById(activeMatchId)?.scrollIntoView({
+      document.getElementById(activeMatchId)?.scrollIntoView?.({
         block: 'center',
         inline: 'nearest',
       });

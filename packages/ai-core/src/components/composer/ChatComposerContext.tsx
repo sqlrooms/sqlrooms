@@ -1,4 +1,11 @@
-import {useCallback, useMemo, type FC, type PropsWithChildren} from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type FC,
+  type PropsWithChildren,
+} from 'react';
 import {useStoreWithAi} from '../../AiSlice';
 import type {LocalAgentChatRuntime} from '../ChatRuntimeContext';
 import {
@@ -11,6 +18,10 @@ import {
   useSendsBlocked,
   useVetoableSend,
 } from './beforeSend';
+import {
+  ChatComposerAttachmentsProvider,
+  useChatAttachments,
+} from './attachments';
 
 export type {ChatComposerMode};
 
@@ -48,8 +59,8 @@ export interface ChatComposerState {
   cancel: () => void;
   /**
    * True when {@link send} would currently do something: a model is
-   * resolvable, the prompt is non-empty once trimmed, and nothing is already
-   * running or summarizing.
+   * resolvable, the prompt is non-empty once trimmed or an attachment is
+   * pending, and nothing is already running or summarizing.
    */
   canSend: boolean;
   /** True while a response is being generated. */
@@ -81,9 +92,18 @@ export interface ChatComposerState {
  * otherwise.
  */
 function useSessionComposerState(): ChatComposerState {
+  const {attachments, clear: clearAttachments} = useChatAttachments();
   // Select the id, not the session: the session object is replaced as messages
   // stream in, which would re-render every composer on each token.
   const sessionId = useStoreWithAi((s) => s.ai.getCurrentSession()?.id);
+  const previousSessionIdRef = useRef(sessionId);
+
+  useEffect(() => {
+    if (previousSessionIdRef.current !== sessionId) {
+      clearAttachments();
+      previousSessionIdRef.current = sessionId;
+    }
+  }, [sessionId, clearAttachments]);
 
   // Short-circuits: `requiresApiKey()` invokes the host's factory, and this
   // selector re-runs once per streamed token.
@@ -130,51 +150,68 @@ function useSessionComposerState(): ChatComposerState {
   // guard (over an optional override), so the two cannot disagree.
   const sendBlocked = useSendsBlocked();
 
-  const canSendText = useCallback(
+  const canSendInput = useCallback(
     (text: string) =>
       hasResolvableModel &&
       !sendBlocked &&
       !isRunning &&
       !isSummarizing &&
-      text.trim().length > 0,
-    [hasResolvableModel, sendBlocked, isRunning, isSummarizing],
+      (text.trim().length > 0 || attachments.length > 0),
+    [
+      hasResolvableModel,
+      sendBlocked,
+      isRunning,
+      isSummarizing,
+      attachments.length,
+    ],
   );
 
-  const canSend = canSendText(prompt);
+  const canSend = canSendInput(prompt);
 
   const rawSend = useCallback(
     (text?: string) => {
       const value = text ?? prompt;
-      if (!canSendText(value)) return;
+      if (!canSendInput(value)) return;
 
       let activeSessionId = sessionId;
       if (!activeSessionId) {
         activeSessionId = createSession();
         setPromptAction(activeSessionId, value);
         setDraftPrompt('');
-        void runAnalysisWhenReady(activeSessionId);
+        if (attachments.length > 0) {
+          void runAnalysisWhenReady(activeSessionId, attachments);
+        } else {
+          void runAnalysisWhenReady(activeSessionId);
+        }
       } else {
         // With no override the session's stored prompt is already `value`, so
         // only write it back when a caller supplies different text.
         if (text !== undefined) {
           setPromptAction(activeSessionId, value);
         }
-        runAnalysis(activeSessionId);
+        if (attachments.length > 0) {
+          void runAnalysis(activeSessionId, attachments);
+        } else {
+          void runAnalysis(activeSessionId);
+        }
       }
+      clearAttachments();
     },
     [
       prompt,
-      canSendText,
+      canSendInput,
       sessionId,
       createSession,
       setPromptAction,
       setDraftPrompt,
       runAnalysisWhenReady,
       runAnalysis,
+      attachments,
+      clearAttachments,
     ],
   );
 
-  const send = useVetoableSend(rawSend, prompt, canSendText);
+  const send = useVetoableSend(rawSend, prompt, canSendInput);
 
   const cancel = useCallback(() => {
     if (!sessionId) return;
@@ -219,20 +256,33 @@ function useLocalAgentComposerState(
   runtime: LocalAgentChatRuntime,
 ): ChatComposerState {
   const {prompt, setPrompt, sendPrompt, stop, isStreaming} = runtime;
+  const {attachments, clear: clearAttachments} = useChatAttachments();
 
   const sendBlocked = useSendsBlocked();
   // Shared by `canSend` and the pre-send wrapper's guard, so a handler cannot
   // fire for text this mode would refuse to send.
-  const canSendText = useCallback(
-    (text: string) => !isStreaming && !sendBlocked && text.trim().length > 0,
-    [isStreaming, sendBlocked],
+  const canSendInput = useCallback(
+    (text: string) =>
+      !isStreaming &&
+      !sendBlocked &&
+      (text.trim().length > 0 || attachments.length > 0),
+    [isStreaming, sendBlocked, attachments.length],
   );
-  const canSend = canSendText(prompt);
+  const canSend = canSendInput(prompt);
 
   // `sendPrompt` already matches `send`'s signature and applies the same
   // guards, so only the veto wrapper is added. `stop` returns a promise, so it
   // is wrapped to match `cancel`'s `void` contract.
-  const send = useVetoableSend(sendPrompt, prompt, canSendText);
+  const rawSend = useCallback(
+    (text?: string) => {
+      if (attachments.length > 0) sendPrompt(text, attachments);
+      else if (text === undefined) sendPrompt();
+      else sendPrompt(text);
+      clearAttachments();
+    },
+    [sendPrompt, attachments, clearAttachments],
+  );
+  const send = useVetoableSend(rawSend, prompt, canSendInput);
 
   const cancel = useCallback(() => {
     void stop();
@@ -263,17 +313,27 @@ const composerContext = createDualModeChatContext<ChatComposerState>({
   useLocalAgentState: useLocalAgentComposerState,
 });
 
-/** Mounts the veto registry above a state provider, since `send` reads it. */
-const withBeforeSend = (
+/** Mounts composer infrastructure above a state provider, since `send` reads it. */
+const withComposerInfrastructure = (
   Provider: FC<PropsWithChildren>,
   displayName: string,
-): FC<PropsWithChildren> =>
-  withProvider(ChatComposerBeforeSendProvider, Provider, displayName);
+): FC<PropsWithChildren> => {
+  const WithBeforeSend = withProvider(
+    ChatComposerBeforeSendProvider,
+    Provider,
+    `${displayName}BeforeSend`,
+  );
+  return withProvider(
+    ChatComposerAttachmentsProvider,
+    WithBeforeSend,
+    displayName,
+  );
+};
 
 /**
  * Publishes normalized session-mode composer state. Rendered by `Chat.Root`.
  */
-export const SessionChatComposerProvider = withBeforeSend(
+export const SessionChatComposerProvider = withComposerInfrastructure(
   composerContext.SessionProvider,
   'SessionChatComposerProvider',
 );
@@ -282,7 +342,7 @@ export const SessionChatComposerProvider = withBeforeSend(
  * Publishes normalized local-agent-mode composer state. Rendered by
  * `Chat.LocalAgentRoot`, inside its `LocalAgentChatRuntimeProvider`.
  */
-export const LocalAgentChatComposerProvider = withBeforeSend(
+export const LocalAgentChatComposerProvider = withComposerInfrastructure(
   composerContext.LocalAgentProvider,
   'LocalAgentChatComposerProvider',
 );
@@ -295,7 +355,7 @@ export const LocalAgentChatComposerProvider = withBeforeSend(
  * session-mode provider is rendered around them, so a composer used without a
  * `<Chat>` ancestor still works.
  */
-export const ChatComposerStateBoundary = withBeforeSend(
+export const ChatComposerStateBoundary = withComposerInfrastructure(
   composerContext.StateBoundary,
   'ChatComposerStateBoundary',
 );

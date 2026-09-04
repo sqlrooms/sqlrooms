@@ -29,7 +29,7 @@ import {getDeckMapSharedAiContractRules} from './mapAiSharedInstructions';
 import {prepareAiDeckMapConfig} from './aiNormalize';
 import type {PrepareAiDeckMapConfigOptions} from './aiNormalize';
 import {assertDeckMapResourceConfig} from './mapResourceAuthoring';
-import type {DeckMapConfig} from './mapConfig';
+import {asDeckJsonMapConfig, withPreservedDeckMapStyle} from './mapConfig';
 
 export {getFirstDatasetSourceTableName, hasSqlOnlyDatasetSource};
 
@@ -319,7 +319,11 @@ function cloneConfig(
   options?: PrepareAiDeckMapConfigOptions,
 ): DeckMapDashboardPanelConfig {
   const normalized = prepareAiDeckMapConfig(config, options);
-  return JSON.parse(JSON.stringify(normalized)) as DeckMapDashboardPanelConfig;
+  const cloned = JSON.parse(
+    JSON.stringify(normalized),
+  ) as DeckMapDashboardPanelConfig;
+  assertDeckMapResourceConfig(cloned);
+  return cloned;
 }
 
 /**
@@ -331,7 +335,6 @@ export function createDeckMapPanelFromNativeConfig(
   options?: PrepareAiDeckMapConfigOptions,
 ) {
   const config = cloneConfig(params.config, options);
-  assertDeckMapResourceConfig(config as DeckMapConfig);
   return createDeckMapDashboardPanelConfig({
     title: params.title || 'Map',
     ...config,
@@ -418,12 +421,13 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
       try {
         // Prepare/validate before mutating dashboard selection so a rejected
         // config does not switch the active table as a side effect.
-        const panel = createDeckMapPanelFromNativeConfig(params, {
+        const config = cloneConfig(params.config, {
           resolveTable: (name) => databaseAdapter.findTable(name),
           stripCatalogNames,
         });
+        const title = params.title || 'Map';
         const tableName =
-          params.tableName ?? getFirstDatasetSourceTableName(panel.config);
+          params.tableName ?? getFirstDatasetSourceTableName(config);
 
         if (tableName) {
           ensureTable(databaseAdapter, tableName);
@@ -433,31 +437,37 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
           await dashboardAdapter.setSelectedTable(tableName);
         }
         if (params.panelId) {
-          ensurePanel(
+          const existingPanel = ensurePanel(
             dashboardAdapter,
             params.panelId,
             DECK_MAP_DASHBOARD_PANEL_TYPE,
           );
+          const updatedConfig: Record<string, unknown> =
+            withPreservedDeckMapStyle(
+              config,
+              asDeckJsonMapConfig(existingPanel.config),
+            );
 
           await dashboardAdapter.updatePanel(params.panelId, {
-            title: panel.title,
-            config: panel.config,
+            title,
+            config: updatedConfig,
           });
 
           return {
             llmResult: {
               success: true,
-              details: `Updated map panel "${panel.title}".`,
+              details: `Updated map panel "${title}".`,
               data: {
                 panelId: params.panelId,
-                title: panel.title,
+                title,
                 type: DECK_MAP_DASHBOARD_PANEL_TYPE,
-                config: panel.config,
+                config: updatedConfig,
               },
             },
           };
         }
 
+        const panel = createDeckMapDashboardPanelConfig({title, ...config});
         const panelId = await dashboardAdapter.addPanel(panel);
 
         return {

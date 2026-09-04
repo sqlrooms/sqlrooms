@@ -6,6 +6,7 @@ import {jest} from '@jest/globals';
 // Type-only: importing the real module here would load it before the test
 // file's `jest.unstable_mockModule` call has a chance to replace it.
 import type {LocalAgentChatRuntime} from '../../src/components/ChatRuntimeContext';
+import type {FileUIPart} from 'ai';
 
 /** A fully stubbed local-agent runtime, with every action a spy. */
 export function createMockLocalAgentRuntime(
@@ -18,7 +19,7 @@ export function createMockLocalAgentRuntime(
     isStreaming: false,
     prompt: '',
     setPrompt: jest.fn<(value: string) => void>(),
-    sendPrompt: jest.fn<(value?: string) => void>(),
+    sendPrompt: jest.fn<(value?: string, attachments?: FileUIPart[]) => void>(),
     stop: jest.fn<() => Promise<void>>(async () => {}),
     initialSuggestions: [],
     suggestionsVisible: true,

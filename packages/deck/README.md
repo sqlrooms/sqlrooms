@@ -105,11 +105,77 @@ export function AirportsMap() {
           geometryEncodingHint: 'wkb',
         },
       }}
-      mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
     />
   );
 }
 ```
+
+## Basemaps
+
+Deck maps use [OpenFreeMap](https://openfreemap.org/) vector tiles by default:
+**Positron** for light mode and **Dark** for dark mode. No API key or registration
+is required. The hosted styles include attribution, which MapLibre displays.
+Maps work immediately with `createDeckMapsSlice()` or `DeckJsonMap`, without
+additional configuration.
+
+New map resources and dashboard panels save `mapStyle: 'light'` or
+`'dark'` using the app theme at creation. Changing the app theme later
+does not change existing maps. The **Basemap** dropdown in map settings selects
+Light or Dark, including for maps with custom layer configurations. The selection
+survives dataset changes, config updates, and saved-workspace reloads; keys and
+generated style objects are not stored in map resources. Applications creating
+configs outside the browser can use `getDefaultDeckMapStyle(theme)` explicitly.
+
+Bare `DeckJsonMap` instances and older saved maps without a style continue to
+follow the app theme. Choose a basemap in settings to persist it in an older map.
+Explicit custom `mapStyle` URLs and `mapProps.mapStyle` objects remain supported;
+the selector displays **Custom** until a built-in style is selected.
+
+For custom basemaps, supply a `DeckMapBasemapProvider` callback:
+
+```tsx
+createDeckMapsSlice({basemapProvider: (theme) => customStyles[theme]});
+```
+
+Return stable MapLibre style objects or URLs. Direct `DeckJsonMap` callers
+can pass `basemapProvider` as a prop, overriding the room's provider without
+requiring the Deck maps slice. The existing room store is still required for
+dataset preparation. Explicit custom map styles take precedence over
+the provider.
+
+`DeckMapDefaultStylesProvider` and `useDeckMapDefaultStyles` are deprecated.
+To migrate an existing `styles={{light, dark}}` wrapper, keep the style objects
+and pass `basemapProvider: (theme) => styles[theme]` to `createDeckMapsSlice`,
+then remove the wrapper. For individual map overrides, pass the same callback
+to `DeckJsonMap`. Code that reads `useDeckMapDefaultStyles` should use the room's
+`deckMaps.basemapProvider` or the supplied callback instead.
+The context API remains functional for backward compatibility, as a fallback
+when no callback style is available. Removal is reserved for a future breaking
+release.
+
+Protomaps remains an optional provider for applications supplying their own key:
+
+```tsx
+import {
+  createDeckMapsSlice,
+  createProtomapsBasemapProvider,
+} from '@sqlrooms/deck';
+
+createDeckMapsSlice({
+  basemapProvider: createProtomapsBasemapProvider(protomapsApiKey),
+});
+```
+
+The helper creates and reuses the light/dark style objects. Its callback lives
+outside `deckMaps.config`, so its key is not persisted with maps. Obtain a
+browser-visible key from [Protomaps](https://protomaps.com/api) and configure
+allowed origins. A missing or blank key falls back to OpenFreeMap.
+Document maps, dashboard maps, and `DeckJsonMap` inherit the room's provider.
+
+`createProtomapsStyle(flavor, apiKey)` creates a MapLibre style object, and
+`createProtomapsDefaultStyles(apiKey)` creates the Protomaps light/dark pair.
+`DECK_MAP_BASEMAP_STYLES` lists the provider-neutral IDs and labels. Existing
+`protomaps-light`/`protomaps-dark` selections are recognized as light/dark aliases.
 
 ## Auto Spec Generation
 
@@ -408,6 +474,24 @@ single WebGL context. This allows deck layers to be inserted between basemap
 layers (e.g. render points under map labels) and reduces WebGL context usage.
 Set `interleaved` to `false` to render deck layers in a separate overlay canvas
 on top of all basemap layers (uses an additional WebGL context per map).
+
+MapLibre's drawing buffer is preserved by default so DOM image capture can
+include the basemap and interleaved deck layers after a frame finishes.
+In separate-overlay mode, deck.gl/luma.gl also preserves its drawing buffer by
+default. Both map canvases are identified for capture validation, including
+overlays with a custom deck ID. A lost context or disabled preservation on
+either canvas causes the CLI rendering tools to return an actionable error.
+Capture readiness also tracks dataset preparation, MapLibre tile rendering,
+and deck layers' asynchronous resources. While any map in the requested surface
+is still loading, the CLI rendering tools return an error asking the caller to
+wait and retry, instead of returning an incomplete image.
+Preserving the buffer can increase GPU memory use and reduce rendering
+performance. Hosts that do not need image capture can opt out by setting
+`mapProps.canvasContextAttributes.preserveDrawingBuffer` to `false`.
+Changing this context option requires remounting the map.
+To opt out for a separate deck overlay, set
+`deckProps.deviceProps.webgl.preserveDrawingBuffer` to `false` and remount
+the map; DOM image capture will then be unavailable.
 
 ```tsx
 {

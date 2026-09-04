@@ -1,4 +1,5 @@
 import {createId} from '@paralleldrive/cuid2';
+import {getDefaultDeckMapStyle} from './mapStyles';
 import type {
   DeckJsonMapProps,
   DeckSqlDatasetInput,
@@ -68,6 +69,7 @@ export type DeckMapConfig = {
   spec: DeckJsonMapProps['spec'];
   datasets: Record<string, DeckMapDatasetConfig>;
   configMode?: DeckMapConfigMode;
+  /** Built-in basemap ID (`light`/`dark`) or custom style URL. */
   mapStyle?: string;
   mapProps?: Record<string, unknown>;
   showLegends?: boolean;
@@ -77,15 +79,43 @@ export type DeckMapConfig = {
   settingsOpen?: boolean;
 };
 
+/** Adds a creation-time basemap default while preserving explicit custom styles. */
+export function withDefaultDeckMapStyle(config: DeckMapConfig): DeckMapConfig {
+  return config.mapStyle || config.mapProps?.mapStyle
+    ? config
+    : {...config, mapStyle: getDefaultDeckMapStyle()};
+}
+
+/** Retains a map's basemap on config replacement unless a new style is supplied. */
+export function withPreservedDeckMapStyle(
+  config: DeckMapConfig,
+  previousConfig: DeckMapConfig | null,
+): DeckMapConfig {
+  if (config.mapStyle || config.mapProps?.mapStyle) return config;
+  if (previousConfig?.mapStyle) {
+    return {...config, mapStyle: previousConfig.mapStyle};
+  }
+  if (previousConfig?.mapProps?.mapStyle) {
+    return {
+      ...config,
+      mapProps: {
+        ...config.mapProps,
+        mapStyle: previousConfig.mapProps.mapStyle,
+      },
+    };
+  }
+  return config;
+}
+
 /** Creates the portable empty configuration used for a new Deck map. */
 export function createEmptyDeckMapConfig(): DeckMapConfig {
-  return {
+  return withDefaultDeckMapStyle({
     spec: {
       initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
       layers: [],
     },
     datasets: {},
-  };
+  });
 }
 
 /** Adapter-facing dashboard panel shape; document resources never store it. */
@@ -111,7 +141,9 @@ export function createDeckMapDashboardPanelConfig(
     id: createId(),
     type: DECK_MAP_DASHBOARD_PANEL_TYPE,
     title: title ?? 'Map',
-    config: JSON.parse(JSON.stringify(config)) as Record<string, unknown>,
+    config: JSON.parse(
+      JSON.stringify(withDefaultDeckMapStyle(config)),
+    ) as Record<string, unknown>,
   };
 }
 

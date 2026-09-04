@@ -9,6 +9,12 @@ import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
 import {useToolTimingRecorder} from '../hooks/useToolTimingRecorder';
 import type {AgentToolCall} from '../types';
 import {
+  getChatAttachmentText,
+  getChatMessageAttachments,
+  isMarkdownAttachment,
+  type ChatAttachmentPart,
+} from '../chatAttachments';
+import {
   isDynamicToolPart,
   isReasoningPart,
   isTextPart,
@@ -57,6 +63,15 @@ const ToolTimingRecorder: React.FC<{
   return null;
 };
 
+/** Returns attachment text normalized to match its rendered search offsets. */
+export function getChatAttachmentSearchText(
+  attachment: ChatAttachmentPart,
+): string | undefined {
+  const text = getChatAttachmentText(attachment);
+  if (!text || !isMarkdownAttachment(attachment)) return text;
+  return markdownToPlainText(processMessageContent(text).processedContent);
+}
+
 export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
   analysisResult,
   chatTurn,
@@ -91,6 +106,10 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
   );
   const turnId = chatTurn?.id ?? analysisResult?.id ?? '';
   const prompt = chatTurn?.prompt ?? analysisResult?.prompt ?? '';
+  const promptAttachments = useMemo(
+    () => getChatMessageAttachments(chatTurn?.userMessage),
+    [chatTurn?.userMessage],
+  );
   const isCompleted =
     chatTurn?.isCompleted ?? analysisResult?.isCompleted ?? true;
   const errorMessage = chatTurn?.errorMessage ?? analysisResult?.errorMessage;
@@ -160,6 +179,16 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       },
     ];
 
+    promptAttachments.forEach((attachment, index) => {
+      const text = getChatAttachmentSearchText(attachment);
+      if (!text) return;
+      blocks.push({
+        id: `${searchBlockPrefix}:attachment:${index}`,
+        resultId: turnId,
+        text,
+      });
+    });
+
     uiMessageParts.forEach((part, index) => {
       if (isTextPart(part)) {
         const isSuppressed = !model.textItems.some(
@@ -203,6 +232,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
     uiMessageParts,
     model.textItems,
     excludedMarkdownSearchTags,
+    promptAttachments,
   ]);
 
   useRegisterChatSearchBlocks(searchBlockPrefix, searchBlocks);
@@ -262,6 +292,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
         turnId,
         model,
         prompt,
+        promptAttachments,
         isCompleted,
         searchBlockPrefix,
         customMarkdownComponents,
@@ -285,6 +316,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       turnId,
       model,
       prompt,
+      promptAttachments,
       isCompleted,
       searchBlockPrefix,
       customMarkdownComponents,

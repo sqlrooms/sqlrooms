@@ -5,10 +5,13 @@ import {
   type UIMessage,
 } from 'ai';
 import {useMemo} from 'react';
+import {sanitizeMessagesForLLM} from '../utils';
 
 /**
  * Build a local `useChat` transport that drives a pre-constructed
- * `ToolLoopAgent` directly instead of calling an HTTP endpoint.
+ * `ToolLoopAgent` directly instead of calling an HTTP endpoint. Before local
+ * dispatch, text and Markdown file parts are converted to model text while
+ * image file parts are retained.
  */
 export function useLocalAgentChatTransport(
   agent: ToolLoopAgent<any, any, any>,
@@ -17,7 +20,7 @@ export function useLocalAgentChatTransport(
     () =>
       new DefaultChatTransport<UIMessage>({
         fetch: (async (_url: RequestInfo | URL, init?: RequestInit) => {
-          const uiMessages = parseUiMessages(init?.body);
+          const uiMessages = parseLocalAgentUiMessages(init?.body);
           return createAgentUIStreamResponse({
             agent,
             uiMessages,
@@ -29,10 +32,14 @@ export function useLocalAgentChatTransport(
   );
 }
 
+/**
+ * Parses and sanitizes a local-agent request body for model dispatch.
+ * Text and Markdown file parts become labeled text; image parts remain files.
+ */
 export function parseLocalAgentUiMessages(
   body: BodyInit | null | undefined,
 ): UIMessage[] {
-  return parseUiMessages(body);
+  return sanitizeMessagesForLLM(parseUiMessages(body));
 }
 
 function parseUiMessages(body: BodyInit | null | undefined): UIMessage[] {

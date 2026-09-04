@@ -30,8 +30,21 @@ has a command registry:
 - `list_commands` for broad command-registry debugging.
 
 Model-facing flows should prefer
-`search_commands -> get_command -> execute_command` instead of repeatedly
-listing the full command catalog. `execute_command` refuses high-risk or
+`search_commands -> get_command (when input schema is needed) -> execute_command`
+instead of repeatedly listing the full command catalog. Keep schemas out of
+search results by default; commands with `requiresInput: false` can run with
+default input without a schema lookup. Search covers registered commands only;
+other directly available AI tools should be called directly.
+
+Search requires text relevance before applying resource/action hints or
+availability bonuses. It ignores common filler words and matches query tokens
+as words or command-ID segments. Read requests (`get`, `read`, `list`, `show`,
+`inspect`) favor relevant read-only commands; exact command IDs retain priority.
+Resource and action parameters remain ranking hints, while `riskLevel` is a
+filter. Unmatched queries return zero commands; an empty query can still browse
+the catalog. The reported match count is computed before the result limit.
+
+`execute_command` refuses high-risk or
 confirmation-required commands until the caller sets `confirmed: true` after an
 explicit user confirmation. Skill runtimes can pass `skillId`, `toolCallId`,
 `traceId`, and metadata through tool execution options; the command invocation
@@ -46,6 +59,26 @@ documents the default command, artifact-context, table/query, and high-level
 agent tool policy for future skill runtimes. Hosts with product-specific agent
 tool names can call `createSkillRuntimeToolPolicy()` to substitute names such
 as their own block document agent while keeping the package defaults generic.
+
+Hosts can scope a command tool instance with `commandGuard`. Denied descriptors
+are omitted from `search_commands`, `list_commands`, and `get_command`, and
+`execute_command` refuses them before validation, confirmation, or invocation.
+The refusal uses `command-not-available-to-caller` unless the guard supplies a
+custom code; a custom message can direct the model to an owning agent tool.
+Direct `store.commands.invokeCommand` calls are unaffected.
+
+```tsx
+const commandTools = createCommandTools(store, {
+  commandGuard: (descriptor) =>
+    descriptor.id.startsWith('block-document.') && !descriptor.readOnly
+      ? {
+          allowed: false,
+          code: 'use-document-agent',
+          message: 'Use the document agent tool for document edits.',
+        }
+      : {allowed: true},
+});
+```
 
 ## Installation
 
@@ -128,12 +161,18 @@ function AiPanel() {
             updateProvider(provider, {apiKey});
           }}
         />
+        <Chat.Composer.Attachments />
         <Chat.ModelSelector />
       </Chat.Composer>
     </Chat>
   );
 }
 ```
+
+`Chat.Composer.Attachments` is opt-in. It accepts images plus plain-text and
+Markdown files through explicit choices in the paperclip menu, shows removable
+previews before sending, and renders posted attachments as clickable previews
+that open in a larger dialog.
 
 ### Customize chat presentation
 

@@ -22,9 +22,17 @@ You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui
 - `getAvailableModels` (optional) – returns selectable `{provider, value}` pairs so new sessions can fall back to the first available model when the configured default is missing
 - `getCustomModel` (optional) – returns a pre-constructed AI SDK `LanguageModel`, bypassing the OpenAI-compatible fallback entirely. Use this when a model is produced some other way, e.g. an app streaming through a server-side model proxy so no API key ever reaches the browser.
 
+The built-in OpenAI-compatible chat transport sends images returned by tools as
+image attachments immediately after the corresponding tool-result batch. This
+avoids the adapter serializing image pixels as JSON text. Tool-call IDs and
+text results are preserved, and persisted chat messages are unchanged. Custom
+models keep their own native tool-output handling.
+
 Send readiness (`ai.hasResolvableModel()`) reflects whichever of these paths can produce a model, so apps relying solely on `getCustomModel` do not need to register a phantom entry in `@sqlrooms/ai-settings`'s model list just to satisfy the composer's UI check. The predicate only checks that `getCustomModel` **was configured**; it never calls it.
 
 Its counterpart `ai.requiresApiKey()` reports whether the path in effect needs a browser-held key at all — `false` when a `chatEndPoint` is configured (the remote transport sends server-side, so no key reaches the browser), and `false` when `getCustomModel` is configured **and currently returns a model**, since that model carries its own credentials. A configured factory returning `undefined` still needs a key, because the transport then falls back to the built-in OpenAI-compatible client. Unlike `hasResolvableModel()`, this predicate therefore invokes the factory: guessing optimistically about readiness only risks a failed send, but guessing optimistically about credentials hides the only UI for entering one. The result is cached per resolved provider/model pair — keyed, so returning to a previously selected model does not re-probe — meaning a mounted composer asks the factory once per distinct selection rather than once per store update. Keep it idempotent for a given selection. The composer's `needsApiKey` is gated on it, so an app behind a server-side proxy is never asked for a key it has no use for.
+
+Both model paths consult `getCustomModel`: the chat transport, and the one-shot `ai.sendPrompt()` helper. In `sendPrompt` a resolved custom model also wins over the `modelProvider`, `modelName`, and `baseUrl` options that call passes, because an app reaching its provider only through a proxy has no other usable endpoint; those options still select the API key and base URL for the fallback client, which is built only when the factory returns `undefined`. Unlike `requiresApiKey()`, `sendPrompt` calls the factory fresh on every request rather than reading the cached probe, so a host that swaps its model at runtime takes effect on the next send. A factory that throws is logged and treated as `undefined`.
 
 > **Upgrading from 0.28.x?** See the [0.29.0 migration guide](https://sqlrooms.org/upgrade-guide#_0-29-0-upcoming) for the full list of breaking changes: `parameters` → `inputSchema`, `component` → `toolRenderers`, `setSessionToolAdditionalData` removed.
 
@@ -86,7 +94,9 @@ export function AiPanel() {
       <Chat.Composer
         placeholder="Ask a question"
         topActions={<Chat.PromptSuggestions.VisibilityToggle />}
-      />
+      >
+        <Chat.Composer.Attachments />
+      </Chat.Composer>
     </Chat>
   );
 }
@@ -98,6 +108,17 @@ and the first `ai.createSession()` transfers it to the new session.
 
 Use `Chat.Composer`'s `topActions` slot for compact controls that should sit in
 the prompt's top row, right-aligned beside context selectors.
+
+Attachments are opt-in. Add `<Chat.Composer.Attachments />` as a composer child
+to accept images and plain-text or Markdown files. Its paperclip menu shows the
+supported categories and opens a type-specific file picker for each one.
+Pending files render in the composer footer and are sent as AI SDK file parts.
+Posted files remain part of the user message: images open at full size in a
+dialog, while text and Markdown open in a scrollable text or rendered-Markdown
+dialog. The default limits are four files, 1 MiB per image and across all
+pending images, 128 KiB per text file, and 128 KiB across all pending text
+files; the component props can override those limits. A file can be sent
+without adding prompt text.
 
 > `<InlineApiKeyInput>` assumes session mode: it calls `useStoreWithAi`
 > unconditionally, so passing it as a `Chat.Composer` child under
@@ -180,6 +201,19 @@ Composer primitives (imported from `@sqlrooms/ai-core`, or via
   plain one it renders but never fires `onDrop`, because drops are accepted
   only for collisions carrying the `pointerWithin` marker that
   `RoomDndProvider`'s collision detector adds.
+
+The styled **`Chat.Composer.Attachments`** recipe is intentionally separate
+from those unstyled primitives: mounting it enables the file input and footer
+previews for that chat root. For a custom attachment UI, use
+`useChatAttachments()` under the same composer state boundary. Pass
+asynchronous file preparation to `appendAsync` so a file that finishes reading
+after the user switches sessions is discarded:
+
+```tsx
+const {appendAsync} = useChatAttachments();
+
+await appendAsync(async () => [await fileToChatAttachmentPart(file)]);
+```
 
 ### Pre-send policy: `useRegisterBeforeSend`
 
@@ -305,7 +339,7 @@ order, what is hoistable / running / completed), then asks the nearest
 | --------------- | ------------------------------------------------------------- |
 | `ActiveStatus`  | Current in-flight run status and elapsed-time presentation    |
 | `Turn`          | Full turn layout recipe — composes pre-wired semantic regions |
-| `Prompt`        | User prompt chrome for the turn                               |
+| `Prompt`        | User prompt and attachment chrome for the turn                |
 | `Activity`      | Collapsible / status chrome around in-progress work           |
 | `Reasoning`     | Model thinking / reasoning disclosure                         |
 | `ToolActivity`  | One tool (or nested agent) line inside Activity               |
@@ -902,6 +936,8 @@ the signal intact for the tools the sub-agent calls, but the agent loop —
 including the model stream and any approval wait — is only cancellable through
 `streamSubAgent`'s fifth argument, so omitting it lets a stopped parent turn
 leave the nested run going.
+
+When a sub-agent stream fails, `streamSubAgent` throws `SUB_AGENT_ERROR_MESSAGE` rather than the provider's own text, and logs the raw error to the console. Callers serialize the thrown message into a tool result that the parent model receives, and a child agent can run on a different provider than its parent, so an exception carrying an endpoint, account detail, or credential would otherwise cross that boundary. A host that has verified parent and child share a trust boundary can pass `{formatError: getSubAgentErrorMessage}` as the sixth argument to get the underlying text back, or supply its own formatter. Local diagnostics are unaffected either way.
 
 Pass the parent's `getAiRunContext` (not a copied `aiRunContext`) so an in-turn
 retarget via `set_primary_context_artifact` is visible to subsequent nested tool

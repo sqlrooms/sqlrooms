@@ -13,6 +13,7 @@ import {
 } from './mapConfig';
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
 import type {GeometryEncodingHint} from './prepare/types';
+import {getDefaultDeckMapStyle} from './mapStyles';
 
 const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
 const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
@@ -750,7 +751,7 @@ export function createDeckMapConfigForTable(options: {
             },
           }
         : {}),
-    ...(options.mapStyle ? {mapStyle: options.mapStyle} : {}),
+    mapStyle: options.mapStyle ?? getDefaultDeckMapStyle(),
   };
 }
 
@@ -812,7 +813,11 @@ export function regenerateMapConfigForTable(
   const nextDataset = Object.values(nextConfig.datasets)[0];
 
   if (existingDatasetIds.length === 0) {
-    return nextConfig;
+    return {
+      ...nextConfig,
+      mapStyle: existingConfig.mapStyle,
+      mapProps: existingConfig.mapProps,
+    };
   }
 
   if (existingDatasetIds.length === 1 && nextDataset) {

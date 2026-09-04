@@ -12,11 +12,12 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   type ReactNode,
 } from 'react';
 import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
 import {useRoomStore} from '../roomStoreHooks';
+import {CliWorkspaceTopbar} from './CliWorkspaceTopbar';
+import {finalizeCreatedCliArtifact} from './finalizeCreatedCliArtifact';
 
 type CliArtifactWorkspaceActions = UseArtifactWorkspaceResult;
 
@@ -34,40 +35,20 @@ function useCliArtifactWorkspaceActions() {
 }
 
 export const ArtifactsContainerPanel: RoomPanelComponent = () => {
-  const artifactActions = useArtifactWorkspace({types: CLI_ARTIFACT_TYPES});
+  const artifactActions = useArtifactWorkspace({
+    types: CLI_ARTIFACT_TYPES,
+    selectFallback: 'none',
+  });
   const showArtifactChooser = useRoomStore(
     (state) => state.workspaceUi.showArtifactChooser,
   );
   const setShowArtifactChooser = useRoomStore(
     (state) => state.workspaceUi.setShowArtifactChooser,
   );
-  const isArtifactStartScreenVisible =
-    showArtifactChooser || !artifactActions.selectedArtifact;
-  const isAssistantCollapsed = useRoomStore((state) =>
-    state.layout.isCollapsed('assistant-sidebar'),
-  );
-  const setCollapsed = useRoomStore((state) => state.layout.setCollapsed);
-  const previousAssistantCollapsedRef = useRef<boolean | null>(null);
-
-  useEffect(() => {
-    if (isArtifactStartScreenVisible) {
-      previousAssistantCollapsedRef.current ??= isAssistantCollapsed;
-      if (!isAssistantCollapsed) {
-        setCollapsed('assistant-sidebar', true);
-      }
-      return;
-    }
-
-    const previousAssistantCollapsed = previousAssistantCollapsedRef.current;
-    if (previousAssistantCollapsed !== null) {
-      setCollapsed('assistant-sidebar', previousAssistantCollapsed);
-      previousAssistantCollapsedRef.current = null;
-    }
-  }, [isArtifactStartScreenVisible, isAssistantCollapsed, setCollapsed]);
-
   return (
     <CliArtifactWorkspaceActionsContext.Provider value={artifactActions}>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <CliWorkspaceTopbar />
         <CliArtifactContentHost
           content={
             showArtifactChooser ? (
@@ -168,7 +149,10 @@ function SelectedCliArtifactContent({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div
+      className="flex min-h-0 flex-1 flex-col overflow-hidden"
+      data-artifact-id={artifact.id}
+    >
       <Component
         key={artifact.id}
         panelInfo={panelInfo}
@@ -187,6 +171,12 @@ type CreateCliArtifactCommand = (
 function useCreateCliArtifactCommand(): CreateCliArtifactCommand {
   const artifactActions = useCliArtifactWorkspaceActions();
   const invokeCommand = useRoomStore((state) => state.commands.invokeCommand);
+  const currentSessionId = useRoomStore(
+    (state) => state.ai.config.currentSessionId,
+  );
+  const addSessionArtifactLink = useRoomStore(
+    (state) => state.artifactAi.addSessionArtifactLink,
+  );
 
   return useCallback(
     async (commandId: string, input?: Record<string, unknown>) => {
@@ -214,11 +204,16 @@ function useCreateCliArtifactCommand(): CreateCliArtifactCommand {
           ? result.data.artifactId
           : undefined;
       if (artifactId) {
-        artifactActions.selectArtifact(artifactId);
+        finalizeCreatedCliArtifact({
+          artifactId,
+          currentSessionId,
+          addSessionArtifactLink,
+          selectArtifact: artifactActions.selectArtifact,
+        });
       }
       return artifactId;
     },
-    [artifactActions, invokeCommand],
+    [addSessionArtifactLink, artifactActions, currentSessionId, invokeCommand],
   );
 }
 

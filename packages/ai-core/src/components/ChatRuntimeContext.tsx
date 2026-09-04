@@ -1,5 +1,11 @@
 import {useChat} from '@ai-sdk/react';
-import type {AbstractChat, ChatStatus, ToolLoopAgent, UIMessage} from 'ai';
+import type {
+  AbstractChat,
+  ChatStatus,
+  FileUIPart,
+  ToolLoopAgent,
+  UIMessage,
+} from 'ai';
 import {
   createContext,
   useCallback,
@@ -24,7 +30,7 @@ export type LocalAgentChatRuntime = {
   isStreaming: boolean;
   prompt: string;
   setPrompt: (value: string) => void;
-  sendPrompt: (value?: string) => void;
+  sendPrompt: (value?: string, attachments?: FileUIPart[]) => void;
   stop: AbstractChat<UIMessage>['stop'];
   initialSuggestions: readonly string[];
   suggestionsVisible: boolean;
@@ -72,10 +78,17 @@ export const LocalAgentChatRuntimeProvider: FC<LocalAgentChatRootProps> = ({
   useMessagesObserver(messages, onMessagesChange);
 
   const sendPrompt = useCallback(
-    (value?: string) => {
+    (value?: string, attachments: FileUIPart[] = []) => {
       const text = (value ?? prompt).trim();
-      if (!text || isStreaming) return;
-      void sendMessage({text});
+      if ((!text && attachments.length === 0) || isStreaming) return;
+      void sendMessage(
+        text
+          ? {
+              text,
+              ...(attachments.length > 0 ? {files: attachments} : {}),
+            }
+          : {files: attachments},
+      );
       setPrompt('');
     },
     [isStreaming, prompt, sendMessage],

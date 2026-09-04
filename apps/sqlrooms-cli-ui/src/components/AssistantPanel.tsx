@@ -1,12 +1,20 @@
-import {RoomPanelHeader} from '@sqlrooms/room-shell';
-import {Button, cn, useDisclosure} from '@sqlrooms/ui';
-import {BugIcon, XIcon} from 'lucide-react';
+import {
+  Button,
+  cn,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  useDisclosure,
+} from '@sqlrooms/ui';
+import {BugIcon, PlusIcon, XIcon} from 'lucide-react';
 import React, {Suspense, useEffect, useState} from 'react';
 import {useRoomStore} from '../roomStoreHooks';
 import {aiDevtoolsEnabled} from '../runtimeEnvironment';
+import {CliChatSelector} from './selectors/CliChatSelector';
 import {AssistantChatContainer} from './AssistantChatContainer';
 import {AssistantSettingsDialog} from './AssistantSettingsDialog';
 import {useAssistantContextDropTarget} from './assistantUtils';
+import {isCreateSessionDisabled} from './sessionCreation';
 
 const ChatSessionDebugView = React.lazy(() =>
   import('@sqlrooms/ai/devtools').then((mod) => ({
@@ -35,10 +43,28 @@ export const AssistantPanel: React.FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.getCurrentSession()?.id || null,
   );
+  const currentSession = useRoomStore((s) => s.ai.getCurrentSession());
+  const currentArtifactId = useRoomStore(
+    (s) => s.artifacts.config.currentArtifactId,
+  );
+  const createSession = useRoomStore((s) => s.ai.createSession);
+  const createArtifactScopedSession = useRoomStore(
+    (s) => s.artifactAi.createArtifactScopedSession,
+  );
   const setCollapsed = useRoomStore((s) => s.layout.setCollapsed);
   const settingsPanelOpen = useDisclosure();
   const contextDropTarget = useAssistantContextDropTarget();
   const [debugOpen, setDebugOpen] = useState(false);
+  const createSessionDisabled = isCreateSessionDisabled(currentSession);
+
+  const handleCreateSession = () => {
+    if (createSessionDisabled) return;
+    if (currentArtifactId) {
+      createArtifactScopedSession();
+    } else {
+      createSession();
+    }
+  };
 
   useEffect(() => {
     if (!currentSessionId && settingsPanelOpen.isOpen) {
@@ -53,9 +79,41 @@ export const AssistantPanel: React.FC = () => {
   }, [currentSessionId]);
 
   return (
-    <div className="flex h-full flex-col overflow-visible p-2">
-      <RoomPanelHeader>
-        <div className="ml-auto flex items-center gap-1 overflow-visible p-0.5">
+    <div className="flex h-full flex-col overflow-visible">
+      <header className="border-border bg-background/95 flex h-12 shrink-0 items-center justify-between gap-3 border-b px-3">
+        <div className="flex min-w-0 items-center">
+          {currentSession ? (
+            <CliChatSelector currentSession={currentSession} />
+          ) : (
+            <span className="text-muted-foreground px-2 text-sm">
+              No chat selected
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 overflow-visible p-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="New chat"
+                disabled={createSessionDisabled}
+                onClick={handleCreateSession}
+              >
+                <PlusIcon className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {currentArtifactId ? 'New chat for this artifact' : 'New chat'}
+            </TooltipContent>
+          </Tooltip>
+          {aiDevtoolsEnabled && currentSessionId ? (
+            <AssistantDebugButton
+              isOpen={debugOpen}
+              onToggle={() => setDebugOpen((open) => !open)}
+            />
+          ) : null}
           {currentSessionId && (
             <AssistantSettingsDialog
               isOpen={settingsPanelOpen.isOpen}
@@ -79,18 +137,10 @@ export const AssistantPanel: React.FC = () => {
             <XIcon className="h-3.5 w-3.5" />
           </Button>
         </div>
-      </RoomPanelHeader>
-      <div className="flex min-h-0 flex-1 flex-col">
+      </header>
+      <div className="flex min-h-0 flex-1 flex-col p-2">
         <AssistantChatContainer
           contextDropTarget={contextDropTarget}
-          beforeCreateSessionAction={
-            aiDevtoolsEnabled && currentSessionId ? (
-              <AssistantDebugButton
-                isOpen={debugOpen}
-                onToggle={() => setDebugOpen((open) => !open)}
-              />
-            ) : null
-          }
           debugPanel={
             aiDevtoolsEnabled && currentSessionId && debugOpen ? (
               <Suspense
