@@ -237,4 +237,48 @@ describe('DefaultChatReasoning search auto-open', () => {
 
     cleanup(container, root);
   });
+
+  it.each([
+    ['next', 'goToNextMatch'],
+    ['previous', 'goToPreviousMatch'],
+  ] as const)(
+    'reopens when %s navigation selects the only match again',
+    (_direction, navigate) => {
+      const {container, root} = renderReasoningWithTwoMatchesInOneBlock();
+
+      setQuery('first');
+      const details = container.querySelector('details') as HTMLDetailsElement;
+      expect(latestSearchRef.current?.matches).toHaveLength(1);
+      expect(details.open).toBe(true);
+
+      act(() => {
+        details.open = false;
+        latestSearchRef.current?.[navigate]();
+      });
+
+      expect(latestSearchRef.current?.activeMatchNumber).toBe(1);
+      expect(details.open).toBe(true);
+
+      cleanup(container, root);
+    },
+  );
+
+  it('reopens when a new query reuses the active match id', () => {
+    const {container, root} = renderReasoningWithTwoMatchesInOneBlock();
+
+    setQuery('design first');
+    const details = container.querySelector('details') as HTMLDetailsElement;
+    const firstMatchId = latestSearchRef.current?.activeMatchId;
+    expect(details.open).toBe(true);
+
+    act(() => {
+      details.open = false;
+    });
+    setQuery('design');
+
+    expect(latestSearchRef.current?.activeMatchId).toBe(firstMatchId);
+    expect(details.open).toBe(true);
+
+    cleanup(container, root);
+  });
 });

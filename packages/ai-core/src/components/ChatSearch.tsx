@@ -103,13 +103,16 @@ function areChatSearchBlocksEqual(
  * by whichever live call reported most recently, so an earlier reporter
  * releasing after a later one never makes the block fall back to stale text.
  * A block that registered but was never reported as rendered is excluded
- * from search entirely.
+ * from search entirely. `activeMatchId` identifies the active match's DOM
+ * anchor, while `activeMatchKey` changes on every query or navigation attempt
+ * so reveal and scroll effects can run again even when that DOM id is reused.
  */
 export type ChatSearchContextValue = {
   query: string;
   setQuery: (query: string) => void;
   matches: ChatSearchMatch[];
   activeMatchId?: string;
+  activeMatchKey?: string;
   activeMatchNumber: number;
   registerBlocks: (groupId: string, blocks: ChatSearchBlock[]) => void;
   unregisterBlocks: (groupId: string) => void;
@@ -159,8 +162,9 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
   const currentSessionId = useStoreWithAi(
     (s) => s.ai.config.currentSessionId ?? '',
   );
-  const [query, setQuery] = useState('');
+  const [query, setQueryState] = useState('');
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
+  const [activeMatchRevision, setActiveMatchRevision] = useState(0);
   const [blockGroups, setBlockGroups] = useState<
     Record<string, ChatSearchBlock[]>
   >({});
@@ -216,6 +220,9 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
     matches.length === 0 ? 0 : Math.min(activeMatchIndex, matches.length - 1);
   const activeMatch = matches[safeActiveIndex];
   const activeMatchId = activeMatch?.id;
+  const activeMatchKey = activeMatchId
+    ? `${activeMatchRevision}:${activeMatchId}`
+    : undefined;
   const activeMatchNumber = matches.length > 0 ? safeActiveIndex + 1 : 0;
 
   useEffect(() => {
@@ -235,7 +242,12 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       return () => window.cancelAnimationFrame(frame);
     }
     scrollToActiveMatch();
-  }, [activeMatchId]);
+  }, [activeMatchId, activeMatchKey]);
+
+  const setQuery = useCallback((nextQuery: string) => {
+    setQueryState(nextQuery);
+    setActiveMatchRevision((revision) => revision + 1);
+  }, []);
 
   const registerBlocks = useCallback(
     (groupId: string, nextBlocks: ChatSearchBlock[]) => {
@@ -316,6 +328,7 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       const safe = Math.min(index, matches.length - 1);
       return (safe + 1) % matches.length;
     });
+    setActiveMatchRevision((revision) => revision + 1);
   }, [matches.length]);
 
   const goToPreviousMatch = useCallback(() => {
@@ -324,12 +337,13 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       const safe = Math.min(index, matches.length - 1);
       return (safe - 1 + matches.length) % matches.length;
     });
+    setActiveMatchRevision((revision) => revision + 1);
   }, [matches.length]);
 
   const clearSearch = useCallback(() => {
     setQuery('');
     setActiveMatchIndex(0);
-  }, []);
+  }, [setQuery]);
 
   const value = useMemo(
     () => ({
@@ -337,6 +351,7 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       setQuery,
       matches,
       activeMatchId,
+      activeMatchKey,
       activeMatchNumber,
       registerBlocks,
       unregisterBlocks,
@@ -348,6 +363,7 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
     }),
     [
       activeMatchId,
+      activeMatchKey,
       activeMatchNumber,
       clearSearch,
       getMatchesForBlock,
@@ -357,6 +373,7 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       query,
       registerBlocks,
       reportRenderedBlock,
+      setQuery,
       unregisterBlocks,
     ],
   );
@@ -517,23 +534,25 @@ export function useReportRenderedChatSearchBlock(
 }
 
 /**
- * The id of `blockId`'s currently active search match, or undefined. Useful
- * for a slot that hides its content behind a disclosure or toggle: keying an
- * effect on the returned id (rather than a boolean) makes each navigation
- * step observable, even when it moves between two matches in the same
- * block, so the slot can reveal itself for every selected match, not just
- * the first. Callers that only need presence can wrap the result in
- * `Boolean(...)`.
+ * An opaque key for `blockId`'s current search selection, or undefined when
+ * the block does not hold the active match. The key changes on every query
+ * or navigation attempt, even when the same match remains active. A slot that
+ * hides content behind a disclosure can key a reveal effect on this value so
+ * repeated navigation never leaves the selected match hidden. Do not use the
+ * key as a DOM id; use `activeMatchId` from {@link ChatSearchContextValue} for
+ * the active mark's anchor.
  */
-export function useActiveChatSearchMatchId(
+export function useActiveChatSearchMatchKey(
   blockId?: string,
 ): string | undefined {
   const search = useOptionalChatSearch();
-  if (!search || !blockId || !search.activeMatchId) return undefined;
+  if (!search || !blockId || !search.activeMatchId || !search.activeMatchKey) {
+    return undefined;
+  }
   const isActiveInBlock = search
     .getMatchesForBlock(blockId)
     .some((match) => match.id === search.activeMatchId);
-  return isActiveInBlock ? search.activeMatchId : undefined;
+  return isActiveInBlock ? search.activeMatchKey : undefined;
 }
 
 /**

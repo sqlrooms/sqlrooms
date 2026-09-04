@@ -294,9 +294,10 @@ A slot that paints its own matches instead of rendering through
 itself, or its block never counts as rendered and contributes no matches.
 
 A slot that hides its content behind a disclosure or a toggle can key an effect
-on `useActiveChatSearchMatchId(blockId)` to reveal that content for each match
-it holds in turn, so scrolling never lands on something still hidden. This is
-what the default reasoning disclosure does to open itself.
+on `useActiveChatSearchMatchKey(blockId)` to reveal that content for every
+selection attempt, including repeated navigation to the same match. This keeps
+scrolling from landing on something still hidden and is what the default
+reasoning disclosure uses to open itself.
 
 ## Chat Session Types
 

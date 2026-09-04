@@ -14,7 +14,7 @@ import {isReasoningPart, isTextPart} from '../utils';
 import {ActivityBox} from './ActivityBox';
 import {
   HighlightedChatSearchText,
-  useActiveChatSearchMatchId,
+  useActiveChatSearchMatchKey,
 } from './ChatSearch';
 import type {
   ChatActionsProps,
@@ -104,19 +104,19 @@ export const DefaultChatReasoning: React.FC<ChatReasoningProps> = ({
   searchBlockId,
 }) => {
   const detailsRef = useRef<HTMLDetailsElement>(null);
-  const activeMatchId = useActiveChatSearchMatchId(searchBlockId);
+  const activeMatchKey = useActiveChatSearchMatchKey(searchBlockId);
 
   // `<details>` stays uncontrolled so a user's own toggle is never fought by
-  // this effect. We only ever force it open, never closed, keyed on the
-  // active match's id so navigating between two matches in the same block
-  // reopens it even if the user had closed it in between.
+  // this effect. We only ever force it open, never closed. The selection key
+  // changes for every query/navigation attempt, including when the active
+  // match's DOM id stays the same.
   useEffect(() => {
-    if (!activeMatchId) return;
+    if (!activeMatchKey) return;
     const element = detailsRef.current;
     if (element && !element.open) {
       element.open = true;
     }
-  }, [activeMatchId]);
+  }, [activeMatchKey]);
 
   return (
     <details

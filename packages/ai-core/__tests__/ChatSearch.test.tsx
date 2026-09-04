@@ -22,7 +22,7 @@ const {
   findChatSearchMatches,
   HighlightedChatSearchText,
   useChatSearch,
-  useActiveChatSearchMatchId,
+  useActiveChatSearchMatchKey,
   useRegisterChatSearchBlocks,
   useReportRenderedChatSearchBlock,
 } = await import('../src/components/ChatSearch');
@@ -743,7 +743,7 @@ describe('Chat.Search rendered-set intersection', () => {
   });
 });
 
-describe('useActiveChatSearchMatchId', () => {
+describe('useActiveChatSearchMatchKey', () => {
   function ActiveMatchProbe({
     blockId,
     label,
@@ -751,8 +751,8 @@ describe('useActiveChatSearchMatchId', () => {
     blockId?: string;
     label: string;
   }) {
-    const activeMatchId = useActiveChatSearchMatchId(blockId);
-    return <div data-testid={label}>{activeMatchId ?? ''}</div>;
+    const activeMatchKey = useActiveChatSearchMatchKey(blockId);
+    return <div data-testid={label}>{activeMatchKey ?? ''}</div>;
   }
 
   it('returns undefined with no provider', () => {
@@ -773,7 +773,7 @@ describe('useActiveChatSearchMatchId', () => {
     cleanup(container, root);
   });
 
-  it('returns undefined when the block has matches but none is the active match, and the match id when navigation lands on it', () => {
+  it('returns undefined when the block has matches but none is active, and a key when navigation lands on it', () => {
     latestSearchRef.current = undefined;
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -804,10 +804,10 @@ describe('useActiveChatSearchMatchId', () => {
 
     // The prompt match ("Show me design trends") comes first, so it starts
     // active. The text block has a match of its own, but it is not active yet.
-    const promptId = container.querySelector(
+    const promptKey = container.querySelector(
       '[data-testid="prompt"]',
     )?.textContent;
-    expect(promptId).toMatch(/^session-1:result-1:prompt:/);
+    expect(promptKey).toMatch(/^\d+:session-1:result-1:prompt:/);
     expect(container.querySelector('[data-testid="text"]')?.textContent).toBe(
       '',
     );
@@ -819,13 +819,15 @@ describe('useActiveChatSearchMatchId', () => {
     });
 
     // Advancing to the next match flips which block reports the active match,
-    // and the reported id changes with it.
+    // and the reported selection key changes with it.
     expect(container.querySelector('[data-testid="prompt"]')?.textContent).toBe(
       '',
     );
-    const textId = container.querySelector('[data-testid="text"]')?.textContent;
-    expect(textId).toMatch(/^session-1:result-1:text:0:/);
-    expect(textId).not.toBe(promptId);
+    const textKey = container.querySelector(
+      '[data-testid="text"]',
+    )?.textContent;
+    expect(textKey).toMatch(/^\d+:session-1:result-1:text:0:/);
+    expect(textKey).not.toBe(promptKey);
 
     cleanup(container, root);
   });
