@@ -135,6 +135,26 @@ describe('MessageContent chat search', () => {
     cleanup(container, root);
   });
 
+  it('ignores undefined custom component entries', () => {
+    const codeResult = renderMessage('`visible design`', {code: undefined});
+
+    setQuery('design');
+    expect(latestSearchRef.current?.matches).toHaveLength(1);
+    expect(codeResult.container.querySelector('mark')?.textContent).toBe(
+      'design',
+    );
+    cleanup(codeResult.container, codeResult.root);
+
+    const markResult = renderMessage('visible design', {mark: undefined});
+
+    setQuery('design');
+    expect(latestSearchRef.current?.matches).toHaveLength(1);
+    expect(markResult.container.querySelector('mark')?.textContent).toBe(
+      'design',
+    );
+    cleanup(markResult.container, markResult.root);
+  });
+
   it('excludes custom-rendered subtrees while preserving other searchable text', () => {
     const {container, root} = renderMessage(
       '`hidden design` visible design',

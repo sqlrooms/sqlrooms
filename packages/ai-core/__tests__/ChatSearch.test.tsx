@@ -104,9 +104,11 @@ function BlockRegistrar({
 function QueryAwareBlockRegistrar({
   groupId = 'group',
   blocks,
+  reportRendered = true,
 }: {
   groupId?: string;
   blocks: ChatSearchBlock[];
+  reportRendered?: boolean;
 }) {
   const {query} = useChatSearch();
   const hasQuery = query.trim().length > 0;
@@ -115,6 +117,7 @@ function QueryAwareBlockRegistrar({
     [hasQuery, blocks],
   );
   useRegisterChatSearchBlocks(groupId, activeBlocks);
+  if (!reportRendered) return null;
   return (
     <>
       {activeBlocks.map((block) => (
@@ -354,7 +357,10 @@ describe('Chat.Search', () => {
       root.render(
         <RoomStateProvider roomStore={store}>
           <ChatSearchProvider>
-            <BlockRegistrar blocks={[attachmentBlock]} />
+            <QueryAwareBlockRegistrar
+              blocks={[attachmentBlock]}
+              reportRendered={false}
+            />
             <SearchController />
             <ChatAttachmentPreview
               attachment={{
@@ -404,7 +410,10 @@ describe('Chat.Search', () => {
       root.render(
         <RoomStateProvider roomStore={store}>
           <ChatSearchProvider>
-            <BlockRegistrar blocks={[attachmentBlock]} />
+            <QueryAwareBlockRegistrar
+              blocks={[attachmentBlock]}
+              reportRendered={false}
+            />
             <SearchController />
             <ChatAttachmentPreview
               attachment={{
@@ -460,6 +469,71 @@ describe('Chat.Search', () => {
     cleanup(container, root);
   });
 
+  it('reopens a manually closed attachment on repeated navigation', async () => {
+    latestSearchRef.current = undefined;
+    const attachmentBlock: ChatSearchBlock = {
+      id: 'session-1:result-1:attachment:0',
+      resultId: 'result-1',
+      text: 'single needle',
+    };
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+
+    await act(async () => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <QueryAwareBlockRegistrar
+              blocks={[attachmentBlock]}
+              reportRendered={false}
+            />
+            <SearchController />
+            <ChatAttachmentPreview
+              attachment={{
+                type: 'file',
+                filename: 'report.txt',
+                mediaType: 'text/plain',
+                url: 'data:text/plain;base64,c2luZ2xlIG5lZWRsZQ==',
+              }}
+              searchBlockId={attachmentBlock.id}
+            />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    await act(async () => {
+      latestSearchRef.current?.setQuery('needle');
+    });
+    await waitForCondition(
+      () => document.body.querySelector('[role="dialog"]') !== null,
+      'attachment preview to open',
+    );
+
+    const closeButton = Array.from(
+      document.body.querySelectorAll<HTMLButtonElement>('button'),
+    ).find((button) => button.textContent?.trim() === 'Close');
+    expect(closeButton).toBeDefined();
+    act(() => closeButton?.click());
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+
+    await act(async () => {
+      latestSearchRef.current?.goToNextMatch();
+    });
+    await waitForCondition(
+      () => document.body.querySelector('[role="dialog"]') !== null,
+      'attachment preview to reopen',
+    );
+    expect(latestSearchRef.current?.matches).toHaveLength(1);
+    expect(
+      document.body.querySelector('[role="dialog"]')?.textContent,
+    ).toContain('report.txt');
+
+    cleanup(container, root);
+  });
+
   it('closes the previous attachment preview during search navigation', async () => {
     latestSearchRef.current = undefined;
     const attachmentBlocks: ChatSearchBlock[] = [
@@ -483,7 +557,10 @@ describe('Chat.Search', () => {
       root.render(
         <RoomStateProvider roomStore={store}>
           <ChatSearchProvider>
-            <BlockRegistrar blocks={attachmentBlocks} />
+            <QueryAwareBlockRegistrar
+              blocks={attachmentBlocks}
+              reportRendered={false}
+            />
             <SearchController />
             <ChatAttachmentPreview
               attachment={{

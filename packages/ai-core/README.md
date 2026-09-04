@@ -435,13 +435,19 @@ function AppPrompt({prompt, searchBlockId}: ChatPromptProps) {
 activity boxes and answer rendering:
 
 ```tsx
-import {Chat, type ChatReasoningProps} from '@sqlrooms/ai-core';
+import {
+  Chat,
+  HighlightedChatSearchText,
+  type ChatReasoningProps,
+} from '@sqlrooms/ai-core';
 
-function AppReasoning({text, isRunning}: ChatReasoningProps) {
+function AppReasoning({text, isRunning, searchBlockId}: ChatReasoningProps) {
   return (
     <aside aria-busy={isRunning}>
       <strong>{isRunning ? 'Thinking…' : 'Thoughts'}</strong>
-      <pre>{text}</pre>
+      <pre>
+        <HighlightedChatSearchText text={text} blockId={searchBlockId} />
+      </pre>
     </aside>
   );
 }
