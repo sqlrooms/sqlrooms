@@ -11,7 +11,12 @@ import {useEffect, useMemo, useRef, useState, type FC} from 'react';
 import type {ChatAttachmentPart} from '../chatAttachments';
 import {getChatAttachmentText, isMarkdownAttachment} from '../chatAttachments';
 import {MessageContent} from './MessageContent';
-import {HighlightedChatSearchText, useOptionalChatSearch} from './ChatSearch';
+import {
+  HighlightedChatSearchText,
+  useActiveChatSearchMatchKey,
+  useOptionalChatSearch,
+  useReportRenderedChatSearchBlock,
+} from './ChatSearch';
 
 /** Props for a clickable image or text/Markdown attachment preview. */
 export type ChatAttachmentPreviewProps = {
@@ -36,17 +41,15 @@ export const ChatAttachmentPreview: FC<ChatAttachmentPreviewProps> = ({
   const text = useMemo(() => getChatAttachmentText(attachment), [attachment]);
   const filename = attachment.filename ?? (isImage ? 'Image' : 'Text file');
   const activeMatchId = search?.activeMatchId;
-  const searchQuery = search?.query;
-  const hasActiveAttachmentMatch = Boolean(
-    searchBlockId &&
-    activeMatchId &&
-    search
-      ?.getMatchesForBlock(searchBlockId)
-      .some((match) => match.id === activeMatchId),
+  const searchableAttachmentBlockId =
+    !isImage && text !== undefined ? searchBlockId : undefined;
+  useReportRenderedChatSearchBlock(searchableAttachmentBlockId);
+  const activeMatchKey = useActiveChatSearchMatchKey(
+    searchableAttachmentBlockId,
   );
 
   useEffect(() => {
-    if (!hasActiveAttachmentMatch || !activeMatchId) {
+    if (!activeMatchKey || !activeMatchId) {
       if (openedBySearchRef.current) {
         openedBySearchRef.current = false;
         setOpen(false);
@@ -67,7 +70,7 @@ export const ChatAttachmentPreview: FC<ChatAttachmentPreviewProps> = ({
       clearTimeout(openTimeoutId);
       if (scrollTimeoutId !== undefined) clearTimeout(scrollTimeoutId);
     };
-  }, [activeMatchId, hasActiveAttachmentMatch, searchQuery]);
+  }, [activeMatchId, activeMatchKey]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) openedBySearchRef.current = false;

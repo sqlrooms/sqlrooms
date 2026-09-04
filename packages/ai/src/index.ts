@@ -284,13 +284,18 @@ export {
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,
   getChatTurnsFromUiMessages,
+  HighlightedChatSearchText,
   markdownToPlainText,
   normalizeChatSearchQuery,
+  useActiveChatSearchMatchKey,
+  useOptionalChatSearch,
+  useReportRenderedChatSearchBlock,
 } from '@sqlrooms/ai-core';
 export type {
   ChatMessageMetadata,
   ChatRequestErrorMessage,
   ChatSearchBlock,
+  ChatSearchContextValue,
   ChatSearchMatch,
   ChatTurn,
 } from '@sqlrooms/ai-core';

@@ -25,29 +25,55 @@ const markdownHastProcessor = unified()
   .use(rehypeRaw)
   .use(rehypeSanitize, markdownSanitizeSchema);
 
-function collectHastText(node: any): string {
+// Keeps searchable text on either side of an opaque custom-renderer subtree
+// in separate regions while preserving one virtual offset for later text.
+const OPAQUE_MARKDOWN_BOUNDARY = '\u0000';
+
+function collectHastText(
+  node: any,
+  excludedTagNames: ReadonlySet<string>,
+): string {
   if (!node) return '';
+  if (
+    node.type === 'element' &&
+    typeof node.tagName === 'string' &&
+    excludedTagNames.has(node.tagName)
+  ) {
+    return OPAQUE_MARKDOWN_BOUNDARY;
+  }
   if (node.type === 'text' && typeof node.value === 'string') {
     return node.value;
   }
   if (Array.isArray(node.children)) {
     let out = '';
     for (const child of node.children) {
-      out += collectHastText(child);
+      out += collectHastText(child, excludedTagNames);
     }
     return out;
   }
   return '';
 }
 
-export function markdownToPlainText(markdown: string): string {
+/**
+ * Extracts the sanitized text projection used by chat search. Subtrees rooted
+ * at `excludedTagNames` become non-searchable boundaries so opaque custom
+ * Markdown renderers cannot contribute text or join searchable text across
+ * content they may replace or hide.
+ */
+export function markdownToPlainText(
+  markdown: string,
+  excludedTagNames: readonly string[] = [],
+): string {
   if (!markdown) return '';
   try {
     const mdast = markdownHastProcessor.parse(markdown);
     const hast = markdownHastProcessor.runSync(mdast);
-    return collectHastText(hast);
+    return collectHastText(hast, new Set(excludedTagNames));
   } catch {
-    return markdown;
+    // Raw markdown is a useful fallback only when every element uses the
+    // default renderer. With opaque custom renderers it could reintroduce text
+    // that never reaches the DOM, so fail closed for search instead.
+    return excludedTagNames.length > 0 ? '' : markdown;
   }
 }
 
@@ -91,11 +117,28 @@ function areChatSearchBlocksEqual(
   return true;
 }
 
-type ChatSearchContextValue = {
+/**
+ * State and actions shared by `Chat.Root`'s search provider.
+ *
+ * `registerBlocks`/`unregisterBlocks` declare which text exists to search
+ * (per turn group), independent of whether anything painted it on screen.
+ * `reportRenderedBlock` is the rendered-set half: a slot calls
+ * `reportRenderedBlock(blockId, text)` on mount and calls the function it
+ * returns on unmount. A block stays indexed as long as at least one call's
+ * release has not run yet, and the text matched against is the text passed
+ * by whichever live call reported most recently, so an earlier reporter
+ * releasing after a later one never makes the block fall back to stale text.
+ * A block that registered but was never reported as rendered is excluded
+ * from search entirely. `activeMatchId` identifies the active match's DOM
+ * anchor, while `activeMatchKey` changes on every query or navigation attempt
+ * so reveal and scroll effects can run again even when that DOM id is reused.
+ */
+export type ChatSearchContextValue = {
   query: string;
   setQuery: (query: string) => void;
   matches: ChatSearchMatch[];
   activeMatchId?: string;
+  activeMatchKey?: string;
   activeMatchNumber: number;
   registerBlocks: (groupId: string, blocks: ChatSearchBlock[]) => void;
   unregisterBlocks: (groupId: string) => void;
@@ -103,6 +146,7 @@ type ChatSearchContextValue = {
   goToNextMatch: () => void;
   goToPreviousMatch: () => void;
   clearSearch: () => void;
+  reportRenderedBlock: (blockId: string, text?: string) => () => void;
 };
 
 const ChatSearchContext = createContext<ChatSearchContextValue | null>(null);
@@ -116,7 +160,9 @@ export function findChatSearchMatches(
   query: string,
 ): ChatSearchMatch[] {
   const normalizedQuery = normalizeChatSearchQuery(query);
-  if (!normalizedQuery) return EMPTY_SEARCH_MATCHES;
+  if (!normalizedQuery || normalizedQuery.includes(OPAQUE_MARKDOWN_BOUNDARY)) {
+    return EMPTY_SEARCH_MATCHES;
+  }
 
   const matches: ChatSearchMatch[] = [];
   for (const block of blocks) {
@@ -144,10 +190,19 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
   const currentSessionId = useStoreWithAi(
     (s) => s.ai.config.currentSessionId ?? '',
   );
-  const [query, setQuery] = useState('');
+  const [query, setQueryState] = useState('');
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
+  const [activeMatchRevision, setActiveMatchRevision] = useState(0);
   const [blockGroups, setBlockGroups] = useState<
     Record<string, ChatSearchBlock[]>
+  >({});
+  // One entry per live reporter (not a count), so StrictMode's double
+  // mount/unmount, and fast remounts during streaming, never drop a block
+  // that is still on screen, and a block never loses its text to a reporter
+  // that already unmounted. Each entry is keyed by a token unique to the
+  // call that created it, so a release only ever removes its own entry.
+  const [renderedBlocks, setRenderedBlocks] = useState<
+    Record<string, Array<{token: object; text?: string}>>
   >({});
 
   // reset active index during render when session or query changes
@@ -161,11 +216,28 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
 
   const blocks = useMemo(() => {
     const allBlocks = Object.values(blockGroups).flat();
-    if (!currentSessionId) return allBlocks;
-    return allBlocks.filter((block) =>
-      block.id.startsWith(`${currentSessionId}:`),
-    );
-  }, [blockGroups, currentSessionId]);
+    const sessionBlocks = currentSessionId
+      ? allBlocks.filter((block) => block.id.startsWith(`${currentSessionId}:`))
+      : allBlocks;
+    // Rendered-set intersection: only blocks a presentation recipe actually
+    // mounted are indexable, so highlights and navigation never point at
+    // content the user cannot see. When a rendered instance reported its own
+    // painted text, that text replaces the registered text so offsets are
+    // always computed against what is actually on screen.
+    const result: ChatSearchBlock[] = [];
+    for (const block of sessionBlocks) {
+      const rendered = renderedBlocks[block.id];
+      if (!rendered || rendered.length === 0) continue;
+      // The most recently reported live reporter wins. This way, when it
+      // unmounts, the block falls back to a reporter that is still mounted
+      // instead of keeping text nothing paints.
+      const latestText = rendered[rendered.length - 1]?.text;
+      result.push(
+        latestText !== undefined ? {...block, text: latestText} : block,
+      );
+    }
+    return result;
+  }, [blockGroups, currentSessionId, renderedBlocks]);
   const matches = useMemo(
     () => findChatSearchMatches(blocks, query),
     [blocks, query],
@@ -176,6 +248,9 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
     matches.length === 0 ? 0 : Math.min(activeMatchIndex, matches.length - 1);
   const activeMatch = matches[safeActiveIndex];
   const activeMatchId = activeMatch?.id;
+  const activeMatchKey = activeMatchId
+    ? `${activeMatchRevision}:${activeMatchId}`
+    : undefined;
   const activeMatchNumber = matches.length > 0 ? safeActiveIndex + 1 : 0;
 
   useEffect(() => {
@@ -195,7 +270,12 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       return () => window.cancelAnimationFrame(frame);
     }
     scrollToActiveMatch();
-  }, [activeMatchId]);
+  }, [activeMatchId, activeMatchKey]);
+
+  const setQuery = useCallback((nextQuery: string) => {
+    setQueryState(nextQuery);
+    setActiveMatchRevision((revision) => revision + 1);
+  }, []);
 
   const registerBlocks = useCallback(
     (groupId: string, nextBlocks: ChatSearchBlock[]) => {
@@ -224,6 +304,34 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
     });
   }, []);
 
+  const reportRenderedBlock = useCallback((blockId: string, text?: string) => {
+    const token = {};
+    setRenderedBlocks((current) => {
+      const existing = current[blockId] ?? [];
+      return {
+        ...current,
+        [blockId]: [...existing, {token, text}],
+      };
+    });
+
+    return () => {
+      setRenderedBlocks((current) => {
+        const existing = current[blockId];
+        if (!existing) return current;
+        const next = existing.filter((reporter) => reporter.token !== token);
+        // Bail out with the same reference when there is nothing to remove,
+        // matching registerBlocks's equality guard against update-depth loops.
+        if (next.length === existing.length) return current;
+        if (next.length === 0) {
+          const rest = {...current};
+          delete rest[blockId];
+          return rest;
+        }
+        return {...current, [blockId]: next};
+      });
+    };
+  }, []);
+
   const matchesByBlock = useMemo(() => {
     const grouped = new Map<string, ChatSearchMatch[]>();
     for (const match of matches) {
@@ -248,6 +356,7 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       const safe = Math.min(index, matches.length - 1);
       return (safe + 1) % matches.length;
     });
+    setActiveMatchRevision((revision) => revision + 1);
   }, [matches.length]);
 
   const goToPreviousMatch = useCallback(() => {
@@ -256,12 +365,13 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       const safe = Math.min(index, matches.length - 1);
       return (safe - 1 + matches.length) % matches.length;
     });
+    setActiveMatchRevision((revision) => revision + 1);
   }, [matches.length]);
 
   const clearSearch = useCallback(() => {
     setQuery('');
     setActiveMatchIndex(0);
-  }, []);
+  }, [setQuery]);
 
   const value = useMemo(
     () => ({
@@ -269,6 +379,7 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       setQuery,
       matches,
       activeMatchId,
+      activeMatchKey,
       activeMatchNumber,
       registerBlocks,
       unregisterBlocks,
@@ -276,9 +387,11 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       goToNextMatch,
       goToPreviousMatch,
       clearSearch,
+      reportRenderedBlock,
     }),
     [
       activeMatchId,
+      activeMatchKey,
       activeMatchNumber,
       clearSearch,
       getMatchesForBlock,
@@ -287,6 +400,8 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
       matches,
       query,
       registerBlocks,
+      reportRenderedBlock,
+      setQuery,
       unregisterBlocks,
     ],
   );
@@ -306,6 +421,7 @@ export function useChatSearch(): ChatSearchContextValue {
   return context;
 }
 
+/** Returns the enclosing `Chat.Root` search context, or `null` when rendered outside one. */
 export function useOptionalChatSearch(): ChatSearchContextValue | null {
   return useContext(ChatSearchContext);
 }
@@ -423,6 +539,57 @@ export const ChatSearch: React.FC<ChatSearchProps> = ({
   );
 };
 
+/**
+ * Marks `blockId` as on screen for the lifetime of the calling component, so
+ * it joins the search index's rendered-set intersection. Reports on mount
+ * and whenever `text` changes, releases on unmount. When `text` is given, it
+ * becomes the string search offsets are computed against for this block,
+ * replacing whatever text the block was registered with; omit it when the
+ * slot's own highlighting mechanism (e.g. a rehype plugin) already matches
+ * offsets to the registered text itself.
+ */
+export function useReportRenderedChatSearchBlock(
+  blockId?: string,
+  text?: string,
+): void {
+  const search = useOptionalChatSearch();
+  const reportRenderedBlock = search?.reportRenderedBlock;
+
+  useEffect(() => {
+    if (!blockId || !reportRenderedBlock) return;
+    return reportRenderedBlock(blockId, text);
+  }, [blockId, text, reportRenderedBlock]);
+}
+
+/**
+ * An opaque key for `blockId`'s current search selection, or undefined when
+ * the block does not hold the active match. The key changes on every query
+ * or navigation attempt, even when the same match remains active. A slot that
+ * hides content behind a disclosure can key a reveal effect on this value so
+ * repeated navigation never leaves the selected match hidden. Do not use the
+ * key as a DOM id; use `activeMatchId` from {@link ChatSearchContextValue} for
+ * the active mark's anchor.
+ */
+export function useActiveChatSearchMatchKey(
+  blockId?: string,
+): string | undefined {
+  const search = useOptionalChatSearch();
+  if (!search || !blockId || !search.activeMatchId || !search.activeMatchKey) {
+    return undefined;
+  }
+  const isActiveInBlock = search
+    .getMatchesForBlock(blockId)
+    .some((match) => match.id === search.activeMatchId);
+  return isActiveInBlock ? search.activeMatchKey : undefined;
+}
+
+/**
+ * Renders `text` with search matches wrapped in `<mark>`. `text` must be the
+ * exact string this call reports as rendered for `blockId`: it both supplies
+ * the offsets are matched against and the characters that get sliced, so a
+ * caller showing a transformed or shortened string is searched by that
+ * string, not by whatever the block was originally registered with.
+ */
 export function HighlightedChatSearchText({
   text,
   blockId,
@@ -430,6 +597,7 @@ export function HighlightedChatSearchText({
   text: string;
   blockId: string;
 }) {
+  useReportRenderedChatSearchBlock(blockId, text);
   const search = useOptionalChatSearch();
   const matches = search?.getMatchesForBlock(blockId) ?? EMPTY_SEARCH_MATCHES;
   if (matches.length === 0) return <>{text}</>;
@@ -468,11 +636,14 @@ export function createChatSearchRehypePlugin({
   blockId,
   matches,
   activeMatchId,
+  excludedTagNames = [],
 }: {
   blockId: string;
   matches: ChatSearchMatch[];
   activeMatchId?: string;
+  excludedTagNames?: readonly string[];
 }) {
+  const excludedTags = new Set(excludedTagNames);
   return () => (tree: unknown) => {
     if (matches.length === 0) return;
 
@@ -543,6 +714,14 @@ export function createChatSearchRehypePlugin({
 
     const visit = (node: any) => {
       if (!node) return;
+      if (
+        node.type === 'element' &&
+        typeof node.tagName === 'string' &&
+        excludedTags.has(node.tagName)
+      ) {
+        textOffset += OPAQUE_MARKDOWN_BOUNDARY.length;
+        return;
+      }
 
       if (node.type === 'text' && typeof node.value === 'string') {
         transformTextNode(node);

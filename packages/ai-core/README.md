@@ -412,12 +412,16 @@ export function AiPanel() {
 layout or tool activity:
 
 ```tsx
-import {Chat, type ChatPromptProps} from '@sqlrooms/ai-core';
+import {
+  Chat,
+  HighlightedChatSearchText,
+  type ChatPromptProps,
+} from '@sqlrooms/ai-core';
 
 function AppPrompt({prompt, searchBlockId}: ChatPromptProps) {
   return (
-    <blockquote data-search-block={searchBlockId} className="border-l-2 pl-3">
-      {prompt}
+    <blockquote className="border-l-2 pl-3">
+      <HighlightedChatSearchText text={prompt} blockId={searchBlockId} />
     </blockquote>
   );
 }
@@ -431,13 +435,19 @@ function AppPrompt({prompt, searchBlockId}: ChatPromptProps) {
 activity boxes and answer rendering:
 
 ```tsx
-import {Chat, type ChatReasoningProps} from '@sqlrooms/ai-core';
+import {
+  Chat,
+  HighlightedChatSearchText,
+  type ChatReasoningProps,
+} from '@sqlrooms/ai-core';
 
-function AppReasoning({text, isRunning}: ChatReasoningProps) {
+function AppReasoning({text, isRunning, searchBlockId}: ChatReasoningProps) {
   return (
     <aside aria-busy={isRunning}>
       <strong>{isRunning ? 'Thinking…' : 'Thoughts'}</strong>
-      <pre>{text}</pre>
+      <pre>
+        <HighlightedChatSearchText text={text} blockId={searchBlockId} />
+      </pre>
     </aside>
   );
 }
@@ -736,6 +746,44 @@ const blocks: ChatSearchBlock[] = [
 ];
 const matches = findChatSearchMatches(blocks, query);
 ```
+
+**Keeping highlighting in a replaced slot.** A host that swaps out a chat leaf
+slot renders its own text, so it loses the highlighting the default slot got for
+free. `HighlightedChatSearchText` restores it. Pass the same `blockId` the turn
+model registered for that part; without it there are no matches to highlight and
+the component renders the text unchanged. The `Prompt` slot example above shows
+the shape.
+
+Matches are wrapped in `<mark>`, and the active match carries the match id as its
+DOM id, so a host can scroll it into view. `useOptionalChatSearch()` exposes the
+same state directly (`activeMatchId`, `getMatchesForBlock`) for slots that need
+to do their own anchoring. It returns `null` outside a `ChatSearchProvider`, so a
+component rendered away from `Chat.Root` degrades instead of throwing.
+
+Indexing follows what actually rendered, not just what got registered. A block
+that a slot returns `null` for, or that stays hidden behind a user preference,
+never mounts `HighlightedChatSearchText` (or the equivalent reporting) and so
+contributes no matches. Search never points at content the user can't see.
+The text a slot renders is also the text that gets indexed: `HighlightedChatSearchText`
+matches and highlights against the `text` prop it was given, so a slot showing
+a transformed or shortened string is searchable by what it actually displays,
+not by whatever text the block was originally registered with.
+
+Custom Markdown components are opaque rendering boundaries. Text beneath an
+overridden Markdown element is excluded from automatic search because the
+component may replace or hide its children; other default-rendered text in the
+same message stays searchable. Overriding `mark` disables automatic search for
+that message because generated highlights may never reach the DOM.
+
+A slot that paints its own matches instead of rendering through
+`HighlightedChatSearchText` must call `useReportRenderedChatSearchBlock(blockId)`
+itself, or its block never counts as rendered and contributes no matches.
+
+A slot that hides its content behind a disclosure or a toggle can key an effect
+on `useActiveChatSearchMatchKey(blockId)` to reveal that content for every
+selection attempt, including repeated navigation to the same match. This keeps
+scrolling from landing on something still hidden and is what the default
+reasoning disclosure uses to open itself.
 
 ## Devtools
 

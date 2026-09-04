@@ -19,6 +19,7 @@ import {
 } from './ChatRenderingContextBase';
 import {useHoistedRenderers} from './HoistedRenderersContext';
 import {ActivityBox} from './ActivityBox';
+import {HighlightedChatSearchText} from './ChatSearch';
 import {
   canHoistAgentToolCall,
   type HoistableToolCall,
@@ -109,7 +110,8 @@ function stripTrailingEllipsis(text: string): string {
 /** SQLRooms' built-in presentation for a normalized nested tool call. */
 export const AgentToolActivityLogLine: React.FC<{
   toolCall: AgentToolCall;
-}> = ({toolCall}) => {
+  searchBlockId?: string;
+}> = ({toolCall, searchBlockId}) => {
   const showDetails = useShowToolCallDetails();
   const {getActivityLabel} = useToolRenderBehavior();
   const isSuccess = toolCall.state === 'success';
@@ -128,6 +130,11 @@ export const AgentToolActivityLogLine: React.FC<{
     (isPending ? 'Thinking...' : toolCall.toolName);
   const label =
     typeof rawLabel === 'string' ? stripTrailingEllipsis(rawLabel) : rawLabel;
+  const labelNode = searchBlockId ? (
+    <HighlightedChatSearchText blockId={searchBlockId} text={label} />
+  ) : (
+    label
+  );
 
   return (
     <div
@@ -154,7 +161,7 @@ export const AgentToolActivityLogLine: React.FC<{
           reasoning && 'italic',
         )}
       >
-        {label}
+        {labelNode}
       </span>
       {toolCall.startedAt != null ? (
         <LogLineElapsed
@@ -202,7 +209,8 @@ export const AgentToolSummaryLine: React.FC<{
   startedAt?: number;
   completedAt?: number;
   toolCall?: AgentToolCall;
-}> = ({toolCall}) => {
+  searchBlockId?: string;
+}> = ({toolCall, searchBlockId}) => {
   const inputObj =
     toolCall?.input && typeof toolCall.input === 'object'
       ? (toolCall.input as Record<string, unknown>)
@@ -215,7 +223,11 @@ export const AgentToolSummaryLine: React.FC<{
 
   return (
     <div className="min-w-0 py-1 text-xs leading-4 break-words whitespace-normal italic">
-      {reasoning}
+      {searchBlockId ? (
+        <HighlightedChatSearchText blockId={searchBlockId} text={reasoning} />
+      ) : (
+        reasoning
+      )}
     </div>
   );
 };
@@ -690,6 +702,11 @@ const OrchestratorLogLineInner: React.FC<{
     (isPending ? 'Thinking...' : toolCall.toolName);
   const label =
     typeof rawLabel === 'string' ? stripTrailingEllipsis(rawLabel) : rawLabel;
+  const labelNode = searchBlockId ? (
+    <HighlightedChatSearchText blockId={searchBlockId} text={label} />
+  ) : (
+    label
+  );
 
   return (
     <div
@@ -716,7 +733,7 @@ const OrchestratorLogLineInner: React.FC<{
           reasoning && 'italic',
         )}
       >
-        {label}
+        {labelNode}
       </span>
       {elapsed ? (
         <span className="text-muted-foreground/60 shrink-0 text-[10px]">

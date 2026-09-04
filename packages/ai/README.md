@@ -296,6 +296,54 @@ const blocks: ChatSearchBlock[] = [
 const matches = findChatSearchMatches(blocks, query);
 ```
 
+**Keeping highlighting in a replaced slot.** A host that swaps out a chat leaf
+slot renders its own text, so it loses the highlighting the default slot got for
+free. `HighlightedChatSearchText` restores it. Pass the same `blockId` the turn
+model registered for that part; without it there are no matches to highlight and
+the component renders the text unchanged.
+
+```tsx
+import {HighlightedChatSearchText} from '@sqlrooms/ai';
+
+function AppPrompt({prompt, searchBlockId}: ChatPromptProps) {
+  return (
+    <MyPromptBubble>
+      <HighlightedChatSearchText text={prompt} blockId={searchBlockId} />
+    </MyPromptBubble>
+  );
+}
+```
+
+Matches are wrapped in `<mark>`, and the active match carries the match id as its
+DOM id, so a host can scroll it into view. `useOptionalChatSearch()` exposes the
+same state directly (`activeMatchId`, `getMatchesForBlock`) for slots that need
+to do their own anchoring. It returns `null` outside a `ChatSearchProvider`, so a
+component rendered away from `Chat.Root` degrades instead of throwing.
+
+Indexing follows what actually rendered, not just what got registered. A slot
+that returns `null`, or a region hidden behind a user preference, never mounts
+`HighlightedChatSearchText` and so contributes no matches. Nothing is indexed
+without something on screen to highlight. The text a slot renders is also the
+text that gets indexed: a slot showing a transformed or shortened string is
+searchable by what it actually displays, not by whatever text the block was
+originally registered with.
+
+Custom Markdown components are opaque rendering boundaries. Text beneath an
+overridden Markdown element is excluded from automatic search because the
+component may replace or hide its children; other default-rendered text in the
+same message stays searchable. Overriding `mark` disables automatic search for
+that message because generated highlights may never reach the DOM.
+
+A slot that paints its own matches instead of rendering through
+`HighlightedChatSearchText` must call `useReportRenderedChatSearchBlock(blockId)`
+itself, or its block never counts as rendered and contributes no matches.
+
+A slot that hides its content behind a disclosure or a toggle can key an effect
+on `useActiveChatSearchMatchKey(blockId)` to reveal that content for every
+selection attempt, including repeated navigation to the same match. This keeps
+scrolling from landing on something still hidden and is what the default
+reasoning disclosure uses to open itself.
+
 ## Chat Session Types
 
 Use `ChatSessionSchema` for persisted chat session validation and
