@@ -243,6 +243,14 @@ Canonical package combos:
             link: "/persistence",
           },
           {
+            text: "Artifacts",
+            link: "/artifacts",
+          },
+          {
+            text: "Blocks and Block Documents",
+            link: "/blocks-and-documents",
+          },
+          {
             text: "Commands",
             link: "/commands",
           },

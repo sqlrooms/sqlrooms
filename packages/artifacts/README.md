@@ -1,3 +1,5 @@
+# @sqlrooms/artifacts
+
 `@sqlrooms/artifacts` provides a room-store slice and React/layout helpers for
 workspace artifacts such as dashboards, notebooks, canvas documents, pivot
 tables, and apps.
@@ -9,6 +11,10 @@ entries.
 Artifacts are workspace-level entries. Embedded document content should be
 modeled as blocks, usually hosted stateful blocks, rather than as hidden child
 artifacts in the artifact registry.
+
+See the
+[Artifacts developer guide](https://sqlrooms.org/artifacts)
+for the workspace model, lifecycle guidance, and end-to-end setup.
 
 ## Usage
 

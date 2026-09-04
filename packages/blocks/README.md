@@ -47,3 +47,7 @@ package.
 Use `@sqlrooms/blocks` when defining cross-package contracts for block-shaped
 resources. Use `@sqlrooms/documents` when you need the Tiptap-backed
 `BlockDocument` editor, persistence slice, commands, or AI authoring tools.
+
+See the
+[Blocks and Block Documents developer guide](https://sqlrooms.org/blocks-and-documents)
+for the ownership model and an end-to-end host setup.
