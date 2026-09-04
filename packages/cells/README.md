@@ -20,19 +20,28 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
+import {
+  createRoomShellSlice,
+  createRoomStore,
+  persistSliceConfigs,
+} from '@sqlrooms/room-shell';
 
-// Add CellsSliceConfig to persistSliceConfigs(...):
-const sliceConfigSchemas = {
-  cells: CellsSliceConfig,
-};
-
-// Inside createRoomStore(...):
-const slices = (set, get, store) => ({
-  ...createRoomShellSlice(roomShellOptions)(set, get, store),
-  ...createCellsSlice({
-    cellRegistry: createDefaultCellRegistry(),
-  })(set, get, store),
-});
+const {roomStore} = createRoomStore(
+  persistSliceConfigs(
+    {
+      name: 'cells-workspace',
+      sliceConfigSchemas: {
+        cells: CellsSliceConfig,
+      },
+    },
+    (set, get, store) => ({
+      ...createRoomShellSlice({})(set, get, store),
+      ...createCellsSlice({
+        cellRegistry: createDefaultCellRegistry(),
+      })(set, get, store),
+    }),
+  ),
+);
 
 roomStore.getState().cells.ensureArtifact('notebook-1');
 ```

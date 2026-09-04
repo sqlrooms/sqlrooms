@@ -14,36 +14,21 @@ Compose the settings slice with a room store that already includes
 
 ```ts
 import {
-  DbSettingsSliceConfig,
   createDbSettingsSlice,
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
-import {
-  createRoomShellSlice,
-  createRoomStore,
-  persistSliceConfigs,
-} from '@sqlrooms/room-shell';
+import {createRoomShellSlice, createRoomStore} from '@sqlrooms/room-shell';
 
-const {roomStore} = createRoomStore(
-  persistSliceConfigs(
-    {
-      name: 'my-workspace',
-      sliceConfigSchemas: {
-        dbSettings: DbSettingsSliceConfig,
-      },
+const {roomStore} = createRoomStore((set, get, store) => ({
+  ...createRoomShellSlice({})(set, get, store),
+  ...createDbSettingsSlice({
+    config: {
+      connections: [],
+      diagnostics: [],
+      supportedEngines: ['postgres'],
     },
-    (set, get, store) => ({
-      ...createRoomShellSlice(roomShellOptions)(set, get, store),
-      ...createDbSettingsSlice({
-        config: {
-          connections: [],
-          diagnostics: [],
-          supportedEngines: ['postgres'],
-        },
-      })(set, get, store),
-    }),
-  ),
-);
+  })(set, get, store),
+}));
 
 syncConnectionsToDb(roomStore);
 ```
@@ -52,8 +37,10 @@ Call `syncConnectionsToDb()` after initialization and after replacing settings
 from an external source. Connections whose matching diagnostic has
 `available: false` are not registered for execution.
 
-Connection `config` may contain credentials. Do not persist secrets in browser
-storage unless that is an explicit security decision for your application.
+Connection `config` may contain credentials, so the example intentionally does
+not add `DbSettingsSliceConfig` to `persistSliceConfigs()`. The schema is
+available for validation, but hosts should keep credentials in server-managed
+configuration or use an explicitly redacted persistence shape.
 
 ## UI
 

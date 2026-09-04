@@ -51,11 +51,19 @@ import {
 } from '@sqlrooms/artifacts';
 import {
   BlockDocumentArtifact,
+  BlockDocumentStatefulBlockRendererProvider,
   BlockDocumentsSliceConfig,
   createBlockDocumentFeatureSlices,
   type BlockDocumentFeatureSlicesState,
+  type BlockDocumentStatefulBlockRenderer,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
+import {
+  PivotSliceConfig,
+  PivotBlock,
+  createPivotSlice,
+  type PivotSliceState,
+} from '@sqlrooms/pivot';
 import {
   createRoomShellSlice,
   createRoomStore,
@@ -65,7 +73,38 @@ import {
 
 type RoomState = RoomShellSliceState &
   ArtifactsSliceState &
-  BlockDocumentFeatureSlicesState;
+  BlockDocumentFeatureSlicesState &
+  PivotSliceState;
+
+const PivotBlockRenderer: BlockDocumentStatefulBlockRenderer = ({
+  blockInstanceId,
+  readOnly,
+}) => (
+  <PivotBlock
+    blockId={blockInstanceId}
+    blockType="pivot"
+    pivotId={blockInstanceId}
+    readOnly={readOnly}
+  />
+);
+
+const pivotBlockTypes = [
+  {
+    blockType: 'pivot',
+    label: 'Pivot table',
+    description: 'Explore a table by dimensions and measures',
+    createNode: (blockId: string) => ({
+      type: 'blockDocumentStatefulBlock',
+      attrs: {
+        id: blockId,
+        blockType: 'pivot',
+        blockInstanceId: blockId,
+        ownership: 'owned',
+        caption: '',
+      },
+    }),
+  },
+];
 
 const BlockDocumentPanel: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId =
@@ -80,11 +119,16 @@ const BlockDocumentPanel: RoomPanelComponent = ({panelId, meta}) => {
   if (!artifact) return null;
 
   return (
-    <BlockDocumentArtifact
-      artifactId={artifactId}
-      title={artifact.title}
-      onTitleChange={(title) => renameArtifact(artifactId, title)}
-    />
+    <BlockDocumentStatefulBlockRendererProvider
+      renderers={{pivot: PivotBlockRenderer}}
+      blockTypes={pivotBlockTypes}
+    >
+      <BlockDocumentArtifact
+        artifactId={artifactId}
+        title={artifact.title}
+        onTitleChange={(title) => renameArtifact(artifactId, title)}
+      />
+    </BlockDocumentStatefulBlockRendererProvider>
   );
 };
 
@@ -120,6 +164,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       sliceConfigSchemas: {
         artifacts: ArtifactsSliceConfig,
         blockDocuments: BlockDocumentsSliceConfig,
+        pivot: PivotSliceConfig,
       },
     },
     (set, get, store) => ({
@@ -142,7 +187,27 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
       ...createArtifactsSlice({artifactTypes})(set, get, store),
-      ...createBlockDocumentFeatureSlices()(set, get, store),
+      ...createBlockDocumentFeatureSlices<RoomState>({
+        onCreateOwnedStatefulBlock: ({
+          blockType,
+          blockInstanceId,
+          getState,
+        }) => {
+          if (blockType === 'pivot') {
+            getState().pivot.ensurePivot(blockInstanceId);
+          }
+        },
+        onDeleteOwnedStatefulBlock: ({
+          blockType,
+          blockInstanceId,
+          getState,
+        }) => {
+          if (blockType === 'pivot') {
+            getState().pivot.removePivot(blockInstanceId);
+          }
+        },
+      })(set, get, store),
+      ...createPivotSlice()(set, get, store),
     }),
   ),
 );
@@ -213,27 +278,8 @@ Register renderers at the document surface:
 
 ```tsx
 <BlockDocumentStatefulBlockRendererProvider
-  renderers={{
-    pivot: PivotBlockRenderer,
-    dashboard: DashboardBlockRenderer,
-  }}
-  blockTypes={[
-    {
-      blockType: 'pivot',
-      label: 'Pivot table',
-      description: 'Explore a table by dimensions and measures',
-      createNode: (blockId) => ({
-        type: 'blockDocumentStatefulBlock',
-        attrs: {
-          id: blockId,
-          blockType: 'pivot',
-          blockInstanceId: createPivotState(blockId),
-          ownership: 'owned',
-          caption: '',
-        },
-      }),
-    },
-  ]}
+  renderers={{pivot: PivotBlockRenderer}}
+  blockTypes={pivotBlockTypes}
 >
   <BlockDocumentArtifact artifactId={documentId} />
 </BlockDocumentStatefulBlockRendererProvider>
@@ -253,10 +299,11 @@ Ownership controls lifecycle, not visual nesting:
 | `shared`   | The document refers to state shared elsewhere in the workspace | Keep backing state                                             |
 | `external` | The reference resolves outside the document's managed state    | Keep backing state                                             |
 
-Wire lifecycle callbacks when composing the slice:
+Wire lifecycle callbacks when composing the slice. The complete setup above
+installs them like this:
 
 ```ts
-createBlockDocumentFeatureSlices({
+...createBlockDocumentFeatureSlices<RoomState>({
   onCreateOwnedStatefulBlock: ({blockType, blockInstanceId, getState}) => {
     if (blockType === 'pivot') {
       getState().pivot.ensurePivot(blockInstanceId);
@@ -267,7 +314,7 @@ createBlockDocumentFeatureSlices({
       getState().pivot.removePivot(blockInstanceId);
     }
   },
-});
+})(set, get, store),
 ```
 
 Captions belong to the document reference. A feature's own display name belongs

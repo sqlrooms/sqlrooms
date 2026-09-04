@@ -23,20 +23,30 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
+import {
+  createRoomShellSlice,
+  createRoomStore,
+  persistSliceConfigs,
+} from '@sqlrooms/room-shell';
 
-// Inside persistSliceConfigs(...):
-const sliceConfigSchemas = {
-  canvas: CanvasSliceConfig,
-  cells: CellsSliceConfig,
-};
-
-// Inside createRoomStore(...):
-const slices = (set, get, store) => ({
-  ...createCellsSlice({
-    cellRegistry: createDefaultCellRegistry(),
-  })(set, get, store),
-  ...createCanvasSlice()(set, get, store),
-});
+const {roomStore} = createRoomStore(
+  persistSliceConfigs(
+    {
+      name: 'canvas-workspace',
+      sliceConfigSchemas: {
+        canvas: CanvasSliceConfig,
+        cells: CellsSliceConfig,
+      },
+    },
+    (set, get, store) => ({
+      ...createRoomShellSlice({})(set, get, store),
+      ...createCellsSlice({
+        cellRegistry: createDefaultCellRegistry(),
+      })(set, get, store),
+      ...createCanvasSlice()(set, get, store),
+    }),
+  ),
+);
 
 roomStore.getState().canvas.ensureArtifact('analysis-canvas');
 ```

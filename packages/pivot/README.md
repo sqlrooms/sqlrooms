@@ -9,17 +9,26 @@ persist `PivotSliceConfig`, ensure a pivot instance, then render it by ID:
 
 ```tsx
 import {PivotSliceConfig, PivotView, createPivotSlice} from '@sqlrooms/pivot';
+import {
+  createRoomShellSlice,
+  createRoomStore,
+  persistSliceConfigs,
+} from '@sqlrooms/room-shell';
 
-// Add PivotSliceConfig to persistSliceConfigs(...):
-const sliceConfigSchemas = {
-  pivot: PivotSliceConfig,
-};
-
-// Inside createRoomStore(...):
-const slices = (set, get, store) => ({
-  ...createRoomShellSlice(roomShellOptions)(set, get, store),
-  ...createPivotSlice()(set, get, store),
-});
+const {roomStore} = createRoomStore(
+  persistSliceConfigs(
+    {
+      name: 'pivot-workspace',
+      sliceConfigSchemas: {
+        pivot: PivotSliceConfig,
+      },
+    },
+    (set, get, store) => ({
+      ...createRoomShellSlice({})(set, get, store),
+      ...createPivotSlice()(set, get, store),
+    }),
+  ),
+);
 
 roomStore.getState().pivot.ensurePivot('sales-pivot', {
   title: 'Sales by region',
