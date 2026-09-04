@@ -241,7 +241,10 @@ export {DataTableBlockRenderer} from './data-table-explorer/block-document/DataT
 export {DataTableBlockSettings} from './data-table-explorer/block-document/DataTableBlockSettings';
 export {MosaicDashboardDataTableExplorerSettings} from './data-table-explorer/dashboard/MosaicDashboardDataTableExplorerSettings';
 export {
+  DataTableExplorerCategorySummaryCell,
   DataTableExplorerHeader,
+  DataTableExplorerHistogramSummaryCell,
+  DataTableExplorerSummaryCell,
   type DataTableExplorerHeaderProps,
 } from './data-table-explorer/DataTableExplorerHeader';
 export {
@@ -263,8 +266,10 @@ export type {
   DataTableExplorerCategoryBucket,
   DataTableExplorerCategorySummary,
   DataTableExplorerColumnKind,
+  DataTableExplorerColumnKindOverride,
   DataTableExplorerColumnState,
   DataTableExplorerHistogramSummary,
+  DataTableExplorerNoneSummary,
   DataTableExplorerOptions,
   DataTableExplorerPaginationState,
   DataTableExplorerSorting,
@@ -272,6 +277,7 @@ export type {
   DataTableExplorerTableReference,
   UseDataTableExplorerReturn,
 } from './data-table-explorer/types';
+export {resolveDataTableExplorerColumnKind} from './data-table-explorer/utils';
 
 // ============================================================================
 // Chart Builder UI Components
