@@ -777,8 +777,8 @@ function MyFilterChart() {
 
 For complete working examples, see:
 
-- **[Mosaic Example](https://github.com/sqlrooms/sqlrooms/tree/main/examples/mosaic)** - Basic example showing Vega-Lite charts with cross-filtering
-- **[DeckGL + Mosaic Example](https://github.com/sqlrooms/sqlrooms/tree/main/examples/deckgl-mosaic)** - Advanced example combining DeckGL maps with Mosaic charts for geospatial data visualization
+- **[Mosaic Example](https://github.com/sqlrooms/examples/tree/main/mosaic)** - Basic example showing Vega-Lite charts with cross-filtering
+- **[DeckGL + Mosaic Example](https://github.com/sqlrooms/examples/tree/main/deckgl-mosaic)** - Advanced example combining DeckGL maps with Mosaic charts for geospatial data visualization
 
 ## Resources
 

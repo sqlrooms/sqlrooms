@@ -61,7 +61,7 @@ store context):
 When canvases are top-level workspace entries, connect `ensureArtifact()` and
 `removeArtifact()` to an `@sqlrooms/artifacts` type lifecycle. See the
 [Artifacts guide](https://sqlrooms.org/artifacts) and the
-[Canvas example](https://github.com/sqlrooms/sqlrooms/tree/main/examples/canvas).
+[Canvas example](https://github.com/sqlrooms/examples/tree/main/canvas).
 
 ## Stable vs internal imports
 

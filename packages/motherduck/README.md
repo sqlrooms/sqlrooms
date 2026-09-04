@@ -52,4 +52,4 @@ if (isWasmMotherDuckDbConnector(connector)) {
 
 ## Example
 
-- MotherDuck cloud query example: https://github.com/sqlrooms/sqlrooms/tree/main/examples/query-motherduck
+- MotherDuck cloud query example: https://github.com/sqlrooms/examples/tree/main/query-motherduck

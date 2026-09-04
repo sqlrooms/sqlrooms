@@ -168,4 +168,4 @@ and written into the SVG/PNG as a concrete color. The tool also accepts
 
 ## Example apps
 
-- AI example (with chart tool): https://github.com/sqlrooms/sqlrooms/tree/main/examples/ai
+- AI example (with chart tool): https://github.com/sqlrooms/examples/tree/main/ai

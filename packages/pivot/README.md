@@ -42,7 +42,7 @@ roomStore.getState().pivot.ensurePivot('sales-pivot', {
 
 The table must be available in the room database catalog before `PivotView`
 can render. See the
-[Pivot example](https://github.com/sqlrooms/sqlrooms/tree/main/examples/pivot)
+[Pivot example](https://github.com/sqlrooms/examples/tree/main/pivot)
 for artifact lifecycle and layout integration.
 
 ## Selection model
