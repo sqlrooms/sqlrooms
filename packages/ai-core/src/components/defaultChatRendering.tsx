@@ -663,7 +663,7 @@ export const DefaultChatTurn: React.FC<ChatTurnSlotProps> = ({turn}) => {
   const Actions = turn.actions.Content;
   return (
     <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
-      <div className="bg-background sticky top-0 z-10 mb-2 flex items-center gap-2 text-gray-700 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.15)] dark:text-gray-100 dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.4)]">
+      <div className="bg-background sticky top-0 z-10 mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-100 dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.4)]">
         <Prompt />
       </div>
       <div className="flex w-full flex-col gap-2">
