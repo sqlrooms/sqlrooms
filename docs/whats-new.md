@@ -8,33 +8,142 @@ New features, improvements, and notable changes in each SQLRooms release. For mi
 
 ## 0.29.0 (upcoming)
 
-### Many-to-many artifact AI sessions
+SQLRooms 0.29 expands the project from a collection of analytics components
+into a more complete, composable workspace for documents, dashboards, maps,
+queries, and AI-assisted exploration. This is a large release with breaking
+changes; applications upgrading from 0.28 should review the
+[0.29 upgrade guide](/upgrade-guide#_0-29-0-upcoming).
 
-`@sqlrooms/artifacts` now represents AI session/artifact relationships only as
-`sessionArtifactLinks`, allowing one session to work across multiple artifacts
-while preserving association time and creator provenance. The prerelease-only
+### Documents, blocks, and artifacts
+
+The new `@sqlrooms/blocks` and `@sqlrooms/documents` packages provide reusable
+primitives for rich-text documents containing live SQL, Python, chart, map, and
+other stateful blocks. Documents can embed charts as image assets, expose block
+settings, and participate in AI editing through the same command and artifact
+mechanisms used by the rest of SQLRooms
+([#666](https://github.com/sqlrooms/sqlrooms/pull/666),
+[#603](https://github.com/sqlrooms/sqlrooms/pull/603),
+[#612](https://github.com/sqlrooms/sqlrooms/pull/612)).
+
+Reusable query blocks and artifact tabs make these surfaces easier to compose
+inside applications ([#669](https://github.com/sqlrooms/sqlrooms/pull/669)).
+The former "worksheet" terminology has been standardized on "document"
+([#878](https://github.com/sqlrooms/sqlrooms/pull/878)).
+
+The new [Artifacts](/artifacts) and
+[Blocks and Block Documents](/blocks-and-documents) developer guides explain
+how these layers compose and who owns persisted feature state.
+
+`@sqlrooms/artifacts` now models AI session/artifact relationships as
+many-to-many `sessionArtifactLinks`, allowing one chat to work across several
+artifacts while keeping workspace state separate from chat associations
+([#844](https://github.com/sqlrooms/sqlrooms/pull/844)). The prerelease-only
 `aiSessionArtifacts` and `artifactCreators` representations were removed; see
-the [upgrade guide](/upgrade-guide#sqlroomsartifacts-artifact-ai-sessions-use-many-to-many-links-breaking).
+the [upgrade guide](/upgrade-guide#sqlroomsartifacts-artifact-ai-sessions-use-pure-many-to-many-associations-breaking).
 
-### Mosaic profiler primitives
+### AI SDK v6 and composable chat
 
-`@sqlrooms/mosaic` now includes composable profiler primitives for building Quake-style cross-filtered data inspectors with per-column summaries, shared Mosaic selections, and paged Arrow row tables.
+The AI packages now use AI SDK v6 and `ToolLoopAgent`. SQLRooms tools use native
+AI SDK definitions, while tool rendering is registered separately so the same
+tool can be reused across different interfaces
+([#497](https://github.com/sqlrooms/sqlrooms/pull/497),
+[#800](https://github.com/sqlrooms/sqlrooms/pull/800)).
 
-The new `useMosaicProfiler` hook pairs with `MosaicProfilerHeader`, `MosaicProfilerRows`, and `MosaicProfilerStatusBar` so apps can keep the rendering fully React-driven while staying aligned with Mosaic coordinator updates and crossfilter lifecycle.
+Chat is now exposed as a compound, composable UI API with unstyled composer and
+prompt-suggestion primitives ([#871](https://github.com/sqlrooms/sqlrooms/pull/871)).
+This release also adds chat history, transcript search, session forking, file
+attachments, persisted errors, active status rendering, and opt-in timeouts
+([#698](https://github.com/sqlrooms/sqlrooms/pull/698),
+[#695](https://github.com/sqlrooms/sqlrooms/pull/695),
+[#716](https://github.com/sqlrooms/sqlrooms/pull/716),
+[#890](https://github.com/sqlrooms/sqlrooms/pull/890),
+[#814](https://github.com/sqlrooms/sqlrooms/pull/814)).
+
+### Commands, skills, and agent capabilities
+
+Commands can declare keyboard shortcuts and run through middleware and telemetry
+hooks. `createRoomShellSlice` accepts the same command configuration, allowing
+the UI, application code, and agents to invoke a shared, inspectable command
+model. See the [Commands guide](/commands) for the full API.
+
+`@sqlrooms/ai` adds a skills subsystem and authoring wizard
+([#574](https://github.com/sqlrooms/sqlrooms/pull/574)). The CLI builds on the
+same primitives with an MCP capability runtime, named capability profiles,
+separate chat and artifact navigation, and tools that can capture rendered
+charts, maps, and documents for visual inspection
+([#845](https://github.com/sqlrooms/sqlrooms/pull/845),
+[#859](https://github.com/sqlrooms/sqlrooms/pull/859),
+[#891](https://github.com/sqlrooms/sqlrooms/pull/891),
+[#889](https://github.com/sqlrooms/sqlrooms/pull/889)).
+
+### Mosaic dashboards and data exploration
+
+`@sqlrooms/mosaic` now includes chart builders, composable dashboards, AI
+dashboard tools, and a table profiler for building Quake-style cross-filtered
+data inspectors
+([#473](https://github.com/sqlrooms/sqlrooms/pull/473),
+[#539](https://github.com/sqlrooms/sqlrooms/pull/539),
+[#527](https://github.com/sqlrooms/sqlrooms/pull/527)). Data table explorer
+blocks bring per-column summaries and paged Arrow rows into dashboards
+([#668](https://github.com/sqlrooms/sqlrooms/pull/668)).
+
+The profiler API pairs `useMosaicProfiler` with `MosaicProfilerHeader`,
+`MosaicProfilerRows`, and `MosaicProfilerStatusBar`, keeping rendering
+React-driven while following Mosaic coordinator and cross-filter lifecycle.
 
 <img src="https://github.com/user-attachments/assets/f07e576d-3ab9-4efe-8fe7-7dd37e8b7b46" alt="SQLRooms Mosaic profiler showing cross-filtered earthquake rows with histogram and category summaries" width="700">
 
-### Sonner toast integration
+Charts gain box plots, configurable count metrics, multiple line-series and
+aggregations, better data-limit reporting, and row-count line charts
+([#588](https://github.com/sqlrooms/sqlrooms/pull/588),
+[#591](https://github.com/sqlrooms/sqlrooms/pull/591),
+[#787](https://github.com/sqlrooms/sqlrooms/pull/787),
+[#900](https://github.com/sqlrooms/sqlrooms/pull/900)).
 
-`Toaster` now renders [Sonner](https://sonner.emilkowal.ski/) with SQLRooms theme-aware styling, and examples now use Sonner notifications instead of `useToast` in file-upload flows. `@sqlrooms/ui` also exports Sonner's `toast` function directly for app-level notifications.
+### Maps and spatial visualization
 
-### Command system enhancements
+Deck.gl maps gain GeoArrow layers, overlaid integration, split views, richer
+appearance controls, reusable AI map tools, and direct document blocks
+([#549](https://github.com/sqlrooms/sqlrooms/pull/549),
+[#661](https://github.com/sqlrooms/sqlrooms/pull/661),
+[#701](https://github.com/sqlrooms/sqlrooms/pull/701),
+[#841](https://github.com/sqlrooms/sqlrooms/pull/841)). New maps use keyless
+OpenFreeMap vector basemaps by default, while Mapbox remains available when a
+token is configured ([#897](https://github.com/sqlrooms/sqlrooms/pull/897)).
 
-- **Command keystrokes**: Commands can now declare `ui.keystrokes` (single key combo or array). Keystrokes are shown in the command palette and can trigger commands directly when the palette is mounted.
-- **Middleware pipeline**: `createCommandSlice` now supports command middleware via `createCommandProps` (`(command, input, context, next)`), enabling clean telemetry, feature-flag, and confirmation layers without modifying `invokeCommand`.
-- **Telemetry hooks**: `createCommandProps` supports invocation lifecycle callbacks (`onCommandInvokeStart`, `onCommandInvokeSuccess`, `onCommandInvokeFailure`, `onCommandInvokeError`) for centralized instrumentation.
-- **Room shell wiring**: `createRoomShellSlice` now accepts `createCommandProps` and passes it to `createCommandSlice`, so shell-based apps can configure command middleware/telemetry from one place.
-- **Coverage + docs**: Added expanded unit tests for command execution/middleware behavior and a new Developer Guide page: [Commands](/commands).
+Kepler map selection and tab ownership now compose with artifacts instead of
+maintaining a separate host-level current-map state
+([#595](https://github.com/sqlrooms/sqlrooms/pull/595)).
+
+### Layout and workspace persistence
+
+The layout packages now use n-ary docking and grid primitives backed by
+`react-resizable-panels`, including per-panel sizing constraints and persisted
+resize state
+([#552](https://github.com/sqlrooms/sqlrooms/pull/552),
+[#575](https://github.com/sqlrooms/sqlrooms/pull/575),
+[#594](https://github.com/sqlrooms/sqlrooms/pull/594),
+[#631](https://github.com/sqlrooms/sqlrooms/pull/631)). The configuration shape
+and several public types changed; consult the upgrade guide before loading
+persisted 0.28 layouts.
+
+### DuckDB and query results
+
+SQLRooms now targets DuckDB 1.5.3 and has more consistent qualified-table and
+multi-schema handling
+([#659](https://github.com/sqlrooms/sqlrooms/pull/659),
+[#734](https://github.com/sqlrooms/sqlrooms/pull/734)).
+`@sqlrooms/duckdb-node` converts results through DuckDB's Arrow IPC support,
+preserving declared Arrow types for values such as `BIGINT`, `DATE`, `DECIMAL`,
+and `BLOB` ([#887](https://github.com/sqlrooms/sqlrooms/pull/887)). This changes
+runtime value types and requires the DuckDB `nanoarrow` extension; see the
+[migration note](/upgrade-guide#sqlroomsduckdb-node-query-results-now-use-duckdb-arrow-ipc-breaking).
+
+### UI notifications
+
+`Toaster` now renders [Sonner](https://sonner.emilkowal.ski/) with SQLRooms
+theme-aware styling, and `@sqlrooms/ui` exports Sonner's `toast` function for
+application notifications ([#397](https://github.com/sqlrooms/sqlrooms/pull/397)).
 
 ## 0.28.0
 

@@ -133,4 +133,4 @@ function SimulationButtons() {
 
 ## Example app
 
-- https://github.com/sqlrooms/examples/tree/main/cosmos
+- https://github.com/sqlrooms/sqlrooms/tree/main/examples/cosmos

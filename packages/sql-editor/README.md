@@ -193,5 +193,5 @@ export function StandaloneEditor() {
 
 ## Example apps
 
-- https://github.com/sqlrooms/examples/tree/main/query
-- https://github.com/sqlrooms/examples/tree/main/query-websocket
+- https://github.com/sqlrooms/sqlrooms/tree/main/examples/query
+- https://github.com/sqlrooms/sqlrooms/tree/main/examples/query-websocket

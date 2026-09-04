@@ -9,6 +9,38 @@ The package owns:
 - in-artifact dependency edges and cascade execution
 - SQL/result execution helpers and status tracking
 
+## Setup
+
+Cells require a room store with database state. Most apps compose them with
+`createRoomShellSlice()` and a feature host such as notebook or canvas:
+
+```ts
+import {
+  CellsSliceConfig,
+  createCellsSlice,
+  createDefaultCellRegistry,
+} from '@sqlrooms/cells';
+
+// Add CellsSliceConfig to persistSliceConfigs(...):
+const sliceConfigSchemas = {
+  cells: CellsSliceConfig,
+};
+
+// Inside createRoomStore(...):
+const slices = (set, get, store) => ({
+  ...createRoomShellSlice(roomShellOptions)(set, get, store),
+  ...createCellsSlice({
+    cellRegistry: createDefaultCellRegistry(),
+  })(set, get, store),
+});
+
+roomStore.getState().cells.ensureArtifact('notebook-1');
+```
+
+The registry controls which cell types can be created and how they render.
+Start with `createDefaultCellRegistry()` and extend it with feature entries such
+as `pivotCellRegistryEntry` when needed.
+
 ## Dependency and schema model
 
 - Dependencies and cascades are **artifact-local** by default.

@@ -2,6 +2,40 @@
 
 Slice-driven pivot table UI for SQLRooms, inspired by `react-pivottable` and backed by DuckDB SQL plus Vega-Lite charts.
 
+## Setup
+
+Compose `createPivotSlice()` with a room store that includes database state,
+persist `PivotSliceConfig`, ensure a pivot instance, then render it by ID:
+
+```tsx
+import {PivotSliceConfig, PivotView, createPivotSlice} from '@sqlrooms/pivot';
+
+// Add PivotSliceConfig to persistSliceConfigs(...):
+const sliceConfigSchemas = {
+  pivot: PivotSliceConfig,
+};
+
+// Inside createRoomStore(...):
+const slices = (set, get, store) => ({
+  ...createRoomShellSlice(roomShellOptions)(set, get, store),
+  ...createPivotSlice()(set, get, store),
+});
+
+roomStore.getState().pivot.ensurePivot('sales-pivot', {
+  title: 'Sales by region',
+  source: {kind: 'table', tableName: 'sales'},
+});
+```
+
+```tsx
+<PivotView pivotId="sales-pivot" />
+```
+
+The table must be available in the room database catalog before `PivotView`
+can render. See the
+[Pivot example](https://github.com/sqlrooms/sqlrooms/tree/main/examples/pivot)
+for artifact lifecycle and layout integration.
+
 ## Selection model
 
 - `createPivotSlice` manages pivot definitions and runtime state, but not host-level selection.
@@ -26,3 +60,6 @@ export const pivotArtifactType =
 
 The adapter preserves pivot state in `pivot.config.pivots` and delegates
 creation, rename, and delete behavior to `createPivotSlice`.
+
+See [Blocks and Block Documents](https://sqlrooms.org/blocks-and-documents) for
+embedding pivots in rich documents and choosing an ownership mode.

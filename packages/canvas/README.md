@@ -1,4 +1,7 @@
-React Flow-based artifact-scoped canvas for building SQL + Vega node DAGs in SQLRooms apps.
+# @sqlrooms/canvas
+
+React Flow-based, artifact-scoped canvas for building SQL and Vega node DAGs in
+SQLRooms apps.
 
 This package includes:
 
@@ -7,7 +10,48 @@ This package includes:
 - `Canvas` React component, which requires an explicit `artifactId`
 - `CanvasSliceConfig`, `CanvasNodeMeta`, and `CanvasArtifactMeta` schemas/types
 
-Refer to the [Canvas example](https://github.com/sqlrooms/examples/tree/main/canvas).
+## Setup
+
+Canvas uses the canonical cell state from `@sqlrooms/cells`. Compose both
+slices, persist both configs, and initialize backing state for each canvas
+artifact:
+
+```tsx
+import {Canvas, CanvasSliceConfig, createCanvasSlice} from '@sqlrooms/canvas';
+import {
+  CellsSliceConfig,
+  createCellsSlice,
+  createDefaultCellRegistry,
+} from '@sqlrooms/cells';
+
+// Inside persistSliceConfigs(...):
+const sliceConfigSchemas = {
+  canvas: CanvasSliceConfig,
+  cells: CellsSliceConfig,
+};
+
+// Inside createRoomStore(...):
+const slices = (set, get, store) => ({
+  ...createCellsSlice({
+    cellRegistry: createDefaultCellRegistry(),
+  })(set, get, store),
+  ...createCanvasSlice()(set, get, store),
+});
+
+roomStore.getState().canvas.ensureArtifact('analysis-canvas');
+```
+
+Render the canvas inside a `RoomShell` (or another host that provides the room
+store context):
+
+```tsx
+<Canvas artifactId="analysis-canvas" />
+```
+
+When canvases are top-level workspace entries, connect `ensureArtifact()` and
+`removeArtifact()` to an `@sqlrooms/artifacts` type lifecycle. See the
+[Artifacts guide](https://sqlrooms.org/artifacts) and the
+[Canvas example](https://github.com/sqlrooms/sqlrooms/tree/main/examples/canvas).
 
 ## Stable vs internal imports
 

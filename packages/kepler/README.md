@@ -227,4 +227,4 @@ not change persisted dataset ids.
 
 ## Examples
 
-- Kepler example app: https://github.com/sqlrooms/examples/tree/main/kepler
+- Kepler example app: https://github.com/sqlrooms/sqlrooms/tree/main/examples/kepler
