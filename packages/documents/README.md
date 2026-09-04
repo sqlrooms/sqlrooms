@@ -193,6 +193,22 @@ Hosts with persisted compatibility artifact types can pass
 `isBlockDocumentArtifact` without adding that product vocabulary to the shared
 adapter API.
 
+### Markdown Export
+
+`blockDocumentToMarkdown(content, {title})` serializes a block document's
+Tiptap JSON content to Markdown. Standard nodes (headings, paragraphs, lists,
+tasks, tables, code, marks) are rendered by `@tiptap/markdown`; the block
+document's custom nodes render as image-style Markdown so their captions
+survive a paste into any Markdown renderer:
+
+- `blockDocumentTitle` → `# <text>`
+- `blockDocumentImage` / `blockDocumentChartImage` → `![<caption>](<assetId>)`
+- `blockDocumentChart` → `![<caption>](chart)`
+- `blockDocumentStatefulBlock` → `![<caption>](<blockType>)`
+
+Pass the artifact title via `options.title` to prepend it as an `# <title>`
+heading, since stored block document content does not include the title node.
+
 ### Block-Scoped Ask AI
 
 `startBlockScopedChat(...)` opens or reuses an artifact-scoped AI session for a

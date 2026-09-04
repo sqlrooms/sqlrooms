@@ -106,6 +106,7 @@ export {
   type DocumentsSliceState,
 } from './DocumentsSlice';
 export {createMarkdownCommands} from './markdownCommands';
+export {blockDocumentToMarkdown} from './blockDocumentToMarkdown';
 export {
   BLOCK_DOCUMENT_COMMAND_SUFFIXES,
   createBlockDocumentCommandIds,
