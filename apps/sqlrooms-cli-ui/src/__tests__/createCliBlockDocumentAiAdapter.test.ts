@@ -25,7 +25,7 @@ function createMockStore({
     artifacts: {
       getArtifact: (artifactId: string) =>
         artifactId === 'document-1'
-          ? {id: artifactId, type: 'document', title: 'Document'}
+          ? {id: artifactId, type: 'block-document', title: 'Document'}
           : undefined,
       setCurrentArtifact,
     },

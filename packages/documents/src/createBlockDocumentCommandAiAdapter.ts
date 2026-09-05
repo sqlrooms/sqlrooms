@@ -29,14 +29,6 @@ export type CreateBlockDocumentCommandAiAdapterOptions<
 > = {
   /** Store with artifacts, block documents, and command slices mounted. */
   store: StoreApi<TRoomState>;
-  /**
-   * Optional host predicate for persisted artifact compatibility.
-   *
-   * Omit this for plain block-document artifacts. Hosts that temporarily persist
-   * another artifact type can provide a predicate without leaking that type into
-   * the reusable adapter API.
-   */
-  isBlockDocumentArtifact?: (artifact: ArtifactMetadataType) => boolean;
 };
 
 function blockIdFromAppendResult(data: unknown, block: BlockDocumentBlock) {
@@ -57,14 +49,13 @@ export function createBlockDocumentCommandAiAdapter<
   TRoomState extends BlockDocumentCommandAiAdapterState,
 >({
   store,
-  isBlockDocumentArtifact = (artifact) => artifact.type === 'block-document',
 }: CreateBlockDocumentCommandAiAdapterOptions<TRoomState>): BlockDocumentAiAdapter &
   BlockDocumentMoveBlockAiAdapter {
   const ensureBlockDocument = (artifactId: string) => {
     const state = store.getState();
     const artifact = state.artifacts.getArtifact(artifactId);
 
-    if (!artifact || !isBlockDocumentArtifact(artifact)) {
+    if (!artifact || artifact.type !== 'block-document') {
       throw new Error(`Artifact ${artifactId} is not a block document`);
     }
 
@@ -80,7 +71,7 @@ export function createBlockDocumentCommandAiAdapter<
     getBlocks: (artifactId) => {
       const state = store.getState();
       const artifact = state.artifacts.getArtifact(artifactId);
-      if (!artifact || !isBlockDocumentArtifact(artifact)) {
+      if (!artifact || artifact.type !== 'block-document') {
         return undefined;
       }
 

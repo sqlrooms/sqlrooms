@@ -189,9 +189,8 @@ const blockDocumentAdapter = createBlockDocumentCommandAiAdapter({
 });
 ```
 
-Hosts with persisted compatibility artifact types can pass
-`isBlockDocumentArtifact` without adding that product vocabulary to the shared
-adapter API.
+The adapter accepts only `block-document` artifacts. Migrate legacy artifact type
+names when loading persisted workspaces before using the adapter.
 
 ### Block-Scoped Ask AI
 
@@ -519,9 +518,11 @@ document artifacts. By default the command IDs are:
 - `block-document.create-chart-block`
 - `block-document.create-stateful-block`
 
-Hosts can pass `artifactType`, `artifactLabel`, and `commandNamespace` options
-to expose the same command surface under product-specific names while keeping
-the package API generic.
+The artifact type is always `block-document`, command IDs always use
+`block-document.*`, and command descriptions use “block document”. Artifact type,
+label, and command namespace overrides are not supported. Hosts can customize
+UI labels in their artifact registry, and pass `commandGroup` and `defaultTitle`
+without changing the AI vocabulary.
 
 Hosts can pass `statefulBlockTypes` to expose supported feature-backed block
 types to `block-document.create-stateful-block`.
@@ -560,15 +561,9 @@ content, document-owned assets, standalone chart block configs, block document
 and Markdown artifact metadata, and their artifact tab order.
 The current artifact selection is kept local.
 
-By default, the mirror treats `block-document` artifacts as block documents.
-Hosts with their own artifact type names can pass
-`blockDocumentArtifactTypes`, for example:
-
-```ts
-createDocumentsCrdtMirror({
-  blockDocumentArtifactTypes: ['report'],
-});
-```
+The mirror syncs `block-document` and `markdown` artifact metadata. Hosts should
+migrate legacy artifact type names to `block-document` when loading a workspace;
+the mirror does not accept custom artifact type aliases.
 
 Hosted dashboard state should continue to use the host app's Mosaic persistence,
 or a future Mosaic-specific CRDT mirror.

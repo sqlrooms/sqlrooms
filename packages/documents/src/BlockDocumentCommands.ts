@@ -63,9 +63,6 @@ export type BlockDocumentStatefulBlockCommandType<TRoomState> = {
 export type CreateBlockDocumentCommandsOptions<
   TRoomState extends BlockDocumentCommandState = BlockDocumentCommandState,
 > = {
-  artifactType?: string;
-  artifactLabel?: string;
-  commandNamespace?: string;
   commandGroup?: string;
   defaultTitle?: string;
   statefulBlockTypes?: BlockDocumentStatefulBlockCommandType<TRoomState>[];
@@ -231,10 +228,6 @@ const BlockDocumentCreateStatefulBlockInput = z.object({
     .describe('Optional top-level insertion index. Defaults to append.'),
 });
 
-function lowerLabel(label: string) {
-  return label.toLowerCase();
-}
-
 function labelFromBlockType(blockType: string) {
   return blockType
     .split(/[-_\s]+/)
@@ -286,42 +279,32 @@ function constrainBlockInput<TSchema extends z.ZodType<unknown>>(
   }) as TSchema;
 }
 
-export function createBlockDocumentCommandIds(
-  commandNamespace = 'block-document',
-) {
+/** Returns the canonical command IDs for block document operations. */
+export function createBlockDocumentCommandIds() {
   return BLOCK_DOCUMENT_COMMAND_SUFFIXES.map(
-    (suffix) => `${commandNamespace}.${suffix}`,
+    (suffix) => `block-document.${suffix}`,
   );
 }
 
 /**
  * Builds the set of room commands (list, get, create, append-blocks, …) for a
- * block-document artifact type. Commands are namespaced by `commandNamespace`
- * and labelled with `artifactLabel`, so a host can register more than one
- * block-document family (for example documents and generic documents).
+ * block-document artifact type using canonical `block-document.*` command IDs.
  *
- * @param options - Artifact type, labels, namespace, supported stateful block
- * types, and optional generic-mutation constraints. When `allowedBlockTypes`
- * includes `statefulBlock`, only block types configured in
- * `statefulBlockTypes` are accepted. All fields are optional and default to
- * generic block-document values.
+ * @param options - Command group, default title, supported stateful block types,
+ * and optional generic-mutation constraints. When `allowedBlockTypes` includes
+ * `statefulBlock`, only types configured in `statefulBlockTypes` are accepted.
  * @returns The list of {@link RoomCommand}s to register with the host store.
  */
 export function createBlockDocumentCommands<
   TRoomState extends BlockDocumentCommandState = BlockDocumentCommandState,
 >({
-  artifactType = 'block-document',
-  artifactLabel = 'Block Document',
-  commandNamespace = 'block-document',
-  commandGroup = artifactLabel,
-  defaultTitle = artifactLabel,
+  commandGroup = 'Block Document',
+  defaultTitle = 'Block Document',
   statefulBlockTypes = [],
   allowedBlockTypes,
 }: CreateBlockDocumentCommandsOptions<TRoomState> = {}): RoomCommand<TRoomState>[] {
-  const label = artifactLabel;
-  const labelLower = lowerLabel(label);
   const commandId = (suffix: BlockDocumentCommandSuffix) =>
-    `${commandNamespace}.${suffix}`;
+    `block-document.${suffix}`;
   const statefulBlockTypesByType = new Map(
     statefulBlockTypes.map((blockType) => [blockType.blockType, blockType]),
   );
@@ -379,15 +362,15 @@ export function createBlockDocumentCommands<
   const commandsBySuffix = {
     list: {
       id: commandId('list'),
-      name: `List ${labelLower}s`,
-      description: `List ${label} artifacts in the room`,
+      name: 'List block documents',
+      description: 'List block document artifacts in the room',
       group: commandGroup,
-      keywords: [labelLower, 'document', 'blocks', 'list'],
+      keywords: ['block document', 'document', 'blocks', 'list'],
       metadata: {readOnly: true, idempotent: true, riskLevel: 'low'},
       execute: ({getState}) => {
         const state = getState();
         const documents = Object.values(state.artifacts.config.artifactsById)
-          .filter((artifact) => artifact.type === artifactType)
+          .filter((artifact) => artifact.type === 'block-document')
           .map((artifact) => {
             const blockDocument = state.blockDocuments.getBlockDocument(
               artifact.id,
@@ -409,12 +392,14 @@ export function createBlockDocumentCommands<
     },
     get: {
       id: commandId('get'),
-      name: `Get ${labelLower}`,
-      description: `Read blocks from a ${label} artifact. Defaults to the current ${labelLower} artifact.`,
+      name: 'Get block document',
+      description:
+        'Read blocks from a block document artifact. Defaults to the current block document artifact.',
       group: commandGroup,
-      keywords: [labelLower, 'read', 'get', 'blocks'],
+      keywords: ['block document', 'read', 'get', 'blocks'],
       inputSchema: BlockDocumentIdInput,
-      inputDescription: `Optional ${labelLower} artifact ID. Defaults to the current ${labelLower}.`,
+      inputDescription:
+        'Optional block document artifact ID. Defaults to the current block document.',
       metadata: {readOnly: true, idempotent: true, riskLevel: 'low'},
       execute: ({getState, invocation}, input) => {
         const state = getState();
@@ -429,9 +414,6 @@ export function createBlockDocumentCommands<
           state,
           artifactId,
           commandId('get'),
-          artifactType,
-          label,
-          labelLower,
         );
         if (!resolved.success) return resolved;
         return {
@@ -443,10 +425,11 @@ export function createBlockDocumentCommands<
     },
     create: {
       id: commandId('create'),
-      name: `Create ${labelLower}`,
-      description: `Create a ${label} artifact with optional initial blocks`,
+      name: 'Create block document',
+      description:
+        'Create a block document artifact with optional initial blocks',
       group: commandGroup,
-      keywords: [labelLower, 'create', 'new', 'blocks'],
+      keywords: ['block document', 'create', 'new', 'blocks'],
       inputSchema: createInputSchema,
       inputDescription: 'Optional title, initial blocks, and select flag.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'low'},
@@ -460,7 +443,7 @@ export function createBlockDocumentCommands<
         const state = context.getState();
         const previousArtifactId = state.artifacts.config.currentArtifactId;
         const artifactId = state.artifacts.createArtifact({
-          type: artifactType,
+          type: 'block-document',
           title: title ?? defaultTitle,
         });
 
@@ -477,7 +460,7 @@ export function createBlockDocumentCommands<
         return {
           success: true,
           commandId: commandId('create'),
-          message: `Created ${labelLower} artifact "${artifactId}".`,
+          message: `Created block document artifact "${artifactId}".`,
           data: {
             ...readBlockDocumentData(state, artifactId),
           },
@@ -486,12 +469,12 @@ export function createBlockDocumentCommands<
     },
     'append-blocks': {
       id: commandId('append-blocks'),
-      name: `Append ${labelLower} blocks`,
-      description: `Append top-level blocks to a ${label} artifact`,
+      name: 'Append block document blocks',
+      description: 'Append top-level blocks to a block document artifact',
       group: commandGroup,
-      keywords: [labelLower, 'append', 'blocks'],
+      keywords: ['block document', 'append', 'blocks'],
       inputSchema: blocksInputSchema,
-      inputDescription: `${label} artifact ID and blocks to append.`,
+      inputDescription: 'Block document artifact ID and blocks to append.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -502,9 +485,6 @@ export function createBlockDocumentCommands<
           state,
           artifactId,
           commandId('append-blocks'),
-          artifactType,
-          label,
-          labelLower,
         );
         if (!resolved.success) return resolved;
         state.blockDocuments.appendBlocks(artifactId, blocks);
@@ -512,19 +492,19 @@ export function createBlockDocumentCommands<
           state,
           commandId('append-blocks'),
           artifactId,
-          labelLower,
           blockResultData(blocks),
         );
       },
     },
     'insert-blocks': {
       id: commandId('insert-blocks'),
-      name: `Insert ${labelLower} blocks`,
-      description: `Insert top-level blocks into a ${label} artifact`,
+      name: 'Insert block document blocks',
+      description: 'Insert top-level blocks into a block document artifact',
       group: commandGroup,
-      keywords: [labelLower, 'insert', 'blocks'],
+      keywords: ['block document', 'insert', 'blocks'],
       inputSchema: insertBlocksInputSchema,
-      inputDescription: `${label} artifact ID, insertion index, and blocks.`,
+      inputDescription:
+        'Block document artifact ID, insertion index, and blocks.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -535,9 +515,6 @@ export function createBlockDocumentCommands<
           state,
           artifactId,
           commandId('insert-blocks'),
-          artifactType,
-          label,
-          labelLower,
         );
         if (!resolved.success) return resolved;
         state.blockDocuments.insertBlocks(artifactId, index, blocks);
@@ -545,7 +522,6 @@ export function createBlockDocumentCommands<
           state,
           commandId('insert-blocks'),
           artifactId,
-          labelLower,
           {
             index,
             ...blockResultData(blocks),
@@ -555,12 +531,13 @@ export function createBlockDocumentCommands<
     },
     'update-block': {
       id: commandId('update-block'),
-      name: `Update ${labelLower} block`,
-      description: `Replace one top-level ${label} block by block ID`,
+      name: 'Update block document block',
+      description: 'Replace one top-level block document block by block ID',
       group: commandGroup,
-      keywords: [labelLower, 'update', 'block'],
+      keywords: ['block document', 'update', 'block'],
       inputSchema: updateBlockInputSchema,
-      inputDescription: `${label} artifact ID, block ID, and replacement block.`,
+      inputDescription:
+        'Block document artifact ID, block ID, and replacement block.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -571,9 +548,6 @@ export function createBlockDocumentCommands<
           state,
           artifactId,
           commandId('update-block'),
-          artifactType,
-          label,
-          labelLower,
         );
         if (!resolved.success) return resolved;
         const target = resolveMutableBlock(
@@ -597,19 +571,18 @@ export function createBlockDocumentCommands<
           state,
           commandId('update-block'),
           artifactId,
-          labelLower,
           blockResultData([replacementBlock]),
         );
       },
     },
     'remove-block': {
       id: commandId('remove-block'),
-      name: `Remove ${labelLower} block`,
-      description: `Remove one top-level ${label} block by block ID`,
+      name: 'Remove block document block',
+      description: 'Remove one top-level block document block by block ID',
       group: commandGroup,
-      keywords: [labelLower, 'remove', 'delete', 'block'],
+      keywords: ['block document', 'remove', 'delete', 'block'],
       inputSchema: BlockDocumentBlockIdInput,
-      inputDescription: `${label} artifact ID and block ID.`,
+      inputDescription: 'Block document artifact ID and block ID.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -620,9 +593,6 @@ export function createBlockDocumentCommands<
           state,
           artifactId,
           commandId('remove-block'),
-          artifactType,
-          label,
-          labelLower,
         );
         if (!resolved.success) return resolved;
         const target = resolveMutableBlock(
@@ -638,7 +608,6 @@ export function createBlockDocumentCommands<
           state,
           commandId('remove-block'),
           artifactId,
-          labelLower,
           {
             removedBlock: target.block,
             ...blockResultData([target.block]),
@@ -648,12 +617,13 @@ export function createBlockDocumentCommands<
     },
     'move-block': {
       id: commandId('move-block'),
-      name: `Move ${labelLower} block`,
-      description: `Move one top-level ${label} block by block ID`,
+      name: 'Move block document block',
+      description: 'Move one top-level block document block by block ID',
       group: commandGroup,
-      keywords: [labelLower, 'move', 'reorder', 'block'],
+      keywords: ['block document', 'move', 'reorder', 'block'],
       inputSchema: BlockDocumentMoveBlockInput,
-      inputDescription: `${label} artifact ID, block ID, and destination index.`,
+      inputDescription:
+        'Block document artifact ID, block ID, and destination index.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -664,9 +634,6 @@ export function createBlockDocumentCommands<
           state,
           artifactId,
           commandId('move-block'),
-          artifactType,
-          label,
-          labelLower,
         );
         if (!resolved.success) return resolved;
         const target = resolveMutableBlock(
@@ -686,7 +653,6 @@ export function createBlockDocumentCommands<
           state,
           commandId('move-block'),
           artifactId,
-          labelLower,
           {
             toIndex,
             ...blockResultData([target.block]),
@@ -696,12 +662,13 @@ export function createBlockDocumentCommands<
     },
     'create-chart-block': {
       id: commandId('create-chart-block'),
-      name: `Create ${labelLower} chart block`,
+      name: 'Create block document chart block',
       description: 'Create a standalone Mosaic/vgplot chart block',
       group: commandGroup,
-      keywords: [labelLower, 'chart', 'block', 'vgplot'],
+      keywords: ['block document', 'chart', 'block', 'vgplot'],
       inputSchema: BlockDocumentCreateChartBlockInput,
-      inputDescription: `${label} artifact ID, tableName, ChartConfig, and optional selection group.`,
+      inputDescription:
+        'Block document artifact ID, tableName, ChartConfig, and optional selection group.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -719,9 +686,6 @@ export function createBlockDocumentCommands<
           state,
           artifactId,
           commandId('create-chart-block'),
-          artifactType,
-          label,
-          labelLower,
         );
         if (!resolved.success) return resolved;
         const block = BlockDocumentChartBlock.parse({
@@ -738,7 +702,6 @@ export function createBlockDocumentCommands<
           state,
           commandId('create-chart-block'),
           artifactId,
-          labelLower,
           {
             tableName,
             selectionGroupId,
@@ -750,13 +713,14 @@ export function createBlockDocumentCommands<
     },
     'create-stateful-block': {
       id: commandId('create-stateful-block'),
-      name: `Create ${labelLower} stateful block`,
+      name: 'Create block document stateful block',
       description:
         'Create a hosted stateful block such as a dashboard, pivot table, or document block',
       group: commandGroup,
-      keywords: [labelLower, 'stateful', 'block', 'dashboard', 'pivot'],
+      keywords: ['block document', 'stateful', 'block', 'dashboard', 'pivot'],
       inputSchema: BlockDocumentCreateStatefulBlockInput,
-      inputDescription: `${label} artifact ID, blockType, and optional seed title/caption/index.`,
+      inputDescription:
+        'Block document artifact ID, blockType, and optional seed title/caption/index.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -776,9 +740,6 @@ export function createBlockDocumentCommands<
           state,
           artifactId,
           commandId('create-stateful-block'),
-          artifactType,
-          label,
-          labelLower,
         );
         if (!resolved.success) return resolved;
 
@@ -829,7 +790,6 @@ export function createBlockDocumentCommands<
           state,
           commandId('create-stateful-block'),
           artifactId,
-          labelLower,
           {
             blockInstanceId,
             ownership,
@@ -852,15 +812,13 @@ function resolveBlockDocumentArtifact(
   state: BlockDocumentCommandState,
   artifactId: string | undefined,
   commandId: string,
-  artifactType: string,
-  artifactLabel: string,
-  artifactLabelLower: string,
 ) {
   if (!artifactId) {
     return {
       success: false as const,
       commandId,
-      error: `No ${artifactLabelLower} artifactId provided and current artifact is not a ${artifactLabelLower}.`,
+      error:
+        'No block document artifactId provided and current artifact is not a block document.',
     };
   }
   const artifact = state.artifacts.getArtifact(artifactId);
@@ -871,11 +829,11 @@ function resolveBlockDocumentArtifact(
       error: `Unknown artifact "${artifactId}".`,
     };
   }
-  if (artifact.type !== artifactType) {
+  if (artifact.type !== 'block-document') {
     return {
       success: false as const,
       commandId,
-      error: `Artifact "${artifactId}" is not a ${artifactLabel} artifact.`,
+      error: `Artifact "${artifactId}" is not a block document artifact.`,
     };
   }
   return {success: true as const, artifact};
@@ -975,13 +933,12 @@ function blockMutationSuccess(
   state: BlockDocumentCommandState,
   commandId: string,
   artifactId: string,
-  artifactLabelLower: string,
   extraData: Record<string, unknown> = {},
 ) {
   return {
     success: true,
     commandId,
-    message: `Updated ${artifactLabelLower} artifact "${artifactId}".`,
+    message: `Updated block document artifact "${artifactId}".`,
     data: {
       ...readBlockDocumentData(state, artifactId),
       ...extraData,

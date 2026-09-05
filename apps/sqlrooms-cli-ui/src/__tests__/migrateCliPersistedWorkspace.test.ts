@@ -87,9 +87,9 @@ describe('migrateCliPersistedWorkspace', () => {
       }
     ).artifactsById;
 
-    expect(artifacts.legacyBlockDocument.type).toBe('document');
+    expect(artifacts.legacyBlockDocument.type).toBe('block-document');
     expect(artifacts.legacyMarkdown.type).toBe('markdown');
-    expect(artifacts.currentDocument.type).toBe('document');
+    expect(artifacts.currentDocument.type).toBe('block-document');
     expect(artifacts.currentMarkdown.type).toBe('markdown');
     expect(artifacts.orphanedLegacyMarkdown.type).toBe('markdown');
     expect(artifacts.dashboard.type).toBe('dashboard');
@@ -104,6 +104,23 @@ describe('migrateCliPersistedWorkspace', () => {
       blockDocuments.artifacts.legacyBlockDocument.content.content[0]?.attrs
         .blockType,
     ).toBe('markdown');
+  });
+
+  it('preserves canonical block documents and their content', () => {
+    const persisted = persistedWorkspace();
+    persisted.artifacts.artifactsById.currentDocument.type = 'block-document';
+    const migrated = migrateCliPersistedWorkspace(persisted);
+
+    expect(migrated.artifacts).toMatchObject({
+      artifactsById: {
+        currentDocument: persisted.artifacts.artifactsById.currentDocument,
+      },
+    });
+    expect(migrated.blockDocuments).toMatchObject({
+      artifacts: {
+        currentDocument: persisted.blockDocuments.artifacts.currentDocument,
+      },
+    });
   });
 
   it('is idempotent', () => {

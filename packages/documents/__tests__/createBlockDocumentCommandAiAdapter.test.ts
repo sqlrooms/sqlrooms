@@ -172,16 +172,14 @@ describe('createBlockDocumentCommandAiAdapter', () => {
     ]);
   });
 
-  it('allows hosts to recognize compatible block-document artifact types', () => {
+  it('does not recognize custom artifact type names', () => {
     const {store} = createMockStore({artifactType: 'analysis-doc'});
-    const adapter = createBlockDocumentCommandAiAdapter({
-      store,
-      isBlockDocumentArtifact: (artifact) => artifact.type === 'analysis-doc',
-    });
+    const adapter = createBlockDocumentCommandAiAdapter({store});
 
-    expect(adapter.getBlocks('doc-1')).toEqual([
-      {id: 'existing', type: 'paragraph', text: 'Hi'},
-    ]);
+    expect(adapter.getBlocks('doc-1')).toBeUndefined();
+    expect(() => adapter.ensureBlockDocument('doc-1')).toThrow(
+      'Artifact doc-1 is not a block document',
+    );
   });
 
   it('throws when ensuring an incompatible artifact type', () => {

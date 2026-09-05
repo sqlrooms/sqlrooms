@@ -6,7 +6,7 @@ export const DEFAULT_CLI_CAPABILITY_PROFILE = {
   name: 'default',
   version: 1,
   artifacts: {
-    creatable: ['document', 'dashboard'],
+    creatable: ['block-document', 'dashboard'],
     runContext: CLI_ARTIFACT_TYPES,
   },
   blocks: {
