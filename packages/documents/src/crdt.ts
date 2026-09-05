@@ -145,7 +145,7 @@ export function createDocumentsCrdtMirror<
   S extends DocumentCrdtState = DocumentCrdtState,
 >(): CrdtMirror<S, typeof documentsMirrorSchema> {
   const isSyncedArtifact = (artifact: ArtifactMetadataType) =>
-    artifact.type === 'markdown' || artifact.type === 'document';
+    artifact.type === 'markdown' || artifact.type === 'block-document';
   const isNonSyncedArtifact = (artifact: ArtifactMetadataType) =>
     !isSyncedArtifact(artifact);
 

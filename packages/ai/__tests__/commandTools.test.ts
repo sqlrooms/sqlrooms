@@ -54,7 +54,7 @@ const commandDescriptors = [
     requiresConfirmation: false,
   },
   {
-    id: 'document.add-dashboard-block',
+    id: 'block-document.add-dashboard-block',
     owner: 'app',
     name: 'Add Dashboard Block',
     description: 'Add a dashboard block to a block document.',
@@ -94,21 +94,21 @@ const commandDescriptors = [
 // Metadata from the command-discovery trace for the earthquake map.
 const documentCommandDescriptors = [
   {
-    id: 'document.insert-blocks',
+    id: 'block-document.insert-blocks',
     name: 'Insert document blocks',
     description: 'Insert top-level blocks into a Document artifact',
     keywords: ['document', 'insert', 'blocks'],
     readOnly: false,
   },
   {
-    id: 'document.list',
+    id: 'block-document.list',
     name: 'List documents',
     description: 'List Document artifacts in the room',
     keywords: ['document', 'document', 'blocks', 'list'],
     readOnly: true,
   },
   {
-    id: 'document.get',
+    id: 'block-document.get',
     name: 'Get document',
     description:
       'Read blocks from a Document artifact. Defaults to the current document artifact.',
@@ -116,7 +116,7 @@ const documentCommandDescriptors = [
     readOnly: true,
   },
   {
-    id: 'document.add-map-block',
+    id: 'block-document.add-map-block',
     name: 'Add or update block document map block',
     description: 'Create or update a direct block document map block.',
     keywords: ['block document', 'map', 'deck', 'block', 'add', 'update'],
@@ -241,7 +241,7 @@ describe('command tools', () => {
         SearchCommandsToolParameters.parse(params),
       );
 
-      expect(result.commands[0].id).toBe('document.get');
+      expect(result.commands[0].id).toBe('block-document.get');
       expect(result.commands[0].matchReason).toContain('read-only command');
       expect(result.commands.map((command: any) => command.id)).not.toContain(
         'artifact.delete',
@@ -261,19 +261,19 @@ describe('command tools', () => {
 
     expect(
       result.commands.slice(0, 2).map((command: any) => command.id),
-    ).toEqual(['document.list', 'document.get']);
+    ).toEqual(['block-document.list', 'block-document.get']);
   });
 
   it('keeps exact command IDs first even with a conflicting read hint', async () => {
     const tools = createCommandState(jest.fn(), documentCommandDescriptors);
     const result = await (tools.search_commands as any).execute(
       SearchCommandsToolParameters.parse({
-        query: 'document.add-map-block',
+        query: 'block-document.add-map-block',
         action: 'get',
       }),
     );
 
-    expect(result.commands[0].id).toBe('document.add-map-block');
+    expect(result.commands[0].id).toBe('block-document.add-map-block');
   });
 
   it('keeps map authoring discoverable with an explicit write action', async () => {
@@ -285,7 +285,7 @@ describe('command tools', () => {
       }),
     );
 
-    expect(result.commands[0].id).toBe('document.add-map-block');
+    expect(result.commands[0].id).toBe('block-document.add-map-block');
   });
 
   it('searches commands by intent with deterministic ranking', async () => {
@@ -313,7 +313,7 @@ describe('command tools', () => {
 
     expect(result.success).toBe(true);
     expect(result.commands[0]).toMatchObject({
-      id: 'document.add-dashboard-block',
+      id: 'block-document.add-dashboard-block',
       requiresInput: true,
       riskLevel: 'medium',
       enabled: true,
@@ -365,7 +365,7 @@ describe('command tools', () => {
       commandDescriptors[0],
       {
         ...commandDescriptors[1],
-        id: 'document.hidden-mutation',
+        id: 'block-document.hidden-mutation',
         visible: false,
       },
       commandDescriptors[2],
@@ -389,7 +389,7 @@ describe('command tools', () => {
       includeInputSchema: true,
     });
     const hiddenGetResult = await (tools.get_command as any).execute({
-      commandId: 'document.hidden-mutation',
+      commandId: 'block-document.hidden-mutation',
       includeHidden: true,
       includeDisabled: true,
     });
@@ -407,7 +407,7 @@ describe('command tools', () => {
     ]);
     expect(hiddenGetResult).toEqual({
       success: false,
-      errorMessage: 'Unknown command ID "document.hidden-mutation".',
+      errorMessage: 'Unknown command ID "block-document.hidden-mutation".',
     });
     expect(disabledGetResult).toEqual({
       success: false,
@@ -466,23 +466,23 @@ describe('command tools', () => {
     const invokeCommand = jest.fn();
     const tools = createCommandState(invokeCommand, commandDescriptors, {
       commandGuard: (descriptor: {id: string}) => ({
-        allowed: descriptor.id !== 'document.add-dashboard-block',
+        allowed: descriptor.id !== 'block-document.add-dashboard-block',
       }),
     });
 
     const result = await (tools.execute_command as any).execute({
-      commandId: 'document.add-dashboard-block',
+      commandId: 'block-document.add-dashboard-block',
     });
 
     expect(result).toEqual({
       success: false,
-      commandId: 'document.add-dashboard-block',
+      commandId: 'block-document.add-dashboard-block',
       errorMessage:
-        'Command "document.add-dashboard-block" is not available to this caller.',
+        'Command "block-document.add-dashboard-block" is not available to this caller.',
       result: {
         code: 'command-not-available-to-caller',
         message:
-          'Command "document.add-dashboard-block" is not available to this caller.',
+          'Command "block-document.add-dashboard-block" is not available to this caller.',
       },
     });
     expect(invokeCommandWithPolicy).not.toHaveBeenCalled();

@@ -70,7 +70,7 @@ Direct `store.commands.invokeCommand` calls are unaffected.
 ```tsx
 const commandTools = createCommandTools(store, {
   commandGuard: (descriptor) =>
-    descriptor.id.startsWith('document.') && !descriptor.readOnly
+    descriptor.id.startsWith('block-document.') && !descriptor.readOnly
       ? {
           allowed: false,
           code: 'use-document-agent',

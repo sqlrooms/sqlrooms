@@ -32,9 +32,9 @@ function createTestStore({
   const ensuredStatefulBlocks: Array<{id: string; title: string}> = [];
   const now = () => timestamp++;
   const artifactTypes = defineArtifactTypes({
-    document: {
-      label: 'Document',
-      defaultTitle: 'Document',
+    'block-document': {
+      label: 'Block Document',
+      defaultTitle: 'Block Document',
     },
     dashboard: {label: 'Dashboard', defaultTitle: 'Dashboard'},
     markdown: {label: 'Markdown', defaultTitle: 'Markdown'},
@@ -66,13 +66,13 @@ function createTestStore({
   return {store, ensuredStatefulBlocks};
 }
 
-describe('document commands', () => {
-  it('creates, lists, and reads document artifacts', async () => {
+describe('block document commands', () => {
+  it('creates, lists, and reads block document artifacts', async () => {
     const {store} = createTestStore();
 
     const createResult = await store
       .getState()
-      .commands.invokeCommand('document.create', {
+      .commands.invokeCommand('block-document.create', {
         title: 'Findings',
         blocks: [
           {
@@ -88,7 +88,7 @@ describe('document commands', () => {
     const artifactId = (createResult.data as any).artifactId as string;
     expect(store.getState().artifacts.getArtifact(artifactId)).toMatchObject({
       id: artifactId,
-      type: 'document',
+      type: 'block-document',
       title: 'Findings',
     });
     expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
@@ -102,7 +102,7 @@ describe('document commands', () => {
 
     const listResult = await store
       .getState()
-      .commands.invokeCommand('document.list');
+      .commands.invokeCommand('block-document.list');
     expect((listResult.data as any).documents).toEqual([
       {
         artifactId,
@@ -115,7 +115,7 @@ describe('document commands', () => {
 
     const getResult = await store
       .getState()
-      .commands.invokeCommand('document.get', {artifactId});
+      .commands.invokeCommand('block-document.get', {artifactId});
     expect(getResult.data).toMatchObject({
       artifactId,
       title: 'Findings',
@@ -135,18 +135,18 @@ describe('document commands', () => {
   it('reads the AI invocation target when the live document changes', async () => {
     const {store} = createTestStore();
     const artifactA = store.getState().artifacts.createArtifact({
-      type: 'document',
+      type: 'block-document',
       title: 'Document A',
     });
     store.getState().blockDocuments.ensureBlockDocument(artifactA);
     const artifactB = store.getState().artifacts.createArtifact({
-      type: 'document',
+      type: 'block-document',
       title: 'Document B',
     });
     store.getState().blockDocuments.ensureBlockDocument(artifactB);
 
     const result = await store.getState().commands.invokeCommand(
-      'document.get',
+      'block-document.get',
       {},
       {
         surface: 'ai',
@@ -158,16 +158,16 @@ describe('document commands', () => {
     expect(store.getState().artifacts.config.currentArtifactId).toBe(artifactB);
   });
 
-  it('mutates document blocks by command', async () => {
+  it('mutates block document blocks by command', async () => {
     const {store} = createTestStore();
     const createResult = await store
       .getState()
-      .commands.invokeCommand('document.create');
+      .commands.invokeCommand('block-document.create');
     const artifactId = (createResult.data as any).artifactId as string;
 
     const appendResult = await store
       .getState()
-      .commands.invokeCommand('document.append-blocks', {
+      .commands.invokeCommand('block-document.append-blocks', {
         artifactId,
         blocks: [
           {id: 'p1', type: 'paragraph', text: [{type: 'text', text: 'First'}]},
@@ -183,21 +183,23 @@ describe('document commands', () => {
         {id: 'p1', type: 'paragraph', text: [{type: 'text', text: 'First'}]},
       ],
     });
-    await store.getState().commands.invokeCommand('document.insert-blocks', {
-      artifactId,
-      index: 0,
-      blocks: [
-        {
-          id: 'h1',
-          type: 'heading',
-          level: 2,
-          text: [{type: 'text', text: 'Overview'}],
-        },
-      ],
-    });
+    await store
+      .getState()
+      .commands.invokeCommand('block-document.insert-blocks', {
+        artifactId,
+        index: 0,
+        blocks: [
+          {
+            id: 'h1',
+            type: 'heading',
+            level: 2,
+            text: [{type: 'text', text: 'Overview'}],
+          },
+        ],
+      });
     const updateResult = await store
       .getState()
-      .commands.invokeCommand('document.update-block', {
+      .commands.invokeCommand('block-document.update-block', {
         artifactId,
         blockId: 'p1',
         block: {
@@ -216,15 +218,17 @@ describe('document commands', () => {
         {id: 'p1', type: 'paragraph', text: [{type: 'text', text: 'Updated'}]},
       ],
     });
-    await store.getState().commands.invokeCommand('document.move-block', {
+    await store.getState().commands.invokeCommand('block-document.move-block', {
       artifactId,
       blockId: 'p1',
       toIndex: 0,
     });
-    await store.getState().commands.invokeCommand('document.remove-block', {
-      artifactId,
-      blockId: 'h1',
-    });
+    await store
+      .getState()
+      .commands.invokeCommand('block-document.remove-block', {
+        artifactId,
+        blockId: 'h1',
+      });
 
     expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
       {id: 'p1', type: 'paragraph', text: [{type: 'text', text: 'Updated'}]},
@@ -235,12 +239,12 @@ describe('document commands', () => {
     const {store} = createTestStore();
     const createResult = await store
       .getState()
-      .commands.invokeCommand('document.create');
+      .commands.invokeCommand('block-document.create');
     const artifactId = (createResult.data as any).artifactId as string;
 
     const chartResult = await store
       .getState()
-      .commands.invokeCommand('document.create-chart-block', {
+      .commands.invokeCommand('block-document.create-chart-block', {
         artifactId,
         blockId: 'chart-1',
         intent: 'Show the revenue distribution for the sales review.',
@@ -274,12 +278,12 @@ describe('document commands', () => {
     const {store, ensuredStatefulBlocks} = createTestStore();
     const createResult = await store
       .getState()
-      .commands.invokeCommand('document.create');
+      .commands.invokeCommand('block-document.create');
     const artifactId = (createResult.data as any).artifactId as string;
 
     const statefulBlockResult = await store
       .getState()
-      .commands.invokeCommand('document.create-stateful-block', {
+      .commands.invokeCommand('block-document.create-stateful-block', {
         artifactId,
         blockId: 'dashboard-block',
         blockType: 'dashboard',
@@ -322,13 +326,13 @@ describe('document commands', () => {
     const {store} = createTestStore();
     const createResult = await store
       .getState()
-      .commands.invokeCommand('document.create');
+      .commands.invokeCommand('block-document.create');
     const artifactId = (createResult.data as any).artifactId as string;
 
     await expect(
       store
         .getState()
-        .commands.invokeCommand('document.create-stateful-block', {
+        .commands.invokeCommand('block-document.create-stateful-block', {
           artifactId,
           blockType: 'notebook',
         }),
@@ -343,23 +347,23 @@ describe('document commands', () => {
       allowedBlockTypes: ['paragraph', 'chart', 'statefulBlock'],
     });
     await expect(
-      store.getState().commands.invokeCommand('document.create', {
+      store.getState().commands.invokeCommand('block-document.create', {
         blocks: [{id: 'image-1', type: 'image', assetId: 'asset-1'}],
       }),
     ).resolves.toMatchObject({success: false});
     const createResult = await store
       .getState()
-      .commands.invokeCommand('document.create');
+      .commands.invokeCommand('block-document.create');
     const artifactId = (createResult.data as any).artifactId as string;
 
     await expect(
-      store.getState().commands.invokeCommand('document.append-blocks', {
+      store.getState().commands.invokeCommand('block-document.append-blocks', {
         artifactId,
         blocks: [{id: 'image-1', type: 'image', assetId: 'asset-1'}],
       }),
     ).resolves.toMatchObject({success: false});
     await expect(
-      store.getState().commands.invokeCommand('document.append-blocks', {
+      store.getState().commands.invokeCommand('block-document.append-blocks', {
         artifactId,
         blocks: [
           {
@@ -372,7 +376,7 @@ describe('document commands', () => {
       }),
     ).resolves.toMatchObject({success: false});
     await expect(
-      store.getState().commands.invokeCommand('document.append-blocks', {
+      store.getState().commands.invokeCommand('block-document.append-blocks', {
         artifactId,
         blocks: [
           {
@@ -385,7 +389,7 @@ describe('document commands', () => {
       }),
     ).resolves.toMatchObject({success: true});
     await expect(
-      store.getState().commands.invokeCommand('document.update-block', {
+      store.getState().commands.invokeCommand('block-document.update-block', {
         artifactId,
         blockId: 'dashboard-1',
         block: {id: 'ignored', type: 'image', assetId: 'asset-1'},
@@ -400,7 +404,7 @@ describe('document commands', () => {
       },
     ]);
     await expect(
-      store.getState().commands.invokeCommand('document.update-block', {
+      store.getState().commands.invokeCommand('block-document.update-block', {
         artifactId,
         blockId: 'persisted-document-1',
         block: {
@@ -411,13 +415,13 @@ describe('document commands', () => {
       }),
     ).resolves.toMatchObject({success: false});
     await expect(
-      store.getState().commands.invokeCommand('document.remove-block', {
+      store.getState().commands.invokeCommand('block-document.remove-block', {
         artifactId,
         blockId: 'persisted-document-1',
       }),
     ).resolves.toMatchObject({success: false});
     await expect(
-      store.getState().commands.invokeCommand('document.move-block', {
+      store.getState().commands.invokeCommand('block-document.move-block', {
         artifactId,
         blockId: 'persisted-document-1',
         toIndex: 0,
@@ -448,7 +452,7 @@ describe('document commands', () => {
     });
 
     await expect(
-      store.getState().commands.invokeCommand('document.get', {
+      store.getState().commands.invokeCommand('block-document.get', {
         artifactId: 'missing',
       }),
     ).resolves.toMatchObject({
@@ -456,12 +460,12 @@ describe('document commands', () => {
       error: 'Unknown artifact "missing".',
     });
     await expect(
-      store.getState().commands.invokeCommand('document.get', {
+      store.getState().commands.invokeCommand('block-document.get', {
         artifactId: markdownId,
       }),
     ).resolves.toMatchObject({
       success: false,
-      error: `Artifact "${markdownId}" is not a document artifact.`,
+      error: `Artifact "${markdownId}" is not a block document artifact.`,
     });
   });
 });

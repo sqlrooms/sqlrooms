@@ -203,6 +203,10 @@ or Data Table Explorer flows use `grid`.
 ## Document Artifacts
 
 Document artifacts are block-composed documents for active analytical work.
+Their canonical artifact type is `block-document`; the UI label remains
+“Document”. Loading an existing workspace migrates `worksheet` artifacts and
+`document` artifacts with block-document backing state to `block-document`.
+Legacy Markdown documents continue to migrate to `markdown`.
 They can contain editable text, images, standalone Mosaic/vgplot chart blocks, and
 direct stateful blocks such as dashboards, pivot tables, Data Table Explorers,
 SQL queries, and Markdown documents.
@@ -244,16 +248,16 @@ instead of mutating app state through hidden paths or rewriting chat messages.
 
 Document AI tools compose generic block-document helpers with CLI-specific
 agent policy. Durable block appends route through the registered
-`document.append-blocks` command, so text and chart block creation use the
+`block-document.append-blocks` command, so text and chart block creation use the
 same traceable mutation path as palette, API, and future skill surfaces.
 Stateful document blocks use CLI-owned commands that wrap the generic document
 commands and feature-specific state creation:
 
-- `document.add-dashboard-block`
-- `document.add-data-table-block`
-- `document.add-html-app-block`
-- `document.add-map-block`
-- `document.update-block-metadata`
+- `block-document.add-dashboard-block`
+- `block-document.add-data-table-block`
+- `block-document.add-html-app-block`
+- `block-document.add-map-block`
+- `block-document.update-block-metadata`
 
 Topbar artifact title edits route through `artifact.rename`, which preserves
 artifact-type rename hooks and returns previous/new title metadata for traces.
@@ -281,7 +285,7 @@ capability profiles:
 - `render_dashboard_panel_image`
 
 Visual-inspection requests use these tools directly. If the target block ID is
-missing, the assistant reads the Document once with `document.get`, then
+missing, the assistant reads the Document once with `block-document.get`, then
 captures the matching block. It does not need to search for map configuration
 commands before inspecting the image. Rendering tools are separate from the
 command registry searched by `search_commands`.
@@ -303,6 +307,3 @@ basemap and interleaved deck.gl layers. Separate deck overlays preserve their
 buffer through deck.gl/luma.gl's default and are checked as well. Maps with an unavailable context or
 explicitly disabled buffer preservation return an actionable error.
 Iframe-backed content is still unsupported.
-
-Document artifacts keep their persisted `document` type. Document commands use
-the canonical `document.*` namespace, including the Python block commands.

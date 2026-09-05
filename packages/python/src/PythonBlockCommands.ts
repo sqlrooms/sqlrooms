@@ -32,20 +32,20 @@ type PythonBlockCommandState = BaseRoomStoreState &
     };
   };
 
-/** Presentation options for canonical document Python commands. */
+/** Presentation options for canonical block-document Python commands. */
 export type CreatePythonBlockCommandsOptions = {
   commandGroup?: string;
 };
 
 function createPythonBlockInputSchemas() {
   const PythonBlockInput = z.object({
-    artifactId: z.string().describe('Target document artifact ID.'),
+    artifactId: z.string().describe('Target block document artifact ID.'),
     blockId: z.string().describe('Document Python block ID.'),
   });
 
   return {
     AddPythonBlockInput: z.object({
-      artifactId: z.string().describe('Target document artifact ID.'),
+      artifactId: z.string().describe('Target block document artifact ID.'),
       blockId: z.string().optional().describe('Optional document block ID.'),
       blockInstanceId: z
         .string()
@@ -75,13 +75,14 @@ function createPythonBlockInputSchemas() {
   };
 }
 
-/** Creates command-backed Python block operations for document artifacts. */
+/** Creates command-backed Python block operations for block document artifacts. */
 export function createPythonBlockCommands<
   TRoomState extends PythonBlockCommandState = PythonBlockCommandState,
 >({
-  commandGroup = 'Document',
+  commandGroup = 'Block Document',
 }: CreatePythonBlockCommandsOptions = {}): RoomCommand<TRoomState>[] {
-  const commandId = (suffix: PythonBlockCommandSuffix) => `document.${suffix}`;
+  const commandId = (suffix: PythonBlockCommandSuffix) =>
+    `block-document.${suffix}`;
   const {AddPythonBlockInput, PythonBlockInput, UpdatePythonBlockCodeInput} =
     createPythonBlockInputSchemas();
 
@@ -95,7 +96,7 @@ export function createPythonBlockCommands<
       keywords: ['python', 'block', 'document'],
       inputSchema: AddPythonBlockInput,
       inputDescription:
-        'Document artifact ID plus optional title, code, inputs, outputs, requirements, and insertion index.',
+        'Block document artifact ID plus optional title, code, inputs, outputs, requirements, and insertion index.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -147,7 +148,7 @@ export function createPythonBlockCommands<
       keywords: ['python', 'block', 'code', 'update', 'document'],
       inputSchema: UpdatePythonBlockCodeInput,
       inputDescription:
-        'Document artifact ID, Python block ID, replacement code, and optional run flag.',
+        'Block document artifact ID, Python block ID, replacement code, and optional run flag.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'high'},
       execute: async ({getState}, input) => {
         const state = getState();
@@ -193,7 +194,7 @@ export function createPythonBlockCommands<
       group: commandGroup,
       keywords: ['python', 'block', 'run', 'execute', 'document'],
       inputSchema: PythonBlockInput,
-      inputDescription: 'Document artifact ID and Python block ID.',
+      inputDescription: 'Block document artifact ID and Python block ID.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'high'},
       execute: async ({getState}, input) => {
         const state = getState();
@@ -235,7 +236,7 @@ export function createPythonBlockCommands<
       group: commandGroup,
       keywords: ['python', 'block', 'clear', 'result', 'document'],
       inputSchema: PythonBlockInput,
-      inputDescription: 'Document artifact ID and Python block ID.',
+      inputDescription: 'Block document artifact ID and Python block ID.',
       metadata: {readOnly: false, idempotent: true, riskLevel: 'low'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -277,11 +278,11 @@ function resolveBlockDocumentArtifact(
       error: `Unknown artifact "${artifactId}".`,
     };
   }
-  if (artifact.type !== 'document') {
+  if (artifact.type !== 'block-document') {
     return {
       success: false as const,
       commandId,
-      error: `Artifact "${artifactId}" is not a document artifact.`,
+      error: `Artifact "${artifactId}" is not a block document artifact.`,
     };
   }
   return {success: true as const, artifact};

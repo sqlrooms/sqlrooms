@@ -80,7 +80,7 @@ function setup() {
     },
   };
   const invokeCommand = jest.fn(async (id: string, input: any) => {
-    if (id === 'document.create-stateful-block') {
+    if (id === 'block-document.create-stateful-block') {
       return {
         success: true,
         commandId: id,
@@ -98,7 +98,7 @@ function setup() {
     artifacts: {
       getArtifact: () => ({
         id: 'document-1',
-        type: 'document',
+        type: 'block-document',
         title: 'Document',
       }),
     },
@@ -136,22 +136,24 @@ describe('createCliBlockDocumentCommands', () => {
     }).map(({id}) => id);
     expect(defaultCommandIds).toEqual(
       expect.arrayContaining([
-        'document.add-dashboard-block',
-        'document.add-data-table-block',
+        'block-document.add-dashboard-block',
+        'block-document.add-data-table-block',
       ]),
     );
-    expect(defaultCommandIds).not.toContain('document.add-html-app-block');
-    expect(defaultCommandIds).not.toContain('document.add-map-block');
+    expect(defaultCommandIds).not.toContain(
+      'block-document.add-html-app-block',
+    );
+    expect(defaultCommandIds).not.toContain('block-document.add-map-block');
 
     const experimentalCommandIds = createCliBlockDocumentCommands({
       statefulBlockTypes: EXPERIMENTAL_CLI_CAPABILITY_PROFILE.blocks.stateful,
     }).map(({id}) => id);
     expect(experimentalCommandIds).toEqual(
       expect.arrayContaining([
-        'document.add-dashboard-block',
-        'document.add-data-table-block',
-        'document.add-html-app-block',
-        'document.add-map-block',
+        'block-document.add-dashboard-block',
+        'block-document.add-data-table-block',
+        'block-document.add-html-app-block',
+        'block-document.add-map-block',
       ]),
     );
 
@@ -160,8 +162,8 @@ describe('createCliBlockDocumentCommands', () => {
         DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
     }).map(({id}) => id);
     expect(documentCommandIds).toEqual([
-      'document.update-block-metadata',
-      'document.add-map-block',
+      'block-document.update-block-metadata',
+      'block-document.add-map-block',
     ]);
   });
 
@@ -177,7 +179,7 @@ describe('createCliBlockDocumentCommands', () => {
       },
     ];
     const updateMetadata = profileCommand(
-      'document.update-block-metadata',
+      'block-document.update-block-metadata',
       DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
     );
 
@@ -195,7 +197,7 @@ describe('createCliBlockDocumentCommands', () => {
 
   it('creates a direct document map without a model or dashboard command', async () => {
     const {state, invokeCommand, mapsById} = setup();
-    const result = await command('document.add-map-block').execute(
+    const result = await command('block-document.add-map-block').execute(
       {getState: () => state} as any,
       {
         blockDocumentId: 'document-1',
@@ -222,7 +224,7 @@ describe('createCliBlockDocumentCommands', () => {
       '"main"."earthquakes"',
     );
     expect(invokeCommand).toHaveBeenCalledWith(
-      'document.create-stateful-block',
+      'block-document.create-stateful-block',
       expect.objectContaining({blockType: 'map', blockInstanceId: mapId}),
       expect.anything(),
     );
@@ -235,7 +237,7 @@ describe('createCliBlockDocumentCommands', () => {
 
   it('generates canonical point geometry from structured provenance', async () => {
     const {state, mapsById} = setup();
-    const result = await command('document.add-map-block').execute(
+    const result = await command('block-document.add-map-block').execute(
       {getState: () => state} as any,
       {
         blockDocumentId: 'document-1',
@@ -296,7 +298,7 @@ describe('createCliBlockDocumentCommands', () => {
 
   it('updates document maps as resources without dashboard commands or panelId', async () => {
     const {state, invokeCommand, mapsById} = setup();
-    const result = await command('document.add-map-block').execute(
+    const result = await command('block-document.add-map-block').execute(
       {getState: () => state} as any,
       {
         blockDocumentId: 'document-1',
@@ -349,7 +351,7 @@ describe('createCliBlockDocumentCommands', () => {
 
   it('keeps actual dashboard block creation on Mosaic commands', async () => {
     const {state, invokeCommand} = setup();
-    await command('document.add-dashboard-block').execute(
+    await command('block-document.add-dashboard-block').execute(
       {getState: () => state} as any,
       {
         blockDocumentId: 'document-1',

@@ -21,7 +21,7 @@ function createActions(
     },
   );
   return {
-    getArtifact: () => ({type: 'document'}),
+    getArtifact: () => ({type: 'block-document'}),
     getCurrentArtifactId: () => 'doc-1',
     setCurrentArtifact: jest.fn(),
     getAiSessions: () => [],
@@ -55,7 +55,8 @@ describe('startBlockScopedChat', () => {
       prompt: 'make it blue',
       revealAssistant,
       actions,
-      isValidBlockDocumentArtifact: (artifact) => artifact.type === 'document',
+      isValidBlockDocumentArtifact: (artifact) =>
+        artifact.type === 'block-document',
     });
 
     expect(revealAssistant).toHaveBeenCalled();
@@ -80,7 +81,8 @@ describe('startBlockScopedChat', () => {
       prompt: 'hello',
       revealAssistant: jest.fn(),
       actions,
-      isValidBlockDocumentArtifact: (artifact) => artifact.type === 'document',
+      isValidBlockDocumentArtifact: (artifact) =>
+        artifact.type === 'block-document',
     });
 
     expect(toastError).toHaveBeenCalled();
@@ -120,7 +122,8 @@ describe('startBlockScopedChat', () => {
       prompt: 'recolor these points',
       revealAssistant,
       actions,
-      isValidBlockDocumentArtifact: (artifact) => artifact.type === 'document',
+      isValidBlockDocumentArtifact: (artifact) =>
+        artifact.type === 'block-document',
     });
 
     expect(toastError).not.toHaveBeenCalled();
@@ -178,7 +181,8 @@ describe('startBlockScopedChat', () => {
       prompt: 'recolor these points',
       revealAssistant,
       actions,
-      isValidBlockDocumentArtifact: (artifact) => artifact.type === 'document',
+      isValidBlockDocumentArtifact: (artifact) =>
+        artifact.type === 'block-document',
     });
 
     expect(toastError).not.toHaveBeenCalled();
@@ -220,7 +224,8 @@ describe('startBlockScopedChat', () => {
       prompt: 'recolor these points',
       revealAssistant,
       actions,
-      isValidBlockDocumentArtifact: (artifact) => artifact.type === 'document',
+      isValidBlockDocumentArtifact: (artifact) =>
+        artifact.type === 'block-document',
     });
 
     expect(toastError).toHaveBeenCalledWith(

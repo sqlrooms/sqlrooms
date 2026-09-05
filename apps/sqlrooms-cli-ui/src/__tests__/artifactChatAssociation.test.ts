@@ -18,7 +18,7 @@ it('links a newly selected artifact to the invoking chat and keeps it selected',
   > = {
     [sourceArtifactId]: {
       id: sourceArtifactId,
-      type: 'document',
+      type: 'block-document',
       title: 'Document A',
     },
   };
@@ -49,13 +49,13 @@ it('links a newly selected artifact to the invoking chat and keeps it selected',
   } as unknown as RoomCommandExecutionContext<RoomState>;
 
   const result = await artifactChatAssociationMiddleware(
-    {id: 'document.create'} as RegisteredRoomCommand<RoomState>,
+    {id: 'block-document.create'} as RegisteredRoomCommand<RoomState>,
     undefined,
     context,
     async () => {
       state.artifacts.config.artifactsById[targetArtifactId] = {
         id: targetArtifactId,
-        type: 'document',
+        type: 'block-document',
         title: 'Document B',
       };
       state.artifacts.config.currentArtifactId = targetArtifactId;
@@ -79,12 +79,12 @@ it('does not associate an artifact that was created without being selected', asy
   > = {
     'document-a': {
       id: 'document-a',
-      type: 'document',
+      type: 'block-document',
       title: 'Document A',
     },
     'document-b': {
       id: 'document-b',
-      type: 'document',
+      type: 'block-document',
       title: 'Document B',
     },
   };
@@ -115,12 +115,12 @@ it('does not associate an artifact that was created without being selected', asy
   } as unknown as RoomCommandExecutionContext<RoomState>;
 
   await artifactChatAssociationMiddleware(
-    {id: 'document.create'} as RegisteredRoomCommand<RoomState>,
+    {id: 'block-document.create'} as RegisteredRoomCommand<RoomState>,
     undefined,
     context,
     async () => ({
       success: true,
-      commandId: 'document.create',
+      commandId: 'block-document.create',
       data: {artifactId: 'document-b'},
     }),
   );

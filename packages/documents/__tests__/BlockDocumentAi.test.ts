@@ -11,15 +11,15 @@ import {
 
 describe('block document AI helpers', () => {
   it('describes the command surface used by block document authoring agents', () => {
-    expect(createBlockDocumentCommandIds()).toContain('document.create');
+    expect(createBlockDocumentCommandIds()).toContain('block-document.create');
     expect(createBlockDocumentCommandIds()).toContain(
-      'document.create-chart-block',
+      'block-document.create-chart-block',
     );
     expect(createBlockDocumentCommandIds()).toContain(
-      'document.create-stateful-block',
+      'block-document.create-stateful-block',
     );
     expect(createBlockDocumentCommandIds()).not.toContain(
-      'document.embed-dashboard',
+      'block-document.embed-dashboard',
     );
   });
 
