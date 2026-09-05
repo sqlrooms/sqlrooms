@@ -44,7 +44,7 @@ const ARTIFACT_STABILITY = {
   dashboard: 'stable',
   pivot: 'experimental',
   notebook: 'experimental',
-  markdown: 'experimental',
+  'markdown-document': 'experimental',
   'sql-query': 'experimental',
   'html-app': 'experimental',
   python: 'experimental',
@@ -101,8 +101,9 @@ const pivotBlockDefinition = createPivotBlockDefinition<RoomState>({
 
 const markdownDocumentBlockDefinition =
   createMarkdownDocumentBlockDefinition<RoomState>({
-    label: STATEFUL_BLOCK_ARTIFACT_CONFIGS.markdown.label,
-    defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS.markdown.defaultTitle,
+    label: STATEFUL_BLOCK_ARTIFACT_CONFIGS['markdown-document'].label,
+    defaultTitle:
+      STATEFUL_BLOCK_ARTIFACT_CONFIGS['markdown-document'].defaultTitle,
   });
 
 const sqlQueryBlockDefinition = createSqlQueryBlockDefinition<RoomState>({
@@ -195,8 +196,8 @@ export function createCliArtifactTypes({
       profile,
     ),
     notebook: withStability('notebook', notebookDefinition, profile),
-    markdown: withStability(
-      'markdown',
+    'markdown-document': withStability(
+      'markdown-document',
       createArtifactTypeFromStatefulBlock(markdownDocumentBlockDefinition),
       profile,
     ),

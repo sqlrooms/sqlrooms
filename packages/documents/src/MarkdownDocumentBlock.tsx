@@ -5,14 +5,14 @@ import type {
 import {ScrollTextIcon} from 'lucide-react';
 import type {ComponentType} from 'react';
 import {MarkdownDocument} from './MarkdownDocument';
-import type {DocumentsSliceState} from './DocumentsSlice';
+import type {MarkdownDocumentsSliceState} from './MarkdownDocumentsSlice';
 
 export type MarkdownDocumentBlockRenderProps<
-  TRoomState extends DocumentsSliceState = DocumentsSliceState,
+  TRoomState extends MarkdownDocumentsSliceState = MarkdownDocumentsSliceState,
 > = StatefulBlockRenderProps<TRoomState>;
 
 export type CreateMarkdownDocumentBlockDefinitionOptions<
-  TRoomState extends DocumentsSliceState = DocumentsSliceState,
+  TRoomState extends MarkdownDocumentsSliceState = MarkdownDocumentsSliceState,
 > = {
   render?: ComponentType<MarkdownDocumentBlockRenderProps<TRoomState>>;
   label?: string;
@@ -27,7 +27,7 @@ const DefaultMarkdownDocumentBlock = ({
 };
 
 export function createMarkdownDocumentBlockDefinition<
-  TRoomState extends DocumentsSliceState = DocumentsSliceState,
+  TRoomState extends MarkdownDocumentsSliceState = MarkdownDocumentsSliceState,
 >({
   render = DefaultMarkdownDocumentBlock as ComponentType<
     MarkdownDocumentBlockRenderProps<TRoomState>
@@ -37,7 +37,7 @@ export function createMarkdownDocumentBlockDefinition<
   defaultMarkdown = '',
 }: CreateMarkdownDocumentBlockDefinitionOptions<TRoomState> = {}): StatefulBlockDefinition<TRoomState> {
   return {
-    type: 'markdown',
+    type: 'markdown-document',
     label,
     defaultTitle,
     icon: ScrollTextIcon,
@@ -47,10 +47,10 @@ export function createMarkdownDocumentBlockDefinition<
     },
     render,
     ensureState: ({blockId, getState}) => {
-      getState().documents.ensureDocument(blockId, defaultMarkdown);
+      getState().markdownDocuments.ensureDocument(blockId, defaultMarkdown);
     },
     deleteState: ({blockId, getState}) => {
-      getState().documents.removeDocument(blockId);
+      getState().markdownDocuments.removeDocument(blockId);
     },
   };
 }

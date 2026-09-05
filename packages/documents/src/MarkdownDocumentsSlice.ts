@@ -2,12 +2,14 @@ import {BaseRoomStoreState, createSlice} from '@sqlrooms/room-store';
 import {produce} from 'immer';
 import {
   DocumentAsset,
-  DocumentsSliceConfig,
-  MarkdownDocumentState,
   type DocumentAsset as DocumentAssetType,
-  type DocumentsSliceConfig as DocumentsSliceConfigType,
+} from './DocumentAsset';
+import {
+  MarkdownDocumentsSliceConfig,
+  MarkdownDocumentState,
+  type MarkdownDocumentsSliceConfig as MarkdownDocumentsSliceConfigType,
   type MarkdownDocumentState as MarkdownDocumentStateType,
-} from './DocumentsSliceConfig';
+} from './MarkdownDocumentsSliceConfig';
 
 export type DocumentAssetInput = Omit<
   DocumentAssetType,
@@ -15,10 +17,11 @@ export type DocumentAssetInput = Omit<
 > &
   Partial<Pick<DocumentAssetType, 'createdAt' | 'updatedAt'>>;
 
-export type DocumentsSliceState = {
-  documents: {
-    config: DocumentsSliceConfigType;
-    setConfig: (config: DocumentsSliceConfigType) => void;
+/** State and operations for artifact-scoped Markdown documents. */
+export type MarkdownDocumentsSliceState = {
+  markdownDocuments: {
+    config: MarkdownDocumentsSliceConfigType;
+    setConfig: (config: MarkdownDocumentsSliceConfigType) => void;
     ensureDocument: (artifactId: string, markdown?: string) => void;
     removeDocument: (artifactId: string) => void;
     setMarkdown: (artifactId: string, markdown: string) => void;
@@ -32,30 +35,34 @@ export type DocumentsSliceState = {
   };
 };
 
-export type CreateDocumentsSliceProps = {
-  config?: Partial<DocumentsSliceConfigType>;
+/** Initial Markdown document state and optional clock. */
+export type CreateMarkdownDocumentsSliceProps = {
+  config?: Partial<MarkdownDocumentsSliceConfigType>;
   now?: () => number;
 };
 
-export function createDefaultDocumentsConfig(
-  props: Partial<DocumentsSliceConfigType> = {},
-): DocumentsSliceConfigType {
-  return DocumentsSliceConfig.parse({artifacts: {}, ...props});
+/** Creates validated default Markdown document configuration. */
+export function createDefaultMarkdownDocumentsConfig(
+  props: Partial<MarkdownDocumentsSliceConfigType> = {},
+): MarkdownDocumentsSliceConfigType {
+  return MarkdownDocumentsSliceConfig.parse({artifacts: {}, ...props});
 }
 
-export function createDocumentsSlice<
-  TRoomState extends BaseRoomStoreState & DocumentsSliceState,
->(props: CreateDocumentsSliceProps = {}) {
+/** Creates the Markdown document store slice. */
+export function createMarkdownDocumentsSlice<
+  TRoomState extends BaseRoomStoreState & MarkdownDocumentsSliceState,
+>(props: CreateMarkdownDocumentsSliceProps = {}) {
   const now = props.now ?? Date.now;
 
-  return createSlice<DocumentsSliceState, TRoomState>((set, get) => ({
-    documents: {
-      config: createDefaultDocumentsConfig(props.config),
+  return createSlice<MarkdownDocumentsSliceState, TRoomState>((set, get) => ({
+    markdownDocuments: {
+      config: createDefaultMarkdownDocumentsConfig(props.config),
 
       setConfig(config) {
         set((state) =>
           produce(state, (draft) => {
-            draft.documents.config = DocumentsSliceConfig.parse(config);
+            draft.markdownDocuments.config =
+              MarkdownDocumentsSliceConfig.parse(config);
           }),
         );
       },
@@ -63,8 +70,8 @@ export function createDocumentsSlice<
       ensureDocument(artifactId, markdown = '') {
         set((state) =>
           produce(state, (draft) => {
-            if (draft.documents.config.artifacts[artifactId]) return;
-            draft.documents.config.artifacts[artifactId] =
+            if (draft.markdownDocuments.config.artifacts[artifactId]) return;
+            draft.markdownDocuments.config.artifacts[artifactId] =
               MarkdownDocumentState.parse({
                 id: artifactId,
                 markdown,
@@ -77,7 +84,7 @@ export function createDocumentsSlice<
       removeDocument(artifactId) {
         set((state) =>
           produce(state, (draft) => {
-            delete draft.documents.config.artifacts[artifactId];
+            delete draft.markdownDocuments.config.artifacts[artifactId];
           }),
         );
       },
@@ -85,13 +92,14 @@ export function createDocumentsSlice<
       setMarkdown(artifactId, markdown) {
         set((state) =>
           produce(state, (draft) => {
-            const existing = draft.documents.config.artifacts[artifactId];
+            const existing =
+              draft.markdownDocuments.config.artifacts[artifactId];
             if (existing) {
               existing.markdown = markdown;
               existing.updatedAt = now();
               return;
             }
-            draft.documents.config.artifacts[artifactId] =
+            draft.markdownDocuments.config.artifacts[artifactId] =
               MarkdownDocumentState.parse({
                 id: artifactId,
                 markdown,
@@ -106,9 +114,9 @@ export function createDocumentsSlice<
           produce(state, (draft) => {
             const timestamp = now();
             const existingDocument =
-              draft.documents.config.artifacts[artifactId];
+              draft.markdownDocuments.config.artifacts[artifactId];
             if (!existingDocument) {
-              draft.documents.config.artifacts[artifactId] =
+              draft.markdownDocuments.config.artifacts[artifactId] =
                 MarkdownDocumentState.parse({
                   id: artifactId,
                   assets: {
@@ -139,7 +147,7 @@ export function createDocumentsSlice<
         set((state) =>
           produce(state, (draft) => {
             const existingDocument =
-              draft.documents.config.artifacts[artifactId];
+              draft.markdownDocuments.config.artifacts[artifactId];
             if (!existingDocument?.assets[assetId]) return;
             delete existingDocument.assets[assetId];
             existingDocument.updatedAt = now();
@@ -148,11 +156,13 @@ export function createDocumentsSlice<
       },
 
       getAsset(artifactId, assetId) {
-        return get().documents.config.artifacts[artifactId]?.assets[assetId];
+        return get().markdownDocuments.config.artifacts[artifactId]?.assets[
+          assetId
+        ];
       },
 
       getDocument(artifactId) {
-        return get().documents.config.artifacts[artifactId];
+        return get().markdownDocuments.config.artifacts[artifactId];
       },
     },
   }));
