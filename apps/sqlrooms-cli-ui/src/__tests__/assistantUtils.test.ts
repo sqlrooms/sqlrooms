@@ -11,7 +11,7 @@ describe('assistant context eligibility', () => {
   it('accepts documents and rejects dashboards for the document profile', () => {
     expect(
       isContextArtifactType(
-        'document',
+        'block-document',
         DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
       ),
     ).toBe(true);

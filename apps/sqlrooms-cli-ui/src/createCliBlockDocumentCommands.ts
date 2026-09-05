@@ -105,7 +105,7 @@ function resolveBlockDocumentArtifact(
   blockDocumentId: string,
 ) {
   const artifact = state.artifacts.getArtifact(blockDocumentId);
-  if (!artifact || artifact.type !== 'document') {
+  if (!artifact || artifact.type !== 'block-document') {
     throw new Error(
       `Artifact ${blockDocumentId} is not a Document block document`,
     );
