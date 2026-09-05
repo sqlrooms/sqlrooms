@@ -40,7 +40,7 @@ type CliArtifactTypeDefinition = ArtifactTypeDefinition<RoomState> & {
 };
 
 const ARTIFACT_STABILITY = {
-  'block-document': 'stable',
+  document: 'stable',
   dashboard: 'stable',
   pivot: 'experimental',
   notebook: 'experimental',
@@ -179,11 +179,7 @@ export function createCliArtifactTypes({
   };
 
   return defineArtifactTypes({
-    'block-document': withStability(
-      'block-document',
-      documentDefinition,
-      profile,
-    ),
+    document: withStability('document', documentDefinition, profile),
     dashboard: withStability(
       'dashboard',
       createArtifactTypeFromStatefulBlock(dashboardBlockDefinition),

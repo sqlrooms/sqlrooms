@@ -103,7 +103,7 @@ describe('createCliBlockDocumentAgentTool', () => {
       'even when another Document is in run context',
     );
     expect(agentTool.description).toContain(
-      'Use registered block-document commands for requested block types this tool does not expose',
+      'Use registered document commands for requested block types this tool does not expose',
     );
   });
 

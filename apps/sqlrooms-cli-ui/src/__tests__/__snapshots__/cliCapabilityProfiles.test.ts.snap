@@ -23,11 +23,11 @@ exports[`CLI capability profiles locks the default capability baseline 1`] = `
   },
   "artifacts": {
     "creatable": [
-      "block-document",
+      "document",
       "dashboard",
     ],
     "runContext": [
-      "block-document",
+      "document",
       "dashboard",
       "pivot",
       "notebook",
@@ -82,10 +82,10 @@ exports[`CLI capability profiles locks the document-charts-maps capability basel
   },
   "artifacts": {
     "creatable": [
-      "block-document",
+      "document",
     ],
     "runContext": [
-      "block-document",
+      "document",
     ],
   },
   "blocks": {
@@ -136,7 +136,7 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
   },
   "artifacts": {
     "creatable": [
-      "block-document",
+      "document",
       "dashboard",
       "pivot",
       "notebook",
@@ -148,7 +148,7 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
       "app-builder",
     ],
     "runContext": [
-      "block-document",
+      "document",
       "dashboard",
       "pivot",
       "notebook",

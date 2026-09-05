@@ -1,5 +1,5 @@
 export const CLI_ARTIFACT_TYPES = [
-  'block-document',
+  'document',
   'dashboard',
   'pivot',
   'notebook',

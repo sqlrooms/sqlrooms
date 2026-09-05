@@ -8,11 +8,9 @@ import type {
 import type {BlockDocumentBlock} from './BlockDocumentSliceConfig';
 import type {BlockDocumentsSliceState} from './BlockDocumentsSlice';
 
-export const BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID =
-  'block-document.append-blocks';
-export const BLOCK_DOCUMENT_UPDATE_BLOCK_COMMAND_ID =
-  'block-document.update-block';
-export const BLOCK_DOCUMENT_MOVE_BLOCK_COMMAND_ID = 'block-document.move-block';
+export const BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID = 'document.append-blocks';
+export const BLOCK_DOCUMENT_UPDATE_BLOCK_COMMAND_ID = 'document.update-block';
+export const BLOCK_DOCUMENT_MOVE_BLOCK_COMMAND_ID = 'document.move-block';
 
 export const BLOCK_DOCUMENT_AGENT_ACTOR = 'block-document-agent';
 
@@ -27,7 +25,7 @@ type BlockDocumentCommandAiAdapterState = BlockDocumentsSliceState &
 export type CreateBlockDocumentCommandAiAdapterOptions<
   TRoomState extends BlockDocumentCommandAiAdapterState,
 > = {
-  /** Store with artifacts, block documents, and command slices mounted. */
+  /** Store with artifacts, documents, and command slices mounted. */
   store: StoreApi<TRoomState>;
 };
 
@@ -43,7 +41,7 @@ function blockIdFromAppendResult(data: unknown, block: BlockDocumentBlock) {
 
 /**
  * Creates a block-document AI adapter that mutates blocks through canonical
- * block-document commands.
+ * document commands.
  */
 export function createBlockDocumentCommandAiAdapter<
   TRoomState extends BlockDocumentCommandAiAdapterState,
@@ -55,8 +53,8 @@ export function createBlockDocumentCommandAiAdapter<
     const state = store.getState();
     const artifact = state.artifacts.getArtifact(artifactId);
 
-    if (!artifact || artifact.type !== 'block-document') {
-      throw new Error(`Artifact ${artifactId} is not a block document`);
+    if (!artifact || artifact.type !== 'document') {
+      throw new Error(`Artifact ${artifactId} is not a document`);
     }
 
     state.blockDocuments.ensureBlockDocument(artifactId);
@@ -71,7 +69,7 @@ export function createBlockDocumentCommandAiAdapter<
     getBlocks: (artifactId) => {
       const state = store.getState();
       const artifact = state.artifacts.getArtifact(artifactId);
-      if (!artifact || artifact.type !== 'block-document') {
+      if (!artifact || artifact.type !== 'document') {
         return undefined;
       }
 

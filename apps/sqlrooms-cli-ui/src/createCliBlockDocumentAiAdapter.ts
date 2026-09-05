@@ -25,7 +25,7 @@ export function createCliBlockDocumentAiAdapter(
       adapter.ensureBlockDocument(blockDocumentId);
 
       const result = await store.getState().commands.invokeCommand(
-        'block-document.update-block',
+        'document.update-block',
         {
           artifactId: blockDocumentId,
           blockId,

@@ -8,7 +8,7 @@ import {
 import {BLOCK_DOCUMENT_UPDATE_BLOCK_COMMAND_ID} from '../src/createBlockDocumentCommandAiAdapter';
 
 function createMockStore({
-  artifactType = 'block-document',
+  artifactType = 'document',
   invokeCommand,
 }: {
   artifactType?: string;
@@ -78,7 +78,7 @@ function createMockStore({
 }
 
 describe('createBlockDocumentCommandAiAdapter', () => {
-  it('sets the current block document through the artifact slice', () => {
+  it('sets the current document through the artifact slice', () => {
     const {store, setCurrentArtifactCalls} = createMockStore();
     const adapter = createBlockDocumentCommandAiAdapter({store});
 
@@ -87,7 +87,7 @@ describe('createBlockDocumentCommandAiAdapter', () => {
     expect(setCurrentArtifactCalls).toEqual([['doc-1']]);
   });
 
-  it('appends blocks through the canonical block document command', async () => {
+  it('appends blocks through the canonical document command', async () => {
     const {store, ensureBlockDocumentCalls, invokeCommandCalls} =
       createMockStore();
     const adapter = createBlockDocumentCommandAiAdapter({store});
@@ -115,7 +115,7 @@ describe('createBlockDocumentCommandAiAdapter', () => {
     ]);
   });
 
-  it('moves blocks through the canonical block document command', async () => {
+  it('moves blocks through the canonical document command', async () => {
     const {store, ensureBlockDocumentCalls, invokeCommandCalls} =
       createMockStore();
     const adapter = createBlockDocumentCommandAiAdapter({store});
@@ -141,7 +141,7 @@ describe('createBlockDocumentCommandAiAdapter', () => {
     ]);
   });
 
-  it('updates blocks through the canonical block document command', async () => {
+  it('updates blocks through the canonical document command', async () => {
     const {store, ensureBlockDocumentCalls, invokeCommandCalls} =
       createMockStore();
     const adapter = createBlockDocumentCommandAiAdapter({store});
@@ -178,7 +178,7 @@ describe('createBlockDocumentCommandAiAdapter', () => {
 
     expect(adapter.getBlocks('doc-1')).toBeUndefined();
     expect(() => adapter.ensureBlockDocument('doc-1')).toThrow(
-      'Artifact doc-1 is not a block document',
+      'Artifact doc-1 is not a document',
     );
   });
 
@@ -187,7 +187,7 @@ describe('createBlockDocumentCommandAiAdapter', () => {
     const adapter = createBlockDocumentCommandAiAdapter({store});
 
     expect(() => adapter.ensureBlockDocument('doc-1')).toThrow(
-      'Artifact doc-1 is not a block document',
+      'Artifact doc-1 is not a document',
     );
   });
 
@@ -203,7 +203,7 @@ describe('createBlockDocumentCommandAiAdapter', () => {
         type: 'paragraph',
         text: 'Summary',
       }),
-    ).rejects.toThrow('Artifact doc-1 is not a block document');
+    ).rejects.toThrow('Artifact doc-1 is not a document');
     expect(invokeCommandCalls).toEqual([]);
   });
 

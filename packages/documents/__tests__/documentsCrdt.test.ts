@@ -34,7 +34,7 @@ function createTestStore(doc: LoroDoc) {
       },
     },
     dashboard: {label: 'Dashboard', defaultTitle: 'Dashboard'},
-    'block-document': {
+    document: {
       label: 'Block Document',
       defaultTitle: 'Block Document',
     },
@@ -199,7 +199,7 @@ describe('documents CRDT mirrors', () => {
 
     const blockDocumentId = storeA.getState().artifacts.createArtifact({
       id: 'block-document-1',
-      type: 'block-document',
+      type: 'document',
       title: 'Block Document',
     });
     storeA.getState().blockDocuments.appendBlocks(blockDocumentId, [
@@ -246,7 +246,7 @@ describe('documents CRDT mirrors', () => {
       storeB.getState().artifacts.getArtifact(blockDocumentId),
     ).toMatchObject({
       id: blockDocumentId,
-      type: 'block-document',
+      type: 'document',
       title: 'Block Document',
     });
     expect(

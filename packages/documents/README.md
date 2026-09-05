@@ -27,9 +27,9 @@ const markdownBlockDefinition = createMarkdownDocumentBlockDefinition();
 
 const artifactTypes = defineArtifactTypes({
   markdown: createArtifactTypeFromStatefulBlock(markdownBlockDefinition),
-  'block-document': {
-    label: 'Block Document',
-    defaultTitle: 'Block Document',
+  document: {
+    label: 'Document',
+    defaultTitle: 'Document',
     component: BlockDocumentArtifact,
     onCreate: ({artifactId, store}) => {
       store.getState().blockDocuments.ensureBlockDocument(artifactId);
@@ -180,7 +180,7 @@ document from a missing or incompatible artifact.
 `BlockDocumentAiAdapter.addBlock` may return a block ID synchronously or from a
 promise. Hosts that already expose block-document mutations as room commands can
 therefore use `createBlockDocumentCommandAiAdapter` to invoke the canonical
-`block-document.append-blocks` and `block-document.move-block` commands while
+`document.append-blocks` and `document.move-block` commands while
 keeping generic AI tools package-neutral:
 
 ```ts
@@ -189,8 +189,7 @@ const blockDocumentAdapter = createBlockDocumentCommandAiAdapter({
 });
 ```
 
-The adapter accepts only `block-document` artifacts. Migrate legacy artifact type
-names when loading persisted workspaces before using the adapter.
+The adapter accepts only `document` artifacts.
 
 ### Block-Scoped Ask AI
 
@@ -241,8 +240,7 @@ await startBlockScopedChat({
   prompt: 'Repair this map',
   revealAssistant: () => setAssistantOpen(true),
   actions,
-  isValidBlockDocumentArtifact: (artifact) =>
-    artifact.type === 'block-document',
+  isValidBlockDocumentArtifact: (artifact) => artifact.type === 'document',
 });
 ```
 
@@ -507,25 +505,25 @@ Markdown artifacts:
 `createBlockDocumentCommands()` registers commands for structured block
 document artifacts. By default the command IDs are:
 
-- `block-document.list`
-- `block-document.get`
-- `block-document.create`
-- `block-document.append-blocks`
-- `block-document.insert-blocks`
-- `block-document.update-block`
-- `block-document.remove-block`
-- `block-document.move-block`
-- `block-document.create-chart-block`
-- `block-document.create-stateful-block`
+- `document.list`
+- `document.get`
+- `document.create`
+- `document.append-blocks`
+- `document.insert-blocks`
+- `document.update-block`
+- `document.remove-block`
+- `document.move-block`
+- `document.create-chart-block`
+- `document.create-stateful-block`
 
-The artifact type is always `block-document`, command IDs always use
-`block-document.*`, and command descriptions use “block document”. Artifact type,
+The artifact type is always `document`, command IDs always use
+`document.*`, and command descriptions use “document”. Artifact type,
 label, and command namespace overrides are not supported. Hosts can customize
 UI labels in their artifact registry, and pass `commandGroup` and `defaultTitle`
 without changing the AI vocabulary.
 
 Hosts can pass `statefulBlockTypes` to expose supported feature-backed block
-types to `block-document.create-stateful-block`.
+types to `document.create-stateful-block`.
 
 Hosts with a narrower block surface can also pass `allowedBlockTypes`. The
 generic create, append, insert, and update commands then reject other block
@@ -561,9 +559,8 @@ content, document-owned assets, standalone chart block configs, block document
 and Markdown artifact metadata, and their artifact tab order.
 The current artifact selection is kept local.
 
-The mirror syncs `block-document` and `markdown` artifact metadata. Hosts should
-migrate legacy artifact type names to `block-document` when loading a workspace;
-the mirror does not accept custom artifact type aliases.
+The mirror syncs `document` and `markdown` artifact metadata and does not accept
+custom artifact type aliases.
 
 Hosted dashboard state should continue to use the host app's Mosaic persistence,
 or a future Mosaic-specific CRDT mirror.

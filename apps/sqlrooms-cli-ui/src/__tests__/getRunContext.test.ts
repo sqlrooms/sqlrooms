@@ -43,7 +43,7 @@ function createMockStore() {
         artifactsById: {
           [blockDocumentId]: {
             id: blockDocumentId,
-            type: 'block-document',
+            type: 'document',
             title: 'Document',
           },
         },
@@ -157,12 +157,12 @@ function createMultiArtifactStore(
         artifactsById: {
           'document-old': {
             id: 'document-old',
-            type: 'block-document',
+            type: 'document',
             title: 'Older Document',
           },
           'document-new': {
             id: 'document-new',
-            type: 'block-document',
+            type: 'document',
             title: 'Newer Document',
           },
           'dashboard-1': {
@@ -235,7 +235,7 @@ describe('getRunContext primary artifact selection', () => {
           {
             kind: 'artifact',
             id: 'document-new',
-            type: 'block-document',
+            type: 'document',
             title: 'Newer Document',
           },
         ],
@@ -282,7 +282,7 @@ describe('getRunContext primary artifact selection', () => {
           {
             kind: 'artifact',
             id: 'document-old',
-            type: 'block-document',
+            type: 'document',
             title: 'Older Document',
           },
           {

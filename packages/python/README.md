@@ -78,15 +78,15 @@ needed.
 
 ## Block document commands
 
-Use `createPythonBlockCommands()` alongside the block-document commands to
+Use `createPythonBlockCommands()` alongside the document commands to
 expose:
 
-- `block-document.add-python-block`
-- `block-document.update-python-block-code`
-- `block-document.run-python-block`
-- `block-document.clear-python-block-result`
+- `document.add-python-block`
+- `document.update-python-block-code`
+- `document.run-python-block`
+- `document.clear-python-block-result`
 
-Python block commands target `block-document` artifacts and use canonical
-`block-document.*` IDs and “block document” descriptions. Hosts can customize
+Python block commands target `document` artifacts and use canonical
+`document.*` IDs and “document” descriptions. Hosts can customize
 `commandGroup` for UI grouping; artifact type, label, and command namespace
 overrides are not supported.

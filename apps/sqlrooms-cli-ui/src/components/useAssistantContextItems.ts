@@ -199,11 +199,10 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
 
     const tableIdSet = new Set(tableItems.map((t) => t.id));
     const documentArtifactId =
-      owningArtifactId &&
-      artifactsById[owningArtifactId]?.type === 'block-document'
+      owningArtifactId && artifactsById[owningArtifactId]?.type === 'document'
         ? owningArtifactId
         : currentArtifactId &&
-            artifactsById[currentArtifactId]?.type === 'block-document'
+            artifactsById[currentArtifactId]?.type === 'document'
           ? currentArtifactId
           : undefined;
     const document = documentArtifactId

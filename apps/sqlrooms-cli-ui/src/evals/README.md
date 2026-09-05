@@ -2,7 +2,7 @@
 
 The target runs the production `document-charts-maps` profile in Node. It
 reuses the CLI profile resolver, command and tool composition, AI slice, local
-chat transport, run-context code, document agent, block-document commands,
+chat transport, run-context code, document agent, document commands,
 document/deck state, and `@sqlrooms/duckdb-node`.
 
 The target-specific layer only provides an in-memory fixture, an injected AI

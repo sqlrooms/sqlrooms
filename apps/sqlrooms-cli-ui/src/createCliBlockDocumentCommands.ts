@@ -24,16 +24,16 @@ export const CLI_BLOCK_DOCUMENT_COMMAND_OWNER =
   '@sqlrooms-cli-ui/block-document';
 
 const BLOCK_DOCUMENT_CREATE_STATEFUL_BLOCK_COMMAND_ID =
-  'block-document.create-stateful-block';
+  'document.create-stateful-block';
 const BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID =
-  'block-document.add-dashboard-block';
+  'document.add-dashboard-block';
 const BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID =
-  'block-document.add-data-table-block';
+  'document.add-data-table-block';
 const BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID =
-  'block-document.add-html-app-block';
+  'document.add-html-app-block';
 const BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID =
-  'block-document.update-block-metadata';
-const BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID = 'block-document.add-map-block';
+  'document.update-block-metadata';
+const BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID = 'document.add-map-block';
 const DASHBOARD_SET_SELECTED_TABLE_COMMAND_ID = 'dashboard.set-selected-table';
 
 const CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES = {
@@ -105,7 +105,7 @@ function resolveBlockDocumentArtifact(
   blockDocumentId: string,
 ) {
   const artifact = state.artifacts.getArtifact(blockDocumentId);
-  if (!artifact || artifact.type !== 'block-document') {
+  if (!artifact || artifact.type !== 'document') {
     throw new Error(
       `Artifact ${blockDocumentId} is not a Document block document`,
     );

@@ -48,7 +48,7 @@ ${getDeckMapResourceAiInstructions()}`,
         const result = await store
           .getState()
           .commands.invokeCommand(
-            'block-document.add-map-block',
+            'document.add-map-block',
             {blockDocumentId, ...params},
             {surface: 'ai', actor: 'block-document-agent'},
           );
@@ -178,7 +178,7 @@ export function blockDocumentAgentTool(
       const result = await store
         .getState()
         .commands.invokeCommand(
-          'block-document.add-dashboard-block',
+          'document.add-dashboard-block',
           {blockDocumentId, title, tableName, intent},
           {surface: 'ai', actor: 'block-document-agent'},
         );
@@ -204,7 +204,7 @@ export function blockDocumentAgentTool(
       const result = await store
         .getState()
         .commands.invokeCommand(
-          'block-document.add-data-table-block',
+          'document.add-data-table-block',
           {blockDocumentId, title, tableName, intent},
           {surface: 'ai', actor: 'block-document-agent'},
         );
@@ -219,7 +219,7 @@ export function blockDocumentAgentTool(
       const result = await store
         .getState()
         .commands.invokeCommand(
-          'block-document.add-html-app-block',
+          'document.add-html-app-block',
           {blockDocumentId, title, intent},
           {surface: 'ai', actor: 'block-document-agent'},
         );

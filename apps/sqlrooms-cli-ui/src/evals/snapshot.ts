@@ -9,7 +9,7 @@ function toJsonValue(value: unknown): JsonValue {
 /** Captures the durable CLI state used by target-neutral behavioral checks. */
 export function snapshotCliEvalState(state: RoomState): JsonObject {
   const documents = Object.values(state.artifacts.config.artifactsById)
-    .filter((artifact) => artifact.type === 'block-document')
+    .filter((artifact) => artifact.type === 'document')
     .map((artifact) => ({
       id: artifact.id,
       title: artifact.title,

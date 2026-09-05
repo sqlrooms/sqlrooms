@@ -586,7 +586,7 @@ ${dashboardBlocksEnabled ? '- DASHBOARD BLOCKS (interactive dashboards for multi
 ${dataTableBlocksEnabled ? '- DATA TABLE EXPLORER BLOCKS' : ''}
 ${htmlAppBlocksEnabled ? '- HTML APP BLOCKS (custom browser apps powered by window.sqlrooms.query/queryRows)' : ''}
 
-This tool requires the target Document's blockDocumentId and does not create the Document artifact container. For an explicit new-Document request, first execute the block-document.create command exactly once even when another Document is in run context, then call this tool with the returned result.data.artifactId as blockDocumentId. Delegate the block types listed above to this agent instead of creating charts or maps through generic commands. Use registered block-document commands for requested block types this tool does not expose, such as Python, pivot, Markdown, or SQL-query blocks.
+This tool requires the target Document's blockDocumentId and does not create the Document artifact container. For an explicit new-Document request, first execute the document.create command exactly once even when another Document is in run context, then call this tool with the returned result.data.artifactId as blockDocumentId. Delegate the block types listed above to this agent instead of creating charts or maps through generic commands. Use registered document commands for requested block types this tool does not expose, such as Python, pivot, Markdown, or SQL-query blocks.
 
 ${
   dashboardBlocksEnabled

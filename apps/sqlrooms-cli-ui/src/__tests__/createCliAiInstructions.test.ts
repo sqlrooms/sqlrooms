@@ -41,7 +41,7 @@ describe('createCliAiInstructions', () => {
       );
       expect(instructions).toContain('use those target IDs immediately');
       expect(instructions).toContain(
-        'read the containing Document once with block-document.get',
+        'read the containing Document once with document.get',
       );
       expect(instructions).toContain(
         'do not search for map configuration or state commands first',
@@ -78,9 +78,7 @@ describe('createCliAiInstructions', () => {
   ])('routes new Documents through the nested agent for $name', (profile) => {
     const instructions = createCliAiInstructions(store, profile);
 
-    expect(instructions).toContain(
-      'execute block-document.create exactly once',
-    );
+    expect(instructions).toContain('execute document.create exactly once');
     expect(instructions).toContain(
       'returned result.data.artifactId as the new blockDocumentId',
     );
@@ -88,10 +86,10 @@ describe('createCliAiInstructions', () => {
       'takes precedence over any Document artifact ID in run context',
     );
     expect(instructions).toContain(
-      'do not create its requested chart or map blocks through generic block-document commands',
+      'do not create its requested chart or map blocks through generic document commands',
     );
     expect(instructions).toContain(
-      'For Document block types that the tool does not expose, such as Python, pivot, Markdown, or SQL-query blocks, use the corresponding registered block-document commands',
+      'For Document block types that the tool does not expose, such as Python, pivot, Markdown, or SQL-query blocks, use the corresponding registered document commands',
     );
     expect(instructions).toContain(
       'asks to edit or add a block type exposed by block_document_agent to an existing Document',
@@ -107,7 +105,7 @@ describe('createCliAiInstructions', () => {
       const instructions = createCliAiInstructions(store, profile);
 
       expect(instructions).toContain(
-        'For a block type that block_document_agent does not expose in an existing Document, use the corresponding registered block-document command with the existing artifact ID.',
+        'For a block type that block_document_agent does not expose in an existing Document, use the corresponding registered document command with the existing artifact ID.',
       );
     },
   );

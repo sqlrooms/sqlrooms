@@ -637,7 +637,7 @@ function seedDocument(
 ): string {
   const documentId = store.getState().artifacts.createArtifact({
     id: `eval-${scenario.id}-${repetition}`,
-    type: 'block-document',
+    type: 'document',
     title: 'Evaluation Document',
   });
   store.getState().blockDocuments.ensureBlockDocument(documentId);

@@ -46,7 +46,7 @@ describe('createCliEvalTarget', () => {
         ),
       ).toEqual(
         Object.fromEntries(
-          CLI_ARTIFACT_TYPES.map((type) => [type, type === 'block-document']),
+          CLI_ARTIFACT_TYPES.map((type) => [type, type === 'document']),
         ),
       );
       expect(
@@ -54,7 +54,7 @@ describe('createCliEvalTarget', () => {
           .listCommands()
           .map((command) => command.id)
           .filter((id) => id.endsWith('.create-artifact')),
-      ).toEqual(['block-document.create-artifact']);
+      ).toEqual(['document.create-artifact']);
     } finally {
       await target.dispose();
     }
@@ -80,7 +80,7 @@ describe('createCliEvalTarget', () => {
     const scripted = createScriptedLanguageModel({
       steps: [
         {
-          expectation: {promptIncludes: ['Current artifact: block-document']},
+          expectation: {promptIncludes: ['Current artifact: document']},
           usage: {inputTokens: 10, outputTokens: 2},
           content: [
             {
@@ -430,7 +430,7 @@ describe('createCliEvalTarget', () => {
       const initialArtifactId = target.store
         .getState()
         .artifacts.createArtifact({
-          type: 'block-document',
+          type: 'document',
           title: 'Initial document',
         });
       const sessionId = target.store
@@ -439,7 +439,7 @@ describe('createCliEvalTarget', () => {
       expect(sessionId).toBeDefined();
 
       const result = await target.store.getState().commands.invokeCommand(
-        'block-document.create-artifact',
+        'document.create-artifact',
         {title: 'Created by AI'},
         {
           surface: 'ai',
