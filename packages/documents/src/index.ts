@@ -106,7 +106,11 @@ export {
   type DocumentsSliceState,
 } from './DocumentsSlice';
 export {createMarkdownCommands} from './markdownCommands';
-export {blockDocumentToMarkdown} from './blockDocumentToMarkdown';
+export {
+  blockDocumentToMarkdown,
+  type BlockDocumentDataUrlResolver,
+} from './blockDocumentToMarkdown';
+export {documentAssetToDataUrl} from './BlockDocumentEditor/node-views/nodeViewUtils';
 export {
   BLOCK_DOCUMENT_COMMAND_SUFFIXES,
   createBlockDocumentCommandIds,

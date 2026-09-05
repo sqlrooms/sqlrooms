@@ -217,4 +217,56 @@ describe('blockDocumentToMarkdown', () => {
   it('returns an empty string for an empty document without a title', () => {
     expect(blockDocumentToMarkdown(doc([]))).toBe('');
   });
+
+  it('uses a resolved data URL as the chart src', () => {
+    const content = doc([
+      {type: 'blockDocumentChart', attrs: {id: 'c1', tableName: 'sales'}},
+    ]);
+
+    expect(
+      blockDocumentToMarkdown(content, {
+        resolveDataUrl: (node) =>
+          node.attrs?.id === 'c1' ? 'data:image/png;base64,AAAA' : undefined,
+      }),
+    ).toBe('![Chart](data:image/png;base64,AAAA)');
+  });
+
+  it('keeps the placeholder when the resolver returns undefined', () => {
+    const content = doc([
+      {type: 'blockDocumentChart', attrs: {id: 'c1', tableName: 'sales'}},
+    ]);
+
+    expect(
+      blockDocumentToMarkdown(content, {resolveDataUrl: () => undefined}),
+    ).toBe('![Chart](chart)');
+  });
+
+  it('resolves data URLs for maps and images independently by block id', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentStatefulBlock',
+        attrs: {id: 'm1', blockType: 'map', caption: 'Store locations'},
+      },
+      {
+        type: 'blockDocumentImage',
+        attrs: {id: 'i1', assetId: 'asset-1', caption: 'A chart'},
+      },
+      // Not capturable — the resolver returns nothing for this block id.
+      {type: 'blockDocumentChart', attrs: {id: 'c1', tableName: 'sales'}},
+    ]);
+
+    const expectDataUrl = (id: string) => `data:image/png;base64,${id}`;
+
+    const markdown = blockDocumentToMarkdown(content, {
+      resolveDataUrl: (node) => {
+        const id =
+          typeof node.attrs?.id === 'string' ? node.attrs.id : undefined;
+        return id === 'm1' || id === 'i1' ? expectDataUrl(id) : undefined;
+      },
+    });
+
+    expect(markdown).toContain('![Store locations](data:image/png;base64,m1)');
+    expect(markdown).toContain('![A chart](data:image/png;base64,i1)');
+    expect(markdown).toContain('![Chart](chart)');
+  });
 });
