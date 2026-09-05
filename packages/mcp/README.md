@@ -1,5 +1,7 @@
 # `@sqlrooms/mcp`
 
+> **Experimental:** This package's API and behavior may change between releases.
+
 Transport-neutral room capabilities and the internal browser RPC protocol used
 by SQLRooms MCP hosts.
 

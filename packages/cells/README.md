@@ -1,5 +1,7 @@
 # @sqlrooms/cells
 
+> **Experimental:** This package's API and behavior may change between releases.
+
 Shared cells model and UI primitives used by notebook and canvas views.
 
 The package owns:
@@ -8,6 +10,47 @@ The package owns:
 - artifact-scoped runtime containers (`cells.config.artifacts`)
 - in-artifact dependency edges and cascade execution
 - SQL/result execution helpers and status tracking
+
+## Setup
+
+Cells require a room store with database state. Most apps compose them with
+`createRoomShellSlice()` and a feature host such as notebook or canvas:
+
+```ts
+import {
+  CellsSliceConfig,
+  createCellsSlice,
+  createDefaultCellRegistry,
+} from '@sqlrooms/cells';
+import {
+  createRoomShellSlice,
+  createRoomStore,
+  persistSliceConfigs,
+} from '@sqlrooms/room-shell';
+
+const {roomStore} = createRoomStore(
+  persistSliceConfigs(
+    {
+      name: 'cells-workspace',
+      sliceConfigSchemas: {
+        cells: CellsSliceConfig,
+      },
+    },
+    (set, get, store) => ({
+      ...createRoomShellSlice({})(set, get, store),
+      ...createCellsSlice({
+        cellRegistry: createDefaultCellRegistry(),
+      })(set, get, store),
+    }),
+  ),
+);
+
+roomStore.getState().cells.ensureArtifact('notebook-1');
+```
+
+The registry controls which cell types can be created and how they render.
+Start with `createDefaultCellRegistry()` and extend it with feature entries such
+as `pivotCellRegistryEntry` when needed.
 
 ## Dependency and schema model
 

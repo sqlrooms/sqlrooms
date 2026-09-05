@@ -168,5 +168,4 @@ and written into the SVG/PNG as a concrete color. The tool also accepts
 
 ## Example apps
 
-- Vega example: https://github.com/sqlrooms/examples/tree/main/vega
 - AI example (with chart tool): https://github.com/sqlrooms/examples/tree/main/ai

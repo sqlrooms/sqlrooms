@@ -1,4 +1,9 @@
-React Flow-based artifact-scoped canvas for building SQL + Vega node DAGs in SQLRooms apps.
+# @sqlrooms/canvas
+
+> **Experimental:** This package's API and behavior may change between releases.
+
+React Flow-based, artifact-scoped canvas for building SQL and Vega node DAGs in
+SQLRooms apps.
 
 This package includes:
 
@@ -7,7 +12,61 @@ This package includes:
 - `Canvas` React component, which requires an explicit `artifactId`
 - `CanvasSliceConfig`, `CanvasNodeMeta`, and `CanvasArtifactMeta` schemas/types
 
-Refer to the [Canvas example](https://github.com/sqlrooms/examples/tree/main/canvas).
+## Setup
+
+Canvas uses the canonical cell state from `@sqlrooms/cells`. Compose both
+slices, persist both configs, and initialize backing state for each canvas
+artifact:
+
+```tsx
+import {Canvas, CanvasSliceConfig, createCanvasSlice} from '@sqlrooms/canvas';
+import {
+  CellsSliceConfig,
+  createCellsSlice,
+  createDefaultCellRegistry,
+} from '@sqlrooms/cells';
+import {
+  RoomStateProvider,
+  createRoomShellSlice,
+  createRoomStore,
+  persistSliceConfigs,
+} from '@sqlrooms/room-shell';
+
+const {roomStore} = createRoomStore(
+  persistSliceConfigs(
+    {
+      name: 'canvas-workspace',
+      sliceConfigSchemas: {
+        canvas: CanvasSliceConfig,
+        cells: CellsSliceConfig,
+      },
+    },
+    (set, get, store) => ({
+      ...createRoomShellSlice({})(set, get, store),
+      ...createCellsSlice({
+        cellRegistry: createDefaultCellRegistry(),
+      })(set, get, store),
+      ...createCanvasSlice()(set, get, store),
+    }),
+  ),
+);
+
+roomStore.getState().canvas.ensureArtifact('analysis-canvas');
+```
+
+Render the canvas inside a `RoomShell` (or another host that provides the room
+store context):
+
+```tsx
+<RoomStateProvider roomStore={roomStore}>
+  <Canvas artifactId="analysis-canvas" />
+</RoomStateProvider>
+```
+
+When canvases are top-level workspace entries, connect `ensureArtifact()` and
+`removeArtifact()` to an `@sqlrooms/artifacts` type lifecycle. See the
+[Artifacts guide](https://sqlrooms.org/artifacts) and the
+[Canvas example](https://github.com/sqlrooms/examples/tree/main/canvas).
 
 ## Stable vs internal imports
 
