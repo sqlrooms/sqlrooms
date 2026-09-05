@@ -26,6 +26,7 @@ import {
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
 import {
+  RoomStateProvider,
   createRoomShellSlice,
   createRoomStore,
   persistSliceConfigs,
@@ -57,7 +58,9 @@ Render the canvas inside a `RoomShell` (or another host that provides the room
 store context):
 
 ```tsx
-<Canvas artifactId="analysis-canvas" />
+<RoomStateProvider roomStore={roomStore}>
+  <Canvas artifactId="analysis-canvas" />
+</RoomStateProvider>
 ```
 
 When canvases are top-level workspace entries, connect `ensureArtifact()` and

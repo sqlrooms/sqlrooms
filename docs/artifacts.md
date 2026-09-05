@@ -34,6 +34,7 @@ import {
   createArtifactPanelDefinition,
   createArtifactsSlice,
   defineArtifactTypes,
+  useArtifactWorkspace,
   type ArtifactTypeDefinition,
   type ArtifactsSliceState,
 } from '@sqlrooms/artifacts';

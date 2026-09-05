@@ -129,8 +129,9 @@ persisted 0.28 layouts.
 
 ### DuckDB and query results
 
-SQLRooms now targets DuckDB 1.5.3 and has more consistent qualified-table and
-multi-schema handling
+The SQLRooms Python packages now target DuckDB 1.5.3. The 0.29.0 JavaScript
+runtimes use `@duckdb/node-api` 1.4.4-r.3 and `@duckdb/duckdb-wasm` 1.32.0.
+DuckDB integrations also have more consistent qualified-table and multi-schema handling
 ([#659](https://github.com/sqlrooms/sqlrooms/pull/659),
 [#734](https://github.com/sqlrooms/sqlrooms/pull/734)).
 `@sqlrooms/duckdb-node` converts results through DuckDB's Arrow IPC support,
