@@ -12,25 +12,25 @@ import {LoroDoc} from 'loro-crdt';
 import {createStore} from 'zustand';
 import {
   createBlockDocumentsSlice,
-  createDocumentsSlice,
+  createMarkdownDocumentsSlice,
   type BlockDocumentsSliceState,
-  type DocumentsSliceState,
+  type MarkdownDocumentsSliceState,
 } from '../src';
 import {createDocumentsCrdtMirror} from '../src/crdt';
 
 type TestRoomState = BaseRoomStoreState &
   ArtifactsSliceState &
-  DocumentsSliceState &
+  MarkdownDocumentsSliceState &
   BlockDocumentsSliceState &
   CrdtSliceState;
 
 function createTestStore(doc: LoroDoc) {
   const artifactTypes = defineArtifactTypes({
-    markdown: {
+    'markdown-document': {
       label: 'Markdown',
       defaultTitle: 'Markdown',
       onCreate: ({artifactId, store}) => {
-        store.getState().documents.ensureDocument(artifactId);
+        store.getState().markdownDocuments.ensureDocument(artifactId);
       },
     },
     dashboard: {label: 'Dashboard', defaultTitle: 'Dashboard'},
@@ -43,7 +43,11 @@ function createTestStore(doc: LoroDoc) {
   return createStore<TestRoomState>()((set, get, store) => ({
     ...createBaseRoomSlice()(set, get, store),
     ...createArtifactsSlice({artifactTypes})(set, get, store),
-    ...createDocumentsSlice<TestRoomState>({now: () => 123})(set, get, store),
+    ...createMarkdownDocumentsSlice<TestRoomState>({now: () => 123})(
+      set,
+      get,
+      store,
+    ),
     ...createBlockDocumentsSlice<TestRoomState>({now: () => 456})(
       set,
       get,
@@ -80,11 +84,11 @@ describe('documents CRDT mirrors', () => {
 
     const artifactId = storeA.getState().artifacts.createArtifact({
       id: 'doc-1',
-      type: 'markdown',
+      type: 'markdown-document',
       title: 'Notes',
     });
-    storeA.getState().documents.setMarkdown(artifactId, '# Hello');
-    storeA.getState().documents.upsertAsset(artifactId, {
+    storeA.getState().markdownDocuments.setMarkdown(artifactId, '# Hello');
+    storeA.getState().markdownDocuments.upsertAsset(artifactId, {
       id: 'chart-1',
       mediaType: 'image/svg+xml',
       encoding: 'utf8',
@@ -113,7 +117,7 @@ describe('documents CRDT mirrors', () => {
 
     expect(storeB.getState().artifacts.getArtifact('doc-1')).toMatchObject({
       id: 'doc-1',
-      type: 'markdown',
+      type: 'markdown-document',
       title: 'Notes',
     });
     expect(storeB.getState().artifacts.getArtifact(dashboardId)).toMatchObject({
@@ -123,7 +127,9 @@ describe('documents CRDT mirrors', () => {
     expect(storeB.getState().artifacts.config.currentArtifactId).toBe(
       dashboardId,
     );
-    expect(storeB.getState().documents.getDocument('doc-1')).toMatchObject({
+    expect(
+      storeB.getState().markdownDocuments.getDocument('doc-1'),
+    ).toMatchObject({
       id: 'doc-1',
       markdown: '# Hello',
       assets: {
@@ -150,7 +156,7 @@ describe('documents CRDT mirrors', () => {
     });
     const removedDocumentId = store.getState().artifacts.createArtifact({
       id: 'removed-document',
-      type: 'markdown',
+      type: 'markdown-document',
       title: 'Removed document',
     });
     store.getState().artifacts.togglePinArtifact(dashboardId);
@@ -169,8 +175,8 @@ describe('documents CRDT mirrors', () => {
     createDocumentsCrdtMirror<TestRoomState>().apply(
       {
         artifacts: [
-          {id: 'doc-1', type: 'markdown', title: 'Notes'},
-          {id: 'doc-2', type: 'markdown', title: 'Ideas'},
+          {id: 'doc-1', type: 'markdown-document', title: 'Notes'},
+          {id: 'doc-2', type: 'markdown-document', title: 'Ideas'},
         ],
         documents: [
           {id: 'doc-1', markdown: '# Notes', updatedAt: 1},
@@ -284,7 +290,7 @@ describe('documents CRDT mirrors', () => {
 
     createDocumentsCrdtMirror<TestRoomState>().apply(
       {
-        artifacts: [{id: 'doc-1', type: 'markdown', title: 'Notes'}],
+        artifacts: [{id: 'doc-1', type: 'markdown-document', title: 'Notes'}],
         documents: [
           {
             id: 'doc-1',
@@ -312,7 +318,9 @@ describe('documents CRDT mirrors', () => {
       store.getState,
     );
 
-    expect(store.getState().documents.getAsset('doc-1', 'image-1')).toEqual({
+    expect(
+      store.getState().markdownDocuments.getAsset('doc-1', 'image-1'),
+    ).toEqual({
       id: 'image-1',
       mediaType: 'image/svg+xml',
       encoding: 'utf8',

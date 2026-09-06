@@ -4,9 +4,9 @@ import {
 } from '@sqlrooms/artifacts';
 import type {BaseRoomStoreState, RoomCommand} from '@sqlrooms/room-store';
 import {z} from 'zod';
-import type {DocumentsSliceState} from './DocumentsSlice';
+import type {MarkdownDocumentsSliceState} from './MarkdownDocumentsSlice';
 
-type MarkdownCommandState = BaseRoomStoreState & {
+type MarkdownDocumentCommandState = BaseRoomStoreState & {
   artifacts: {
     createArtifact: (artifact: {
       type: string;
@@ -20,44 +20,51 @@ type MarkdownCommandState = BaseRoomStoreState & {
       currentArtifactId?: string;
     };
   };
-} & DocumentsSliceState;
+} & MarkdownDocumentsSliceState;
 
 const MarkdownIdInput = z
   .object({
-    artifactId: z.string().optional().describe('Target Markdown artifact ID.'),
+    artifactId: z
+      .string()
+      .optional()
+      .describe('Target Markdown document artifact ID.'),
   })
   .default({});
 
 const MarkdownCreateInput = z
   .object({
-    title: z.string().optional().describe('Optional Markdown artifact title.'),
+    title: z
+      .string()
+      .optional()
+      .describe('Optional Markdown document artifact title.'),
     markdown: z.string().optional().describe('Initial Markdown content.'),
     select: z
       .boolean()
       .optional()
-      .describe('Whether to select the new Markdown artifact.'),
+      .describe('Whether to select the new Markdown document artifact.'),
   })
   .default({});
 
 const MarkdownSetInput = z.object({
-  artifactId: z.string().describe('Target Markdown artifact ID.'),
+  artifactId: z.string().describe('Target Markdown document artifact ID.'),
   markdown: z.string().describe('Replacement Markdown content.'),
 });
 
 const MarkdownAppendInput = z.object({
-  artifactId: z.string().describe('Target Markdown artifact ID.'),
+  artifactId: z.string().describe('Target Markdown document artifact ID.'),
   markdown: z.string().describe('Markdown content to append.'),
 });
 
-/** Creates the room command family for Markdown artifacts. */
-export function createMarkdownCommands<
-  TRoomState extends MarkdownCommandState = MarkdownCommandState,
+/** Creates the room command family for Markdown document artifacts. */
+export function createMarkdownDocumentCommands<
+  TRoomState extends MarkdownDocumentCommandState =
+    MarkdownDocumentCommandState,
 >(): RoomCommand<TRoomState>[] {
   return [
     {
-      id: 'markdown.list',
-      name: 'List Markdown artifacts',
-      description: 'List Markdown artifacts in the room',
+      id: 'markdown-document.list',
+      name: 'List Markdown document artifacts',
+      description: 'List Markdown document artifacts in the room',
       group: 'Markdown',
       keywords: ['markdown', 'list', 'read'],
       metadata: {
@@ -70,9 +77,9 @@ export function createMarkdownCommands<
         const markdownArtifacts = Object.values(
           state.artifacts.config.artifactsById,
         )
-          .filter((artifact) => artifact.type === 'markdown')
+          .filter((artifact) => artifact.type === 'markdown-document')
           .map((artifact) => {
-            const document = state.documents.getDocument(artifact.id);
+            const document = state.markdownDocuments.getDocument(artifact.id);
             return {
               artifactId: artifact.id,
               title: artifact.title,
@@ -84,21 +91,21 @@ export function createMarkdownCommands<
 
         return {
           success: true,
-          commandId: 'markdown.list',
+          commandId: 'markdown-document.list',
           data: {markdownArtifacts},
         };
       },
     },
     {
-      id: 'markdown.get',
+      id: 'markdown-document.get',
       name: 'Get Markdown',
       description:
-        'Read content from a Markdown artifact. Defaults to the current Markdown artifact.',
+        'Read content from a Markdown document artifact. Defaults to the current Markdown document artifact.',
       group: 'Markdown',
       keywords: ['markdown', 'read', 'get'],
       inputSchema: MarkdownIdInput,
       inputDescription:
-        'Optional Markdown artifact ID. Defaults to the current Markdown artifact.',
+        'Optional Markdown document artifact ID. Defaults to the current Markdown document artifact.',
       metadata: {
         readOnly: true,
         idempotent: true,
@@ -116,14 +123,16 @@ export function createMarkdownCommands<
         const resolved = resolveMarkdownArtifact(
           state,
           artifactId,
-          'markdown.get',
+          'markdown-document.get',
         );
         if (!resolved.success) return resolved;
 
-        const document = state.documents.getDocument(resolved.artifact.id);
+        const document = state.markdownDocuments.getDocument(
+          resolved.artifact.id,
+        );
         return {
           success: true,
-          commandId: 'markdown.get',
+          commandId: 'markdown-document.get',
           data: {
             artifactId: resolved.artifact.id,
             title: resolved.artifact.title,
@@ -137,9 +146,10 @@ export function createMarkdownCommands<
       },
     },
     {
-      id: 'markdown.create',
+      id: 'markdown-document.create',
       name: 'Create Markdown',
-      description: 'Create a Markdown artifact with optional initial content',
+      description:
+        'Create a Markdown document artifact with optional initial content',
       group: 'Markdown',
       keywords: ['markdown', 'create', 'new'],
       inputSchema: MarkdownCreateInput,
@@ -158,12 +168,12 @@ export function createMarkdownCommands<
         const state = getState();
         const previousArtifactId = state.artifacts.config.currentArtifactId;
         const artifactId = state.artifacts.createArtifact({
-          type: 'markdown',
+          type: 'markdown-document',
           title: title ?? 'Markdown',
         });
-        state.documents.ensureDocument(artifactId);
+        state.markdownDocuments.ensureDocument(artifactId);
         if (markdown) {
-          state.documents.setMarkdown(artifactId, markdown);
+          state.markdownDocuments.setMarkdown(artifactId, markdown);
         }
         if (select) {
           state.artifacts.setCurrentArtifact(artifactId);
@@ -173,27 +183,29 @@ export function createMarkdownCommands<
 
         return {
           success: true,
-          commandId: 'markdown.create',
-          message: `Created Markdown artifact "${artifactId}".`,
+          commandId: 'markdown-document.create',
+          message: `Created Markdown document artifact "${artifactId}".`,
           data: {
             artifactId,
             title: state.artifacts.getArtifact(artifactId)?.title,
-            markdown: state.documents.getDocument(artifactId)?.markdown ?? '',
+            markdown:
+              state.markdownDocuments.getDocument(artifactId)?.markdown ?? '',
             assets: Object.values(
-              state.documents.getDocument(artifactId)?.assets ?? {},
+              state.markdownDocuments.getDocument(artifactId)?.assets ?? {},
             ).map(markdownAssetMetadata),
           },
         };
       },
     },
     {
-      id: 'markdown.set-markdown',
+      id: 'markdown-document.set-markdown',
       name: 'Set Markdown',
-      description: 'Replace the content of a Markdown artifact',
+      description: 'Replace the content of a Markdown document artifact',
       group: 'Markdown',
       keywords: ['markdown', 'replace', 'set', 'edit'],
       inputSchema: MarkdownSetInput,
-      inputDescription: 'Markdown artifact ID and replacement content.',
+      inputDescription:
+        'Markdown document artifact ID and replacement content.',
       metadata: {
         readOnly: false,
         idempotent: false,
@@ -207,31 +219,32 @@ export function createMarkdownCommands<
         const resolved = resolveMarkdownArtifact(
           state,
           artifactId,
-          'markdown.set-markdown',
+          'markdown-document.set-markdown',
         );
         if (!resolved.success) return resolved;
 
-        state.documents.setMarkdown(artifactId, markdown);
+        state.markdownDocuments.setMarkdown(artifactId, markdown);
         return {
           success: true,
-          commandId: 'markdown.set-markdown',
-          message: `Updated Markdown artifact "${artifactId}".`,
+          commandId: 'markdown-document.set-markdown',
+          message: `Updated Markdown document artifact "${artifactId}".`,
           data: {
             artifactId,
             markdown,
-            updatedAt: state.documents.getDocument(artifactId)?.updatedAt,
+            updatedAt:
+              state.markdownDocuments.getDocument(artifactId)?.updatedAt,
           },
         };
       },
     },
     {
-      id: 'markdown.append-markdown',
+      id: 'markdown-document.append-markdown',
       name: 'Append Markdown',
-      description: 'Append content to a Markdown artifact',
+      description: 'Append content to a Markdown document artifact',
       group: 'Markdown',
       keywords: ['markdown', 'append', 'edit'],
       inputSchema: MarkdownAppendInput,
-      inputDescription: 'Markdown artifact ID and content to append.',
+      inputDescription: 'Markdown document artifact ID and content to append.',
       metadata: {
         readOnly: false,
         idempotent: false,
@@ -245,23 +258,24 @@ export function createMarkdownCommands<
         const resolved = resolveMarkdownArtifact(
           state,
           artifactId,
-          'markdown.append-markdown',
+          'markdown-document.append-markdown',
         );
         if (!resolved.success) return resolved;
 
-        state.documents.ensureDocument(artifactId);
+        state.markdownDocuments.ensureDocument(artifactId);
         const existing =
-          state.documents.getDocument(artifactId)?.markdown ?? '';
+          state.markdownDocuments.getDocument(artifactId)?.markdown ?? '';
         const nextMarkdown = appendMarkdown(existing, markdown);
-        state.documents.setMarkdown(artifactId, nextMarkdown);
+        state.markdownDocuments.setMarkdown(artifactId, nextMarkdown);
         return {
           success: true,
-          commandId: 'markdown.append-markdown',
-          message: `Appended content to Markdown artifact "${artifactId}".`,
+          commandId: 'markdown-document.append-markdown',
+          message: `Appended content to Markdown document artifact "${artifactId}".`,
           data: {
             artifactId,
             markdown: nextMarkdown,
-            updatedAt: state.documents.getDocument(artifactId)?.updatedAt,
+            updatedAt:
+              state.markdownDocuments.getDocument(artifactId)?.updatedAt,
           },
         };
       },
@@ -270,7 +284,7 @@ export function createMarkdownCommands<
 }
 
 function resolveMarkdownArtifact(
-  state: MarkdownCommandState,
+  state: MarkdownDocumentCommandState,
   artifactId: string | undefined,
   commandId: string,
 ) {
@@ -278,7 +292,7 @@ function resolveMarkdownArtifact(
     return {
       success: false as const,
       commandId,
-      error: 'No Markdown artifact is selected. Provide artifactId.',
+      error: 'No Markdown document artifact is selected. Provide artifactId.',
     };
   }
   const artifact = state.artifacts.getArtifact(artifactId);
@@ -289,11 +303,11 @@ function resolveMarkdownArtifact(
       error: `Unknown artifact "${artifactId}".`,
     };
   }
-  if (artifact.type !== 'markdown') {
+  if (artifact.type !== 'markdown-document') {
     return {
       success: false as const,
       commandId,
-      error: `Artifact "${artifactId}" is not a Markdown artifact.`,
+      error: `Artifact "${artifactId}" is not a Markdown document artifact.`,
     };
   }
   return {success: true as const, artifact};
@@ -308,7 +322,7 @@ function appendMarkdown(existing: string, markdown: string) {
 }
 
 function markdownAssetMetadata(
-  asset: MarkdownCommandState['documents']['config']['artifacts'][string]['assets'][string],
+  asset: MarkdownDocumentCommandState['markdownDocuments']['config']['artifacts'][string]['assets'][string],
 ) {
   return {
     id: asset.id,

@@ -11,14 +11,14 @@ import {
   type BlockDocumentsSliceConfig as BlockDocumentsSliceConfigType,
 } from './BlockDocumentSliceConfig';
 import type {BlockDocumentsSliceState} from './BlockDocumentsSlice';
+import {type DocumentAsset} from './DocumentAsset';
 import {
-  DocumentsSliceConfig,
-  type DocumentAsset,
-  type DocumentsSliceConfig as DocumentsSliceConfigType,
-} from './DocumentsSliceConfig';
-import type {DocumentsSliceState} from './DocumentsSlice';
+  MarkdownDocumentsSliceConfig,
+  type MarkdownDocumentsSliceConfig as MarkdownDocumentsSliceConfigType,
+} from './MarkdownDocumentsSliceConfig';
+import type {MarkdownDocumentsSliceState} from './MarkdownDocumentsSlice';
 
-type DocumentCrdtState = DocumentsSliceState &
+type DocumentCrdtState = MarkdownDocumentsSliceState &
   BlockDocumentsSliceState &
   ArtifactsSliceState;
 type OmitAssetMetadata<T extends DocumentAsset> = Omit<
@@ -36,7 +36,7 @@ type IncomingDocumentAsset = (DocumentAsset extends infer Asset
   provenance?: unknown;
 };
 type IncomingDocument = Omit<
-  DocumentsSliceConfigType['artifacts'][string],
+  MarkdownDocumentsSliceConfigType['artifacts'][string],
   'assets'
 > & {
   assets?: IncomingDocumentAsset[] | Record<string, DocumentAsset>;
@@ -58,6 +58,7 @@ type IncomingArtifact = {
 };
 
 export const documentsMirrorSchema = schema.LoroMap({
+  // Preserve the wire key so existing Loro snapshots retain their content.
   documents: schema.LoroList(
     schema.LoroMap({
       id: schema.String(),
@@ -145,7 +146,7 @@ export function createDocumentsCrdtMirror<
   S extends DocumentCrdtState = DocumentCrdtState,
 >(): CrdtMirror<S, typeof documentsMirrorSchema> {
   const isSyncedArtifact = (artifact: ArtifactMetadataType) =>
-    artifact.type === 'markdown' || artifact.type === 'block-document';
+    artifact.type === 'markdown-document' || artifact.type === 'block-document';
   const isNonSyncedArtifact = (artifact: ArtifactMetadataType) =>
     !isSyncedArtifact(artifact);
 
@@ -164,7 +165,7 @@ export function createDocumentsCrdtMirror<
       );
       const artifactOrder = state.artifacts.config.artifactOrder as string[];
       return {
-        documents: Object.values(state.documents.config.artifacts).map(
+        documents: Object.values(state.markdownDocuments.config.artifacts).map(
           (document) => ({
             id: document.id,
             markdown: document.markdown,
@@ -226,7 +227,7 @@ export function createDocumentsCrdtMirror<
             artifact.id,
             ArtifactMetadata.parse({
               id: artifact.id,
-              type: artifact.type ?? 'markdown',
+              type: artifact.type ?? 'markdown-document',
               title: artifact.title,
             }),
           ]),
@@ -293,9 +294,9 @@ export function createDocumentsCrdtMirror<
                 : undefined,
           }),
         },
-        documents: {
-          ...state.documents,
-          config: DocumentsSliceConfig.parse({artifacts: documents}),
+        markdownDocuments: {
+          ...state.markdownDocuments,
+          config: MarkdownDocumentsSliceConfig.parse({artifacts: documents}),
         },
         blockDocuments: {
           ...state.blockDocuments,

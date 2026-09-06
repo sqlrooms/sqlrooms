@@ -9,12 +9,12 @@ import {
   BlockDocumentsSliceConfig,
   BlockDocumentChartRendererProvider,
   BlockDocumentStatefulBlockRendererProvider,
-  DocumentsSliceConfig,
+  MarkdownDocumentsSliceConfig,
   buildKnowledgeIndex,
   createBlockDocumentCommands,
   createBlockDocumentFeatureSlices,
-  createMarkdownCommands,
-  createDocumentsSlice,
+  createMarkdownDocumentCommands,
+  createMarkdownDocumentsSlice,
   createMarkdownDocumentBlockDefinition,
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
@@ -26,7 +26,9 @@ import {
 const markdownBlockDefinition = createMarkdownDocumentBlockDefinition();
 
 const artifactTypes = defineArtifactTypes({
-  markdown: createArtifactTypeFromStatefulBlock(markdownBlockDefinition),
+  'markdown-document': createArtifactTypeFromStatefulBlock(
+    markdownBlockDefinition,
+  ),
   'block-document': {
     label: 'Block Document',
     defaultTitle: 'Block Document',
@@ -48,12 +50,12 @@ const roomStore = createRoomStore(
     {
       name: 'my-room',
       sliceConfigSchemas: {
-        documents: DocumentsSliceConfig,
+        markdownDocuments: MarkdownDocumentsSliceConfig,
         blockDocuments: BlockDocumentsSliceConfig,
       },
     },
     (set, get, store) => ({
-      ...createDocumentsSlice()(set, get, store),
+      ...createMarkdownDocumentsSlice()(set, get, store),
       ...createBlockDocumentFeatureSlices({
         onDeleteOwnedStatefulBlock: ({
           blockType,
@@ -495,14 +497,14 @@ layout, or when dashboard AI tools are the natural authoring path.
 
 ## Commands
 
-`createMarkdownCommands()` registers AI- and palette-friendly commands for
+`createMarkdownDocumentCommands()` registers AI- and palette-friendly commands for
 Markdown artifacts:
 
-- `markdown.list`
-- `markdown.get`
-- `markdown.create`
-- `markdown.set-markdown`
-- `markdown.append-markdown`
+- `markdown-document.list`
+- `markdown-document.get`
+- `markdown-document.create`
+- `markdown-document.set-markdown`
+- `markdown-document.append-markdown`
 
 `createBlockDocumentCommands()` registers commands for structured block
 document artifacts. By default the command IDs are:
@@ -561,8 +563,9 @@ content, document-owned assets, standalone chart block configs, block document
 and Markdown artifact metadata, and their artifact tab order.
 The current artifact selection is kept local.
 
-The mirror syncs `block-document` and `markdown` artifact metadata. Hosts should
-migrate legacy artifact type names to `block-document` when loading a workspace;
+The mirror syncs `block-document` and `markdown-document` artifact metadata. Hosts should
+migrate legacy artifact names to the corresponding `markdown-document` or
+`block-document` type when loading a workspace;
 the mirror does not accept custom artifact type aliases.
 
 Hosted dashboard state should continue to use the host app's Mosaic persistence,
@@ -574,7 +577,7 @@ or a future Mosaic-specific CRDT mirror.
 
 ```ts
 const index = buildKnowledgeIndex({
-  documents: roomStore.getState().documents.config,
+  markdownDocuments: roomStore.getState().markdownDocuments.config,
   artifacts: roomStore.getState().artifacts.config,
 });
 ```
@@ -582,3 +585,19 @@ const index = buildKnowledgeIndex({
 It extracts `[[Document Title]]` wikilinks, body hashtags such as `#metrics`,
 and optional frontmatter tags. Links are resolved against Markdown artifact
 titles. Missing or ambiguous titles are reported as unresolved links.
+
+## Markdown document naming and persistence
+
+Markdown artifacts and embeddable blocks use `markdown-document`; their commands
+use `markdown-document.*`. Use `createMarkdownDocumentsSlice`,
+`MarkdownDocumentsSliceConfig`, `MarkdownDocumentsSliceState`, and
+`useStoreWithMarkdownDocuments` with the `markdownDocuments` store key.
+`createMarkdownDocumentCommands` provides the command family. These replace the
+former generic `DocumentsSlice*` APIs and `markdown.*` commands.
+
+Hosts loading older snapshots must migrate the `documents` store key and
+`markdown` artifact/block types to their new names. The CLI performs this migration
+at its local storage and sync boundaries. The combined `createDocumentsCrdtMirror`
+retains the `documents` CRDT wire field for existing snapshots, while reading and
+writing the `markdownDocuments` room state. `DocumentAsset` stays shared by both
+document families.

@@ -18,7 +18,7 @@ export type CliCapabilityProfileName =
 export type CliCommandGroupId =
   | 'dashboard'
   | 'mosaic-dashboard'
-  | 'markdown'
+  | 'markdown-document'
   | 'block-document'
   | 'cli-block-document'
   | 'block-document-python'

@@ -123,18 +123,18 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
       state.deckMaps.removeMap(artifactId);
     },
   },
-  markdown: {
-    artifactType: 'markdown',
+  'markdown-document': {
+    artifactType: 'markdown-document',
     stability: 'experimental',
     label: 'Markdown',
     defaultTitle: 'Markdown',
     embeddedTitle: 'Embedded Markdown',
     embeddedDescription: 'Embedded Markdown document',
     ensureState: (state, artifactId, _title, options) => {
-      state.documents.ensureDocument(artifactId, options?.initialText);
+      state.markdownDocuments.ensureDocument(artifactId, options?.initialText);
     },
     deleteState: (state, artifactId) => {
-      state.documents.removeDocument(artifactId);
+      state.markdownDocuments.removeDocument(artifactId);
     },
   },
   'sql-query': {

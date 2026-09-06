@@ -1,5 +1,5 @@
 import type {AiSliceState} from '@sqlrooms/ai-core';
-import type {DocumentsSliceState} from '@sqlrooms/documents';
+import type {MarkdownDocumentsSliceState} from '@sqlrooms/documents';
 import {arrowTableToJson, type DuckDbSliceState} from '@sqlrooms/duckdb';
 import {tool} from 'ai';
 import {parse as vegaParse, View} from 'vega';
@@ -84,7 +84,7 @@ type StoreLike<S> = {
 
 type ChartImageToolState = AiSliceState &
   DuckDbSliceState &
-  DocumentsSliceState;
+  MarkdownDocumentsSliceState;
 
 export function createChartImageForMarkdownTool<
   S extends ChartImageToolState = ChartImageToolState,
@@ -131,25 +131,27 @@ For portable Markdown documents, the default renderTheme is light with a white b
           params.assetId ?? createChartAssetId(params, source.sourceToolCallId);
         const filename = `${assetId}.${params.format}`;
 
-        store.getState().documents.upsertAsset(params.documentArtifactId, {
-          id: assetId,
-          mediaType: image.mediaType,
-          encoding: image.encoding,
-          data: image.data,
-          filename,
-          alt: params.alt,
-          title: params.title,
-          provenance: {
-            sourceToolCallId: source.sourceToolCallId,
-            sqlQuery: source.sqlQuery,
-            vegaLiteSpec: source.vegaLiteSpec,
-            renderTheme: params.renderTheme,
-            background: image.background,
-            renderedAt: new Date(timestamp).toISOString(),
-          },
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        });
+        store
+          .getState()
+          .markdownDocuments.upsertAsset(params.documentArtifactId, {
+            id: assetId,
+            mediaType: image.mediaType,
+            encoding: image.encoding,
+            data: image.data,
+            filename,
+            alt: params.alt,
+            title: params.title,
+            provenance: {
+              sourceToolCallId: source.sourceToolCallId,
+              sqlQuery: source.sqlQuery,
+              vegaLiteSpec: source.vegaLiteSpec,
+              renderTheme: params.renderTheme,
+              background: image.background,
+              renderedAt: new Date(timestamp).toISOString(),
+            },
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          });
 
         return {
           success: true,

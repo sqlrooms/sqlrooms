@@ -9,7 +9,7 @@ import {CrdtSliceState} from '@sqlrooms/crdt';
 import {
   BlockDocumentsSliceState,
   BlockSettingsSliceState,
-  DocumentsSliceState,
+  MarkdownDocumentsSliceState,
 } from '@sqlrooms/documents';
 import type {
   MosaicDashboardLayoutType,
@@ -58,7 +58,7 @@ export type RoomState = RoomShellSliceState &
   PivotSliceState &
   PythonSliceState &
   CanvasSliceState &
-  DocumentsSliceState &
+  MarkdownDocumentsSliceState &
   BlockDocumentsSliceState &
   BlockSettingsSliceState &
   CrdtSliceState &

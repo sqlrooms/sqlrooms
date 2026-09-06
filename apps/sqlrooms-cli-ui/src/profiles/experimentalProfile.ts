@@ -15,7 +15,7 @@ export const EXPERIMENTAL_CLI_CAPABILITY_PROFILE = {
       'pivot',
       'data-table',
       'map',
-      'markdown',
+      'markdown-document',
       'sql-query',
       'html-app',
       'python',
@@ -25,7 +25,7 @@ export const EXPERIMENTAL_CLI_CAPABILITY_PROFILE = {
   commands: [
     'dashboard',
     'mosaic-dashboard',
-    'markdown',
+    'markdown-document',
     'block-document',
     'cli-block-document',
     'block-document-python',
