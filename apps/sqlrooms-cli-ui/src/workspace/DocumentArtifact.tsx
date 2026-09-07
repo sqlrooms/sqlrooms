@@ -197,7 +197,7 @@ export const DocumentArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const [editor, setEditor] = useState<Editor | null>(null);
 
   useEffect(() => {
-    if (artifact?.type === 'document') {
+    if (artifact?.type === 'block-document') {
       ensureBlockDocument(artifactId);
     }
   }, [artifact?.type, artifactId, ensureBlockDocument]);
@@ -251,7 +251,7 @@ export const DocumentArtifact: RoomPanelComponent = ({panelId, meta}) => {
             revealAssistant,
             actions: createStartBlockScopedChatActions(roomStore.getState),
             isValidBlockDocumentArtifact: (candidate) =>
-              candidate.type === 'document',
+              candidate.type === 'block-document',
             artifactLabel: 'document',
           });
         },
@@ -259,7 +259,7 @@ export const DocumentArtifact: RoomPanelComponent = ({panelId, meta}) => {
     [revealAssistant, enabledDocumentAiBlockTypes],
   );
 
-  if (!artifact || artifact.type !== 'document') {
+  if (!artifact || artifact.type !== 'block-document') {
     return null;
   }
 

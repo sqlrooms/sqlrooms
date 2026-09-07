@@ -86,13 +86,15 @@ function preprocessCliPersistedWorkspace(value: unknown): unknown {
 
       let type = artifact.type;
       if (type === 'worksheet') {
-        type = 'document';
+        type = 'block-document';
       } else if (type === 'document') {
         const hasBlockDocument = hasArtifact(blockDocumentsSlice, artifactId);
         const hasMarkdownDocument = hasArtifact(documentsSlice, artifactId);
-        if (!hasBlockDocument && hasMarkdownDocument) {
+        if (hasBlockDocument) {
+          type = 'block-document';
+        } else if (hasMarkdownDocument) {
           type = 'markdown';
-        } else if (!hasBlockDocument && !hasMarkdownDocument) {
+        } else {
           // Before this migration, "document" only meant the Markdown
           // artifact. Preserve that meaning for incomplete legacy snapshots.
           type = 'markdown';
