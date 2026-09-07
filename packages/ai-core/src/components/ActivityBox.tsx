@@ -27,6 +27,8 @@ export type ActivityBoxProps = {
   startedAt?: number;
   /** Step count shown next to the elapsed time, e.g. "step 4". */
   stepCount?: number;
+  /** Aggregated duration, shown instead of the step count once settled. */
+  computationTimeLabel?: string;
 };
 
 /**
@@ -38,6 +40,7 @@ const ActivityHeader: React.FC<{
   isRunning: boolean;
   startedAt?: number;
   stepCount?: number;
+  computationTimeLabel?: string;
   isOpen: boolean;
   /** False while running, when the box is pinned open. */
   canToggle: boolean;
@@ -47,6 +50,7 @@ const ActivityHeader: React.FC<{
   isRunning,
   startedAt,
   stepCount,
+  computationTimeLabel,
   isOpen,
   canToggle,
   onToggle,
@@ -58,9 +62,8 @@ const ActivityHeader: React.FC<{
     ? [elapsed, stepCount ? `step ${stepCount}` : undefined]
         .filter(Boolean)
         .join(' · ')
-    : stepCount
-      ? `${stepCount} step${stepCount === 1 ? '' : 's'}`
-      : '';
+    : (computationTimeLabel ??
+      (stepCount ? `${stepCount} step${stepCount === 1 ? '' : 's'}` : ''));
 
   return (
     <button
@@ -113,6 +116,7 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
   summaryLabel,
   startedAt,
   stepCount,
+  computationTimeLabel,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
@@ -194,6 +198,7 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
       isRunning={isRunning}
       startedAt={startedAt}
       stepCount={stepCount}
+      computationTimeLabel={computationTimeLabel}
       isOpen={showBox}
       canToggle={!isRunning}
       onToggle={() =>

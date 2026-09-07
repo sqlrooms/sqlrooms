@@ -446,10 +446,11 @@ export function splitTextAroundHoists(model: ChatTurnModel): {
 }
 
 /** Compute the enclosing duration of the supplied recorded tool calls. */
-export function computeComputationTimeMs(
+/** Span enclosing the supplied recorded tool calls. */
+export function computeActivityTimeSpan(
   toolCallIds: Iterable<string>,
   toolTimings: Record<string, {startedAt?: number; completedAt?: number}>,
-): number | undefined {
+): {startedAt: number; endedAt: number} | undefined {
   let earliest: number | undefined;
   let latest: number | undefined;
   for (const id of toolCallIds) {
@@ -463,5 +464,13 @@ export function computeComputationTimeMs(
     latest = latest == null ? end : Math.max(latest, end);
   }
   if (earliest == null || latest == null || latest < earliest) return undefined;
-  return latest - earliest;
+  return {startedAt: earliest, endedAt: latest};
+}
+
+export function computeComputationTimeMs(
+  toolCallIds: Iterable<string>,
+  toolTimings: Record<string, {startedAt?: number; completedAt?: number}>,
+): number | undefined {
+  const span = computeActivityTimeSpan(toolCallIds, toolTimings);
+  return span ? span.endedAt - span.startedAt : undefined;
 }

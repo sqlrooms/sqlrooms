@@ -378,6 +378,34 @@ So:
 Without a `Chat.Rendering` ancestor, `ChatTurnView` uses the built-in SQLRooms
 defaults for every slot.
 
+#### Activity timing
+
+`ChatActivityProps` carries the timing an activity header needs:
+
+- `startedAt` — epoch ms of the earliest tool start in the group. While
+  `isRunning` is true, chrome can render a clock that ticks from it (the
+  default recipe shows `· 12s · step 3`). Derive it with
+  `computeActivityTimeSpan(toolCallIds, toolTimings)?.startedAt`.
+- `toolCount` — tools in the group, shown as the current step while running.
+- `computationTimeLabel` — aggregated duration for a settled group.
+
+`ActivityBox` takes the same values as `startedAt`, `stepCount` and
+`computationTimeLabel`; the duration replaces the derived step count once the
+activity has settled, so a summary that already names the tool count is not
+repeated.
+
+```tsx
+<ActivityBox
+  isRunning={isRunning}
+  summaryLabel={isRunning ? 'Thinking' : 'Worked with 3 tools'}
+  startedAt={startedAt}
+  stepCount={isRunning ? toolCount : undefined}
+  computationTimeLabel={isRunning ? undefined : computationTimeLabel}
+>
+  {children}
+</ActivityBox>
+```
+
 #### Override a single slot
 
 Pass a partial `components` map. Only the slots you provide change; everything

@@ -22,7 +22,7 @@ import {
 } from '../utils';
 import {
   buildChatTurnModel,
-  computeComputationTimeMs,
+  computeActivityTimeSpan,
   getToolName,
   splitTextAroundHoists,
 } from './buildChatTurnModel';
@@ -245,10 +245,15 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       : undefined;
 
   const showComputationTime = !model.isActivityRunning && isCompleted;
-  const computationTimeMs = useMemo(() => {
-    if (!showComputationTime) return undefined;
-    return computeComputationTimeMs(model.timingToolCallIds, toolTimings);
-  }, [showComputationTime, model.timingToolCallIds, toolTimings]);
+  const activitySpan = useMemo(
+    () => computeActivityTimeSpan(model.timingToolCallIds, toolTimings),
+    [model.timingToolCallIds, toolTimings],
+  );
+  const activityStartedAt = activitySpan?.startedAt;
+  const computationTimeMs =
+    showComputationTime && activitySpan
+      ? activitySpan.endedAt - activitySpan.startedAt
+      : undefined;
 
   const computationTimeLabel =
     computationTimeMs != null
@@ -304,6 +309,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
         copyText,
         errorMessage: errorMessage?.error,
         activitySummaryLabel,
+        activityStartedAt,
         computationTimeMs,
         computationTimeLabel,
         responseText,
@@ -327,6 +333,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       copyText,
       errorMessage?.error,
       activitySummaryLabel,
+      activityStartedAt,
       computationTimeMs,
       computationTimeLabel,
       responseText,

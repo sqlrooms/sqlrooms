@@ -98,13 +98,16 @@ export const DefaultChatActivity: React.FC<ChatActivityProps> = ({
   summaryLabel,
   startedAt,
   toolCount,
+  computationTimeLabel,
   className,
 }) => (
   <ActivityBox
     isRunning={isRunning}
     summaryLabel={summaryLabel}
     startedAt={startedAt}
-    stepCount={toolCount}
+    // A settled group reports its duration, not a step.
+    stepCount={isRunning ? toolCount : undefined}
+    computationTimeLabel={isRunning ? undefined : computationTimeLabel}
     className={className}
   >
     {children}
@@ -284,6 +287,8 @@ type CreateChatTurnPresentationOptions = {
   copyText?: string;
   errorMessage?: string;
   activitySummaryLabel?: string;
+  /** Earliest tool start in the group, for the header's live clock. */
+  activityStartedAt?: number;
   computationTimeMs?: number;
   computationTimeLabel?: string;
   responseText: ChatTurnTextItem[];
@@ -311,6 +316,7 @@ export function createChatTurnPresentation({
   copyText,
   errorMessage,
   activitySummaryLabel,
+  activityStartedAt,
   computationTimeMs,
   computationTimeLabel,
   responseText,
@@ -548,6 +554,7 @@ export function createChatTurnPresentation({
         isCompleted={isCompleted}
         toolCount={model.leafToolCount}
         summaryLabel={activitySummaryLabel}
+        startedAt={activityStartedAt}
         computationTimeMs={computationTimeMs}
         computationTimeLabel={computationTimeLabel}
       >

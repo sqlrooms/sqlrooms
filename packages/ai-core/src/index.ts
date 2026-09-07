@@ -296,6 +296,7 @@ export type {HoistableToolCall} from './components/collectHoistableRenderers';
 export {
   buildChatTurnModel,
   splitTextAroundHoists,
+  computeActivityTimeSpan,
   computeComputationTimeMs,
   getToolName,
   isAgentToolPart,
