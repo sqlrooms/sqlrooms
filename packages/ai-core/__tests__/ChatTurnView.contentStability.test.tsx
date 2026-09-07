@@ -26,6 +26,7 @@ Object.assign(globalThis, {
 });
 
 jest.unstable_mockModule('../src/components/MessageContent', () => ({
+  getChatSearchExcludedMarkdownTags: () => [],
   MessageContent: ({content}: {content: string}) => (
     <div data-testid="message-content">{content}</div>
   ),

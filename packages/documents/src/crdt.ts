@@ -129,19 +129,10 @@ export const documentsMirrorInitialState = {
   artifactOrder: [],
 };
 
-export type CreateDocumentsCrdtMirrorOptions = {
-  /**
-   * Artifact types backed by the block document slice.
-   *
-   * Apps can use their own user-facing artifact names while reusing the generic
-   * block document storage and CRDT mirror.
-   */
-  blockDocumentArtifactTypes?: string[];
-};
-
 /**
  * Creates a CRDT mirror for Markdown documents, block documents, and their
- * artifact metadata.
+ * artifact metadata for `markdown` and `block-document` artifacts.
+ * Uses canonical artifact types without migrating pre-release snapshots.
  *
  * The room's current artifact selection and pinned artifacts are intentionally
  * kept local.
@@ -153,15 +144,9 @@ export type CreateDocumentsCrdtMirrorOptions = {
  */
 export function createDocumentsCrdtMirror<
   S extends DocumentCrdtState = DocumentCrdtState,
->(
-  options: CreateDocumentsCrdtMirrorOptions = {},
-): CrdtMirror<S, typeof documentsMirrorSchema> {
-  const blockDocumentArtifactTypes = new Set(
-    options.blockDocumentArtifactTypes ?? ['block-document'],
-  );
+>(): CrdtMirror<S, typeof documentsMirrorSchema> {
   const isSyncedArtifact = (artifact: ArtifactMetadataType) =>
-    artifact.type === 'markdown' ||
-    blockDocumentArtifactTypes.has(artifact.type);
+    artifact.type === 'markdown' || artifact.type === 'block-document';
   const isNonSyncedArtifact = (artifact: ArtifactMetadataType) =>
     !isSyncedArtifact(artifact);
 

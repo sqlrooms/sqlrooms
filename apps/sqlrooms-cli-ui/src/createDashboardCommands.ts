@@ -107,7 +107,7 @@ function createArtifactCommand(
       });
       if (artifactType === 'notebook') {
         state.notebook.ensureArtifact(artifactId);
-      } else if (artifactType === 'document') {
+      } else if (artifactType === 'block-document') {
         state.blockDocuments.ensureBlockDocument(artifactId);
       } else if (artifactType === 'markdown') {
         state.documents.ensureDocument(artifactId);
@@ -189,8 +189,8 @@ const ARTIFACT_CREATE_COMMANDS: {
   command: () => RoomCommand<RoomState>;
 }[] = [
   {
-    artifactType: 'document',
-    command: () => createArtifactCommand('document', 'Document'),
+    artifactType: 'block-document',
+    command: () => createArtifactCommand('block-document', 'Document'),
   },
   {
     artifactType: 'pivot',
@@ -286,7 +286,7 @@ export function createDashboardCommands({
         if (artifact.type === 'notebook') {
           state.notebook.ensureArtifact(artifactId);
         }
-        if (artifact.type === 'document') {
+        if (artifact.type === 'block-document') {
           state.blockDocuments.ensureBlockDocument(artifactId);
         }
         if (artifact.type === 'markdown') {

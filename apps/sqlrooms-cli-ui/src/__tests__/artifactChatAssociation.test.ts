@@ -18,7 +18,7 @@ it('links a newly selected artifact to the invoking chat and keeps it selected',
   > = {
     [sourceArtifactId]: {
       id: sourceArtifactId,
-      type: 'document',
+      type: 'block-document',
       title: 'Document A',
     },
   };
@@ -55,7 +55,7 @@ it('links a newly selected artifact to the invoking chat and keeps it selected',
     async () => {
       state.artifacts.config.artifactsById[targetArtifactId] = {
         id: targetArtifactId,
-        type: 'document',
+        type: 'block-document',
         title: 'Document B',
       };
       state.artifacts.config.currentArtifactId = targetArtifactId;
@@ -79,12 +79,12 @@ it('does not associate an artifact that was created without being selected', asy
   > = {
     'document-a': {
       id: 'document-a',
-      type: 'document',
+      type: 'block-document',
       title: 'Document A',
     },
     'document-b': {
       id: 'document-b',
-      type: 'document',
+      type: 'block-document',
       title: 'Document B',
     },
   };

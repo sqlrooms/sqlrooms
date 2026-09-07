@@ -5,8 +5,8 @@ export const DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE = {
   name: 'document-charts-maps',
   version: 1,
   artifacts: {
-    creatable: ['document'],
-    runContext: ['document'],
+    creatable: ['block-document'],
+    runContext: ['block-document'],
   },
   blocks: {
     stateful: ['map'],

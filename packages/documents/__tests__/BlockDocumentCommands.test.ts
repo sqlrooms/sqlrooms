@@ -465,7 +465,7 @@ describe('block document commands', () => {
       }),
     ).resolves.toMatchObject({
       success: false,
-      error: `Artifact "${markdownId}" is not a Block Document artifact.`,
+      error: `Artifact "${markdownId}" is not a block document artifact.`,
     });
   });
 });

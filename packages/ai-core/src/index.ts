@@ -317,7 +317,15 @@ export {
 } from './components/HoistedRenderersContext';
 export {
   findChatSearchMatches,
+  HighlightedChatSearchText,
   markdownToPlainText,
   normalizeChatSearchQuery,
+  useActiveChatSearchMatchKey,
+  useOptionalChatSearch,
+  useReportRenderedChatSearchBlock,
 } from './components/ChatSearch';
-export type {ChatSearchBlock, ChatSearchMatch} from './components/ChatSearch';
+export type {
+  ChatSearchBlock,
+  ChatSearchContextValue,
+  ChatSearchMatch,
+} from './components/ChatSearch';

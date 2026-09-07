@@ -969,9 +969,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
               sync: createCliCrdtSyncConnector(),
               mirrors: {
-                documentState: createDocumentsCrdtMirror<RoomState>({
-                  blockDocumentArtifactTypes: ['document'],
-                }),
+                documentState: createDocumentsCrdtMirror<RoomState>(),
               },
             })(set, get, store)
           : createDisabledCrdtState()),

@@ -98,7 +98,7 @@ function setup() {
     artifacts: {
       getArtifact: () => ({
         id: 'document-1',
-        type: 'document',
+        type: 'block-document',
         title: 'Document',
       }),
     },

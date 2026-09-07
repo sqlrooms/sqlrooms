@@ -55,7 +55,7 @@ function readCliArtifact({
     };
   }
 
-  if (artifact.type === 'document') {
+  if (artifact.type === 'block-document') {
     const document = state.blockDocuments.getBlockDocument(artifactId);
     return {
       success: true as const,

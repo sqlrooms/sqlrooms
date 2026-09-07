@@ -373,7 +373,7 @@ export function createCliScenarioChecks(
         );
         const pass =
           workspace.documents.length === 1 &&
-          types.filter((type) => type === 'document').length === 1 &&
+          types.filter((type) => type === 'block-document').length === 1 &&
           !types.includes('dashboard');
         return {
           pass,

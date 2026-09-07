@@ -34,9 +34,6 @@ export const BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER =
   '@sqlrooms/python/block-document';
 
 const BLOCK_DOCUMENT_OPTIONS = {
-  artifactType: 'document',
-  artifactLabel: 'Document',
-  commandNamespace: 'block-document',
   commandGroup: 'Document',
   defaultTitle: 'Document',
 } as const;
@@ -103,9 +100,6 @@ export function registerCliCapabilityProfileCommands(
       store,
       BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER,
       createPythonBlockCommands<RoomState>({
-        artifactType: BLOCK_DOCUMENT_OPTIONS.artifactType,
-        artifactLabel: BLOCK_DOCUMENT_OPTIONS.artifactLabel,
-        commandNamespace: BLOCK_DOCUMENT_OPTIONS.commandNamespace,
         commandGroup: BLOCK_DOCUMENT_OPTIONS.commandGroup,
       }),
     );
