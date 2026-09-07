@@ -1,3 +1,4 @@
+import {MarkdownDocumentsSliceConfig} from '@sqlrooms/documents';
 import {migrateCliPersistedWorkspace} from '../migrateCliPersistedWorkspace';
 
 type PersistedWorkspaceFixture = {
@@ -88,10 +89,10 @@ describe('migrateCliPersistedWorkspace', () => {
     ).artifactsById;
 
     expect(artifacts.legacyBlockDocument.type).toBe('block-document');
-    expect(artifacts.legacyMarkdown.type).toBe('markdown');
+    expect(artifacts.legacyMarkdown.type).toBe('markdown-document');
     expect(artifacts.currentDocument.type).toBe('block-document');
-    expect(artifacts.currentMarkdown.type).toBe('markdown');
-    expect(artifacts.orphanedLegacyMarkdown.type).toBe('markdown');
+    expect(artifacts.currentMarkdown.type).toBe('markdown-document');
+    expect(artifacts.orphanedLegacyMarkdown.type).toBe('markdown-document');
     expect(artifacts.dashboard.type).toBe('dashboard');
 
     const blockDocuments = migrated.blockDocuments as {
@@ -103,7 +104,7 @@ describe('migrateCliPersistedWorkspace', () => {
     expect(
       blockDocuments.artifacts.legacyBlockDocument.content.content[0]?.attrs
         .blockType,
-    ).toBe('markdown');
+    ).toBe('markdown-document');
   });
 
   it('preserves canonical block documents and their content', () => {
@@ -121,6 +122,85 @@ describe('migrateCliPersistedWorkspace', () => {
         currentDocument: persisted.blockDocuments.artifacts.currentDocument,
       },
     });
+  });
+
+  it('preserves legacy Markdown bodies and assets through canonical schema parsing', () => {
+    const document = {
+      id: 'notes',
+      markdown: '![Chart](asset://chart)',
+      assets: {
+        chart: {
+          id: 'chart',
+          mediaType: 'image/png',
+          encoding: 'base64',
+          data: 'aW1hZ2U=',
+          createdAt: 1,
+          updatedAt: 2,
+        },
+      },
+      updatedAt: 3,
+    };
+    const migrated = migrateCliPersistedWorkspace({
+      documents: {artifacts: {notes: document}},
+      artifacts: {
+        artifactsById: {notes: {id: 'notes', type: 'markdown', title: 'Notes'}},
+      },
+    });
+
+    expect(
+      MarkdownDocumentsSliceConfig.parse(migrated.markdownDocuments),
+    ).toEqual({
+      artifacts: {notes: document},
+    });
+    expect(migrated.artifacts).toMatchObject({
+      artifactsById: {notes: {type: 'markdown-document'}},
+    });
+    expect(migrated).not.toHaveProperty('documents');
+  });
+
+  it('merges old and canonical slice entries with canonical values taking precedence', () => {
+    const persisted = persistedWorkspace();
+    const canonical = {id: 'currentMarkdown', markdown: '# Canonical'};
+    const migrated = migrateCliPersistedWorkspace({
+      ...persisted,
+      markdownDocuments: {
+        artifacts: {
+          currentMarkdown: canonical,
+          canonicalOnly: {id: 'canonicalOnly', markdown: '# New'},
+        },
+      },
+    });
+    expect(migrated).not.toHaveProperty('documents');
+    expect(migrated.markdownDocuments).toEqual({
+      artifacts: {
+        ...persisted.documents.artifacts,
+        currentMarkdown: canonical,
+        canonicalOnly: {id: 'canonicalOnly', markdown: '# New'},
+      },
+    });
+  });
+
+  it('migrates Markdown slices and embedded blocks without artifact metadata', () => {
+    const persisted = persistedWorkspace();
+    const block = persisted.blockDocuments.artifacts.legacyBlockDocument
+      .content as {
+      content: Array<{attrs: {blockType: string}}>;
+    };
+    block.content[0]!.attrs.blockType = 'markdown';
+    const migrated = migrateCliPersistedWorkspace({
+      documents: persisted.documents,
+      blockDocuments: persisted.blockDocuments,
+    });
+    expect(migrated).not.toHaveProperty('documents');
+    expect(migrated.markdownDocuments).toEqual(persisted.documents);
+    expect(migrated.blockDocuments).toMatchObject({
+      artifacts: {
+        legacyBlockDocument: {
+          content: {content: [{attrs: {blockType: 'markdown-document'}}]},
+        },
+      },
+    });
+    expect(block.content[0]!.attrs.blockType).toBe('markdown');
   });
 
   it('is idempotent', () => {

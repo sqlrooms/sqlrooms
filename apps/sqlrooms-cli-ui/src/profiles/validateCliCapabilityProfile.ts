@@ -17,7 +17,7 @@ import type {
 const COMMAND_GROUPS: readonly CliCommandGroupId[] = [
   'dashboard',
   'mosaic-dashboard',
-  'markdown',
+  'markdown-document',
   'block-document',
   'cli-block-document',
   'block-document-python',
@@ -116,8 +116,10 @@ export function validateCliCapabilityProfile(
   }
 
   const commands = new Set<string>(profile.commands);
-  if (commands.has('markdown') && !stateful.has('markdown')) {
-    errors.push('Markdown commands require the markdown stateful block.');
+  if (commands.has('markdown-document') && !stateful.has('markdown-document')) {
+    errors.push(
+      'Markdown document commands require the markdown-document stateful block.',
+    );
   }
   if (commands.has('block-document-python') && !stateful.has('python')) {
     errors.push('Python block commands require the python stateful block.');

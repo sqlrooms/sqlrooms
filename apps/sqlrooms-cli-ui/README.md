@@ -206,7 +206,13 @@ Document artifacts are block-composed documents for active analytical work.
 Their canonical artifact type is `block-document`; the UI label remains
 “Document”. Loading an existing workspace migrates `worksheet` artifacts and
 `document` artifacts with block-document backing state to `block-document`.
-Legacy Markdown documents continue to migrate to `markdown`.
+Markdown document artifacts and embedded blocks use `markdown-document`, commands use
+`markdown-document.*`, and their backing store and CRDT field are `markdownDocuments`.
+Local workspaces migrate the persisted `documents` slice to `markdownDocuments`
+and normalize `markdown` artifact and embedded block types to `markdown-document`.
+When both slice keys exist, disjoint records are preserved and canonical records
+take precedence for overlapping IDs. Experimental CRDT snapshots are not migrated;
+reset incompatible development sync state when upgrading.
 They can contain editable text, images, standalone Mosaic/vgplot chart blocks, and
 direct stateful blocks such as dashboards, pivot tables, Data Table Explorers,
 SQL queries, and Markdown documents.

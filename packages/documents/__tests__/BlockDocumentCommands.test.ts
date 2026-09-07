@@ -37,7 +37,7 @@ function createTestStore({
       defaultTitle: 'Block Document',
     },
     dashboard: {label: 'Dashboard', defaultTitle: 'Dashboard'},
-    markdown: {label: 'Markdown', defaultTitle: 'Markdown'},
+    'markdown-document': {label: 'Markdown', defaultTitle: 'Markdown'},
   });
 
   const store = createStore<TestRoomState>()((...args) => ({
@@ -369,7 +369,7 @@ describe('block document commands', () => {
           {
             id: 'document-1',
             type: 'statefulBlock',
-            blockType: 'markdown',
+            blockType: 'markdown-document',
             blockInstanceId: 'document-1',
           },
         ],
@@ -399,7 +399,7 @@ describe('block document commands', () => {
       {
         id: 'persisted-document-1',
         type: 'statefulBlock',
-        blockType: 'markdown',
+        blockType: 'markdown-document',
         blockInstanceId: 'persisted-document-1',
       },
     ]);
@@ -438,7 +438,7 @@ describe('block document commands', () => {
       {
         id: 'persisted-document-1',
         type: 'statefulBlock',
-        blockType: 'markdown',
+        blockType: 'markdown-document',
         blockInstanceId: 'persisted-document-1',
       },
     ]);
@@ -447,7 +447,7 @@ describe('block document commands', () => {
   it('fails clearly for invalid targets', async () => {
     const {store} = createTestStore();
     const markdownId = store.getState().artifacts.createArtifact({
-      type: 'markdown',
+      type: 'markdown-document',
       title: 'Markdown',
     });
 

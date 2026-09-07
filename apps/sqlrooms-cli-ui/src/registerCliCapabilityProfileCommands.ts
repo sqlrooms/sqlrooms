@@ -1,6 +1,6 @@
 import {
   createBlockDocumentCommands,
-  createMarkdownCommands,
+  createMarkdownDocumentCommands,
   type BlockDocumentBlock,
 } from '@sqlrooms/documents';
 import {createMosaicDashboardCommands} from '@sqlrooms/mosaic';
@@ -26,7 +26,8 @@ import type {CliCapabilityProfile} from './profiles';
 import {createStatefulBlockCommandTypes} from './statefulBlockArtifactConfigs';
 import type {RoomState} from './store-types';
 
-export const MARKDOWN_COMMAND_OWNER = '@sqlrooms/documents/markdown';
+export const MARKDOWN_DOCUMENT_COMMAND_OWNER =
+  '@sqlrooms/documents/markdown-document';
 export const MOSAIC_DASHBOARD_COMMAND_OWNER = '@sqlrooms/mosaic/dashboard';
 export const BLOCK_DOCUMENT_COMMAND_OWNER =
   '@sqlrooms/documents/block-document';
@@ -65,11 +66,11 @@ export function registerCliCapabilityProfileCommands(
       createMosaicDashboardCommands<RoomState>(),
     );
   }
-  if (profile.commands.includes('markdown')) {
+  if (profile.commands.includes('markdown-document')) {
     registerCommandsForOwner(
       store,
-      MARKDOWN_COMMAND_OWNER,
-      createMarkdownCommands<RoomState>(),
+      MARKDOWN_DOCUMENT_COMMAND_OWNER,
+      createMarkdownDocumentCommands<RoomState>(),
     );
   }
   if (profile.commands.includes('block-document')) {
@@ -119,7 +120,7 @@ export function unregisterCliCapabilityProfileCommands(
 ): void {
   unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
   unregisterCommandsForOwner(store, MOSAIC_DASHBOARD_COMMAND_OWNER);
-  unregisterCommandsForOwner(store, MARKDOWN_COMMAND_OWNER);
+  unregisterCommandsForOwner(store, MARKDOWN_DOCUMENT_COMMAND_OWNER);
   unregisterCommandsForOwner(store, BLOCK_DOCUMENT_COMMAND_OWNER);
   unregisterCommandsForOwner(store, CLI_BLOCK_DOCUMENT_COMMAND_OWNER);
   unregisterCommandsForOwner(store, BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER);

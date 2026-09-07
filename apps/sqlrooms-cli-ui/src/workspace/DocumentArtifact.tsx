@@ -32,7 +32,7 @@ import {
 } from '../statefulBlockArtifactConfigs';
 import {DocumentDashboardBlockRenderer} from './DocumentDashboardBlockRenderer';
 import {DocumentMapBlockRenderer} from './DocumentMapBlockRenderer';
-import {DocumentMarkdownBlockRenderer} from './DocumentMarkdownBlockRenderer';
+import {MarkdownDocumentBlockRenderer} from './MarkdownDocumentBlockRenderer';
 import {DocumentPivotBlockRenderer} from './DocumentPivotBlockRenderer';
 import {DocumentSqlQueryBlockRenderer} from './DocumentSqlQueryBlockRenderer';
 import {createProfiledDocumentStatefulBlockRenderers} from './documentStatefulBlockRenderers';
@@ -132,7 +132,7 @@ const DOCUMENT_STATEFUL_BLOCK_RENDERERS = {
   map: DocumentMapBlockRenderer,
   pivot: DocumentPivotBlockRenderer,
   'data-table': DocumentDataTableBlockRenderer,
-  markdown: DocumentMarkdownBlockRenderer,
+  'markdown-document': MarkdownDocumentBlockRenderer,
   'sql-query': DocumentSqlQueryBlockRenderer,
   'html-app': DocumentHtmlAppBlockRenderer,
   python: DocumentPythonBlockRenderer,

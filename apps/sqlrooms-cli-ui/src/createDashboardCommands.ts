@@ -109,8 +109,8 @@ function createArtifactCommand(
         state.notebook.ensureArtifact(artifactId);
       } else if (artifactType === 'block-document') {
         state.blockDocuments.ensureBlockDocument(artifactId);
-      } else if (artifactType === 'markdown') {
-        state.documents.ensureDocument(artifactId);
+      } else if (artifactType === 'markdown-document') {
+        state.markdownDocuments.ensureDocument(artifactId);
       } else if (artifactType === 'sql-query') {
         state.sqlEditor.ensureQuery(artifactId, {name: uniqueTitle});
       } else if (artifactType === 'canvas') {
@@ -201,8 +201,8 @@ const ARTIFACT_CREATE_COMMANDS: {
     command: () => createArtifactCommand('notebook', 'Notebook'),
   },
   {
-    artifactType: 'markdown',
-    command: () => createArtifactCommand('markdown', 'Markdown'),
+    artifactType: 'markdown-document',
+    command: () => createArtifactCommand('markdown-document', 'Markdown'),
   },
   {
     artifactType: 'sql-query',
@@ -289,8 +289,8 @@ export function createDashboardCommands({
         if (artifact.type === 'block-document') {
           state.blockDocuments.ensureBlockDocument(artifactId);
         }
-        if (artifact.type === 'markdown') {
-          state.documents.ensureDocument(artifactId);
+        if (artifact.type === 'markdown-document') {
+          state.markdownDocuments.ensureDocument(artifactId);
         }
         if (artifact.type === 'sql-query') {
           state.sqlEditor.ensureQuery(artifactId, {name: artifact.title});

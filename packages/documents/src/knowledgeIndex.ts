@@ -3,7 +3,7 @@ import type {
   ArtifactsSliceConfigType,
 } from '@sqlrooms/artifacts';
 import YAML from 'yaml';
-import type {DocumentsSliceConfig} from './DocumentsSliceConfig';
+import type {MarkdownDocumentsSliceConfig} from './MarkdownDocumentsSliceConfig';
 
 export type DocumentLink = {
   sourceArtifactId: string;
@@ -32,8 +32,9 @@ export type KnowledgeIndex = {
   unresolvedLinks: UnresolvedDocumentLink[];
 };
 
+/** Markdown document content and artifact metadata used to index links and tags. */
 export type BuildKnowledgeIndexProps = {
-  documents: DocumentsSliceConfig;
+  markdownDocuments: MarkdownDocumentsSliceConfig;
   artifacts: ArtifactsSliceConfigType;
 };
 
@@ -42,7 +43,7 @@ const BODY_TAG_PATTERN = /(^|[^\w/])#([A-Za-z][A-Za-z0-9_-]*)\b/gm;
 const FRONTMATTER_PATTERN = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 
 export function buildKnowledgeIndex({
-  documents,
+  markdownDocuments,
   artifacts,
 }: BuildKnowledgeIndexProps): KnowledgeIndex {
   const titleToArtifactIds = new Map<string, string[]>();
@@ -51,7 +52,7 @@ export function buildKnowledgeIndex({
     ArtifactMetadataType
   >;
   for (const artifact of Object.values(artifactsById)) {
-    if (artifact.type !== 'markdown') continue;
+    if (artifact.type !== 'markdown-document') continue;
     const ids = titleToArtifactIds.get(artifact.title) ?? [];
     ids.push(artifact.id);
     titleToArtifactIds.set(artifact.title, ids);
@@ -64,9 +65,9 @@ export function buildKnowledgeIndex({
     unresolvedLinks: [],
   };
 
-  for (const document of Object.values(documents.artifacts)) {
+  for (const document of Object.values(markdownDocuments.artifacts)) {
     const artifact = artifactsById[document.id];
-    if (!artifact || artifact.type !== 'markdown') continue;
+    if (!artifact || artifact.type !== 'markdown-document') continue;
 
     const sourceTitle = artifact.title;
     const sourceLinks: DocumentLink[] = [];

@@ -11,7 +11,7 @@ const CLI_ARTIFACT_TITLES = {
   dashboard: 'Dashboard',
   pivot: 'Pivot',
   notebook: 'Notebook',
-  markdown: 'Markdown',
+  'markdown-document': 'Markdown',
   'sql-query': 'SQL Query',
   'html-app': 'HTML App',
   python: 'Python',

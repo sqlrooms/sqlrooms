@@ -28,8 +28,8 @@ function readCliArtifact({
     };
   }
 
-  if (artifact.type === 'markdown') {
-    const document = state.documents.getDocument(artifactId);
+  if (artifact.type === 'markdown-document') {
+    const document = state.markdownDocuments.getDocument(artifactId);
     return {
       success: true as const,
       artifact: {
@@ -38,7 +38,7 @@ function readCliArtifact({
         type: artifact.type,
       },
       payload: {
-        kind: 'markdown',
+        kind: 'markdown-document',
         markdown: document?.markdown ?? '',
         assets: Object.values(document?.assets ?? {}).map((asset) => ({
           id: asset.id,
