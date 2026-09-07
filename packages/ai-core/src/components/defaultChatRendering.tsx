@@ -11,7 +11,9 @@ import type {Components} from 'react-markdown';
 import {TOOL_CALL_CANCELLED} from '../constants';
 import type {AgentToolCall} from '../types';
 import {isReasoningPart, isTextPart} from '../utils';
+import {formatShortDuration} from '@sqlrooms/utils';
 import {ActivityBox} from './ActivityBox';
+import {computeActivityTimeSpan} from './buildChatTurnModel';
 import {
   HighlightedChatSearchText,
   useActiveChatSearchMatchKey,
@@ -289,6 +291,8 @@ type CreateChatTurnPresentationOptions = {
   activitySummaryLabel?: string;
   /** Earliest tool start in the group, for the header's live clock. */
   activityStartedAt?: number;
+  /** Per-tool-call timings, so each timeline group can report its own. */
+  toolTimings: Record<string, {startedAt?: number; completedAt?: number}>;
   computationTimeMs?: number;
   computationTimeLabel?: string;
   responseText: ChatTurnTextItem[];
@@ -317,6 +321,7 @@ export function createChatTurnPresentation({
   errorMessage,
   activitySummaryLabel,
   activityStartedAt,
+  toolTimings,
   computationTimeMs,
   computationTimeLabel,
   responseText,
@@ -482,9 +487,20 @@ export function createChatTurnPresentation({
             isToolPartPending(part.state),
           );
           const toolCount = segment.parts.length;
-          const summaryLabel =
-            !anyPending && toolCount > 0 && isCompleted
+          const summaryLabel = anyPending
+            ? 'Thinking'
+            : toolCount > 0 && isCompleted
               ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
+              : undefined;
+          const groupSpan = computeActivityTimeSpan(
+            segment.parts.map(({part}) => part.toolCallId),
+            toolTimings,
+          );
+          const groupComputationTimeLabel =
+            !anyPending && groupSpan
+              ? `Computation Time: ${formatShortDuration(
+                  groupSpan.endedAt - groupSpan.startedAt,
+                )}`
               : undefined;
 
           return (
@@ -495,6 +511,8 @@ export function createChatTurnPresentation({
                   isCompleted={isCompleted}
                   toolCount={toolCount}
                   summaryLabel={summaryLabel}
+                  startedAt={groupSpan?.startedAt}
+                  computationTimeLabel={groupComputationTimeLabel}
                 >
                   {segment.parts.map(({part, index}) => {
                     const item = activityByIndex.get(index);

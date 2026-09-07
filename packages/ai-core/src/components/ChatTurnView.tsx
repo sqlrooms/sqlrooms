@@ -237,8 +237,9 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
 
   useRegisterChatSearchBlocks(searchBlockPrefix, searchBlocks);
 
-  const activitySummaryLabel =
-    !model.isActivityRunning && isCompleted && model.leafToolCount > 0
+  const activitySummaryLabel = model.isActivityRunning
+    ? 'Thinking'
+    : isCompleted && model.leafToolCount > 0
       ? `Worked with ${model.leafToolCount} tool${
           model.leafToolCount === 1 ? '' : 's'
         }`
@@ -310,6 +311,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
         errorMessage: errorMessage?.error,
         activitySummaryLabel,
         activityStartedAt,
+        toolTimings,
         computationTimeMs,
         computationTimeLabel,
         responseText,
@@ -334,6 +336,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       errorMessage?.error,
       activitySummaryLabel,
       activityStartedAt,
+      toolTimings,
       computationTimeMs,
       computationTimeLabel,
       responseText,
