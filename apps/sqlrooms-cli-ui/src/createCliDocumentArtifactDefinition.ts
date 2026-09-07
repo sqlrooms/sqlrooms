@@ -7,11 +7,11 @@ import type {CliCapabilityProfile} from './profiles';
 import type {RoomState} from './store-types';
 
 const CLI_ARTIFACT_TITLES = {
-  document: 'Document',
+  'block-document': 'Document',
   dashboard: 'Dashboard',
   pivot: 'Pivot',
   notebook: 'Notebook',
-  markdown: 'Markdown',
+  'markdown-document': 'Markdown',
   'sql-query': 'SQL Query',
   'html-app': 'HTML App',
   python: 'Python',
@@ -42,7 +42,7 @@ export function createCliHeadlessArtifactTypes(profile: CliCapabilityProfile) {
     CLI_ARTIFACT_TYPES.map((type) => [
       type,
       {
-        ...(type === 'document'
+        ...(type === 'block-document'
           ? createCliDocumentArtifactDefinition()
           : {
               label: CLI_ARTIFACT_TITLES[type],

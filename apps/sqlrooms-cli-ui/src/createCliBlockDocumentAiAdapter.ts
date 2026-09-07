@@ -13,7 +13,6 @@ export function createCliBlockDocumentAiAdapter(
 ): BlockDocumentAiAdapter & BlockDocumentMoveBlockAiAdapter {
   const adapter = createBlockDocumentCommandAiAdapter({
     store,
-    isBlockDocumentArtifact: (artifact) => artifact.type === 'document',
   });
 
   return {

@@ -109,10 +109,6 @@
         "description": "MotherDuck connector using the WebAssembly client."
       },
       {
-        "name": "python",
-        "description": "Python runtime, Pyodide adapter, commands, and block primitives for SQLRooms block documents."
-      },
-      {
         "name": "recharts",
         "description": "Responsive charts built with Recharts."
       },
@@ -172,6 +168,10 @@
       {
         "name": "pivot",
         "description": "Slice-driven pivot table UI backed by DuckDB SQL and Vega-Lite charts."
+      },
+      {
+        "name": "python",
+        "description": "Python runtime, Pyodide adapter, commands, and block primitives for SQLRooms block documents."
       },
       {
         "name": "s3-browser",

@@ -8,7 +8,7 @@ import {
 
 function workspace() {
   return {
-    artifacts: {artifactsById: {document: {type: 'document'}}},
+    artifacts: {artifactsById: {document: {type: 'block-document'}}},
     documents: [
       {
         id: 'document',

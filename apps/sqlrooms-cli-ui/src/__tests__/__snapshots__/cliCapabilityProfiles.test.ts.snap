@@ -23,15 +23,15 @@ exports[`CLI capability profiles locks the default capability baseline 1`] = `
   },
   "artifacts": {
     "creatable": [
-      "document",
+      "block-document",
       "dashboard",
     ],
     "runContext": [
-      "document",
+      "block-document",
       "dashboard",
       "pivot",
       "notebook",
-      "markdown",
+      "markdown-document",
       "sql-query",
       "html-app",
       "python",
@@ -82,10 +82,10 @@ exports[`CLI capability profiles locks the document-charts-maps capability basel
   },
   "artifacts": {
     "creatable": [
-      "document",
+      "block-document",
     ],
     "runContext": [
-      "document",
+      "block-document",
     ],
   },
   "blocks": {
@@ -136,11 +136,11 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
   },
   "artifacts": {
     "creatable": [
-      "document",
+      "block-document",
       "dashboard",
       "pivot",
       "notebook",
-      "markdown",
+      "markdown-document",
       "sql-query",
       "html-app",
       "python",
@@ -148,11 +148,11 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
       "app-builder",
     ],
     "runContext": [
-      "document",
+      "block-document",
       "dashboard",
       "pivot",
       "notebook",
-      "markdown",
+      "markdown-document",
       "sql-query",
       "html-app",
       "python",
@@ -172,7 +172,7 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
       "pivot",
       "data-table",
       "map",
-      "markdown",
+      "markdown-document",
       "sql-query",
       "html-app",
       "python",
@@ -181,7 +181,7 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
   "commands": [
     "dashboard",
     "mosaic-dashboard",
-    "markdown",
+    "markdown-document",
     "block-document",
     "cli-block-document",
     "block-document-python",

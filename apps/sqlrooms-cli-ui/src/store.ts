@@ -86,8 +86,8 @@ import {
 import {
   BlockDocumentsSliceConfig,
   createBlockDocumentsSlice,
-  createDocumentsSlice,
-  DocumentsSliceConfig,
+  createMarkdownDocumentsSlice,
+  MarkdownDocumentsSliceConfig,
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
@@ -582,7 +582,7 @@ const sliceConfigSchemas = {
   cells: CellsSliceConfig,
   notebook: NotebookSliceConfig,
   canvas: CanvasSliceConfig,
-  documents: DocumentsSliceConfig,
+  markdownDocuments: MarkdownDocumentsSliceConfig,
   blockDocuments: BlockDocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   htmlApps: HtmlAppRuntimeConfig,
@@ -926,7 +926,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createCanvasSlice()(set, get, store),
 
-        ...createDocumentsSlice()(set, get, store),
+        ...createMarkdownDocumentsSlice()(set, get, store),
 
         ...createBlockDocumentsSlice<RoomState>({
           onCreateOwnedStatefulBlock: ({
@@ -969,9 +969,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
               sync: createCliCrdtSyncConnector(),
               mirrors: {
-                documentState: createDocumentsCrdtMirror<RoomState>({
-                  blockDocumentArtifactTypes: ['document'],
-                }),
+                documentState: createDocumentsCrdtMirror<RoomState>(),
               },
             })(set, get, store)
           : createDisabledCrdtState()),

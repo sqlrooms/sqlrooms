@@ -1,6 +1,20 @@
+# @sqlrooms/deck
+
 Deck.gl integration for SQLRooms with JSON-driven map specs, dataset registry
 binding, DuckDB-backed or in-memory Arrow datasets, and GeoArrow-first geometry
 preparation.
+
+## Package entry points
+
+| Import                  | Use                                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------------- |
+| `@sqlrooms/deck`        | Host-neutral maps, durable map resources, block-document integration, and authoring tools |
+| `@sqlrooms/deck/mosaic` | Opt-in Mosaic dashboard renderers, configuration helpers, and AI tools                    |
+
+The [Deck.gl example](https://github.com/sqlrooms/examples/tree/main/deckgl)
+shows direct DuckDB-backed maps. The
+[Deck.gl + Mosaic example](https://github.com/sqlrooms/examples/tree/main/deckgl-mosaic)
+shows custom cross-filter integration.
 
 ## Map resources and dashboard adapters
 
@@ -39,8 +53,12 @@ resource ownership.
 ## Installation
 
 ```bash
-npm install @sqlrooms/deck @sqlrooms/duckdb @sqlrooms/ui
+npm install @sqlrooms/deck @sqlrooms/room-shell apache-arrow
 ```
+
+For Mosaic dashboard integration, also install `@sqlrooms/mosaic`,
+`@uwdata/mosaic-core`, and `@uwdata/mosaic-sql`, then import the adapter from
+`@sqlrooms/deck/mosaic`.
 
 ## What This Package Does
 
@@ -59,6 +77,10 @@ Use this package when you want deck.gl layers to be driven by a JSON-like spec
 instead of hand-constructing deck layer instances in React code.
 
 ## Quick Start
+
+`DeckJsonMap` resolves SQL and table datasets through the current SQLRooms
+store. Render it inside `RoomShell` or `RoomStateProvider` with a store that
+includes DuckDB state. The example below assumes that host is already mounted.
 
 ```tsx
 import {DeckJsonMap} from '@sqlrooms/deck';
@@ -87,7 +109,8 @@ const spec = {
         scheme: 'YlOrRd',
         domain: 'auto',
       },
-      getRadius: '@@=6',
+      getRadius: 6,
+      radiusUnits: 'pixels',
       radiusMinPixels: 2,
     },
   ],
@@ -230,10 +253,11 @@ const spec = createDeckJsonSpecFromDatasets({
 
 ## Mosaic Dashboard Renderer
 
-`@sqlrooms/deck` can contribute a `deck-json-map` panel renderer to
+`@sqlrooms/deck/mosaic` contributes a `deck-json-map` panel renderer to
 `@sqlrooms/mosaic` dashboards without making the Mosaic package depend on
-deck.gl or MapLibre. Pass the renderer when creating the Mosaic dashboard
-slice.
+deck.gl or MapLibre. `createDeckMapDashboardSliceOptions()` installs the map
+renderer and add-panel action alongside the default Mosaic renderers, actions,
+and chart types.
 
 The dashboard renderer exposes `DeckMapDashboardSettings` through its renderer
 definition. `DeckMapBlockSettings` is also exported for block-document hosts
@@ -242,20 +266,13 @@ that embed maps as stateful blocks.
 ```tsx
 import {
   createDeckMapDashboardPanelConfig,
-  DECK_MAP_DASHBOARD_PANEL_TYPE,
-  deckMapDashboardPanelRenderer,
-} from '@sqlrooms/deck';
-import {
-  createDefaultMosaicDashboardPanelRenderers,
-  createMosaicDashboardSlice,
-  MosaicDashboard,
-} from '@sqlrooms/mosaic';
+  createDeckMapDashboardSliceOptions,
+} from '@sqlrooms/deck/mosaic';
+import {createMosaicDashboardSlice, MosaicDashboard} from '@sqlrooms/mosaic';
 
-const dashboardSlice = createMosaicDashboardSlice({
-  panelRenderers: createDefaultMosaicDashboardPanelRenderers({
-    [DECK_MAP_DASHBOARD_PANEL_TYPE]: deckMapDashboardPanelRenderer,
-  }),
-});
+const dashboardSlice = createMosaicDashboardSlice(
+  createDeckMapDashboardSliceOptions(),
+);
 
 function Dashboard() {
   return <MosaicDashboard dashboardId="geo" />;
@@ -329,6 +346,10 @@ as durable resources without creating a dashboard. Compose
 `createDeckMapsSlice()` into the room store, call
 `ensureDeckMapResourceState(...)` for a durable map id, and render it with
 `DeckMapBlockRenderer`.
+
+See [Blocks and Block Documents](https://sqlrooms.org/blocks-and-documents.html)
+for the surrounding artifact, renderer-provider, persistence, and ownership
+setup.
 
 Runtime issue recovery can call `deckMaps.clearMapIssue(mapId, kind)` to clear
 only a matching issue kind; omit `kind` when the map state should clear any
@@ -737,7 +758,7 @@ Deck caches only the expensive geometry preparation layer on top.
 
 ## Supported Layers
 
-The current curated layer set is:
+The map-resource validator and settings UI support this curated layer set:
 
 - `GeoArrowScatterplotLayer`
 - `GeoArrowHeatmapLayer`
@@ -748,6 +769,10 @@ The current curated layer set is:
 - `GeoArrowTripsLayer`
 - `GeoArrowH3HexagonLayer`
 - `GeoJsonLayer`
+
+The lower-level `DeckJsonMap` JSON converter also registers
+`GeoArrowSolidPolygonLayer`. Durable resource and AI authoring intentionally do
+not accept it; use `GeoArrowPolygonLayer` for authored map resources.
 
 GeoArrow-native geometry columns are the efficient path. WKB/WKT geometry falls
 back to decoding and GeoJSON-binary preparation, with promotion available
@@ -768,7 +793,7 @@ not rewritten — the wrap is an outer pipeline query. Prefer writing
 `ST_AsWKB(...)` in transforms when you control the SQL; the pipeline covers
 bare `ST_Point(...)` / table `GEOMETRY` columns for every authoring surface.
 
-## AI map config prepare
+## Prepare AI-authored map configs
 
 AI and host tooling should prepare authored Deck map configs through the shared
 helpers exported from `@sqlrooms/deck`:
@@ -792,6 +817,11 @@ helpers exported from `@sqlrooms/deck`:
   Skips unknown-field rejection when `transformSql` / `sqlQuery` is present
   (aliases may be transform-only).
 
+Mosaic-specific AI helpers such as `createDeckMapDashboardTool()`,
+`createDashboardWithDeckMapAiTools()`, and
+`createDashboardAgentToolWithDeckMaps()` are exported from
+`@sqlrooms/deck/mosaic`.
+
 Durable resource writes also run `getDeckMapResourceConfigIssues` /
 `assertDeckMapResourceConfig` for syntax, supported layer types, and type/scheme
 compatibility (e.g. `quantile` + `Viridis` is rejected; layer `@@type` must be
@@ -808,3 +838,11 @@ Keep the spec serializable, then pass runtime behavior separately:
 
 This lets the spec stay stable for storage, validation, and future AI-assisted
 generation while still supporting interactive React behavior at runtime.
+
+## More resources
+
+- [`@sqlrooms/deck` API reference](https://sqlrooms.org/api/deck/)
+- [Deck.gl example source](https://github.com/sqlrooms/examples/tree/main/deckgl)
+- [Deck.gl + Mosaic example source](https://github.com/sqlrooms/examples/tree/main/deckgl-mosaic)
+- [Blocks and Block Documents](https://sqlrooms.org/blocks-and-documents.html)
+- [Commands](https://sqlrooms.org/commands.html)

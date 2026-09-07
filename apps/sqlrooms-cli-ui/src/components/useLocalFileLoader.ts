@@ -26,13 +26,14 @@ function getCurrentOrFirstDocumentArtifactId(
     ? state.artifacts.config.artifactsById[currentArtifactId]
     : undefined;
 
-  if (currentArtifact?.type === 'document') {
+  if (currentArtifact?.type === 'block-document') {
     return currentArtifactId;
   }
 
   return state.artifacts.config.artifactOrder.find(
     (artifactId) =>
-      state.artifacts.config.artifactsById[artifactId]?.type === 'document',
+      state.artifacts.config.artifactsById[artifactId]?.type ===
+      'block-document',
   );
 }
 
@@ -45,7 +46,7 @@ function ensureImportDocumentForTable(
   const documentArtifactId =
     getCurrentOrFirstDocumentArtifactId(state) ??
     state.artifacts.createArtifact({
-      type: 'document',
+      type: 'block-document',
       title: 'Document',
     });
 

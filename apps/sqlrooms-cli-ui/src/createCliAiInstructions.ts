@@ -5,7 +5,7 @@ import type {CliCapabilityProfile} from './profiles';
 import type {RoomState} from './store-types';
 
 const STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS = `
-In the SQLRooms CLI app, a Document is a block document artifact. When the user asks to create, edit, or add content to a document, target the current document artifact using block-document commands and block-document agent tools. Use the word Document in user-facing replies, but use block-document tool names and command IDs when invoking tools. Its artifact type is "document" and its editable content model is a block document.
+In the SQLRooms CLI app, a Document is a block document artifact. When the user asks to create, edit, or add content to a document, target the current document artifact using block-document commands and block-document agent tools. Use the word Document in user-facing replies, but use block-document tool names and command IDs when invoking tools. Its artifact type is "block-document".
 
 When the user's primary context artifact is a document or dashboard and they ask to add, update, or create a visualization, chart, or dashboard surface, mutate that artifact through the appropriate agent tool instead of creating a separate artifact, chat-only chart, or markdown image.
 

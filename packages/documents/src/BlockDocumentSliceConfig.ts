@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {DocumentAsset} from './DocumentsSliceConfig';
+import {DocumentAsset} from './DocumentAsset';
 
 export type BlockDocumentMark = {
   type: string;

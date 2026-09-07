@@ -32,23 +32,20 @@ type PythonBlockCommandState = BaseRoomStoreState &
     };
   };
 
+/** Presentation options for canonical block-document Python commands. */
 export type CreatePythonBlockCommandsOptions = {
-  artifactType?: string;
-  artifactLabel?: string;
-  commandNamespace?: string;
   commandGroup?: string;
 };
 
-function createPythonBlockInputSchemas(artifactLabel: string) {
-  const artifactIdDescription = `Target ${artifactLabel.toLowerCase()} artifact ID.`;
+function createPythonBlockInputSchemas() {
   const PythonBlockInput = z.object({
-    artifactId: z.string().describe(artifactIdDescription),
+    artifactId: z.string().describe('Target block document artifact ID.'),
     blockId: z.string().describe('Document Python block ID.'),
   });
 
   return {
     AddPythonBlockInput: z.object({
-      artifactId: z.string().describe(artifactIdDescription),
+      artifactId: z.string().describe('Target block document artifact ID.'),
       blockId: z.string().optional().describe('Optional document block ID.'),
       blockInstanceId: z
         .string()
@@ -78,30 +75,16 @@ function createPythonBlockInputSchemas(artifactLabel: string) {
   };
 }
 
-function keywordParts(...values: string[]) {
-  return Array.from(
-    new Set(
-      values
-        .flatMap((value) => value.toLowerCase().split(/[-_\s]+/))
-        .filter(Boolean),
-    ),
-  );
-}
-
 /** Creates command-backed Python block operations for block document artifacts. */
 export function createPythonBlockCommands<
   TRoomState extends PythonBlockCommandState = PythonBlockCommandState,
 >({
-  artifactType = 'block-document',
-  artifactLabel = 'Block Document',
-  commandNamespace = 'block-document',
-  commandGroup = artifactLabel,
+  commandGroup = 'Block Document',
 }: CreatePythonBlockCommandsOptions = {}): RoomCommand<TRoomState>[] {
   const commandId = (suffix: PythonBlockCommandSuffix) =>
-    `${commandNamespace}.${suffix}`;
+    `block-document.${suffix}`;
   const {AddPythonBlockInput, PythonBlockInput, UpdatePythonBlockCodeInput} =
-    createPythonBlockInputSchemas(artifactLabel);
-  const artifactKeywords = keywordParts(commandNamespace, artifactLabel);
+    createPythonBlockInputSchemas();
 
   const commands = {
     'add-python-block': {
@@ -110,9 +93,10 @@ export function createPythonBlockCommands<
       description:
         'Create a visible Python block with persisted code and declarations.',
       group: commandGroup,
-      keywords: ['python', 'block', ...artifactKeywords],
+      keywords: ['python', 'block', 'document'],
       inputSchema: AddPythonBlockInput,
-      inputDescription: `${artifactLabel} artifact ID plus optional title, code, inputs, outputs, requirements, and insertion index.`,
+      inputDescription:
+        'Block document artifact ID plus optional title, code, inputs, outputs, requirements, and insertion index.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -121,8 +105,6 @@ export function createPythonBlockCommands<
           state,
           parsed.artifactId,
           commandId('add-python-block'),
-          artifactType,
-          artifactLabel,
         );
         if (!resolved.success) return resolved;
 
@@ -163,9 +145,10 @@ export function createPythonBlockCommands<
       name: 'Update Python block code',
       description: 'Update the code stored for a visible Python block.',
       group: commandGroup,
-      keywords: ['python', 'block', 'code', 'update', ...artifactKeywords],
+      keywords: ['python', 'block', 'code', 'update', 'document'],
       inputSchema: UpdatePythonBlockCodeInput,
-      inputDescription: `${artifactLabel} artifact ID, Python block ID, replacement code, and optional run flag.`,
+      inputDescription:
+        'Block document artifact ID, Python block ID, replacement code, and optional run flag.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'high'},
       execute: async ({getState}, input) => {
         const state = getState();
@@ -175,8 +158,6 @@ export function createPythonBlockCommands<
           parsed.artifactId,
           parsed.blockId,
           commandId('update-python-block-code'),
-          artifactType,
-          artifactLabel,
         );
         if (!block.success) return block;
         state.python.updateBlockCode(block.block.blockInstanceId, parsed.code);
@@ -211,9 +192,9 @@ export function createPythonBlockCommands<
       description:
         'Run a visible Python block through the configured Python runtime adapter.',
       group: commandGroup,
-      keywords: ['python', 'block', 'run', 'execute', ...artifactKeywords],
+      keywords: ['python', 'block', 'run', 'execute', 'document'],
       inputSchema: PythonBlockInput,
-      inputDescription: `${artifactLabel} artifact ID and Python block ID.`,
+      inputDescription: 'Block document artifact ID and Python block ID.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'high'},
       execute: async ({getState}, input) => {
         const state = getState();
@@ -223,8 +204,6 @@ export function createPythonBlockCommands<
           parsed.artifactId,
           parsed.blockId,
           commandId('run-python-block'),
-          artifactType,
-          artifactLabel,
         );
         if (!block.success) return block;
         const result = await state.python.runBlock(
@@ -255,9 +234,9 @@ export function createPythonBlockCommands<
       name: 'Clear Python block result',
       description: 'Clear the persisted result summary for a Python block.',
       group: commandGroup,
-      keywords: ['python', 'block', 'clear', 'result', ...artifactKeywords],
+      keywords: ['python', 'block', 'clear', 'result', 'document'],
       inputSchema: PythonBlockInput,
-      inputDescription: `${artifactLabel} artifact ID and Python block ID.`,
+      inputDescription: 'Block document artifact ID and Python block ID.',
       metadata: {readOnly: false, idempotent: true, riskLevel: 'low'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -267,8 +246,6 @@ export function createPythonBlockCommands<
           parsed.artifactId,
           parsed.blockId,
           commandId('clear-python-block-result'),
-          artifactType,
-          artifactLabel,
         );
         if (!block.success) return block;
         state.python.clearBlockResult(block.block.blockInstanceId);
@@ -292,8 +269,6 @@ function resolveBlockDocumentArtifact(
   state: PythonBlockCommandState,
   artifactId: string,
   commandId: string,
-  artifactType: string,
-  artifactLabel: string,
 ) {
   const artifact = state.artifacts.getArtifact(artifactId);
   if (!artifact) {
@@ -303,11 +278,11 @@ function resolveBlockDocumentArtifact(
       error: `Unknown artifact "${artifactId}".`,
     };
   }
-  if (artifact.type !== artifactType) {
+  if (artifact.type !== 'block-document') {
     return {
       success: false as const,
       commandId,
-      error: `Artifact "${artifactId}" is not a ${artifactLabel} artifact.`,
+      error: `Artifact "${artifactId}" is not a block document artifact.`,
     };
   }
   return {success: true as const, artifact};
@@ -318,16 +293,8 @@ function resolvePythonBlock(
   artifactId: string,
   blockId: string,
   commandId: string,
-  artifactType: string,
-  artifactLabel: string,
 ) {
-  const resolved = resolveBlockDocumentArtifact(
-    state,
-    artifactId,
-    commandId,
-    artifactType,
-    artifactLabel,
-  );
+  const resolved = resolveBlockDocumentArtifact(state, artifactId, commandId);
   if (!resolved.success) return resolved;
 
   const block = state.blockDocuments

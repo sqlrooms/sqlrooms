@@ -404,6 +404,7 @@ not be stored.
 ## Add custom tools
 
 ```tsx
+import {tool} from 'ai';
 import {z} from 'zod';
 import {
   createAiSlice,
@@ -415,19 +416,16 @@ import {
 createAiSlice({
   tools: {
     ...createDefaultAiTools(store),
-    echo: {
-      name: 'echo',
+    echo: tool({
       description: 'Return user text back to the chat',
-      parameters: z.object({
+      inputSchema: z.object({
         text: z.string(),
       }),
       execute: async ({text}) => ({
-        llmResult: {
-          success: true,
-          details: `Echo: ${text}`,
-        },
+        success: true,
+        details: `Echo: ${text}`,
       }),
-    },
+    }),
   },
   getInstructions: () => createDefaultAiInstructions(store),
 })(set, get, store);

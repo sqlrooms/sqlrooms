@@ -146,9 +146,12 @@ These fields are supplied by the LLM when invoking the tool (not passed into
 
 ## Markdown document image assets
 
+The host store must include `MarkdownDocumentsSliceState`; image assets are stored
+in `store.markdownDocuments` alongside the document’s Markdown content.
+
 `createChartImageForMarkdownTool(store)` creates an AI-only companion tool that
 renders a Vega chart to SVG or PNG, stores it as an asset on a
-`@sqlrooms/documents` Markdown artifact, and returns a ready-to-insert Markdown
+`@sqlrooms/documents` `markdown-document` artifact, and returns a ready-to-insert Markdown
 image link such as:
 
 ```md
@@ -168,5 +171,4 @@ and written into the SVG/PNG as a concrete color. The tool also accepts
 
 ## Example apps
 
-- Vega example: https://github.com/sqlrooms/examples/tree/main/vega
 - AI example (with chart tool): https://github.com/sqlrooms/examples/tree/main/ai

@@ -16,7 +16,7 @@ import {
   useRef,
 } from 'react';
 import type {BlockDocumentContent} from '../BlockDocumentSliceConfig';
-import type {DocumentAsset} from '../DocumentsSliceConfig';
+import type {DocumentAsset} from '../DocumentAsset';
 import {useBlockSettingsStore} from '../block-settings/useBlockSettingsStore';
 import {
   BlockDocumentBlockIdExtension,

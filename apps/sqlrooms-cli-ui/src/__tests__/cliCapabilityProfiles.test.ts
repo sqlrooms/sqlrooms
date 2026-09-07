@@ -29,7 +29,7 @@ describe('CLI capability profiles', () => {
 
   it('keeps disabled default capabilities out of UI and AI exposure', () => {
     expect(DEFAULT_CLI_CAPABILITY_PROFILE.artifacts.creatable).toEqual([
-      'document',
+      'block-document',
       'dashboard',
     ]);
     expect(DEFAULT_CLI_CAPABILITY_PROFILE.blocks.stateful).toEqual([
@@ -60,7 +60,7 @@ describe('CLI capability profiles', () => {
 
   it('keeps the document charts/maps profile dashboard-free', () => {
     const profile = DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE;
-    expect(profile.artifacts.creatable).toEqual(['document']);
+    expect(profile.artifacts.creatable).toEqual(['block-document']);
     expect(profile.blocks.stateful).toEqual(['map']);
     expect(profile.blocks.aiContext).toEqual(['chart', 'map']);
     expect(profile.ai.topLevelToolGroups).not.toContain('dashboard-agent');

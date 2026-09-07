@@ -5,12 +5,12 @@ describe('buildKnowledgeIndex', () => {
     const index = buildKnowledgeIndex({
       artifacts: {
         artifactsById: {
-          a: {id: 'a', type: 'markdown', title: 'Alpha'},
-          b: {id: 'b', type: 'markdown', title: 'Beta'},
+          a: {id: 'a', type: 'markdown-document', title: 'Alpha'},
+          b: {id: 'b', type: 'markdown-document', title: 'Beta'},
         },
         artifactOrder: ['a', 'b'],
       },
-      documents: {
+      markdownDocuments: {
         artifacts: {
           a: {id: 'a', markdown: 'See [[Beta]].', updatedAt: 0},
           b: {id: 'b', markdown: '', updatedAt: 0},
@@ -34,13 +34,13 @@ describe('buildKnowledgeIndex', () => {
     const index = buildKnowledgeIndex({
       artifacts: {
         artifactsById: {
-          a: {id: 'a', type: 'markdown', title: 'Alpha'},
-          b: {id: 'b', type: 'markdown', title: 'Duplicate'},
-          c: {id: 'c', type: 'markdown', title: 'Duplicate'},
+          a: {id: 'a', type: 'markdown-document', title: 'Alpha'},
+          b: {id: 'b', type: 'markdown-document', title: 'Duplicate'},
+          c: {id: 'c', type: 'markdown-document', title: 'Duplicate'},
         },
         artifactOrder: ['a', 'b', 'c'],
       },
-      documents: {
+      markdownDocuments: {
         artifacts: {
           a: {
             id: 'a',
@@ -72,11 +72,11 @@ describe('buildKnowledgeIndex', () => {
     const index = buildKnowledgeIndex({
       artifacts: {
         artifactsById: {
-          a: {id: 'a', type: 'markdown', title: 'Alpha'},
+          a: {id: 'a', type: 'markdown-document', title: 'Alpha'},
         },
         artifactOrder: ['a'],
       },
-      documents: {
+      markdownDocuments: {
         artifacts: {
           a: {
             id: 'a',
