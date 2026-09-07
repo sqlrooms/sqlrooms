@@ -1,17 +1,18 @@
 import React, {useCallback, useEffect} from 'react';
-import {useShallow} from 'zustand/react/shallow';
 import {MarkdownDocumentEditor} from './MarkdownDocumentEditor';
 import {useStoreWithMarkdownDocuments} from './useStoreWithMarkdownDocuments';
 
 export const MarkdownDocument: React.FC<{artifactId: string}> = ({
   artifactId,
 }) => {
-  const {document, ensureDocument, setMarkdown} = useStoreWithMarkdownDocuments(
-    useShallow((state) => ({
-      document: state.markdownDocuments.config.artifacts[artifactId],
-      ensureDocument: state.markdownDocuments.ensureDocument,
-      setMarkdown: state.markdownDocuments.setMarkdown,
-    })),
+  const document = useStoreWithMarkdownDocuments(
+    (state) => state.markdownDocuments.config.artifacts[artifactId],
+  );
+  const ensureDocument = useStoreWithMarkdownDocuments(
+    (state) => state.markdownDocuments.ensureDocument,
+  );
+  const setMarkdown = useStoreWithMarkdownDocuments(
+    (state) => state.markdownDocuments.setMarkdown,
   );
 
   useEffect(() => {

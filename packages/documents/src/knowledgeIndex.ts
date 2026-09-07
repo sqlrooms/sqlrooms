@@ -32,6 +32,7 @@ export type KnowledgeIndex = {
   unresolvedLinks: UnresolvedDocumentLink[];
 };
 
+/** Markdown document content and artifact metadata used to index links and tags. */
 export type BuildKnowledgeIndexProps = {
   markdownDocuments: MarkdownDocumentsSliceConfig;
   artifacts: ArtifactsSliceConfigType;

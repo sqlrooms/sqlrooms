@@ -24,4 +24,5 @@ export const DocumentAsset = z.discriminatedUnion('mediaType', [
     encoding: z.literal('base64'),
   }),
 ]);
+/** Persisted SVG or PNG image asset shared by Markdown and block documents. */
 export type DocumentAsset = z.infer<typeof DocumentAsset>;

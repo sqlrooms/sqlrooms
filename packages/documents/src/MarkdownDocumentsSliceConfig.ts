@@ -32,6 +32,7 @@ export const MarkdownDocumentsSliceConfig = z.object({
       }
     }),
 });
+/** Persisted Markdown document records keyed by their matching artifact IDs. */
 export type MarkdownDocumentsSliceConfig = z.infer<
   typeof MarkdownDocumentsSliceConfig
 >;

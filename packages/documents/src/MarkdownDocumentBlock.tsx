@@ -7,10 +7,12 @@ import type {ComponentType} from 'react';
 import {MarkdownDocument} from './MarkdownDocument';
 import type {MarkdownDocumentsSliceState} from './MarkdownDocumentsSlice';
 
+/** Renderer props for a Markdown document block whose block ID identifies its stored document. */
 export type MarkdownDocumentBlockRenderProps<
   TRoomState extends MarkdownDocumentsSliceState = MarkdownDocumentsSliceState,
 > = StatefulBlockRenderProps<TRoomState>;
 
+/** Custom renderer, labels, and initial content for Markdown document blocks. */
 export type CreateMarkdownDocumentBlockDefinitionOptions<
   TRoomState extends MarkdownDocumentsSliceState = MarkdownDocumentsSliceState,
 > = {
@@ -26,6 +28,10 @@ const DefaultMarkdownDocumentBlock = ({
   return <MarkdownDocument artifactId={blockId} />;
 };
 
+/**
+ * Creates an embeddable `markdown-document` block definition backed by the
+ * Markdown documents slice. Ensures and deletes document state by block ID.
+ */
 export function createMarkdownDocumentBlockDefinition<
   TRoomState extends MarkdownDocumentsSliceState = MarkdownDocumentsSliceState,
 >({

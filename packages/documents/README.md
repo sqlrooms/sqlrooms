@@ -107,9 +107,9 @@ Markdown artifacts can reference artifact-owned assets with `asset://` URLs:
 Pass the artifact asset map to `MarkdownDocumentEditor` to render those links as
 browser-loadable image data while preserving the canonical `asset://` link in
 Markdown source. `MarkdownDocument` handles this automatically for artifacts
-stored in the documents slice.
+stored in the `markdownDocuments` slice.
 
-The documents slice exposes `upsertAsset`, `removeAsset`, and `getAsset` for
+The `markdownDocuments` slice exposes `upsertAsset`, `removeAsset`, and `getAsset` for
 managing image assets alongside Markdown content. SVG assets may use `utf8` or
 `base64` encoding; PNG assets must use `base64` encoding.
 
