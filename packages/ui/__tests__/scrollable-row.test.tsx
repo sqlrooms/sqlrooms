@@ -98,6 +98,24 @@ describe('ScrollableRow', () => {
       ),
     ],
     [
+      'nested hidden attribute',
+      (wide: boolean) => (
+        <div style={{width: 100, height: 20, whiteSpace: 'nowrap'}}>
+          <span hidden={!wide}>The text stays unchanged</span>
+        </div>
+      ),
+    ],
+    [
+      'nested data attribute used by a CSS selector',
+      (wide: boolean) => (
+        <div style={{width: 100, height: 20}}>
+          <span data-wrap={wide ? 'nowrap' : 'normal'}>
+            The text stays unchanged
+          </span>
+        </div>
+      ),
+    ],
+    [
       'nested style',
       (wide: boolean) => (
         <div style={{width: 100, height: 20}}>

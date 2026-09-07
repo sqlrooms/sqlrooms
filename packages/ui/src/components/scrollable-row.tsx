@@ -104,11 +104,11 @@ export const ScrollableRow = React.forwardRef<
       updateScrollState();
     });
     // Text and styling can change overflow without resizing a direct child.
+    // Observe all attributes: hidden and arbitrary CSS selectors affect layout too.
     mutationObserver.observe(container, {
       childList: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ['class', 'style'],
       subtree: true,
     });
 
