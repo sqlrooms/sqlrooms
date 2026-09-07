@@ -69,14 +69,13 @@ const ActivityHeader: React.FC<{
     <button
       type="button"
       onClick={canToggle ? onToggle : undefined}
+      aria-expanded={isOpen}
       aria-disabled={!canToggle}
       className={cn(
         'flex w-full items-center gap-1.5 px-3 py-1.5 text-xs transition-colors',
         canToggle && 'hover:bg-muted/40 cursor-pointer',
       )}
     >
-      {/* The brand tint marks work in progress; a settled group reads as
-          ordinary chrome. */}
       <SparklesIcon
         className={cn(
           'size-3.5 shrink-0',
