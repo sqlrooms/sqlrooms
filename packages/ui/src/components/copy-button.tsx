@@ -1,17 +1,16 @@
 'use client';
 
-import {CheckIcon, CopyIcon} from 'lucide-react';
+import { CheckIcon, CopyIcon } from 'lucide-react';
 import * as React from 'react';
-import {cn} from '../lib/utils';
-import {Button, type ButtonProps} from './button';
-import {Tooltip, TooltipContent, TooltipTrigger} from './tooltip';
+import { cn } from '../lib/utils';
+import { Button, type ButtonProps } from './button';
+import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
 
 export interface CopyButtonProps {
   text: string | (() => string);
   variant?: ButtonProps['variant'];
   size?: ButtonProps['size'];
   className?: string;
-  /** Class applied to the copy/check icon, for callers that need a size other than 16px. */
   iconClassName?: string;
   tooltipLabel?: string;
   ariaLabel?: string;
