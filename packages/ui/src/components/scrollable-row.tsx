@@ -92,11 +92,23 @@ export const ScrollableRow = React.forwardRef<
     };
     observeChildren();
 
-    const mutationObserver = new MutationObserver(() => {
-      observeChildren();
+    const mutationObserver = new MutationObserver((mutations) => {
+      // Only direct child additions/removals change the resize-observer targets.
+      if (
+        mutations.some(
+          ({type, target}) => type === 'childList' && target === container,
+        )
+      ) {
+        observeChildren();
+      }
       updateScrollState();
     });
-    mutationObserver.observe(container, {childList: true});
+    // Text and nested content can change overflow without resizing a direct child.
+    mutationObserver.observe(container, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
 
     return () => {
       container.removeEventListener('scroll', updateScrollState);
@@ -107,8 +119,8 @@ export const ScrollableRow = React.forwardRef<
     // `children` is intentionally excluded from the deps: it is typically a
     // fresh array on every parent render, and re-running this effect (which
     // calls setState) on every render would trip React's "Maximum update depth
-    // exceeded" warning. Content changes are handled instead by observing the
-    // child elements above; the scroll listener covers user/dnd scrolling.
+    // exceeded" warning. Content changes are handled by the resize and mutation
+    // observers above; the scroll listener covers user/dnd scrolling.
   }, [containerRef]);
 
   const arrowBaseClass = cn(
