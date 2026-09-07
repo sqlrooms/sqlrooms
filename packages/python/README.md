@@ -1,3 +1,7 @@
+# @sqlrooms/python
+
+> **Experimental:** This package's API and behavior may change between releases.
+
 Python runtime and block primitives for SQLRooms block documents.
 
 This package provides:

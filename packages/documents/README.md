@@ -1,5 +1,11 @@
+# @sqlrooms/documents
+
 Artifact-scoped Markdown documents, structured block documents, and
 knowledge-index utilities for SQLRooms.
+
+See the
+[Blocks and Block Documents developer guide](https://sqlrooms.org/blocks-and-documents)
+for the conceptual model, ownership rules, and a focused host setup.
 
 ## Usage
 

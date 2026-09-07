@@ -2,6 +2,8 @@ This package is part of the SQLRooms framework.
 
 # S3 Browser
 
+> **Experimental:** This package's API and behavior may change between releases.
+
 A React component library for browsing and interacting with S3-compatible storage services.
 
 ![S3 File Browser Interface](https://github.com/user-attachments/assets/dd79fbb9-c487-4050-96ef-81cff39930d3)
