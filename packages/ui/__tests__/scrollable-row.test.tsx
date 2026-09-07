@@ -1,6 +1,7 @@
 /**
  * @jest-environment jsdom
  */
+import {jest} from '@jest/globals';
 import React, {act} from 'react';
 import {createRoot} from 'react-dom/client';
 import {ScrollableRow} from '../src/components/scrollable-row';
@@ -214,6 +215,63 @@ describe('ScrollableRow', () => {
       ResizeObserverStub.instances.every(({targets}) => targets.size === 0),
     ).toBe(true);
   });
+
+  it.each(['loadingdone', 'loadingerror'])(
+    'refreshes direct-text overflow after fonts emit %s and cleans up listeners',
+    async (eventType) => {
+      // jsdom has no FontFaceSet. Use real events with mocked layout metrics.
+      const fonts = new EventTarget();
+      const originalFonts = Object.getOwnPropertyDescriptor(document, 'fonts');
+      Object.defineProperty(document, 'fonts', {
+        configurable: true,
+        value: fonts,
+      });
+      const addListener = jest.spyOn(fonts, 'addEventListener');
+      const removeListener = jest.spyOn(fonts, 'removeEventListener');
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        await act(async () => {
+          root.render(
+            <ScrollableRow>Direct text in a late-loading font</ScrollableRow>,
+          );
+        });
+        const wrapper = host.firstElementChild!;
+        const scrollContainer = wrapper.children[1]!;
+        let scrollWidth = 100;
+        Object.defineProperties(scrollContainer, {
+          clientWidth: {get: () => 100},
+          scrollWidth: {get: () => scrollWidth},
+        });
+        const right = wrapper.querySelector<HTMLButtonElement>(
+          '[aria-label="Scroll right"]',
+        )!;
+        expect(scrollContainer.children.length).toBe(0);
+        expect(right.disabled).toBe(true);
+
+        for (const width of [600, 100]) {
+          await act(async () => {
+            scrollWidth = width;
+            fonts.dispatchEvent(new Event(eventType));
+          });
+          expect(right.disabled).toBe(width === 100);
+        }
+      } finally {
+        await act(async () => root.unmount());
+        host.remove();
+        if (originalFonts) {
+          Object.defineProperty(document, 'fonts', originalFonts);
+        } else {
+          Reflect.deleteProperty(document, 'fonts');
+        }
+      }
+      expect(addListener).toHaveBeenCalled();
+      for (const [type, listener] of addListener.mock.calls) {
+        expect(removeListener).toHaveBeenCalledWith(type, listener);
+      }
+    },
+  );
 
   it('forwards its ref to a real DOM node and passes through a data- prop', async () => {
     const ref: React.RefObject<HTMLDivElement | null> = {current: null};

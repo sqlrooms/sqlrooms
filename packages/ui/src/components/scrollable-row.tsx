@@ -112,17 +112,25 @@ export const ScrollableRow = React.forwardRef<
       subtree: true,
     });
 
+    // Font metrics can change direct-text overflow without a DOM mutation or
+    // an element resize. Refresh after font loading settles, including failures.
+    const fonts = container.ownerDocument.fonts;
+    fonts?.addEventListener('loadingdone', updateScrollState);
+    fonts?.addEventListener('loadingerror', updateScrollState);
+
     return () => {
       container.removeEventListener('scroll', updateScrollState);
       resizeObserver.disconnect();
       contentObserver.disconnect();
       mutationObserver.disconnect();
+      fonts?.removeEventListener('loadingdone', updateScrollState);
+      fonts?.removeEventListener('loadingerror', updateScrollState);
     };
     // `children` is intentionally excluded from the deps: it is typically a
     // fresh array on every parent render, and re-running this effect (which
     // calls setState) on every render would trip React's "Maximum update depth
-    // exceeded" warning. Content changes are handled by the resize and mutation
-    // observers above; the scroll listener covers user/dnd scrolling.
+    // exceeded" warning. DOM observers and font events handle content changes;
+    // the scroll listener covers user/dnd scrolling.
   }, [containerRef]);
 
   const arrowBaseClass = cn(
