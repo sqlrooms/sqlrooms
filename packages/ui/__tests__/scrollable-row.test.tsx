@@ -7,9 +7,22 @@ import {ScrollableRow} from '../src/components/scrollable-row';
 
 // jsdom does not implement ResizeObserver.
 class ResizeObserverStub {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  static instances: ResizeObserverStub[] = [];
+  readonly targets = new Set<Element>();
+
+  constructor(readonly callback: ResizeObserverCallback) {
+    ResizeObserverStub.instances.push(this);
+  }
+
+  observe(target: Element) {
+    this.targets.add(target);
+  }
+  unobserve(target: Element) {
+    this.targets.delete(target);
+  }
+  disconnect() {
+    this.targets.clear();
+  }
 }
 
 Object.assign(globalThis, {
@@ -18,6 +31,10 @@ Object.assign(globalThis, {
 });
 
 describe('ScrollableRow', () => {
+  beforeEach(() => {
+    ResizeObserverStub.instances = [];
+  });
+
   it.each([
     [
       'direct text',
@@ -50,11 +67,53 @@ describe('ScrollableRow', () => {
           : []),
       ],
     ],
+    [
+      'className on a fixed-size child',
+      (wide: boolean) => (
+        <div style={{width: 100, height: 20}} className={wide ? 'nowrap' : ''}>
+          The text stays unchanged
+        </div>
+      ),
+    ],
+    [
+      'style on a fixed-size child',
+      (wide: boolean) => (
+        <div
+          style={{
+            width: 100,
+            height: 20,
+            whiteSpace: wide ? 'nowrap' : 'normal',
+          }}
+        >
+          The text stays unchanged
+        </div>
+      ),
+    ],
+    [
+      'nested className',
+      (wide: boolean) => (
+        <div style={{width: 100, height: 20}}>
+          <span className={wide ? 'nowrap' : ''}>The text stays unchanged</span>
+        </div>
+      ),
+    ],
+    [
+      'nested style',
+      (wide: boolean) => (
+        <div style={{width: 100, height: 20}}>
+          <span style={{whiteSpace: wide ? 'nowrap' : 'normal'}}>
+            The text stays unchanged
+          </span>
+        </div>
+      ),
+    ],
   ])('refreshes arrows after %s changes', async (_name, content) => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
+    let scrollWidth = 100;
     const render = async (wide: boolean) => {
+      scrollWidth = wide ? 600 : 100;
       await act(async () => {
         root.render(<ScrollableRow>{content(wide)}</ScrollableRow>);
       });
@@ -65,13 +124,10 @@ describe('ScrollableRow', () => {
       const wrapper = host.firstElementChild!;
       const scrollContainer = wrapper.children[1]!;
       // jsdom has no layout: model content overflow while keeping the viewport
-      // fixed. ResizeObserver is inert, so only real DOM mutations can refresh it.
+      // fixed. No resize callbacks fire, so only DOM mutations can refresh it.
       Object.defineProperties(scrollContainer, {
         clientWidth: {get: () => 100},
-        scrollWidth: {
-          get: () =>
-            Math.max(100, (scrollContainer.textContent?.length ?? 0) * 10),
-        },
+        scrollWidth: {get: () => scrollWidth},
       });
       const left = wrapper.querySelector<HTMLButtonElement>(
         '[aria-label="Scroll left"]',
@@ -93,6 +149,52 @@ describe('ScrollableRow', () => {
       await act(async () => root.unmount());
       host.remove();
     }
+  });
+
+  it('refreshes arrows when a direct child resizes without a DOM mutation', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(
+          <ScrollableRow>
+            <span>Content with a changing intrinsic size</span>
+          </ScrollableRow>,
+        );
+      });
+      const wrapper = host.firstElementChild!;
+      const scrollContainer = wrapper.children[1]!;
+      const child = scrollContainer.firstElementChild!;
+      let childWidth = 100;
+      Object.defineProperties(scrollContainer, {
+        clientWidth: {get: () => 100},
+        scrollWidth: {get: () => child.clientWidth},
+      });
+      Object.defineProperty(child, 'clientWidth', {get: () => childWidth});
+      const right = wrapper.querySelector<HTMLButtonElement>(
+        '[aria-label="Scroll right"]',
+      )!;
+      const observer = ResizeObserverStub.instances.find((instance) =>
+        instance.targets.has(child),
+      );
+      expect(observer).toBeDefined();
+      expect(right.disabled).toBe(true);
+
+      for (const width of [600, 100]) {
+        await act(async () => {
+          childWidth = width;
+          observer!.callback([], observer!);
+        });
+        expect(right.disabled).toBe(width === 100);
+      }
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+    expect(
+      ResizeObserverStub.instances.every(({targets}) => targets.size === 0),
+    ).toBe(true);
   });
 
   it('forwards its ref to a real DOM node and passes through a data- prop', async () => {

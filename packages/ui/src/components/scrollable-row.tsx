@@ -103,10 +103,12 @@ export const ScrollableRow = React.forwardRef<
       }
       updateScrollState();
     });
-    // Text and nested content can change overflow without resizing a direct child.
+    // Text and styling can change overflow without resizing a direct child.
     mutationObserver.observe(container, {
       childList: true,
       characterData: true,
+      attributes: true,
+      attributeFilter: ['class', 'style'],
       subtree: true,
     });
 
