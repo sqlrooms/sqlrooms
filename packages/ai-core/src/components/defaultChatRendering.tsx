@@ -61,7 +61,7 @@ export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
   attachmentSearchBlockIds,
   searchBlockId,
 }) => (
-  <div className="group/prompt bg-muted relative ml-auto flex w-fit max-w-[85%] flex-col gap-2 rounded-md border p-2 text-sm">
+  <div className="group/prompt bg-muted relative ml-auto flex w-fit max-w-[85%] flex-col gap-2 rounded-md p-2 text-sm">
     {attachments.length > 0 ? (
       <div className="flex max-w-full flex-wrap justify-end gap-2">
         {attachments.map((attachment, index) => (
@@ -80,10 +80,11 @@ export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
         </div>
       </ExpandableContent>
     </div>
-    <div className="absolute top-1/2 right-full mr-1 shrink-0 -translate-y-1/2 opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
+    <div className="absolute top-0 right-full mr-1 shrink-0">
       <CopyButton
         text={prompt}
         className="h-6 w-6"
+        iconClassName="h-2.5 w-2.5"
         tooltipLabel="Copy prompt"
       />
     </div>
@@ -95,22 +96,20 @@ export const DefaultChatActivity: React.FC<ChatActivityProps> = ({
   children,
   isRunning,
   summaryLabel,
-  computationTimeLabel,
+  startedAt,
+  toolCount,
   className,
-}) => {
-  const combinedSummaryLabel = [summaryLabel, computationTimeLabel]
-    .filter(Boolean)
-    .join(' · ');
-  return (
-    <ActivityBox
-      isRunning={isRunning}
-      summaryLabel={combinedSummaryLabel || undefined}
-      className={className}
-    >
-      {children}
-    </ActivityBox>
-  );
-};
+}) => (
+  <ActivityBox
+    isRunning={isRunning}
+    summaryLabel={summaryLabel}
+    startedAt={startedAt}
+    stepCount={toolCount}
+    className={className}
+  >
+    {children}
+  </ActivityBox>
+);
 
 /** SQLRooms default reasoning disclosure. */
 export const DefaultChatReasoning: React.FC<ChatReasoningProps> = ({
@@ -691,7 +690,7 @@ export const DefaultChatTurn: React.FC<ChatTurnSlotProps> = ({turn}) => {
   const Actions = turn.actions.Content;
   return (
     <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
-      <div className="bg-background sticky top-0 z-10 mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-100 dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.4)]">
+      <div className="bg-background sticky top-0 z-10 flex items-center gap-2 py-3 text-gray-700 dark:text-gray-100">
         <Prompt />
       </div>
       <div className="flex w-full flex-col gap-2">

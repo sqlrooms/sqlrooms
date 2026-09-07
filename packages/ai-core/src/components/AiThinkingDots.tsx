@@ -12,13 +12,15 @@ export const AiThinkingDots: React.FC<{className?: string}> = ({className}) => (
     <span className="dot inline-block h-1 w-1 rounded-full bg-current" />
     <span className="dot inline-block h-1 w-1 rounded-full bg-current" />
     <style>{`
-      @keyframes dot-bounce {
-        0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
-        30% { opacity: 0.8; transform: translateY(-8px); }
+      /* The dots hold their position and only brighten in turn, left to
+         right, never dropping to fully transparent. */
+      @keyframes dot-fade {
+        0%, 100% { opacity: 0.25; }
+        50% { opacity: 1; }
       }
-      .dot { opacity: 0.3; animation: dot-bounce 2s ease-in-out infinite; }
-      .dot:nth-child(2) { animation-delay: 0.20s; }
-      .dot:nth-child(3) { animation-delay: 0.30s; }
+      .dot { opacity: 0.25; animation: dot-fade 1.4s ease-in-out infinite; }
+      .dot:nth-child(2) { animation-delay: 0.2s; }
+      .dot:nth-child(3) { animation-delay: 0.4s; }
     `}</style>
   </div>
 );

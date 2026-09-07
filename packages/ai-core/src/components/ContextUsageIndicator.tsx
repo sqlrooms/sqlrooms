@@ -225,12 +225,22 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
 
   if (totalTokens === 0) return null;
 
-  const size = 20;
-  const strokeWidth = 2;
+  const size = 18;
+  const strokeWidth = 1.5;
   const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const dashOffset = circumference * (1 - percentage / 100);
   const strokeColor = getStrokeColor(percentage);
+
+  // A pie slice rather than a ring: the outline is the full context window and
+  // the filled wedge is what is used, swept clockwise from twelve o'clock.
+  const center = size / 2;
+  const sweep = (percentage / 100) * 2 * Math.PI;
+  const wedgeEndX = center + radius * Math.sin(sweep);
+  const wedgeEndY = center - radius * Math.cos(sweep);
+  const wedgePath =
+    percentage >= 100
+      ? // A full sweep degenerates to a zero-length arc, so draw two halves.
+        `M ${center} ${center} m 0 ${-radius} a ${radius} ${radius} 0 1 1 0 ${2 * radius} a ${radius} ${radius} 0 1 1 0 ${-2 * radius} z`
+      : `M ${center} ${center} L ${center} ${center - radius} A ${radius} ${radius} 0 ${sweep > Math.PI ? 1 : 0} 1 ${wedgeEndX} ${wedgeEndY} Z`;
 
   const tooltipText = `${percentage.toFixed(1)}% · ${formatTokenCount(contextTokens)} / ${formatTokenCount(contextWindow)} context used${cumulativeTokens > contextTokens ? `\n${formatTokenCount(cumulativeTokens)} total tokens consumed` : ''}`;
   const fullTooltip =
@@ -262,32 +272,16 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
                 : undefined
           }
         >
-          <svg
-            width={size}
-            height={size}
-            viewBox={`0 0 ${size} ${size}`}
-            className="-rotate-90"
-          >
+          <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
             <circle
-              cx={size / 2}
-              cy={size / 2}
+              cx={center}
+              cy={center}
               r={radius}
               fill="none"
               stroke={strokeColor}
               strokeWidth={strokeWidth}
-              opacity={0.2}
             />
-            <circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="none"
-              stroke={strokeColor}
-              strokeWidth={strokeWidth}
-              strokeDasharray={circumference}
-              strokeDashoffset={dashOffset}
-              strokeLinecap="round"
-            />
+            {percentage > 0 && <path d={wedgePath} fill={strokeColor} />}
           </svg>
         </button>
       </TooltipTrigger>

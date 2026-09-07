@@ -1,6 +1,7 @@
 import {cn} from '@sqlrooms/ui';
-import {ChevronDown, ChevronRight, ChevronsUp} from 'lucide-react';
+import {ChevronDown, ChevronRight, ChevronsUp, SparklesIcon} from 'lucide-react';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {useElapsedTime} from '../hooks/useElapsedTime';
 
 const DEFAULT_MAX_HEIGHT = 100;
 
@@ -19,6 +20,83 @@ export type ActivityBoxProps = {
    * box is always shown regardless of this prop.
    */
   summaryLabel?: string;
+  /**
+   * Start of the activity, for the live elapsed time in the header. Ticks
+   * every second while {@link ActivityBoxProps.isRunning} is true.
+   */
+  startedAt?: number;
+  /** Step count shown next to the elapsed time, e.g. "step 4". */
+  stepCount?: number;
+};
+
+/**
+ * The activity box's header: what the agent is doing, how long it has been
+ * doing it, and a disclosure control for the log below.
+ */
+const ActivityHeader: React.FC<{
+  label: string;
+  isRunning: boolean;
+  startedAt?: number;
+  stepCount?: number;
+  isOpen: boolean;
+  /** False while running, when the box is pinned open. */
+  canToggle: boolean;
+  onToggle: () => void;
+}> = ({
+  label,
+  isRunning,
+  startedAt,
+  stepCount,
+  isOpen,
+  canToggle,
+  onToggle,
+}) => {
+  const elapsed = useElapsedTime(isRunning, startedAt);
+  // Running: the live clock plus which step is underway. Settled: how many
+  // steps it took — the duration is already part of `label`.
+  const meta = isRunning
+    ? [elapsed, stepCount ? `step ${stepCount}` : undefined]
+        .filter(Boolean)
+        .join(' · ')
+    : stepCount
+      ? `${stepCount} step${stepCount === 1 ? '' : 's'}`
+      : '';
+
+  return (
+    <button
+      type="button"
+      onClick={canToggle ? onToggle : undefined}
+      disabled={!canToggle}
+      className={cn(
+        'flex w-full items-center gap-1.5 px-3 py-1.5 text-xs transition-colors',
+        canToggle && 'hover:bg-muted/40 cursor-pointer',
+      )}
+    >
+      {/* The brand tint marks work in progress; a settled group reads as
+          ordinary chrome. */}
+      <SparklesIcon
+        className={cn(
+          'size-3.5 shrink-0',
+          isRunning ? 'text-primary' : 'text-muted-foreground',
+        )}
+      />
+      <span
+        className={cn(
+          'font-medium',
+          isRunning ? 'text-primary' : 'text-muted-foreground',
+        )}
+      >
+        {label}
+      </span>
+      {meta && <span className="text-muted-foreground">· {meta}</span>}
+      {canToggle &&
+        (isOpen ? (
+          <ChevronDown className="text-muted-foreground ml-auto size-3.5 shrink-0" />
+        ) : (
+          <ChevronRight className="text-muted-foreground ml-auto size-3.5 shrink-0" />
+        ))}
+    </button>
+  );
 };
 
 /**
@@ -33,6 +111,8 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
   isRunning = false,
   className,
   summaryLabel,
+  startedAt,
+  stepCount,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
@@ -108,38 +188,42 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
   const showOverlay = overflows && !expanded;
   const showBox = isRunning || !summaryLabel || visible;
 
+  const header = summaryLabel ? (
+    <ActivityHeader
+      label={summaryLabel}
+      isRunning={isRunning}
+      startedAt={startedAt}
+      stepCount={stepCount}
+      isOpen={showBox}
+      canToggle={!isRunning}
+      onToggle={() =>
+        setExpandedForLabel(showBox ? null : (summaryLabel ?? null))
+      }
+    />
+  ) : null;
+
   if (!showBox) {
     return (
-      <button
-        onClick={() => setExpandedForLabel(summaryLabel ?? null)}
+      <div
         className={cn(
-          'text-muted-foreground hover:text-foreground flex w-full cursor-pointer items-center gap-1 py-0.5 text-xs transition-colors',
+          'border-border/50 min-w-0 overflow-hidden rounded-lg border',
           className,
         )}
       >
-        <ChevronRight className="h-3 w-3 shrink-0" />
-        <span>{summaryLabel}</span>
-      </button>
+        {header}
+      </div>
     );
   }
 
   return (
     <div
       className={cn(
-        'border-border/50 min-w-0 overflow-hidden rounded-md border p-1',
+        'border-border/50 min-w-0 overflow-hidden rounded-lg border',
         className,
       )}
     >
-      {summaryLabel && !isRunning && (
-        <button
-          onClick={() => setExpandedForLabel(null)}
-          className="text-muted-foreground hover:text-foreground flex w-full cursor-pointer items-center gap-1 px-1.5 pt-1 pb-0.5 text-xs transition-colors"
-        >
-          <ChevronDown className="h-3 w-3 shrink-0" />
-          <span>{summaryLabel}</span>
-        </button>
-      )}
-      <div className="relative">
+      {header}
+      <div className={cn('relative', header && 'border-border/50 border-t')}>
         <div
           ref={scrollRef}
           className="overflow-y-hidden"

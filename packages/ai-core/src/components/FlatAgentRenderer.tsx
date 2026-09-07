@@ -482,9 +482,34 @@ const FlatSegmentList: React.FC<{
 
           const toolCount = seg.tools.length;
           const allToolsDone = !anyPending && toolCount > 0;
-          const summaryLabel =
-            allToolsDone && isAgentComplete
-              ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
+          const groupStartedAt = seg.tools.reduce<number | undefined>(
+            (earliest, tool) =>
+              tool.startedAt != null &&
+              (earliest == null || tool.startedAt < earliest)
+                ? tool.startedAt
+                : earliest,
+            undefined,
+          );
+          const groupCompletedAt = seg.tools.reduce<number | undefined>(
+            (latest, tool) =>
+              tool.completedAt != null &&
+              (latest == null || tool.completedAt > latest)
+                ? tool.completedAt
+                : latest,
+            undefined,
+          );
+          const groupDuration =
+            groupStartedAt != null && groupCompletedAt != null
+              ? formatShortDuration(groupCompletedAt - groupStartedAt)
+              : undefined;
+          // While the group runs the header reports the live step; once it
+          // settles it reports how long the whole thing took.
+          const summaryLabel = anyPending
+            ? 'Thinking'
+            : allToolsDone && isAgentComplete
+              ? groupDuration
+                ? `Thought for ${groupDuration}`
+                : 'Thought'
               : undefined;
 
           const logLines = seg.tools.map((tc) => {
@@ -565,11 +590,17 @@ const FlatSegmentList: React.FC<{
               isCompleted={allToolsDone && isAgentComplete === true}
               toolCount={toolCount}
               summaryLabel={summaryLabel}
+              startedAt={groupStartedAt}
             >
               {logLines}
             </Activity>
           ) : (
-            <ActivityBox isRunning={anyPending} summaryLabel={summaryLabel}>
+            <ActivityBox
+              isRunning={anyPending}
+              summaryLabel={summaryLabel}
+              startedAt={groupStartedAt}
+              stepCount={toolCount}
+            >
               {logLines}
             </ActivityBox>
           );

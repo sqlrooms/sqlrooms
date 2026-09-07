@@ -11,6 +11,8 @@ export interface CopyButtonProps {
   variant?: ButtonProps['variant'];
   size?: ButtonProps['size'];
   className?: string;
+  /** Class applied to the copy/check icon, for callers that need a size other than 16px. */
+  iconClassName?: string;
   tooltipLabel?: string;
   ariaLabel?: string;
   durationMs?: number;
@@ -23,6 +25,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
   variant = 'ghost',
   size = 'icon',
   className,
+  iconClassName = 'h-4 w-4',
   tooltipLabel = 'Copy to clipboard',
   ariaLabel: ariaLabelProp,
   durationMs = 1500,
@@ -78,9 +81,9 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
             )}
           >
             {copied ? (
-              <CheckIcon className="h-4 w-4 text-green-500" />
+              <CheckIcon className={cn(iconClassName, 'text-green-500')} />
             ) : (
-              <CopyIcon className="h-4 w-4" />
+              <CopyIcon className={iconClassName} />
             )}
           </span>
         </Button>

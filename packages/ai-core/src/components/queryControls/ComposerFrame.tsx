@@ -84,7 +84,7 @@ export function ComposerFrame({
           <div
             ref={setNodeRef}
             className={cn(
-              'bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border transition-all',
+              'bg-background flex h-full w-full flex-row items-center gap-2 rounded-[10px] border transition-all',
               isAcceptedOver &&
                 'border-primary/70 bg-primary/10 ring-primary/35 shadow-primary/10 shadow-sm ring-2',
             )}
@@ -100,7 +100,7 @@ export function ComposerFrame({
                 autoFocus
               >
                 <Textarea
-                  className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-hidden focus-visible:ring-0"
+                  className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-4 text-sm font-light shadow-none outline-hidden focus-visible:ring-0"
                   autoResize
                 />
               </Input>
@@ -110,7 +110,7 @@ export function ComposerFrame({
                     {footerEnd}
                     <Send asChild>
                       <Button
-                        className="h-8 w-8 rounded-full"
+                        className="h-7 w-7 rounded-md"
                         variant="default"
                         size="icon"
                         aria-label="Send message"
@@ -120,7 +120,7 @@ export function ComposerFrame({
                     </Send>
                     <Stop asChild onClick={handleStopClick}>
                       <Button
-                        className="h-8 w-8 rounded-full"
+                        className="h-7 w-7 rounded-md"
                         variant="default"
                         size="icon"
                         aria-label="Stop generating"
