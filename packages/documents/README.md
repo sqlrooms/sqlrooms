@@ -191,8 +191,7 @@ const blockDocumentAdapter = createBlockDocumentCommandAiAdapter({
 });
 ```
 
-The adapter accepts only `block-document` artifacts. Migrate legacy artifact type
-names when loading persisted workspaces before using the adapter.
+The adapter accepts only `block-document` artifacts.
 
 ### Block-Scoped Ask AI
 
@@ -563,10 +562,9 @@ content, document-owned assets, standalone chart block configs, block document
 and Markdown artifact metadata, and their artifact tab order.
 The current artifact selection is kept local.
 
-The mirror syncs `block-document` and `markdown-document` artifact metadata. Hosts should
-migrate legacy artifact names to the corresponding `markdown-document` or
-`block-document` type when loading a workspace;
-the mirror does not accept custom artifact type aliases.
+The mirror syncs `block-document` and `markdown-document` artifact metadata without
+legacy aliases. Pre-release sync snapshots and saved AI context are not migrated;
+reset incompatible development state when upgrading.
 
 Hosted dashboard state should continue to use the host app's Mosaic persistence,
 or a future Mosaic-specific CRDT mirror.
@@ -595,9 +593,7 @@ use `markdown-document.*`. Use `createMarkdownDocumentsSlice`,
 `createMarkdownDocumentCommands` provides the command family. These replace the
 former generic `DocumentsSlice*` APIs and `markdown.*` commands.
 
-Hosts loading older snapshots must migrate the `documents` store key and
-`markdown` artifact/block types to their new names. The CLI performs this migration
-at its local storage and sync boundaries. The combined `createDocumentsCrdtMirror`
-retains the `documents` CRDT wire field for existing snapshots, while reading and
-writing the `markdownDocuments` room state. `DocumentAsset` stays shared by both
-document families.
+The room state and CRDT field both use `markdownDocuments`. Old pre-release
+`documents` state and `markdown` artifact/block aliases are not migrated. Reset
+incompatible development workspace, sync, and saved-session state when upgrading.
+`DocumentAsset` stays shared by both document families.

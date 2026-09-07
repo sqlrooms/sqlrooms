@@ -178,7 +178,7 @@ describe('documents CRDT mirrors', () => {
           {id: 'doc-1', type: 'markdown-document', title: 'Notes'},
           {id: 'doc-2', type: 'markdown-document', title: 'Ideas'},
         ],
-        documents: [
+        markdownDocuments: [
           {id: 'doc-1', markdown: '# Notes', updatedAt: 1},
           {id: 'doc-2', markdown: '# Ideas', updatedAt: 2},
         ],
@@ -291,7 +291,7 @@ describe('documents CRDT mirrors', () => {
     createDocumentsCrdtMirror<TestRoomState>().apply(
       {
         artifacts: [{id: 'doc-1', type: 'markdown-document', title: 'Notes'}],
-        documents: [
+        markdownDocuments: [
           {
             id: 'doc-1',
             markdown: '# Notes',

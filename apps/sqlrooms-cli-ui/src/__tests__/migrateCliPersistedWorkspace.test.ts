@@ -4,7 +4,7 @@ type PersistedWorkspaceFixture = {
   artifacts: {
     artifactsById: Record<string, {id: string; type: string; title: string}>;
   };
-  documents: {
+  markdownDocuments: {
     artifacts: Record<string, {id: string; markdown: string}>;
   };
   blockDocuments: {
@@ -33,7 +33,7 @@ function persistedWorkspace(): PersistedWorkspaceFixture {
         },
         currentMarkdown: {
           id: 'currentMarkdown',
-          type: 'markdown',
+          type: 'markdown-document',
           title: 'Current Markdown',
         },
         orphanedLegacyMarkdown: {
@@ -44,7 +44,7 @@ function persistedWorkspace(): PersistedWorkspaceFixture {
         dashboard: {id: 'dashboard', type: 'dashboard', title: 'Dashboard'},
       },
     },
-    documents: {
+    markdownDocuments: {
       artifacts: {
         legacyMarkdown: {id: 'legacyMarkdown', markdown: '# Legacy'},
         currentMarkdown: {id: 'currentMarkdown', markdown: '# Current'},
@@ -123,51 +123,6 @@ describe('migrateCliPersistedWorkspace', () => {
     });
   });
 
-  it('merges old and canonical slice entries with canonical values taking precedence', () => {
-    const persisted = persistedWorkspace();
-    const canonical = {id: 'currentMarkdown', markdown: '# Canonical'};
-    const migrated = migrateCliPersistedWorkspace({
-      ...persisted,
-      markdownDocuments: {
-        artifacts: {
-          currentMarkdown: canonical,
-          canonicalOnly: {id: 'canonicalOnly', markdown: '# New'},
-        },
-      },
-    });
-    expect(migrated).not.toHaveProperty('documents');
-    expect(migrated.markdownDocuments).toEqual({
-      artifacts: {
-        ...persisted.documents.artifacts,
-        currentMarkdown: canonical,
-        canonicalOnly: {id: 'canonicalOnly', markdown: '# New'},
-      },
-    });
-  });
-
-  it('migrates Markdown slices and embedded blocks without artifact metadata', () => {
-    const persisted = persistedWorkspace();
-    const block = persisted.blockDocuments.artifacts.legacyBlockDocument
-      .content as {
-      content: Array<{attrs: {blockType: string}}>;
-    };
-    block.content[0]!.attrs.blockType = 'markdown';
-    const migrated = migrateCliPersistedWorkspace({
-      documents: persisted.documents,
-      blockDocuments: persisted.blockDocuments,
-    });
-    expect(migrated).not.toHaveProperty('documents');
-    expect(migrated.markdownDocuments).toEqual(persisted.documents);
-    expect(migrated.blockDocuments).toMatchObject({
-      artifacts: {
-        legacyBlockDocument: {
-          content: {content: [{attrs: {blockType: 'markdown-document'}}]},
-        },
-      },
-    });
-    expect(block.content[0]!.attrs.blockType).toBe('markdown');
-  });
-
   it('is idempotent', () => {
     const migrated = migrateCliPersistedWorkspace(persistedWorkspace());
     expect(migrateCliPersistedWorkspace(migrated)).toEqual(migrated);
@@ -175,7 +130,7 @@ describe('migrateCliPersistedWorkspace', () => {
 
   it('rejects artifacts with both backing states', () => {
     const persisted = persistedWorkspace();
-    persisted.documents.artifacts.currentDocument = {
+    persisted.markdownDocuments.artifacts.currentDocument = {
       id: 'currentDocument',
       markdown: '# Invalid duplicate backing state',
     };
@@ -187,7 +142,7 @@ describe('migrateCliPersistedWorkspace', () => {
 
   it('rejects duplicate backing state without artifact metadata', () => {
     const persisted = persistedWorkspace();
-    persisted.documents.artifacts.unregisteredDuplicate = {
+    persisted.markdownDocuments.artifacts.unregisteredDuplicate = {
       id: 'unregisteredDuplicate',
       markdown: '# Duplicate',
     };

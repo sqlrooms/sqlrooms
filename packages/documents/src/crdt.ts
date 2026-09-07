@@ -58,8 +58,7 @@ type IncomingArtifact = {
 };
 
 export const documentsMirrorSchema = schema.LoroMap({
-  // Preserve the wire key so existing Loro snapshots retain their content.
-  documents: schema.LoroList(
+  markdownDocuments: schema.LoroList(
     schema.LoroMap({
       id: schema.String(),
       markdown: schema.String(),
@@ -124,7 +123,7 @@ export const documentsMirrorSchema = schema.LoroMap({
 export type DocumentsMirrorSchema = typeof documentsMirrorSchema;
 
 export const documentsMirrorInitialState = {
-  documents: [],
+  markdownDocuments: [],
   blockDocuments: [],
   artifacts: [],
   artifactOrder: [],
@@ -132,7 +131,8 @@ export const documentsMirrorInitialState = {
 
 /**
  * Creates a CRDT mirror for Markdown documents, block documents, and their
- * artifact metadata.
+ * artifact metadata for `markdown-document` and `block-document` artifacts.
+ * Uses canonical artifact types without migrating pre-release snapshots.
  *
  * The room's current artifact selection and pinned artifacts are intentionally
  * kept local.
@@ -165,25 +165,25 @@ export function createDocumentsCrdtMirror<
       );
       const artifactOrder = state.artifacts.config.artifactOrder as string[];
       return {
-        documents: Object.values(state.markdownDocuments.config.artifacts).map(
-          (document) => ({
-            id: document.id,
-            markdown: document.markdown,
-            assets: Object.values(document.assets).map((asset) => ({
-              id: asset.id,
-              mediaType: asset.mediaType,
-              encoding: asset.encoding,
-              data: asset.data,
-              filename: asset.filename ?? null,
-              alt: asset.alt ?? null,
-              title: asset.title ?? null,
-              provenance: asset.provenance ?? null,
-              createdAt: asset.createdAt,
-              updatedAt: asset.updatedAt,
-            })),
-            updatedAt: document.updatedAt,
-          }),
-        ),
+        markdownDocuments: Object.values(
+          state.markdownDocuments.config.artifacts,
+        ).map((document) => ({
+          id: document.id,
+          markdown: document.markdown,
+          assets: Object.values(document.assets).map((asset) => ({
+            id: asset.id,
+            mediaType: asset.mediaType,
+            encoding: asset.encoding,
+            data: asset.data,
+            filename: asset.filename ?? null,
+            alt: asset.alt ?? null,
+            title: asset.title ?? null,
+            provenance: asset.provenance ?? null,
+            createdAt: asset.createdAt,
+            updatedAt: asset.updatedAt,
+          })),
+          updatedAt: document.updatedAt,
+        })),
         blockDocuments: Object.values(
           state.blockDocuments.config.artifacts,
         ).map((blockDocument) => ({
@@ -216,7 +216,7 @@ export function createDocumentsCrdtMirror<
     },
     apply: (value, set, get) => {
       const incomingArtifacts = (value?.artifacts ?? []) as IncomingArtifact[];
-      const incomingDocuments = (value?.documents ??
+      const incomingDocuments = (value?.markdownDocuments ??
         []) as unknown as IncomingDocument[];
       const incomingBlockDocuments = (value?.blockDocuments ??
         []) as unknown as IncomingBlockDocument[];

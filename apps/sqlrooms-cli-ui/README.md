@@ -207,11 +207,9 @@ Their canonical artifact type is `block-document`; the UI label remains
 “Document”. Loading an existing workspace migrates `worksheet` artifacts and
 `document` artifacts with block-document backing state to `block-document`.
 Markdown document artifacts and embedded blocks use `markdown-document`, commands use
-`markdown-document.*`, and their backing store is `markdownDocuments`. Existing
-`markdown` artifacts and the legacy `documents` store migrate automatically. If
-both store keys exist, entries are merged and canonical entries take precedence.
-The shared CRDT wire field remains `documents` so synchronized workspaces retain
-their Markdown content.
+`markdown-document.*`, and their backing store and CRDT field are `markdownDocuments`.
+Old pre-release `markdown` aliases and the `documents` store key are not migrated;
+reset incompatible development workspace and sync state when upgrading.
 They can contain editable text, images, standalone Mosaic/vgplot chart blocks, and
 direct stateful blocks such as dashboards, pivot tables, Data Table Explorers,
 SQL queries, and Markdown documents.
@@ -312,3 +310,7 @@ basemap and interleaved deck.gl layers. Separate deck overlays preserve their
 buffer through deck.gl/luma.gl's default and are checked as well. Maps with an unavailable context or
 explicitly disabled buffer preservation return an actionable error.
 Iframe-backed content is still unsupported.
+
+Pre-release CRDT snapshots and saved AI run context are not migrated across
+document naming changes. Reset incompatible development sync state and saved
+sessions when upgrading. Existing local workspace migrations remain supported.
