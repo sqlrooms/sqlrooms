@@ -307,3 +307,7 @@ basemap and interleaved deck.gl layers. Separate deck overlays preserve their
 buffer through deck.gl/luma.gl's default and are checked as well. Maps with an unavailable context or
 explicitly disabled buffer preservation return an actionable error.
 Iframe-backed content is still unsupported.
+
+Pre-release CRDT snapshots and saved AI run context are not migrated across
+document naming changes. Reset incompatible development sync state and saved
+sessions when upgrading. Existing local workspace migrations remain supported.

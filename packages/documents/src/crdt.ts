@@ -131,7 +131,8 @@ export const documentsMirrorInitialState = {
 
 /**
  * Creates a CRDT mirror for Markdown documents, block documents, and their
- * artifact metadata.
+ * artifact metadata for `markdown` and `block-document` artifacts.
+ * Uses canonical artifact types without migrating pre-release snapshots.
  *
  * The room's current artifact selection and pinned artifacts are intentionally
  * kept local.

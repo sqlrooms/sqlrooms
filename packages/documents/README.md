@@ -189,8 +189,7 @@ const blockDocumentAdapter = createBlockDocumentCommandAiAdapter({
 });
 ```
 
-The adapter accepts only `block-document` artifacts. Migrate legacy artifact type
-names when loading persisted workspaces before using the adapter.
+The adapter accepts only `block-document` artifacts.
 
 ### Block-Scoped Ask AI
 
@@ -561,9 +560,9 @@ content, document-owned assets, standalone chart block configs, block document
 and Markdown artifact metadata, and their artifact tab order.
 The current artifact selection is kept local.
 
-The mirror syncs `block-document` and `markdown` artifact metadata. Hosts should
-migrate legacy artifact type names to `block-document` when loading a workspace;
-the mirror does not accept custom artifact type aliases.
+The mirror syncs `block-document` and `markdown` artifact metadata without legacy
+artifact aliases. Pre-release sync snapshots and saved AI context are not migrated;
+reset incompatible development state when upgrading.
 
 Hosted dashboard state should continue to use the host app's Mosaic persistence,
 or a future Mosaic-specific CRDT mirror.

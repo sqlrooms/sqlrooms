@@ -89,7 +89,7 @@ import {
   createDocumentsSlice,
   DocumentsSliceConfig,
 } from '@sqlrooms/documents';
-import {createCliDocumentsCrdtMirror} from './createCliDocumentsCrdtMirror';
+import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
 import {artifactChatAssociationMiddleware} from './artifactChatAssociation';
 import {createCliArtifactTypes} from './artifactTypes';
@@ -969,7 +969,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
               sync: createCliCrdtSyncConnector(),
               mirrors: {
-                documentState: createCliDocumentsCrdtMirror<RoomState>(),
+                documentState: createDocumentsCrdtMirror<RoomState>(),
               },
             })(set, get, store)
           : createDisabledCrdtState()),
