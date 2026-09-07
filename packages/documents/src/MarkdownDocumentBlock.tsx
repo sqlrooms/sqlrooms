@@ -5,14 +5,16 @@ import type {
 import {ScrollTextIcon} from 'lucide-react';
 import type {ComponentType} from 'react';
 import {MarkdownDocument} from './MarkdownDocument';
-import type {DocumentsSliceState} from './DocumentsSlice';
+import type {MarkdownDocumentsSliceState} from './MarkdownDocumentsSlice';
 
+/** Renderer props for a Markdown document block whose block ID identifies its stored document. */
 export type MarkdownDocumentBlockRenderProps<
-  TRoomState extends DocumentsSliceState = DocumentsSliceState,
+  TRoomState extends MarkdownDocumentsSliceState = MarkdownDocumentsSliceState,
 > = StatefulBlockRenderProps<TRoomState>;
 
+/** Custom renderer, labels, and initial content for Markdown document blocks. */
 export type CreateMarkdownDocumentBlockDefinitionOptions<
-  TRoomState extends DocumentsSliceState = DocumentsSliceState,
+  TRoomState extends MarkdownDocumentsSliceState = MarkdownDocumentsSliceState,
 > = {
   render?: ComponentType<MarkdownDocumentBlockRenderProps<TRoomState>>;
   label?: string;
@@ -26,18 +28,22 @@ const DefaultMarkdownDocumentBlock = ({
   return <MarkdownDocument artifactId={blockId} />;
 };
 
+/**
+ * Creates an embeddable `markdown-document` block definition backed by the
+ * Markdown documents slice. Ensures and deletes document state by block ID.
+ */
 export function createMarkdownDocumentBlockDefinition<
-  TRoomState extends DocumentsSliceState = DocumentsSliceState,
+  TRoomState extends MarkdownDocumentsSliceState = MarkdownDocumentsSliceState,
 >({
   render = DefaultMarkdownDocumentBlock as ComponentType<
     MarkdownDocumentBlockRenderProps<TRoomState>
   >,
-  label = 'Document',
-  defaultTitle = 'Document',
+  label = 'Markdown',
+  defaultTitle = 'Markdown',
   defaultMarkdown = '',
 }: CreateMarkdownDocumentBlockDefinitionOptions<TRoomState> = {}): StatefulBlockDefinition<TRoomState> {
   return {
-    type: 'document',
+    type: 'markdown-document',
     label,
     defaultTitle,
     icon: ScrollTextIcon,
@@ -47,10 +53,10 @@ export function createMarkdownDocumentBlockDefinition<
     },
     render,
     ensureState: ({blockId, getState}) => {
-      getState().documents.ensureDocument(blockId, defaultMarkdown);
+      getState().markdownDocuments.ensureDocument(blockId, defaultMarkdown);
     },
     deleteState: ({blockId, getState}) => {
-      getState().documents.removeDocument(blockId);
+      getState().markdownDocuments.removeDocument(blockId);
     },
   };
 }

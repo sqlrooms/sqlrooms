@@ -1,9 +1,5 @@
 import {FC, useState, useMemo, useEffect} from 'react';
-import {
-  CosmosGraph,
-  CosmosGraphControls,
-  GraphConfigInterface,
-} from '@sqlrooms/cosmos';
+import {CosmosGraph, CosmosGraphControls, GraphConfig} from '@sqlrooms/cosmos';
 import {usePublicationsData} from './hooks/usePublicationsData';
 import {Legend} from './components/Legend';
 import {PublicationTooltip} from './components/PublicationTooltip';
@@ -28,18 +24,17 @@ export const PublicationsMap: FC = () => {
 
   const updateGraphConfig = useRoomStore((s) => s.cosmos.updateGraphConfig);
 
-  const config = useMemo<GraphConfigInterface>(
+  const config = useMemo<GraphConfig>(
     () => ({
       backgroundColor: 'transparent',
       fitViewOnInit: true,
       enableDrag: false,
-      disableSimulation: true,
+      enableSimulation: false,
       pointSizeScale: 1,
       scalePointsOnZoom: false,
       hoveredPointCursor: 'pointer',
       renderHoveredPointRing: true,
       hoveredPointRingColor: '#a33aef',
-      renderFocusedPointRing: true,
       focusedPointRingColor: '#ee55ff',
       onClick: (index: number | undefined) => {
         if (index === undefined) {

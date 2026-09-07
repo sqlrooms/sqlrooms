@@ -1,4 +1,4 @@
-import {FC, PropsWithChildren, useCallback, useRef} from 'react';
+import {FC, PropsWithChildren, useCallback, useMemo, useRef} from 'react';
 import {
   getLayoutNodeId,
   isLayoutNodeKey,
@@ -8,7 +8,8 @@ import {ResizablePanelGroup} from '@sqlrooms/ui';
 import {useSplitNodeContext} from '../../LayoutNodeContext';
 import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {updateLayoutNodeById} from '../../layout-tree';
-import type {Layout} from 'react-resizable-panels';
+import type {Layout, LayoutChangedMeta} from 'react-resizable-panels';
+import {computeDefaultLayout} from './computeDefaultLayout';
 
 export type RenderPanelProps = {
   node: LayoutNode;
@@ -79,15 +80,22 @@ export const SplitLayoutPanelGroup: FC<PropsWithChildren> = ({children}) => {
   const {node: parentNode} = useSplitNodeContext();
   const {rootLayout, onLayoutChange} = useLayoutRendererContext();
   const groupElementRef = useRef<HTMLDivElement | null>(null);
-  const didReceiveInitialLayoutRef = useRef(false);
 
   const orientation =
     parentNode.direction === 'column' ? 'vertical' : 'horizontal';
 
+  const defaultLayout = useMemo(
+    () => computeDefaultLayout(parentNode.children),
+    [parentNode.children],
+  );
+
   const handleLayoutChanged = useCallback(
-    (layout: Layout) => {
-      if (!didReceiveInitialLayoutRef.current) {
-        didReceiveInitialLayoutRef.current = true;
+    (layout: Layout, meta: LayoutChangedMeta) => {
+      // Only persist genuine user-driven resizes. Programmatic collapse/expand,
+      // initial mount, constraint recompute and default-size changes all report
+      // `isUserInteraction === false` — writing those back into the config would
+      // create a render feedback loop and drift the stored `defaultSize`s.
+      if (!meta.isUserInteraction) {
         return;
       }
 
@@ -137,6 +145,7 @@ export const SplitLayoutPanelGroup: FC<PropsWithChildren> = ({children}) => {
     <ResizablePanelGroup
       elementRef={groupElementRef}
       orientation={orientation}
+      defaultLayout={defaultLayout}
       onLayoutChanged={handleLayoutChanged}
     >
       {children}

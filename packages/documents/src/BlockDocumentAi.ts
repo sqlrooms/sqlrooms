@@ -27,6 +27,12 @@ export type BlockDocumentAiAdapter = {
     blockDocumentId: string,
     block: BlockDocumentBlock,
   ): string | Promise<string>;
+  /** Update an existing block in place, if supported by the host. */
+  updateBlock?(
+    blockDocumentId: string,
+    blockId: string,
+    block: BlockDocumentBlock,
+  ): void | Promise<void>;
 };
 
 /**

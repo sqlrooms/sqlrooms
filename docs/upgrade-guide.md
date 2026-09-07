@@ -10,6 +10,103 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### `@sqlrooms/documents`: canonical document names (breaking)
+
+The prerelease document APIs now distinguish structured block documents from
+Markdown documents. Block documents use the `block-document` artifact type
+and `block-document.*` command IDs. Markdown artifacts and embedded Markdown
+blocks use `markdown-document`, with `markdown-document.*` command IDs.
+
+Update Markdown imports, selectors, persistence schemas, artifact registries,
+and command callers:
+
+| Previous API or key                                 | Replacement                                                         |
+| --------------------------------------------------- | ------------------------------------------------------------------- |
+| `createDocumentsSlice`                              | `createMarkdownDocumentsSlice`                                      |
+| `createDefaultDocumentsConfig`                      | `createDefaultMarkdownDocumentsConfig`                              |
+| `DocumentsSliceConfig` / `DocumentsSliceConfigType` | `MarkdownDocumentsSliceConfig` / `MarkdownDocumentsSliceConfigType` |
+| `DocumentsSliceState`                               | `MarkdownDocumentsSliceState`                                       |
+| `CreateDocumentsSliceProps`                         | `CreateMarkdownDocumentsSliceProps`                                 |
+| `useStoreWithDocuments`                             | `useStoreWithMarkdownDocuments`                                     |
+| `state.documents`                                   | `state.markdownDocuments`                                           |
+| `createMarkdownCommands`                            | `createMarkdownDocumentCommands`                                    |
+| `markdown.*` command IDs                            | `markdown-document.*` command IDs                                   |
+| `markdown` artifact and embedded block type         | `markdown-document`                                                 |
+| `buildKnowledgeIndex({documents, artifacts})`       | `buildKnowledgeIndex({markdownDocuments, artifacts})`               |
+
+Persist `MarkdownDocumentsSliceConfig` under the `markdownDocuments` key.
+`DocumentAsset` and `createDocumentsCrdtMirror()` remain shared by both document
+families and keep their names.
+
+`createBlockDocumentCommands()` and `createPythonBlockCommands()` no longer
+accept `artifactType`, `artifactLabel`, or `commandNamespace`. Remove those
+options and use the canonical `block-document` type and `block-document.*`
+IDs. Keep product-specific labels in the artifact registry; `commandGroup`
+remains available for UI grouping. The block-document command factory also
+retains `defaultTitle`.
+
+`createBlockDocumentCommandIds()` no longer accepts a namespace argument.
+`createBlockDocumentCommandAiAdapter()` no longer accepts
+`isBlockDocumentArtifact`, and `createDocumentsCrdtMirror()` no longer accepts
+`blockDocumentArtifactTypes`.
+
+#### Persisted workspace data
+
+The CLI migrates local workspace snapshots from `documents` to
+`markdownDocuments` before schema validation, preserving Markdown bodies and
+owned assets. When both keys exist, it retains disjoint records and gives
+canonical records precedence for overlapping IDs. It also normalizes legacy
+`markdown` artifact and embedded block types to `markdown-document` and keeps
+its existing local `document`/`worksheet` migration to the appropriate family.
+
+Applications that persist their own workspaces must perform the equivalent
+migration before parsing with the new schema; the package schema does not
+rename the outer slice key automatically. Preserve both the Markdown content
+and the document-owned asset map when moving each record.
+
+The CRDT Markdown field is also named `markdownDocuments`. Experimental CRDT
+snapshots and saved AI context are not migrated. Reset incompatible development
+sync snapshots and saved sessions when upgrading; this does not replace the
+local workspace migration above.
+
+### `@sqlrooms/artifacts`: artifact AI sessions use pure many-to-many associations (breaking)
+
+The prerelease-only one-to-one `artifactAi.aiSessionArtifacts` map,
+`artifactCreators` map, and provenance-bearing link shape were removed.
+`artifactAi.sessionArtifactLinks` is now the only persisted and runtime
+representation of relationships between AI sessions and artifacts:
+
+```ts
+type ArtifactSessionLink = {
+  sessionId: string;
+  artifactId: string;
+  linkedAt: number;
+};
+```
+
+This is a clean prerelease break: `ArtifactAiConfigSchema` does not migrate the
+removed fields or the previous `{createdAt, linkType}` link shape. If you need
+to retain prerelease state, convert each relationship to an association and
+rename its relationship timestamp from `createdAt` to `linkedAt`. Creation
+provenance, when needed, should live in the artifact's domain metadata rather
+than in its chat associations. Helper APIs now require
+`sessionArtifactLinks`, and the deprecated one-to-one and creator-provenance
+slice methods were removed:
+
+- `setSessionArtifact` → `addSessionArtifactLink(sessionId, artifactId)`
+- `clearSessionArtifact` → `removeAllLinksForSession`
+- `getSessionArtifactId` → `getLatestArtifactForSession`
+- `setArtifactCreator`, `getArtifactCreatorSessionId`, and
+  `getCreatedArtifactIds` have no association-layer replacement
+
+Artifact pinning is workspace state and has moved from the AI companion slice
+to the base artifacts slice:
+
+- `artifactAi.config.pinnedArtifactIds` →
+  `artifacts.config.pinnedArtifactIds`
+- `artifactAi.togglePinArtifact(id)` → `artifacts.togglePinArtifact(id)`
+- `artifactAi.isPinnedArtifact(id)` → `artifacts.isPinnedArtifact(id)`
+
 ### `@sqlrooms/artifacts`: "Sheets" terminology migrated to "Artifacts" (breaking)
 
 The concept of "sheets" has been replaced with "artifacts" to better represent the variety of content types (app builders, charts, maps, etc.) that can be created and managed.
@@ -173,18 +270,6 @@ await state.kepler.addTableToMap({
 For normal add-table flows, omit `datasetId`. Kepler will derive the persisted
 dataset id from the configured `tableSelection.getDatasetIdForTable` policy.
 
-### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
-
-This release introduces explicit panel identity and dock boundaries, replacing the previous path-based panel lookup system.
-
-#### Removed APIs
-
-- **`getPanelByPath`**: Path-based panel lookup function removed
-- **`useGetPanelByPath`**: Hook for path-based panel lookup removed
-- **`useGetPanelInfoByPath`**: Hook for path-based panel info removed
-- **`draggable` property**: Removed from split and tabs nodes
-- **`pathSegment` property**: Removed from split and tabs nodes
-
 ### `@sqlrooms/duckdb-core`, `@sqlrooms/duckdb`: schema catalog loader and `createDbSchemaTrees()` input changed (breaking)
 
 `createDbSchemaTrees()` now takes a grouped `SchemaWithTables[]` instead of a flat `DataTable[]`, and the loader pair changed:
@@ -255,6 +340,52 @@ for (const t of tables) {
 }
 const trees = createDbSchemaTrees(Array.from(grouped.values()));
 ```
+
+### `@sqlrooms/duckdb-node`: query results now use DuckDB Arrow IPC (breaking)
+
+`@sqlrooms/duckdb-node` now converts query results with DuckDB's `nanoarrow`
+extension instead of reconstructing Arrow tables from JavaScript values. This
+preserves DuckDB's declared types and fixes lossy handling of timestamps,
+decimals, and binary data, but it changes both initialization requirements and
+the JavaScript values returned by `query()`.
+
+#### Make `nanoarrow` available during initialization
+
+The connector installs and loads DuckDB's `nanoarrow` community extension when
+it initializes. Initialization now fails if the extension cannot be installed
+or loaded. Environments without outbound network access must populate DuckDB's
+extension cache before creating the connector.
+
+If you use a restricted CI or production environment, exercise connector
+initialization in that environment before deployment. Do not treat
+`nanoarrow` as an optional enhancement: it is the conversion path used by the
+Node connector.
+
+#### Update code that consumes Arrow values
+
+Values returned by `query()` now follow their Arrow types instead of inferred
+JavaScript types. In particular:
+
+- `BIGINT` is Arrow `Int64` and is exposed as JavaScript `bigint`.
+- `DATE` remains Arrow `Date32` instead of being inferred from a JavaScript
+  date value.
+- `DECIMAL` retains its declared precision and scale.
+- `BLOB` remains Arrow `Binary` and preserves arbitrary bytes.
+
+Code that converts `query()` results to plain objects or serializes them with
+`JSON.stringify` must handle values such as `bigint` explicitly.
+
+For JSON-facing code, prefer `queryJson()`. Its row accessor converts safe
+integers to JavaScript numbers, unsafe integers and decimals to strings, and
+applies the same conversion recursively inside lists, structs, and maps.
+
+#### Arrow loading is now supported
+
+`loadArrow()` now accepts both Arrow tables and IPC byte streams. The Node API
+does not currently register in-memory Arrow buffers directly, so the connector
+uses a short-lived local file while DuckDB reads the IPC stream. Environments
+that restrict temporary-file creation must provide a writable operating-system
+temporary directory.
 
 ### `@sqlrooms/ai-core`, `@sqlrooms/ai`: Upgraded to AI SDK v6 with `ToolLoopAgent` (breaking)
 
@@ -664,9 +795,55 @@ return createAgentUIStreamResponse({
 - `findToolComponent` — replaced by `findToolRenderer`
 - `VegaChartToolParametersType` from `@sqlrooms/vega` — removed (use `VegaChartToolParameters` directly)
 
+### `@sqlrooms/ai-core`: Composer and prompt suggestions rebuilt on unstyled primitives (breaking)
+
+`Chat.Composer` and `Chat.PromptSuggestions` are now recipes built on a new
+public primitive layer — `useChatComposer()` / `usePromptSuggestions()` and a
+set of `asChild`-capable, unstyled components (`Input`, `Send`, `Stop`,
+`DropTarget` for the composer; `Root`, `Item`, `VisibilityToggle`, `Dismiss`
+for suggestions). See the "Composable composer and prompt-suggestions
+primitives" section of the [`@sqlrooms/ai-core` README](https://github.com/sqlrooms/sqlrooms/blob/main/packages/ai-core/README.md)
+for the full layering and API.
+
+Three behavior changes ship alongside the new primitives:
+
+- **`Chat.Composer`'s `onRun` is now a chat-wide pre-send veto, not a
+  per-control one.** It is registered on the composer state rather than wired
+  into the composer's own button and keymap, so it also runs for sends that
+  originate elsewhere under the same `<Chat>` root — clicking a prompt
+  suggestion, or a host calling `useChatComposer().send()`. This is deliberate:
+  a policy the composer enforces and a suggestion row bypasses is a policy two
+  surfaces disagree about. Two consequences to check: `onRun` may now fire for
+  a prompt the user never typed into the composer, and two `Chat.Composer`s
+  under one root share one registry, so both `onRun`s run for either surface's
+  sends (a duplicate warns in development). Give independent surfaces their own
+  `<Chat>` root. `onRun` is still skipped entirely when sending is not possible,
+  so it never fires for a send that does not happen.
+- **Local-agent `Enter` while streaming no longer stops the run.** It is now
+  a no-op, matching session mode: `Enter` sends when ready, and never
+  cancels a run in flight.
+- **`Chat.PromptSuggestions` now defaults to a full-width vertical list**
+  with click-to-send and CSS-ellipsis truncation (plus a native `title` for
+  the full text), replacing the previous horizontal card carousel that
+  filled the prompt for editing and truncated by character count. A
+  horizontal layout is still available — build it directly from the
+  suggestions primitives, as `examples/ai-rag` now does.
+
 ### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
 
-The layout system has been significantly refactored. `LayoutConfig` is now `LayoutNode | null` directly — the outer `{ type: 'mosaic', nodes: ... }` wrapper is gone. Type names have been renamed from `MosaicLayout*` to `Layout*`, and `react-resizable-panels` now handles all layout rendering.
+The layout system now uses explicit panel identity and dock boundaries instead
+of path-based lookup. `LayoutConfig` is `LayoutNode | null` directly — the
+outer `{ type: 'mosaic', nodes: ... }` wrapper is gone. Type names have been
+renamed from `MosaicLayout*` to `Layout*`, and `react-resizable-panels` now
+handles all layout rendering.
+
+The following APIs and properties were removed:
+
+- `getPanelByPath`
+- `useGetPanelByPath`
+- `useGetPanelInfoByPath`
+- `draggable` on split and tabs nodes
+- `pathSegment` on split and tabs nodes
 
 **Limited automatic migration:** The Zod schema uses `z.preprocess` to detect and convert **only** legacy binary tree formats (`{first, second, direction, splitPercentage?}`) to the new n-ary format with `children` arrays.
 
@@ -1124,7 +1301,8 @@ AI chat state is now **scoped per session** (instead of a single global chat ins
   - `getPrompt(sessionId)` / `setPrompt(sessionId, prompt)`
   - `getIsRunning(sessionId)` / `setIsRunning(sessionId, isRunning)`
 - **New hook**: `useSessionChat(sessionId)` for session-scoped chat (replaces legacy single-instance patterns)
-- **Mounting requirement**: if you render AI primitives directly (e.g. `QueryControls`, `AnalysisResultsContainer`) you must mount chat providers once via `Chat.Root` (it mounts `SessionChatManager`).
+- **Lifecycle**: session chat execution is owned by the AI slice. Starting a run
+  does not require a mounted React chat provider.
 
 #### Before
 
@@ -1156,7 +1334,8 @@ if (sessionId) {
 
 #### Recommended UI composition
 
-Use `Chat.Root` once at the top of your AI UI tree (it mounts `SessionChatManager`):
+Use `Chat.Root` once at the top of your AI UI tree to provide the compound chat
+presentation context:
 
 ```tsx
 import {Chat} from '@sqlrooms/ai';

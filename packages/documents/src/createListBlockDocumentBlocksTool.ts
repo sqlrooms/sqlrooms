@@ -4,7 +4,24 @@ import {
   type BlockDocumentAiAdapter,
   type BlockDocumentBlockSummary,
 } from './BlockDocumentAi';
-import {blockDocumentNodeToBlock} from './BlockDocumentSliceConfig';
+import {
+  blockDocumentNodeToBlock,
+  type BlockDocumentBlock,
+  type BlockDocumentNode,
+} from './BlockDocumentSliceConfig';
+
+/**
+ * Extract plain text from an array of BlockDocumentNodes.
+ */
+function extractTextFromNodes(nodes: BlockDocumentNode[]): string {
+  return nodes
+    .map((node) => {
+      if (node.text) return node.text;
+      if (node.content) return extractTextFromNodes(node.content);
+      return '';
+    })
+    .join('');
+}
 
 const ListBlockDocumentBlocksToolInput = z.object({
   reasoning: z
@@ -22,8 +39,16 @@ type BlockDocumentToolOutput<T> =
   | {success: false; errorMessage: string};
 
 type ListBlockDocumentBlocksToolOutput = BlockDocumentToolOutput<{
+  blockDocumentId: string;
+  documentExists: boolean;
   blocks?: BlockDocumentBlockSummary[];
 }>;
+
+export type BlockDocumentBlockSummaryAugmenter = (params: {
+  block: BlockDocumentBlock;
+  summary: BlockDocumentBlockSummary;
+  index: number;
+}) => Record<string, unknown> | undefined;
 
 /**
  * Options for creating a generic block-document listing tool.
@@ -35,6 +60,8 @@ export type CreateListBlockDocumentBlocksToolOptions = {
   blockDocumentId: string;
   /** Optional host-specific guidance appended to the tool description. */
   usageHint?: string;
+  /** Optional host-specific summary metadata, such as runtime issues. */
+  augmentBlockSummary?: BlockDocumentBlockSummaryAugmenter;
 };
 
 function summarizeBlock(
@@ -48,8 +75,8 @@ function summarizeBlock(
       blockId: block.id,
       index,
       type: block.type,
-      ...(block.title !== undefined ? {title: block.title} : {}),
       ...(block.caption !== undefined ? {caption: block.caption} : {}),
+      ...(block.tableName !== undefined ? {tableName: block.tableName} : {}),
       statefulBlock: {
         blockType: block.blockType,
         ...(block.blockInstanceId !== undefined
@@ -74,7 +101,7 @@ function summarizeBlock(
     blockId: block.id,
     index,
     type: block.type,
-    ...('text' in block ? {title: block.text} : {}),
+    ...('text' in block ? {title: extractTextFromNodes(block.text)} : {}),
     ...('caption' in block && block.caption !== undefined
       ? {caption: block.caption}
       : {}),
@@ -89,6 +116,7 @@ export function createListBlockDocumentBlocksTool({
   blockDocumentAdapter,
   blockDocumentId,
   usageHint,
+  augmentBlockSummary,
 }: CreateListBlockDocumentBlocksToolOptions) {
   return tool<
     ListBlockDocumentBlocksToolInput,
@@ -104,12 +132,23 @@ export function createListBlockDocumentBlocksTool({
     inputSchema: ListBlockDocumentBlocksToolInput,
     execute: async () => {
       try {
-        const blocks = blockDocumentAdapter.getBlocks(blockDocumentId) ?? [];
+        const nodes = blockDocumentAdapter.getBlocks(blockDocumentId);
         return {
           success: true,
-          blocks: blocks
+          blockDocumentId,
+          documentExists: nodes !== undefined,
+          blocks: (nodes ?? [])
             .map((node, index) =>
-              summarizeBlock(blockDocumentNodeToBlock(node), index),
+              (() => {
+                const block = blockDocumentNodeToBlock(node);
+                const summary = summarizeBlock(block, index);
+                if (!block || !summary) return undefined;
+
+                return {
+                  ...summary,
+                  ...(augmentBlockSummary?.({block, summary, index}) ?? {}),
+                };
+              })(),
             )
             .filter(
               (block): block is BlockDocumentBlockSummary =>

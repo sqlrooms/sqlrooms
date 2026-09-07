@@ -4,7 +4,8 @@ import React, {useCallback, useEffect, useRef, useState} from 'react';
 
 const DEFAULT_MAX_HEIGHT = 100;
 
-type ActivityBoxProps = {
+/** Props for the collapsible SQLRooms activity container. */
+export type ActivityBoxProps = {
   children: React.ReactNode;
   /** Max collapsed height in px. Defaults to 100. */
   maxCollapsedHeight?: number;
@@ -112,7 +113,7 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
       <button
         onClick={() => setExpandedForLabel(summaryLabel ?? null)}
         className={cn(
-          'text-muted-foreground hover:text-foreground ml-4 flex w-full cursor-pointer items-center gap-1 py-0.5 text-xs transition-colors',
+          'text-muted-foreground hover:text-foreground flex w-full cursor-pointer items-center gap-1 py-0.5 text-xs transition-colors',
           className,
         )}
       >

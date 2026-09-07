@@ -395,6 +395,10 @@ The `useSql` hook automatically re-runs queries when the database state changes 
 
 ## Develop locally
 
+Repository development and testing require Node.js `>=24.9`. This tooling
+requirement does not change the Node.js versions supported by published
+packages.
+
 ```bash
 pnpm install
 pnpm build

@@ -18,10 +18,12 @@ import type {
 import {
   parseWKBHeader,
   readWKBLineStringXY,
+  readWKBMultiLineStringXY,
   readWKBPointXY,
   visitWKBMultiPolygonCoordinates,
   visitWKBPolygonCoordinates,
   WKB_LINESTRING,
+  WKB_MULTILINESTRING,
   WKB_MULTIPOLYGON,
   WKB_POINT,
   WKB_POLYGON,
@@ -33,6 +35,8 @@ const VERTEX_FIELD = new Field('', VERTEX_TYPE, true);
 const RING_TYPE = new List(VERTEX_FIELD);
 const RING_FIELD = new Field('', RING_TYPE, true);
 const POLYGON_TYPE = new List(RING_FIELD);
+const POLYGON_FIELD = new Field('', POLYGON_TYPE, true);
+const MULTIPOLYGON_TYPE = new List(POLYGON_FIELD);
 
 const GEOMETRY_SAMPLE_LIMIT = 100;
 const BITS_PER_VALIDITY_BYTE = 8;
@@ -217,23 +221,36 @@ function tryPromotePolygonTable(
   if (!vector) return null;
 
   const n = table.numRows;
-  const polygonOffsets = new Int32Array(n + 1);
+  const rowPolygonOffsets = new Int32Array(n + 1);
+  const polygonRingStarts: number[] = [];
   const ringOffsetsList: number[] = [];
   const xyList: number[] = [];
   const isNull = new Uint8Array(n);
   let nullCount = 0;
+  let sawMultiPolygon = false;
+
+  const startPolygon = () => {
+    polygonRingStarts.push(ringOffsetsList.length);
+  };
   const polygonVisitor = {
+    onPolygonStart: startPolygon,
     onRingStart: () => ringOffsetsList.push(xyList.length / 2),
     onCoordinate: (x: number, y: number) => xyList.push(x, y),
   };
 
+  const appendParsedPolygon = (rings: number[][][]) => {
+    startPolygon();
+    appendPolygonCoordinates(rings, ringOffsetsList, xyList);
+  };
+
   for (let i = 0; i < n; i++) {
-    polygonOffsets[i] = ringOffsetsList.length;
+    rowPolygonOffsets[i] = polygonRingStarts.length;
     const raw = vector.get(i);
 
     if (raw == null) {
       isNull[i] = 1;
       nullCount++;
+      startPolygon();
       continue;
     }
 
@@ -242,19 +259,19 @@ function tryPromotePolygonTable(
       if (!geom) {
         isNull[i] = 1;
         nullCount++;
+        startPolygon();
         continue;
       }
       if (geom.type === 'Polygon') {
-        appendPolygonCoordinates(
-          geom.coordinates as number[][][],
-          ringOffsetsList,
-          xyList,
-        );
+        appendParsedPolygon(geom.coordinates as number[][][]);
       } else if (geom.type === 'MultiPolygon') {
-        for (const polygon of geom.coordinates as number[][][][]) {
-          appendPolygonCoordinates(polygon, ringOffsetsList, xyList);
+        sawMultiPolygon = true;
+        for (const rings of geom.coordinates as number[][][][]) {
+          appendParsedPolygon(rings);
         }
-      } else return null;
+      } else {
+        return null;
+      }
       continue;
     }
 
@@ -263,17 +280,22 @@ function tryPromotePolygonTable(
     if (!hdr) return null;
 
     if (hdr.geomType === WKB_POLYGON) {
+      startPolygon();
       if (visitWKBPolygonCoordinates(buf, hdr, polygonVisitor) == null) {
         return null;
       }
     } else if (hdr.geomType === WKB_MULTIPOLYGON) {
+      sawMultiPolygon = true;
       if (!visitWKBMultiPolygonCoordinates(buf, hdr, polygonVisitor)) {
         return null;
       }
-    } else return null;
+    } else {
+      return null;
+    }
   }
-  polygonOffsets[n] = ringOffsetsList.length;
+  rowPolygonOffsets[n] = polygonRingStarts.length;
 
+  const nPolygons = polygonRingStarts.length;
   const totalRings = ringOffsetsList.length;
   const totalPoints = xyList.length / 2;
 
@@ -281,11 +303,14 @@ function tryPromotePolygonTable(
   for (let j = 0; j < totalRings; j++) ringOffsets[j] = ringOffsetsList[j]!;
   ringOffsets[totalRings] = totalPoints;
 
-  const flatCoords = new Float64Array(xyList);
+  const polygonOffsets = new Int32Array(nPolygons + 1);
+  for (let j = 0; j < nPolygons; j++) polygonOffsets[j] = polygonRingStarts[j]!;
+  polygonOffsets[nPolygons] = totalRings;
+
   const floatData = makeData({
     type: new Float64(),
     length: totalPoints * 2,
-    data: flatCoords,
+    data: new Float64Array(xyList),
   });
   const pointData = makeData({
     type: VERTEX_TYPE,
@@ -300,17 +325,36 @@ function tryPromotePolygonTable(
   });
   const polyData = makeData({
     type: POLYGON_TYPE,
+    length: nPolygons,
+    nullCount: sawMultiPolygon ? 0 : nullCount,
+    nullBitmap: sawMultiPolygon ? null : buildNullBitmap(n, isNull, nullCount),
+    valueOffsets: polygonOffsets,
+    child: ringData,
+  });
+
+  if (!sawMultiPolygon) {
+    if (nPolygons !== n) return null;
+    return buildPromotedResult(
+      table,
+      columnName,
+      new Vector([polyData]),
+      'geoarrow.polygon',
+    );
+  }
+
+  const multiData = makeData({
+    type: MULTIPOLYGON_TYPE,
     length: n,
     nullCount,
     nullBitmap: buildNullBitmap(n, isNull, nullCount),
-    valueOffsets: polygonOffsets,
-    child: ringData,
+    valueOffsets: rowPolygonOffsets,
+    child: polyData,
   });
   return buildPromotedResult(
     table,
     columnName,
-    new Vector([polyData]),
-    'geoarrow.polygon',
+    new Vector([multiData]),
+    'geoarrow.multipolygon',
   );
 }
 
@@ -394,6 +438,13 @@ const POINT_LAYERS = new Set([
   'GeoArrowArcLayer',
 ]);
 
+/** Scatter / heatmap / column (not OD arcs). */
+const POINT_POSITION_LAYERS = new Set([
+  'GeoArrowScatterplotLayer',
+  'GeoArrowHeatmapLayer',
+  'GeoArrowColumnLayer',
+]);
+
 const POLYGON_LAYERS = new Set([
   'GeoArrowPolygonLayer',
   'GeoArrowSolidPolygonLayer',
@@ -401,9 +452,100 @@ const POLYGON_LAYERS = new Set([
 
 const PATH_LAYERS = new Set(['GeoArrowPathLayer', 'GeoArrowTripsLayer']);
 
+/** Promote WKB/WKT Points only — no silent polygon centroid. */
+export function promoteToPointPositions(
+  table: arrow.Table,
+  columnName: string,
+  encoding: ResolvedGeometryEncoding,
+): PreparedGeoArrowLayerData | null {
+  return tryPromotePointTable(table, columnName, encoding);
+}
+
+export function isPointPositionLayer(layerType: string): boolean {
+  return POINT_POSITION_LAYERS.has(layerType);
+}
+
+const WKB_TYPE_NAMES: Record<number, string> = {
+  [WKB_POINT]: 'Point',
+  [WKB_LINESTRING]: 'LineString',
+  [WKB_POLYGON]: 'Polygon',
+  [WKB_MULTILINESTRING]: 'MultiLineString',
+  [WKB_MULTIPOLYGON]: 'MultiPolygon',
+};
+
+function uniqueSortedTypes(types: string[]): string[] {
+  return [...new Set(types)].sort();
+}
+
+function sampleGeometryTypeNames(
+  table: arrow.Table,
+  columnName: string,
+  encoding: ResolvedGeometryEncoding,
+): string[] | null {
+  try {
+    const parsed = getSampleGeometryTypes(table, columnName, encoding);
+    if (parsed && parsed.length > 0) {
+      return uniqueSortedTypes(parsed);
+    }
+  } catch {
+    // Fall through to WKB header sampling.
+  }
+  try {
+    const wkbTypes = getSampleWKBGeomTypes(table, columnName);
+    if (!wkbTypes || wkbTypes.length === 0) return null;
+    return uniqueSortedTypes(
+      wkbTypes.map((t) => WKB_TYPE_NAMES[t] ?? `type:${t}`),
+    );
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Promotes WKB/WKT LineString geometries to a native GeoArrow LineString vector
- * (List<FixedSizeList<2, Float64>>). Returns null if any geometry is not a LineString.
+ * Extra guidance when a typed GeoArrow layer cannot promote WKB/WKT geometry.
+ * Mixed geometry columns must use GeoJsonLayer or an ST_GeometryType filter.
+ */
+export function describeGeoArrowPromotionFailure(
+  layerType: string,
+  encoding: ResolvedGeometryEncoding,
+  table: arrow.Table,
+  columnName: string,
+): string {
+  const sampled = sampleGeometryTypeNames(table, columnName, encoding);
+  const sampledText =
+    sampled && sampled.length > 0
+      ? ` Sampled geometry types: ${sampled.join(', ')}.`
+      : '';
+
+  if (POLYGON_LAYERS.has(layerType)) {
+    return (
+      `${sampledText} GeoArrowPolygonLayer requires Polygon or MultiPolygon rows.` +
+      ` Use GeoJsonLayer for mixed Point/Line/Polygon columns, or filter with` +
+      ` WHERE ST_GeometryType(geom) IN ('POLYGON','MULTIPOLYGON').`
+    );
+  }
+  if (PATH_LAYERS.has(layerType)) {
+    return (
+      `${sampledText} GeoArrowPathLayer requires only LineString/MultiLineString rows.` +
+      ` For mixed geometry columns use GeoJsonLayer, or filter with` +
+      ` WHERE ST_GeometryType(geom) IN ('LINESTRING','MULTILINESTRING').`
+    );
+  }
+  if (POINT_LAYERS.has(layerType)) {
+    return (
+      `${sampledText} This point layer requires Point geometry.` +
+      ` For mixed geometry columns use GeoJsonLayer, or filter/transform to points.`
+    );
+  }
+  return sampledText;
+}
+
+/**
+ * Promotes WKB/WKT LineString geometries (and single-part MultiLineString) to a
+ * native GeoArrow LineString vector (List<FixedSizeList<2, Float64>>).
+ * Multi-part MultiLineStrings are rejected — stitching parts would draw
+ * artificial segments between disjoint routes. Returns null if any non-null
+ * geometry is not a promotable line type.
  */
 function tryPromoteLineStringTable(
   table: arrow.Table,
@@ -438,15 +580,26 @@ function tryPromoteLineStringTable(
         nullCount++;
         continue;
       }
-      if (geom.type !== 'LineString') return null;
-      coords = (geom.coordinates as number[][]).map(
-        (c) => [c[0]!, c[1]!] as [number, number],
-      );
+      if (geom.type === 'LineString') {
+        coords = (geom.coordinates as number[][]).map(
+          (c) => [c[0]!, c[1]!] as [number, number],
+        );
+      } else if (geom.type === 'MultiLineString') {
+        const parts = geom.coordinates as number[][][];
+        // Only single-part MultiLineString promotes cleanly to PathLayer.
+        if (parts.length !== 1 || !parts[0]?.length) return null;
+        coords = parts[0].map((c) => [c[0]!, c[1]!] as [number, number]);
+      } else {
+        return null;
+      }
     } else {
       const buf = toArrayBuffer(raw);
       const hdr = parseWKBHeader(buf);
       if (!hdr) return null;
-      coords = readWKBLineStringXY(buf, hdr);
+      coords =
+        hdr.geomType === WKB_MULTILINESTRING
+          ? readWKBMultiLineStringXY(buf, hdr)
+          : readWKBLineStringXY(buf, hdr);
       if (!coords) return null;
     }
 
@@ -537,8 +690,11 @@ export const wkbGeometryDecoder: GeometryDecoder = {
         table,
         columnName,
         encoding,
-        (geometryType) => geometryType === 'LineString',
-        (geometryType) => geometryType === WKB_LINESTRING,
+        (geometryType) =>
+          geometryType === 'LineString' || geometryType === 'MultiLineString',
+        (geometryType) =>
+          geometryType === WKB_LINESTRING ||
+          geometryType === WKB_MULTILINESTRING,
       );
     }
 

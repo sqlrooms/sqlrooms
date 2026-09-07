@@ -49,7 +49,7 @@ describe('BlockDocumentsSlice', () => {
         blockDocumentBlockToNode({
           id: 'block-1',
           type: 'paragraph',
-          text: 'Hello',
+          text: [{type: 'text', text: 'Hello'}],
         }),
       ],
     });
@@ -87,7 +87,7 @@ describe('BlockDocumentsSlice', () => {
           id: 'block-1',
           type: 'heading',
           level: 2,
-          text: 'Original',
+          text: [{type: 'text', text: 'Original'}],
         }),
       ],
     });
@@ -98,14 +98,21 @@ describe('BlockDocumentsSlice', () => {
           id: 'block-2',
           type: 'heading',
           level: 2,
-          text: 'Replacement',
+          text: [{type: 'text', text: 'Replacement'}],
         }),
       ],
     });
 
     expect(
       store.getState().blockDocuments.getBlocks('block-document-1'),
-    ).toEqual([{id: 'block-1', type: 'heading', level: 2, text: 'Original'}]);
+    ).toEqual([
+      {
+        id: 'block-1',
+        type: 'heading',
+        level: 2,
+        text: [{type: 'text', text: 'Original'}],
+      },
+    ]);
   });
 
   it('round-trips block intent through document nodes', () => {
@@ -134,7 +141,7 @@ describe('BlockDocumentsSlice', () => {
     ).toEqual([block]);
   });
 
-  it('preserves legacy worksheet table reference strings in block nodes', () => {
+  it('preserves legacy document table reference strings in block nodes', () => {
     const tableReferences = [
       'events',
       '"main"."events"',
@@ -158,14 +165,13 @@ describe('BlockDocumentsSlice', () => {
               type: 'statefulBlock',
               blockType: 'data-table',
               blockInstanceId: 'data-table',
-              title: tableReference,
+              tableName: tableReference,
             }),
             blockDocumentBlockToNode({
               id: 'map',
               type: 'statefulBlock',
               blockType: 'map',
               blockInstanceId: 'map',
-              title: tableReference,
             }),
           ],
         }),
@@ -181,14 +187,13 @@ describe('BlockDocumentsSlice', () => {
           type: 'statefulBlock',
           blockType: 'data-table',
           blockInstanceId: 'data-table',
-          title: tableReference,
+          tableName: tableReference,
         },
         {
           id: 'map',
           type: 'statefulBlock',
           blockType: 'map',
           blockInstanceId: 'map',
-          title: tableReference,
         },
       ]);
     }
@@ -198,8 +203,17 @@ describe('BlockDocumentsSlice', () => {
     const store = createTestStore();
 
     store.getState().blockDocuments.appendBlocks('block-document-1', [
-      {id: 'heading', type: 'heading', level: 1, text: 'Overview'},
-      {id: 'paragraph', type: 'paragraph', text: 'First note'},
+      {
+        id: 'heading',
+        type: 'heading',
+        level: 1,
+        text: [{type: 'text', text: 'Overview'}],
+      },
+      {
+        id: 'paragraph',
+        type: 'paragraph',
+        text: [{type: 'text', text: 'First note'}],
+      },
     ]);
     store.getState().blockDocuments.insertBlocks('block-document-1', 1, [
       {
@@ -214,7 +228,12 @@ describe('BlockDocumentsSlice', () => {
     expect(
       store.getState().blockDocuments.getBlocks('block-document-1'),
     ).toEqual([
-      {id: 'heading', type: 'heading', level: 1, text: 'Overview'},
+      {
+        id: 'heading',
+        type: 'heading',
+        level: 1,
+        text: [{type: 'text', text: 'Overview'}],
+      },
       {
         id: 'chart',
         type: 'chart',
@@ -222,7 +241,11 @@ describe('BlockDocumentsSlice', () => {
         config: {chartType: 'histogram', settings: {field: 'revenue'}},
         selectionGroupId: 'overview',
       },
-      {id: 'paragraph', type: 'paragraph', text: 'First note'},
+      {
+        id: 'paragraph',
+        type: 'paragraph',
+        text: [{type: 'text', text: 'First note'}],
+      },
     ]);
 
     expect(
@@ -231,7 +254,7 @@ describe('BlockDocumentsSlice', () => {
         .blockDocuments.updateBlock('block-document-1', 'paragraph', {
           id: 'ignored-id',
           type: 'paragraph',
-          text: 'Updated note',
+          text: [{type: 'text', text: 'Updated note'}],
         }),
     ).toBe(true);
     expect(
@@ -248,7 +271,11 @@ describe('BlockDocumentsSlice', () => {
     expect(
       store.getState().blockDocuments.getBlocks('block-document-1'),
     ).toEqual([
-      {id: 'paragraph', type: 'paragraph', text: 'Updated note'},
+      {
+        id: 'paragraph',
+        type: 'paragraph',
+        text: [{type: 'text', text: 'Updated note'}],
+      },
       {
         id: 'chart',
         type: 'chart',
@@ -270,7 +297,7 @@ describe('BlockDocumentsSlice', () => {
           blockDocumentBlockToNode({
             id: 'paragraph',
             type: 'paragraph',
-            text: 'Draft',
+            text: [{type: 'text', text: 'Draft'}],
           }),
         ],
       },
@@ -288,11 +315,14 @@ describe('BlockDocumentsSlice', () => {
       store.getState().blockDocuments.getBlockDocument('block-document-1'),
     ).not.toHaveProperty('syncMetadata');
 
-    store
-      .getState()
-      .blockDocuments.appendBlocks('block-document-1', [
-        {id: 'heading', type: 'heading', level: 1, text: 'External edit'},
-      ]);
+    store.getState().blockDocuments.appendBlocks('block-document-1', [
+      {
+        id: 'heading',
+        type: 'heading',
+        level: 1,
+        text: [{type: 'text', text: 'External edit'}],
+      },
+    ]);
 
     expect(
       store.getState().blockDocuments.getSyncMetadata('block-document-1'),
@@ -309,7 +339,7 @@ describe('BlockDocumentsSlice', () => {
     const block: BlockDocumentBlockType = {
       id: 'missing',
       type: 'paragraph',
-      text: 'Nope',
+      text: [{type: 'text', text: 'Nope'}],
     };
 
     expect(
@@ -396,7 +426,6 @@ describe('BlockDocumentsSlice', () => {
       blockId: string;
       blockType: string;
       blockInstanceId: string;
-      title?: string;
     }> = [];
     const store = createTestStore({
       onCreateOwnedStatefulBlock: ({
@@ -404,14 +433,12 @@ describe('BlockDocumentsSlice', () => {
         blockId,
         blockType,
         blockInstanceId,
-        title,
       }) => {
         createdBlocks.push({
           documentId,
           blockId,
           blockType,
           blockInstanceId,
-          title,
         });
       },
     });
@@ -423,7 +450,6 @@ describe('BlockDocumentsSlice', () => {
         blockType: 'dashboard',
         blockInstanceId: 'dashboard-1',
         ownership: 'owned',
-        title: 'Dashboard',
       },
       {
         id: 'shared-dashboard',
@@ -431,7 +457,6 @@ describe('BlockDocumentsSlice', () => {
         blockType: 'dashboard',
         blockInstanceId: 'dashboard-2',
         ownership: 'shared',
-        title: 'Shared Dashboard',
       },
     ]);
 
@@ -441,7 +466,6 @@ describe('BlockDocumentsSlice', () => {
         blockId: 'owned-dashboard',
         blockType: 'dashboard',
         blockInstanceId: 'dashboard-1',
-        title: 'Dashboard',
       },
     ]);
   });
@@ -469,7 +493,7 @@ describe('BlockDocumentsSlice', () => {
         blockDocumentBlockToNode({
           id: 'paragraph',
           type: 'paragraph',
-          text: 'Replacement',
+          text: [{type: 'text', text: 'Replacement'}],
         }),
       ],
     });
@@ -511,15 +535,15 @@ describe('BlockDocumentsSlice', () => {
     expect(deletedBlockIds).toEqual(['dashboard-1']);
   });
 
-  it('renames owned stateful block references when title changes', () => {
-    const renamedBlocks: Array<{
-      blockInstanceId: string;
-      previousTitle: string;
-      title: string;
-    }> = [];
+  it('does not treat caption changes as stateful instance lifecycle changes', () => {
+    const deletedBlockIds: string[] = [];
+    const createdBlockIds: string[] = [];
     const store = createTestStore({
-      onRenameOwnedStatefulBlock: ({blockInstanceId, previousTitle, title}) => {
-        renamedBlocks.push({blockInstanceId, previousTitle, title});
+      onCreateOwnedStatefulBlock: ({blockInstanceId}) => {
+        createdBlockIds.push(blockInstanceId);
+      },
+      onDeleteOwnedStatefulBlock: ({blockInstanceId}) => {
+        deletedBlockIds.push(blockInstanceId);
       },
     });
 
@@ -530,17 +554,10 @@ describe('BlockDocumentsSlice', () => {
         blockType: 'pivot',
         blockInstanceId: 'pivot-1',
         ownership: 'owned',
-        title: 'Original Pivot',
-      },
-      {
-        id: 'shared-pivot-block',
-        type: 'statefulBlock',
-        blockType: 'pivot',
-        blockInstanceId: 'pivot-2',
-        ownership: 'shared',
-        title: 'Original Shared Pivot',
+        caption: 'Original Pivot',
       },
     ]);
+    createdBlockIds.length = 0;
 
     expect(
       store
@@ -551,35 +568,39 @@ describe('BlockDocumentsSlice', () => {
           blockType: 'pivot',
           blockInstanceId: 'pivot-1',
           ownership: 'owned',
-          title: 'Renamed Pivot',
+          caption: 'Renamed Pivot',
         }),
     ).toBe(true);
-    store
-      .getState()
-      .blockDocuments.updateBlock('block-document-1', 'shared-pivot-block', {
-        id: 'ignored',
-        type: 'statefulBlock',
-        blockType: 'pivot',
-        blockInstanceId: 'pivot-2',
-        ownership: 'shared',
-        title: 'Renamed Shared Pivot',
-      });
 
-    expect(renamedBlocks).toEqual([
-      {
-        blockInstanceId: 'pivot-1',
-        previousTitle: 'Original Pivot',
-        title: 'Renamed Pivot',
-      },
-    ]);
+    expect(createdBlockIds).toEqual([]);
+    expect(deletedBlockIds).toEqual([]);
   });
 
   it('round-trips supported block DTOs through Tiptap JSON nodes', () => {
     const blocks: BlockDocumentBlockType[] = [
-      {id: 'heading', type: 'heading', level: 3, text: 'Findings'},
-      {id: 'paragraph', type: 'paragraph', text: 'A note'},
-      {id: 'list', type: 'list', ordered: true, items: ['One', 'Two']},
-      {id: 'todo', type: 'todo', checked: true, text: 'Review'},
+      {
+        id: 'heading',
+        type: 'heading',
+        level: 3,
+        text: [{type: 'text', text: 'Findings'}],
+      },
+      {
+        id: 'paragraph',
+        type: 'paragraph',
+        text: [{type: 'text', text: 'A note'}],
+      },
+      {
+        id: 'list',
+        type: 'list',
+        ordered: true,
+        items: [[{type: 'text', text: 'One'}], [{type: 'text', text: 'Two'}]],
+      },
+      {
+        id: 'todo',
+        type: 'todo',
+        checked: true,
+        text: [{type: 'text', text: 'Review'}],
+      },
       {id: 'image', type: 'image', assetId: 'asset-1', caption: 'Image'},
       {
         id: 'chart-image',
@@ -601,7 +622,6 @@ describe('BlockDocumentsSlice', () => {
         blockType: 'pivot',
         blockInstanceId: 'pivot-instance-1',
         ownership: 'owned',
-        title: 'Embedded Pivot Table',
         caption: 'Pivot',
       },
     ];
@@ -655,7 +675,6 @@ describe('BlockDocumentsSlice', () => {
               blockType: 'dashboard',
               blockInstanceId: 'dashboard-1',
               ownership: 'owned',
-              title: 'Dashboard',
             },
           },
           {
@@ -665,7 +684,6 @@ describe('BlockDocumentsSlice', () => {
               blockType: 'dashboard',
               blockInstanceId: 'dashboard-1',
               ownership: 'owned',
-              title: 'Dashboard copy',
             },
           },
           {
@@ -690,7 +708,6 @@ describe('BlockDocumentsSlice', () => {
           blockType: 'dashboard',
           blockInstanceId: 'dashboard-1',
           ownership: 'owned',
-          title: 'Dashboard',
         },
       },
       {
@@ -700,7 +717,6 @@ describe('BlockDocumentsSlice', () => {
           blockType: 'dashboard',
           blockInstanceId: 'block-1',
           ownership: 'owned',
-          title: 'Dashboard copy',
         },
       },
       {

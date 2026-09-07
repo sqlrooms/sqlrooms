@@ -4,13 +4,20 @@ import {
 } from '@sqlrooms/documents';
 import {getTableIdentity} from '@sqlrooms/duckdb';
 import {
-  createDeckMapPanelFromNativeConfig,
-  DeckMapDashboardToolParameters,
-  DECK_MAP_DASHBOARD_PANEL_TYPE,
-  type DeckMapDashboardConfigToolConfig,
+  createOrUpdateDeckMapResource,
+  DeckMapResourceToolParameters,
+  mergeDeckMapResourceConfigPatch,
+  normalizeDeckMapPointConfig,
+  prepareAiDeckMapConfig,
+  type DeckMapConfig,
 } from '@sqlrooms/deck';
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
+import {
+  STATEFUL_BLOCK_ARTIFACT_TYPES,
+  type StatefulBlockArtifactType,
+} from './artifactTypeIds';
+import {CLI_WORKSPACE_CATALOG} from './cliWorkspaceCatalog';
 import type {RoomState} from './store-types';
 
 export const CLI_BLOCK_DOCUMENT_COMMAND_OWNER =
@@ -28,6 +35,13 @@ const BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID =
   'block-document.update-block-metadata';
 const BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID = 'block-document.add-map-block';
 const DASHBOARD_SET_SELECTED_TABLE_COMMAND_ID = 'dashboard.set-selected-table';
+
+const CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES = {
+  [BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID]: 'dashboard',
+  [BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID]: 'data-table',
+  [BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID]: 'html-app',
+  [BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID]: 'map',
+} as const satisfies Record<string, StatefulBlockArtifactType>;
 
 const BlockDocumentIdInput = z.object({
   blockDocumentId: z.string().describe('Target block document artifact ID.'),
@@ -64,13 +78,13 @@ const BlockDocumentAddHtmlAppBlockInput = BlockDocumentIdInput.extend({
 
 const BlockDocumentUpdateBlockMetadataInput = BlockDocumentIdInput.extend({
   blockId: z.string().describe('Block document block ID to update.'),
-  title: z.string().optional().describe('Updated block title.'),
   caption: z.string().optional().describe('Updated block caption.'),
   height: z.number().positive().optional().describe('Updated block height.'),
 });
 
 export const BlockDocumentMapBlockToolParameters =
-  DeckMapDashboardToolParameters.extend({
+  DeckMapResourceToolParameters.extend({
+    title: z.string().optional().describe('Map title.'),
     blockDocumentId: z.string().describe('Target block document artifact ID.'),
     mapId: z
       .string()
@@ -86,46 +100,14 @@ type BlockDocumentMapBlockToolParameters = z.infer<
   typeof BlockDocumentMapBlockToolParameters
 >;
 
-function getFirstDatasetSourceTableName(
-  config: DeckMapDashboardConfigToolConfig,
-): string | undefined {
-  if (!config.datasets || typeof config.datasets !== 'object') {
-    return undefined;
-  }
-
-  return Object.values(config.datasets)
-    .map(
-      (dataset) =>
-        (dataset as Record<string, unknown>).source as
-          | {tableName?: string}
-          | undefined,
-    )
-    .find((source) => source?.tableName)?.tableName;
-}
-
-function hasSqlOnlyDatasetSource(
-  config: DeckMapDashboardConfigToolConfig,
-): boolean {
-  if (!config.datasets || typeof config.datasets !== 'object') {
-    return false;
-  }
-
-  return Object.values(config.datasets).some((dataset) => {
-    const source = (dataset as Record<string, unknown>).source as
-      | {tableName?: string; sqlQuery?: string}
-      | undefined;
-    return Boolean(source?.sqlQuery && !source.tableName);
-  });
-}
-
 function resolveBlockDocumentArtifact(
   state: RoomState,
   blockDocumentId: string,
 ) {
   const artifact = state.artifacts.getArtifact(blockDocumentId);
-  if (!artifact || artifact.type !== 'worksheet') {
+  if (!artifact || artifact.type !== 'block-document') {
     throw new Error(
-      `Artifact ${blockDocumentId} is not a Worksheet block document`,
+      `Artifact ${blockDocumentId} is not a Document block document`,
     );
   }
   state.blockDocuments.ensureBlockDocument(blockDocumentId);
@@ -185,28 +167,19 @@ function findStatefulBlock(
     });
 }
 
-function findMapPanel(state: RoomState, mapId: string, panelId?: string) {
-  const dashboard = state.mosaicDashboard.getDashboard(mapId);
-  if (panelId) {
-    return dashboard?.panels.find(
-      (candidate: {id?: string; type?: string}) =>
-        candidate.id === panelId &&
-        candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
-    );
-  }
-  return dashboard?.panels.find(
-    (candidate: {type?: string}) =>
-      candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
-  );
-}
-
-export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
-  return [
+/** Creates CLI document commands allowed by the selected block capabilities. */
+export function createCliBlockDocumentCommands({
+  statefulBlockTypes = STATEFUL_BLOCK_ARTIFACT_TYPES,
+}: {
+  statefulBlockTypes?: readonly StatefulBlockArtifactType[];
+} = {}): RoomCommand<RoomState>[] {
+  const statefulBlockTypeSet = new Set<string>(statefulBlockTypes);
+  const commands: RoomCommand<RoomState>[] = [
     {
       id: BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID,
       name: 'Add block document dashboard block',
       description: 'Add an owned dashboard block to a block document.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'dashboard', 'block', 'add'],
       inputSchema: BlockDocumentAddDashboardBlockInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
@@ -243,7 +216,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
         return {
           success: true,
           commandId: BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID,
-          message: `Added worksheet dashboard block "${title}".`,
+          message: `Added block document dashboard block "${title}".`,
           data: {
             blockDocumentId,
             blockId,
@@ -257,7 +230,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
       id: BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID,
       name: 'Add block document data table block',
       description: 'Add a data table explorer block to a block document.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'data table', 'block', 'add'],
       inputSchema: BlockDocumentAddDataTableBlockInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
@@ -279,8 +252,8 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
             artifactId: blockDocumentId,
             blockType: 'data-table',
             intent,
-            title: tableIdentity,
             caption: title,
+            tableName: tableIdentity,
             height: 640,
           },
         );
@@ -290,7 +263,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
         return {
           success: true,
           commandId: BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID,
-          message: `Added worksheet data table block "${title}".`,
+          message: `Added block document data table block "${title}".`,
           data: {
             blockDocumentId,
             blockId,
@@ -304,7 +277,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
       id: BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID,
       name: 'Add block document HTML app block',
       description: 'Add an owned HTML app block to a block document.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'html', 'app', 'block', 'add'],
       inputSchema: BlockDocumentAddHtmlAppBlockInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
@@ -332,7 +305,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
         return {
           success: true,
           commandId: BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID,
-          message: `Added worksheet HTML app block "${title}".`,
+          message: `Added block document HTML app block "${title}".`,
           data: {blockDocumentId, blockId, appId},
         };
       },
@@ -340,15 +313,15 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
     {
       id: BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID,
       name: 'Update block document block metadata',
-      description:
-        'Update title, caption, or height for a block document block.',
-      group: 'Worksheet',
+      description: 'Update caption or height for a block document block.',
+      group: 'Document',
       keywords: ['block document', 'block', 'metadata', 'update'],
       inputSchema: BlockDocumentUpdateBlockMetadataInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
-        const {blockDocumentId, blockId, title, caption, height} =
-          input as z.infer<typeof BlockDocumentUpdateBlockMetadataInput>;
+        const {blockDocumentId, blockId, caption, height} = input as z.infer<
+          typeof BlockDocumentUpdateBlockMetadataInput
+        >;
         const state = getState();
         resolveBlockDocumentArtifact(state, blockDocumentId);
         const existing = state.blockDocuments
@@ -359,12 +332,19 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
             `Block document block ${blockId} was not found in ${blockDocumentId}`,
           );
         }
+        if (
+          existing.type === 'statefulBlock' &&
+          !statefulBlockTypeSet.has(existing.blockType)
+        ) {
+          throw new Error(
+            `Stateful block type ${existing.blockType} is not available in the selected capability profile`,
+          );
+        }
         const updated = state.blockDocuments.updateBlock(
           blockDocumentId,
           blockId,
           {
             ...existing,
-            ...(title !== undefined ? {title} : {}),
             ...(caption !== undefined ? {caption} : {}),
             ...(height !== undefined ? {height} : {}),
           },
@@ -375,8 +355,15 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
         return {
           success: true,
           commandId: BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID,
-          message: `Updated worksheet block "${blockId}".`,
-          data: {blockDocumentId, blockId, title, caption, height},
+          message: `Updated block document block "${blockId}".`,
+          data: {
+            blockDocumentId,
+            blockId,
+            caption:
+              caption ?? ('caption' in existing ? existing.caption : undefined),
+            height:
+              height ?? ('height' in existing ? existing.height : undefined),
+          },
         };
       },
     },
@@ -384,7 +371,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
       id: BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID,
       name: 'Add or update block document map block',
       description: 'Create or update a direct block document map block.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'map', 'deck', 'block', 'add', 'update'],
       inputSchema: BlockDocumentMapBlockToolParameters,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
@@ -393,119 +380,139 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
         const state = getState();
         resolveBlockDocumentArtifact(state, params.blockDocumentId);
 
-        const tableName =
-          params.tableName ?? getFirstDatasetSourceTableName(params.config);
-        if (
-          params.mapId &&
-          !tableName &&
-          hasSqlOnlyDatasetSource(params.config)
-        ) {
-          throw new Error(
-            'tableName is required when updating a block document map block with SQL-only dataset sources',
-          );
-        }
-        const table = tableName ? state.db.findTable(tableName) : undefined;
-        if (tableName && !table) {
-          throw new Error(`Table ${tableName} was not found`);
-        }
-        const tableIdentity = table ? getTableIdentity(table.table) : undefined;
-
-        const mapId = params.mapId ?? createDefaultBlockDocumentBlockId();
-        const title = params.title || 'Map';
-        const existingMapBlock = params.mapId
-          ? findStatefulBlock(
-              state,
-              params.blockDocumentId,
-              params.mapId,
-              'map',
-            )
-          : undefined;
-        if (params.mapId && !existingMapBlock) {
-          throw new Error(
-            `Block document map block ${params.mapId} was not found in ${params.blockDocumentId}`,
-          );
-        }
-
-        let existingPanel = findMapPanel(state, mapId, params.panelId);
-        if (params.panelId && !existingPanel) {
-          throw new Error(`Map panel ${params.panelId} was not found`);
-        }
-
-        let blockId: string;
-        if (existingMapBlock) {
-          blockId = existingMapBlock.id;
-        } else {
-          const result = await invokeRequiredCommand(
-            state,
-            BLOCK_DOCUMENT_CREATE_STATEFUL_BLOCK_COMMAND_ID,
-            {
-              artifactId: params.blockDocumentId,
-              blockType: 'map',
-              blockInstanceId: mapId,
-              intent: params.intent,
-              title,
-              caption: title,
-              height: 560,
+        const result = await createOrUpdateDeckMapResource(
+          {
+            ensureBlockDocument: (id) =>
+              state.blockDocuments.ensureBlockDocument(id),
+            findMapBlock: (docId, mapId) => {
+              const block = findStatefulBlock(state, docId, mapId, 'map');
+              return block?.blockInstanceId
+                ? {
+                    blockId: block.id,
+                    mapId: block.blockInstanceId,
+                    caption: 'caption' in block ? block.caption : undefined,
+                  }
+                : undefined;
             },
-          );
-          blockId = statefulBlockFromCommandData(result.data).blockId;
-          existingPanel = findMapPanel(state, mapId, params.panelId);
-        }
-
-        state.mosaicDashboard.ensureDashboard(mapId, title, 'grid');
-        if (tableName) {
-          await invokeRequiredCommand(
-            state,
-            DASHBOARD_SET_SELECTED_TABLE_COMMAND_ID,
-            {dashboardId: mapId, tableName: tableIdentity},
-          );
-        }
-
-        const panel = createDeckMapPanelFromNativeConfig({
-          title,
-          config: params.config,
-        });
-        if (existingPanel) {
-          await invokeRequiredCommand(state, 'dashboard.update-panel', {
-            dashboardId: mapId,
-            panelId: existingPanel.id,
-            patch: {title: panel.title, config: panel.config},
-          });
-        } else {
-          await invokeRequiredCommand(state, 'dashboard.add-panel', {
-            dashboardId: mapId,
-            panel,
-          });
-        }
-
-        if (existingMapBlock) {
-          await invokeRequiredCommand(
-            state,
-            BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID,
-            {
-              blockDocumentId: params.blockDocumentId,
-              blockId: existingMapBlock.id,
+            findMap: (mapId) => state.deckMaps.getMap(mapId),
+            createMapBlock: async ({
+              blockDocumentId,
+              mapId,
               title,
-              caption: title,
+              caption,
+              intent,
+              height,
+            }) => {
+              const createResult = await invokeRequiredCommand(
+                state,
+                BLOCK_DOCUMENT_CREATE_STATEFUL_BLOCK_COMMAND_ID,
+                {
+                  artifactId: blockDocumentId,
+                  blockType: 'map',
+                  blockInstanceId: mapId,
+                  intent,
+                  title,
+                  caption: caption ?? title,
+                  height: height ?? 560,
+                },
+              );
+              return {
+                blockId: statefulBlockFromCommandData(createResult.data)
+                  .blockId,
+                mapId,
+              };
             },
-          );
-        }
+            updateBlockMetadata: async ({
+              blockDocumentId,
+              blockId,
+              caption,
+              height,
+            }) => {
+              await invokeRequiredCommand(
+                state,
+                BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID,
+                {
+                  blockDocumentId,
+                  blockId,
+                  caption,
+                  height,
+                },
+              );
+            },
+            ensureMap: (mapId, title) =>
+              state.deckMaps.ensureMap(mapId, {title}),
+            writeMap: ({mapId, title, config, selectedTable}) => {
+              state.deckMaps.updateMap(mapId, {title, config, selectedTable});
+            },
+            findTable: (tableName) => {
+              const table = state.db.findTable(tableName);
+              return table
+                ? {
+                    tableIdentity: getTableIdentity(table.table),
+                    columns: table.columns,
+                  }
+                : undefined;
+            },
+            prepareConfig: ({
+              config,
+              existingMapConfig,
+              replaceLayers,
+              replaceDatasets,
+            }) => {
+              const resolveTable = (tableName: string) =>
+                state.db.findTable(tableName);
+              // Merge before prepare so isSourceDowngrade keeps existing SQL.
+              const merged = mergeDeckMapResourceConfigPatch(
+                existingMapConfig,
+                config as DeckMapConfig,
+                {replaceLayers, replaceDatasets},
+              );
+              const prepared = prepareAiDeckMapConfig(merged as any, {
+                resolveTable,
+                stripCatalogNames: [CLI_WORKSPACE_CATALOG],
+              }) as DeckMapConfig;
+              return normalizeDeckMapPointConfig({
+                config: prepared,
+                resolveTable,
+              });
+            },
+          },
+          {
+            blockDocumentId: params.blockDocumentId,
+            config: params.config,
+            pointBinding: params.pointBinding,
+            mapId: params.mapId,
+            tableName: params.tableName,
+            title: params.title,
+            intent: params.intent,
+            replaceLayers: params.replaceLayers,
+            replaceDatasets: params.replaceDatasets,
+            artifactLabel: 'block document',
+            missingMapBlockBehavior: 'throw',
+            createMapId: () => createDefaultBlockDocumentBlockId(),
+          },
+        );
 
         return {
           success: true,
           commandId: BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID,
-          message: params.mapId
-            ? `Updated worksheet map block "${title}".`
-            : `Added worksheet map block "${title}".`,
+          message: result.message,
           data: {
-            blockDocumentId: params.blockDocumentId,
-            blockId,
-            mapId,
-            panelId: existingPanel?.id ?? panel.id,
-            selectedTable: tableIdentity,
+            blockDocumentId: result.blockDocumentId,
+            blockId: result.blockId,
+            mapId: result.mapId,
+            selectedTable: result.selectedTable,
           },
         };
       },
     },
   ];
+  const enabledBlockTypes = new Set(statefulBlockTypes);
+  return commands.filter((command) => {
+    const blockType =
+      CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES[
+        command.id as keyof typeof CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES
+      ];
+    return blockType === undefined || enabledBlockTypes.has(blockType);
+  });
 }

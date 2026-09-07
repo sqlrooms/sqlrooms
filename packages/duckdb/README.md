@@ -22,6 +22,19 @@ A powerful wrapper around DuckDB-WASM that provides React hooks and utilities fo
 - **Data Export**: Export query results to CSV files with pagination for large datasets
 - **Batch Processing**: Handle large datasets efficiently with built-in pagination support
 
+### SQL Statement Utilities
+
+`splitSqlStatements` splits DuckDB SQL without treating semicolons inside quoted
+strings, dollar-quoted strings, or comments as statement boundaries. Comments are
+removed safely by default; preserve them when the original SQL will be rewritten
+or re-executed:
+
+```ts
+import {splitSqlStatements} from '@sqlrooms/duckdb';
+
+const statements = splitSqlStatements(sql, {removeComments: false});
+```
+
 ## Installation
 
 ```bash

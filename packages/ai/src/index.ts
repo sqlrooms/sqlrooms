@@ -26,6 +26,7 @@ export {
 export type {
   CommandToolDescriptor,
   CommandToolSearchDescriptor,
+  CommandGuardResult,
   CommandToolsOptions,
   DefaultCommandTools,
   ExecuteCommandToolLlmResult,
@@ -148,7 +149,11 @@ export type {
 export {AiThinkingDots} from '@sqlrooms/ai-core';
 export {cleanupPendingAnalysisResults, ToolAbortError} from '@sqlrooms/ai-core';
 export {fixIncompleteToolCalls} from '@sqlrooms/ai-core';
-export {streamSubAgent, updateAgentToolCallData} from '@sqlrooms/ai-core';
+export {
+  streamSubAgent,
+  updateAgentToolCallData,
+  withRunContextTools,
+} from '@sqlrooms/ai-core';
 export {
   getEffectiveSessionContextItemIds,
   getRunContextItemIds,
@@ -192,6 +197,29 @@ export {PromptSuggestions} from '@sqlrooms/ai-core';
 export {ModelSelector} from '@sqlrooms/ai-core';
 export {SessionControls} from '@sqlrooms/ai-core';
 export {QueryControls} from '@sqlrooms/ai-core';
+export {
+  fileToChatAttachmentPart,
+  getChatAttachmentMediaType,
+  getChatAttachmentText,
+  getChatMessageAttachments,
+  isMarkdownAttachment,
+  isSupportedChatAttachment,
+  isTextAttachmentFilename,
+  isTextAttachmentMediaType,
+  useChatAttachments,
+} from '@sqlrooms/ai-core';
+export type {
+  ChatAttachmentPart,
+  ChatAttachmentsState,
+  ChatComposerAttachmentsProps,
+} from '@sqlrooms/ai-core';
+export {
+  BlockAiPromptPopover,
+  type BlockAiPromptPopoverProps,
+  createAskAiBlockHeaderAction,
+  type AskAiBlockHeaderActionRenderContext,
+  type CreateAskAiBlockHeaderActionOptions,
+} from '@sqlrooms/ai-core';
 export {DeleteSessionDialog} from '@sqlrooms/ai-core';
 export {SessionActions} from '@sqlrooms/ai-core';
 export {SessionDropdown} from '@sqlrooms/ai-core';
@@ -206,21 +234,68 @@ export type {
   ToolStructureBehavior,
   ToolDisplayBehavior,
   LocalAgentChatRootProps,
+  ChatComponentType,
+  ChatRenderingProps,
+  ChatRenderingComponents,
+  ChatNestedActivityMode,
+  ChatTurnSlotProps,
+  ChatTurnPresentation,
+  ChatPromptRegion,
+  ChatActivityRegion,
+  ChatActivityItem,
+  ChatTextRegion,
+  ChatTextItem,
+  ChatOutputRegion,
+  ChatOutputItem,
+  ChatCopyAction,
+  ChatForkAction,
+  ChatErrorRegion,
+  ChatActionsRegion,
+  ChatTimelineRegion,
+  ChatToolState,
+  ChatPromptProps,
+  ChatActivityProps,
+  ChatReasoningProps,
+  ChatTextOutputProps,
+  ChatToolActivityProps,
+  ChatHoistedOutputProps,
+  ChatErrorProps,
+  ChatActionsProps,
+  ChatTurnModel,
+  ChatTurnActivityItem,
+  ChatTurnTextItem,
+  ChatTurnRenderPlan,
+  ToolRendererShouldHoist,
 } from '@sqlrooms/ai-core';
-export {Chat} from '@sqlrooms/ai-core';
+export {
+  Chat,
+  ChatRendering,
+  DefaultChatTurn,
+  DefaultChatActivity,
+  ActivityBox,
+  buildChatTurnModel,
+  buildChatTurnRenderPlan,
+  HoistedToolCallRenderer,
+  defaultChatRenderingComponents,
+} from '@sqlrooms/ai-core';
 export {ContextSelector, CHAT_CONTEXT_SELECTOR_SLOT} from '@sqlrooms/ai-core';
 export {
   findChatSearchMatches,
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,
   getChatTurnsFromUiMessages,
+  HighlightedChatSearchText,
   markdownToPlainText,
   normalizeChatSearchQuery,
+  useActiveChatSearchMatchKey,
+  useOptionalChatSearch,
+  useReportRenderedChatSearchBlock,
 } from '@sqlrooms/ai-core';
 export type {
   ChatMessageMetadata,
   ChatRequestErrorMessage,
   ChatSearchBlock,
+  ChatSearchContextValue,
   ChatSearchMatch,
   ChatTurn,
 } from '@sqlrooms/ai-core';
@@ -236,6 +311,8 @@ export {
   AiSliceConfig,
   AiSessionForkOrigin,
   ChatSessionSchema,
+  createBlockContextItem,
+  BlockAiRunContextItemSchema,
   createDefaultAiConfig,
   AiSettingsSliceConfig,
   AnalysisSessionSchema,
@@ -245,7 +322,11 @@ export {
   getAiRunContextItems,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
-export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
+export type {
+  AiRunContext,
+  AiRunContextItem,
+  BlockAiRunContextItem,
+} from '@sqlrooms/ai-config';
 export type {ToolUIPart, UIMessagePart} from '@sqlrooms/ai-config';
 
 // From @sqlrooms/ai-settings - State/Logic

@@ -37,7 +37,6 @@ export const ContextSelectorBadge: FC<ContextSelectorBadgeProps> = ({
     runningItems,
     renderBadgeLabel,
     removeItem,
-    makeMain,
     reorderItems,
   } = useContextSelectorContext();
 
@@ -111,7 +110,6 @@ export const ContextSelectorBadge: FC<ContextSelectorBadgeProps> = ({
                 key={item.id}
                 item={item}
                 main={index === 0}
-                onMakeMain={makeMain}
                 onRemove={removeItem}
               />
             ))}

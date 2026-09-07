@@ -35,7 +35,6 @@ export type BlockDocumentStatefulBlockReference = {
   blockType: string;
   blockInstanceId: string;
   ownership: BlockOwnership;
-  title?: string;
   caption?: string;
 };
 
@@ -51,13 +50,6 @@ export type BlockDocumentOwnedStatefulBlockDeleteContext<TRoomState> =
 
 export type BlockDocumentOwnedStatefulBlockCreateContext<TRoomState> =
   BlockDocumentOwnedStatefulBlockReference & {
-    getState: () => TRoomState;
-  };
-
-export type BlockDocumentOwnedStatefulBlockRenameContext<TRoomState> =
-  BlockDocumentOwnedStatefulBlockReference & {
-    previousTitle: string;
-    title: string;
     getState: () => TRoomState;
   };
 
@@ -115,9 +107,6 @@ export type CreateBlockDocumentsSliceProps<
   ) => void;
   onCreateOwnedStatefulBlock?: (
     context: BlockDocumentOwnedStatefulBlockCreateContext<TRoomState>,
-  ) => void;
-  onRenameOwnedStatefulBlock?: (
-    context: BlockDocumentOwnedStatefulBlockRenameContext<TRoomState>,
   ) => void;
 };
 
@@ -177,7 +166,6 @@ function getOwnedStatefulBlockReferences(
         blockType: block.blockType,
         blockInstanceId: block.blockInstanceId,
         ownership,
-        title: block.title,
         caption: block.caption,
       });
     }
@@ -223,42 +211,6 @@ function findAddedOwnedStatefulBlockReferences(
     addedReferenceKeys.add(key);
   }
   return addedReferences;
-}
-
-function findRenamedOwnedStatefulBlockReferences(
-  previousConfig: BlockDocumentsSliceConfigType,
-  nextConfig: BlockDocumentsSliceConfigType,
-): Array<
-  BlockDocumentOwnedStatefulBlockReference & {
-    previousTitle: string;
-    title: string;
-  }
-> {
-  const previousReferences = new Map<
-    string,
-    BlockDocumentOwnedStatefulBlockReference
-  >();
-  for (const reference of getOwnedStatefulBlockReferences(previousConfig)) {
-    previousReferences.set(statefulBlockReferenceKey(reference), reference);
-  }
-
-  const renamedReferences: Array<
-    BlockDocumentOwnedStatefulBlockReference & {
-      previousTitle: string;
-      title: string;
-    }
-  > = [];
-  for (const reference of getOwnedStatefulBlockReferences(nextConfig)) {
-    const previousReference = previousReferences.get(
-      statefulBlockReferenceKey(reference),
-    );
-    if (!previousReference) continue;
-    const previousTitle = previousReference.title ?? '';
-    const title = reference.title ?? '';
-    if (!title || previousTitle === title) continue;
-    renamedReferences.push({...reference, previousTitle, title});
-  }
-  return renamedReferences;
 }
 
 function nextSyncMetadata(
@@ -311,23 +263,6 @@ export function createBlockDocumentsSlice<
     }
   };
 
-  const runOwnedStatefulBlockRename = (
-    previousConfig: BlockDocumentsSliceConfigType,
-    getState: () => TRoomState,
-  ) => {
-    if (!props.onRenameOwnedStatefulBlock) return;
-    const renamedReferences = findRenamedOwnedStatefulBlockReferences(
-      previousConfig,
-      getState().blockDocuments.config,
-    );
-    for (const reference of renamedReferences) {
-      props.onRenameOwnedStatefulBlock({
-        ...reference,
-        getState,
-      });
-    }
-  };
-
   return createSlice<BlockDocumentsSliceState, TRoomState>((set, get) => ({
     blockDocuments: {
       config: createDefaultBlockDocumentsConfig(props.config),
@@ -357,7 +292,6 @@ export function createBlockDocumentsSlice<
           }),
         );
         runOwnedStatefulBlockCreate(previousConfig, get);
-        runOwnedStatefulBlockRename(previousConfig, get);
         runOwnedStatefulBlockCleanup(previousConfig, get);
       },
 
@@ -392,7 +326,6 @@ export function createBlockDocumentsSlice<
             delete draft.blockDocuments.syncMetadata[artifactId];
           }),
         );
-        runOwnedStatefulBlockRename(previousConfig, get);
         runOwnedStatefulBlockCleanup(previousConfig, get);
       },
 
@@ -424,7 +357,6 @@ export function createBlockDocumentsSlice<
           }),
         );
         runOwnedStatefulBlockCreate(previousConfig, get);
-        runOwnedStatefulBlockRename(previousConfig, get);
         runOwnedStatefulBlockCleanup(previousConfig, get);
       },
 
@@ -495,7 +427,6 @@ export function createBlockDocumentsSlice<
         );
         if (updated) {
           runOwnedStatefulBlockCreate(previousConfig, get);
-          runOwnedStatefulBlockRename(previousConfig, get);
           runOwnedStatefulBlockCleanup(previousConfig, get);
         }
         return updated;

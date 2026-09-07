@@ -107,10 +107,10 @@ function createArtifactCommand(
       });
       if (artifactType === 'notebook') {
         state.notebook.ensureArtifact(artifactId);
-      } else if (artifactType === 'worksheet') {
+      } else if (artifactType === 'block-document') {
         state.blockDocuments.ensureBlockDocument(artifactId);
-      } else if (artifactType === 'document') {
-        state.documents.ensureDocument(artifactId);
+      } else if (artifactType === 'markdown-document') {
+        state.markdownDocuments.ensureDocument(artifactId);
       } else if (artifactType === 'sql-query') {
         state.sqlEditor.ensureQuery(artifactId, {name: uniqueTitle});
       } else if (artifactType === 'canvas') {
@@ -130,13 +130,6 @@ function createArtifactCommand(
         message: `Created ${group.toLowerCase()} artifact "${artifactId}".`,
         data: {
           artifactId,
-          artifactTargetChange: {
-            artifactId,
-            artifactType,
-            title: uniqueTitle,
-            change: 'created',
-            shouldContinueChat: true,
-          },
         },
       };
     },
@@ -181,16 +174,6 @@ function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
         message: `Created dashboard artifact "${artifactId}".`,
         data: {
           artifactId,
-          artifactTargetChange: {
-            artifactId,
-            artifactType: 'dashboard',
-            title:
-              state.artifacts.getArtifact(artifactId)?.title ??
-              title ??
-              'Dashboard',
-            change: 'created',
-            shouldContinueChat: true,
-          },
         },
       };
     },
@@ -206,8 +189,8 @@ const ARTIFACT_CREATE_COMMANDS: {
   command: () => RoomCommand<RoomState>;
 }[] = [
   {
-    artifactType: 'worksheet',
-    command: () => createArtifactCommand('worksheet', 'Worksheet'),
+    artifactType: 'block-document',
+    command: () => createArtifactCommand('block-document', 'Document'),
   },
   {
     artifactType: 'pivot',
@@ -218,8 +201,8 @@ const ARTIFACT_CREATE_COMMANDS: {
     command: () => createArtifactCommand('notebook', 'Notebook'),
   },
   {
-    artifactType: 'document',
-    command: () => createArtifactCommand('document', 'Document'),
+    artifactType: 'markdown-document',
+    command: () => createArtifactCommand('markdown-document', 'Markdown'),
   },
   {
     artifactType: 'sql-query',
@@ -303,11 +286,11 @@ export function createDashboardCommands({
         if (artifact.type === 'notebook') {
           state.notebook.ensureArtifact(artifactId);
         }
-        if (artifact.type === 'worksheet') {
+        if (artifact.type === 'block-document') {
           state.blockDocuments.ensureBlockDocument(artifactId);
         }
-        if (artifact.type === 'document') {
-          state.documents.ensureDocument(artifactId);
+        if (artifact.type === 'markdown-document') {
+          state.markdownDocuments.ensureDocument(artifactId);
         }
         if (artifact.type === 'sql-query') {
           state.sqlEditor.ensureQuery(artifactId, {name: artifact.title});
@@ -330,13 +313,6 @@ export function createDashboardCommands({
           message: `Selected artifact "${artifactId}".`,
           data: {
             artifactId,
-            artifactTargetChange: {
-              artifactId,
-              artifactType: artifact.type,
-              title: artifact.title,
-              change: 'selected',
-              shouldContinueChat: true,
-            },
           },
         };
       },

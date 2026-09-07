@@ -15,6 +15,8 @@ import {
 import {
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
+  isBlockDocumentStatefulBlockTypeEnabled,
+  useBlockDocumentRenderBlockHeaderActions,
   useBlockDocumentStatefulBlockRenderer,
   useBlockDocumentStatefulBlockTypes,
 } from '../../BlockDocumentStatefulBlockRendererContext';
@@ -132,7 +134,6 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const {documentId, readOnly} = useBlockDocumentEditorContext();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const updateAttributesRef = useRef(updateAttributes);
-  const readOnlyRef = useRef(readOnly);
   const hideScrollHintTimeoutRef = useRef<number | undefined>(undefined);
   const scrollHintTargetRef = useRef<HTMLElement | null>(null);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
@@ -141,14 +142,18 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const blockType = optionalString(attrs.blockType) ?? '';
   const blockInstanceId = optionalString(attrs.blockInstanceId) ?? blockId;
   const ownership = optionalString(attrs.ownership);
-  const title = optionalString(attrs.title);
   const caption = optionalString(attrs.caption);
+  const tableName = optionalString(attrs.tableName);
   const height = optionalNumber(attrs.height);
   const Renderer = useBlockDocumentStatefulBlockRenderer(blockType);
+  const renderBlockHeaderActions = useBlockDocumentRenderBlockHeaderActions();
   const blockTypes = useBlockDocumentStatefulBlockTypes();
   const blockTypeConfig = blockTypes.find(
     (candidate) => candidate.blockType === blockType,
   );
+  const blockReadOnly =
+    readOnly || !isBlockDocumentStatefulBlockTypeEnabled(blockTypes, blockType);
+  const readOnlyRef = useRef(blockReadOnly);
   const resizableHeight = Boolean(blockTypeConfig?.resizableHeight);
   const minHeight = blockTypeConfig?.minHeight ?? 320;
   const maxHeight = blockTypeConfig?.maxHeight;
@@ -163,6 +168,25 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const [resizingHeight, setResizingHeight] = useState<number | null>(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
   const resolvedHeight = resizingHeight ?? persistedHeight;
+  const blockHeaderActions = useMemo(
+    () =>
+      !blockReadOnly && renderBlockHeaderActions
+        ? renderBlockHeaderActions({
+            blockDocumentId: documentId,
+            blockId,
+            blockType,
+            blockInstanceId,
+          })
+        : null,
+    [
+      blockId,
+      blockInstanceId,
+      blockType,
+      documentId,
+      blockReadOnly,
+      renderBlockHeaderActions,
+    ],
+  );
 
   const wrapperStyle = useMemo(
     () => (resolvedHeight ? {height: resolvedHeight} : undefined),
@@ -171,8 +195,25 @@ export const BlockDocumentStatefulBlockNodeView: FC<
 
   useEffect(() => {
     updateAttributesRef.current = updateAttributes;
-    readOnlyRef.current = readOnly;
-  }, [readOnly, updateAttributes]);
+    readOnlyRef.current = blockReadOnly;
+  }, [blockReadOnly, updateAttributes]);
+
+  useEffect(() => {
+    if (!blockReadOnly || !selected) return;
+    const editorElement = editor.view.dom;
+    const preventBlockRemoval = (event: KeyboardEvent) => {
+      const isDeleteKey = event.key === 'Backspace' || event.key === 'Delete';
+      const isCutShortcut =
+        (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'x';
+      if (!isDeleteKey && !isCutShortcut) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    editorElement.addEventListener('keydown', preventBlockRemoval, true);
+    return () => {
+      editorElement.removeEventListener('keydown', preventBlockRemoval, true);
+    };
+  }, [blockReadOnly, editor, selected]);
 
   useEffect(() => {
     return () => {
@@ -193,7 +234,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
       scrollHintTargetRef.current = null;
       hideScrollHintTimeoutRef.current = undefined;
     }, SCROLL_HINT_HIDE_DELAY_MS);
-  }, []);
+  }, [setShowScrollHint]);
 
   const hideScrollHint = useCallback(() => {
     setShowScrollHint(false);
@@ -202,7 +243,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
       window.clearTimeout(hideScrollHintTimeoutRef.current);
       hideScrollHintTimeoutRef.current = undefined;
     }
-  }, []);
+  }, [setShowScrollHint]);
 
   const handleWheelCapture = useCallback(
     (event: WheelEvent) => {
@@ -294,7 +335,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   }, [hideScrollHint, isMac, requireScrollModifier, showScrollHint]);
 
   const handleResizeMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
-    if (readOnly || !resizableHeight || !persistedHeight) return;
+    if (blockReadOnly || !resizableHeight || !persistedHeight) return;
     event.preventDefault();
     event.stopPropagation();
 
@@ -331,15 +372,18 @@ export const BlockDocumentStatefulBlockNodeView: FC<
     window.addEventListener('mouseup', handleMouseUp);
   };
 
-  const handleTitleChange = useCallback((nextTitle: string | undefined) => {
-    if (readOnlyRef.current) return;
-    updateAttributesRef.current({title: nextTitle || undefined});
-  }, []);
-
   const handleCaptionChange = useCallback((nextCaption: string | undefined) => {
     if (readOnlyRef.current) return;
     updateAttributesRef.current({caption: nextCaption});
   }, []);
+
+  const handleTableNameChange = useCallback(
+    (nextTableName: string | undefined) => {
+      if (readOnlyRef.current) return;
+      updateAttributesRef.current({tableName: nextTableName || undefined});
+    },
+    [],
+  );
 
   const handleClick = useCallback(() => {
     // Select this node when clicked
@@ -360,6 +404,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
       )}
       contentEditable={false}
       data-block-document-widget-node-view=""
+      data-block-document-block-id={blockId}
       style={wrapperStyle}
       onClick={handleClick}
     >
@@ -376,13 +421,14 @@ export const BlockDocumentStatefulBlockNodeView: FC<
             blockType={blockType}
             blockInstanceId={blockInstanceId}
             ownership={ownership}
-            title={title}
             caption={caption}
+            tableName={tableName}
             height={resolvedHeight}
+            headerActions={blockHeaderActions}
             selected={selected}
-            readOnly={readOnly}
-            onTitleChange={handleTitleChange}
+            readOnly={blockReadOnly}
             onCaptionChange={handleCaptionChange}
+            onTableNameChange={handleTableNameChange}
           />
         ) : (
           <div className="p-4">
@@ -397,7 +443,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
             </div>
           </div>
         )}
-        {resizableHeight && !readOnly ? (
+        {resizableHeight && !blockReadOnly ? (
           <div
             className="absolute right-0 -bottom-4 left-0 z-10 flex h-3 cursor-row-resize items-start justify-center opacity-0 transition-opacity group-hover/stateful-block:opacity-100"
             onMouseDown={handleResizeMouseDown}

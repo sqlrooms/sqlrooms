@@ -100,13 +100,16 @@ export type {
 export {
   createCommandCliAdapter,
   createCommandMcpAdapter,
+  invokeCommandWithPolicy,
 } from './CommandAdapters';
 export type {
   CommandCliAdapter,
   CommandCliAdapterOptions,
+  CommandInvocationPolicyOptions,
   CommandMcpAdapter,
   CommandMcpAdapterOptions,
   CommandMcpToolDescriptor,
+  GuardedCommandInvocationOptions,
 } from './CommandAdapters';
 
 // Re-export from @sqlrooms/room-config

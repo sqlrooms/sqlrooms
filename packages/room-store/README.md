@@ -103,6 +103,38 @@ export function incrementLater() {
 }
 ```
 
+## Guarded command invocation
+
+External and agent-facing integrations must use `invokeCommandWithPolicy()`
+instead of calling `roomStore.getState().commands.invokeCommand()` directly.
+The guarded helper re-checks that the command exists and is enabled immediately
+before execution. It also blocks high-risk or `requiresConfirmation` commands
+unless the caller supplies confirmation obtained from the user.
+
+```ts
+import {invokeCommandWithPolicy} from '@sqlrooms/room-store';
+
+const result = await invokeCommandWithPolicy(
+  roomStore,
+  'workspace.refresh',
+  undefined,
+  {
+    surface: 'mcp',
+    actor: 'assistant',
+    traceId: requestId,
+    metadata: {clientName: 'Example client'},
+    signal: abortController.signal,
+  },
+  {confirmed: false},
+);
+```
+
+Set `confirmed: true` only after explicit user confirmation. Omitting it, or
+passing `false`, fails closed with `command-confirmation-required` when the
+command requires confirmation. `createCommandCliAdapter()` and
+`createCommandMcpAdapter()` use the same guard and therefore have the same
+execution semantics.
+
 ## Persistence
 
 For a Zustand room store with host-owned storage, prefer
@@ -113,6 +145,14 @@ entry point for SQLRooms apps that persist room state to DuckDB, files, or anoth
 project-owned store. See the
 [Persistence developer guide](https://sqlrooms.org/persistence.html) for the
 full integration model, data flow, and examples.
+
+`persistSliceConfigs()` defaults to browser `localStorage`. If browser storage
+is `null`, cannot be accessed, or a raw storage operation fails, the room state
+continues to work in memory and persistence is skipped. Malformed persisted JSON
+and read failures from an explicit custom storage adapter still propagate
+through Zustand's `onRehydrateStorage` callback so hosts can distinguish a
+failed load from an empty store; custom write and removal failures are logged
+and skipped.
 
 Use the lower-level `createPersistenceController()` only when you need the same
 persistence policy outside a room store or Zustand persist. The controller is

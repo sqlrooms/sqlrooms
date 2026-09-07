@@ -13,12 +13,14 @@ import {
   UIMessagePart,
 } from '@sqlrooms/ai-config';
 import {
+  type FileUIPart,
   TextUIPart,
   UIMessage,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import {ABORT_EVENT, TOOL_CALL_CANCELLED} from './constants';
 import {CHAT_REQUEST_ERROR_PART_TYPE} from './chatTurns';
+import {textAttachmentToModelText} from './chatAttachments';
 
 /**
  * Merge multiple AbortSignals into a single signal.
@@ -49,24 +51,28 @@ export function mergeAbortSignals(
   // which would otherwise accumulate one listener per request if requests usually complete normally.
   //
   // Node >=22 and modern browsers support this.
-  // We intentionally use an `any` cast to keep compatibility with older TS lib typings.
-  // const anyFn = (AbortSignal as unknown as {any?: (signals: AbortSignal[]) => AbortSignal})
-  //   .any;
-  // if (typeof anyFn === 'function') {
-  //   return anyFn(present);
-  // }
+  // Keep compatibility with older TS lib typings while using the native
+  // implementation wherever the runtime supports it.
+  const anyFn = (
+    AbortSignal as unknown as {
+      any?: (signals: AbortSignal[]) => AbortSignal;
+    }
+  ).any;
+  if (typeof anyFn === 'function') {
+    return anyFn(present);
+  }
 
   const controller = new AbortController();
-  const abort = () => {
-    if (!controller.signal.aborted) controller.abort();
+  const abort = (signal: AbortSignal) => {
+    if (!controller.signal.aborted) controller.abort(signal.reason);
   };
 
   for (const s of present) {
     if (s.aborted) {
-      abort();
+      abort(s);
       break;
     }
-    s.addEventListener(ABORT_EVENT, abort, {once: true});
+    s.addEventListener(ABORT_EVENT, () => abort(s), {once: true});
   }
 
   return controller.signal;
@@ -153,6 +159,45 @@ export function extractModelsFromSettings(
   });
 
   return models;
+}
+
+/**
+ * Whether a `(provider, model)` pair is present in an
+ * {@link AiSettingsSliceConfig}.
+ *
+ * Mirrors {@link extractModelsFromSettings}' treatment of `'custom'` as the
+ * union of `config.providers['custom']` and `config.customModels`, and guards
+ * the `config.providers` lookup with an own-property check so an inherited
+ * `Object.prototype` key (`'constructor'`, `'__proto__'`, …) reports `false`
+ * rather than throwing.
+ *
+ * @param config - The AI settings configuration to search.
+ * @param provider - The provider key (`'custom'` also matches custom models).
+ * @param model - The model name to look for.
+ */
+export function isModelInSettings(
+  config: AiSettingsSliceConfig,
+  provider: string | undefined,
+  model: string | undefined,
+): boolean {
+  if (!provider || !model) return false;
+
+  if (
+    Object.hasOwn(config.providers, provider) &&
+    config.providers[provider]?.models?.some(
+      (providerModel) => providerModel.modelName === model,
+    )
+  ) {
+    return true;
+  }
+
+  if (provider === 'custom') {
+    return config.customModels.some(
+      (customModel) => customModel.modelName === model,
+    );
+  }
+
+  return false;
 }
 
 /**
@@ -377,6 +422,12 @@ export function sanitizeMessagesForLLM(
           return true;
         })
         .map((part) => {
+          if (part.type === 'file') {
+            const text = textAttachmentToModelText(part as FileUIPart);
+            if (text !== undefined) {
+              return {type: 'text' as const, text};
+            }
+          }
           const p = part as Record<string, unknown>;
           if (
             p.state === 'output-available' &&
@@ -407,6 +458,44 @@ export function sanitizeMessagesForLLM(
       // Remove messages that have no parts (shouldn't happen after above logic, but safety check)
       return message.parts && message.parts.length > 0;
     });
+}
+
+/**
+ * Formats persisted UI messages for conversation summarization. Consecutive
+ * text parts remain contiguous, while text and Markdown file parts are decoded
+ * into labeled sections so summarize-and-continue does not lose their content.
+ */
+export function buildConversationText(messages: UIMessage[]): string {
+  return messages
+    .map((message) => {
+      const sections: string[] = [];
+      let text = '';
+
+      const flushText = () => {
+        if (text) sections.push(text);
+        text = '';
+      };
+
+      for (const part of message.parts) {
+        if (part.type === 'text') {
+          text += (part as TextUIPart).text;
+          continue;
+        }
+        if (part.type !== 'file') continue;
+
+        const attachmentText = textAttachmentToModelText(part as FileUIPart);
+        if (attachmentText === undefined) continue;
+        flushText();
+        sections.push(attachmentText);
+      }
+      flushText();
+
+      const role = message.role === 'user' ? 'User' : 'Assistant';
+      const content = sections.join('\n\n');
+      return content ? `${role}: ${content}` : '';
+    })
+    .filter((line) => line.length > 0)
+    .join('\n\n');
 }
 
 /**
@@ -464,9 +553,15 @@ export function shouldEndAnalysis(messages: UIMessage[]): boolean {
  * after the user stops a tool call mid-stream.
  *
  * @param messages - The messages to validate and complete
+ * @param incompleteToolError - Error text for synthesized tool results
+ * @param options - Completion behavior for states normally kept interactive
  * @returns Cleaned messages with completed tool-call/result pairs
  */
-export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
+export function fixIncompleteToolCalls(
+  messages: UIMessage[],
+  incompleteToolError: string = TOOL_CALL_CANCELLED,
+  options: {completeApprovalRequests?: boolean} = {},
+): UIMessage[] {
   return messages.map((message) => {
     if (message.role !== 'assistant' || !message.parts) {
       return message;
@@ -516,7 +611,8 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
       const toolPart = current as ToolPart & {rawInput?: unknown};
       const isCompleted =
         toolPart.state?.startsWith('output') ||
-        toolPart.state === 'approval-requested' ||
+        (toolPart.state === 'approval-requested' &&
+          !options.completeApprovalRequests) ||
         toolPart.state === 'approval-responded';
       if (isCompleted) {
         // `output-error` parts can carry an `input` that does NOT satisfy the
@@ -556,7 +652,7 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
         state: 'output-error' as const,
         input: undefined,
         rawInput: toolPart.rawInput ?? toolPart.input,
-        errorText: TOOL_CALL_CANCELLED,
+        errorText: incompleteToolError,
         providerExecuted: false,
       };
 

@@ -1,15 +1,22 @@
 import {jest} from '@jest/globals';
 import {
   HTML_APP_RENAME_COMMAND_ID,
+  HTML_APP_UNDO_REVISION_COMMAND_ID,
   HTML_APP_WRITE_REVISION_COMMAND_ID,
 } from '@sqlrooms/app-runtime';
 import {createHtmlAppRevisionCommands} from '../createHtmlAppRevisionCommands';
 
-function createCommandContext(state: unknown) {
+function createCommandContext(
+  state: unknown,
+  invocation: {
+    surface: 'ai' | 'unknown';
+    target?: {kind: string; id: string};
+  } = {surface: 'unknown'},
+) {
   return {
     getState: () => state as any,
     store: {getState: () => state} as any,
-    invocation: {surface: 'unknown' as const},
+    invocation,
   };
 }
 
@@ -169,6 +176,55 @@ describe('createHtmlAppRevisionCommands', () => {
         revisionId: 'revision-1',
       },
     });
+  });
+
+  it('uses the AI invocation artifact for optional revision targets', async () => {
+    const created = createState();
+    const state = created.state as any;
+    const appA = created.app;
+    const appB = {...appA, id: 'app-2', title: 'App 2', revisions: []};
+    const revision = {
+      id: 'revision-1',
+      name: 'Previous',
+      source: 'assistant',
+      createdAt: 2,
+      files: appA.files,
+      entryHtmlPath: appA.entryHtmlPath,
+      dependencies: appA.dependencies,
+    };
+    const undoAppRevision = jest.fn(() => revision);
+    state.htmlApps.config = {appsById: {'app-1': appA, 'app-2': appB}};
+    state.htmlApps.getApp = (appId: string) =>
+      state.htmlApps.config.appsById[appId];
+    state.htmlApps.undoAppRevision = undoAppRevision;
+    state.artifacts.config = {
+      currentArtifactId: 'app-2',
+      artifactsById: {
+        'app-1': {id: 'app-1', type: 'html-app', title: 'App'},
+        'app-2': {id: 'app-2', type: 'html-app', title: 'App 2'},
+      },
+    };
+    const command = getCommand(HTML_APP_UNDO_REVISION_COMMAND_ID);
+
+    await command.execute(
+      createCommandContext(state, {
+        surface: 'ai',
+        target: {kind: 'artifact', id: 'app-1'},
+      }),
+      {},
+    );
+    await command.execute(
+      createCommandContext(state, {
+        surface: 'ai',
+        target: {kind: 'artifact', id: 'app-1'},
+      }),
+      {appId: 'app-2'},
+    );
+    await command.execute(createCommandContext(state), {});
+
+    expect(undoAppRevision).toHaveBeenNthCalledWith(1, 'app-1');
+    expect(undoAppRevision).toHaveBeenNthCalledWith(2, 'app-2');
+    expect(undoAppRevision).toHaveBeenNthCalledWith(3, 'app-2');
   });
 
   it('renames HTML apps through a revision when updated files are provided', async () => {

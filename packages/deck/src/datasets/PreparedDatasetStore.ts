@@ -13,7 +13,6 @@ import {
   evictLruEntries,
   nextAccessTimestamp,
   resolvePreparedDatasetCacheKey,
-  touchEntry,
 } from './helpers';
 import {resolveArrowTable} from './normalizeDatasets';
 import {createDeckTableDatasetSql} from './tableDatasetSql';
@@ -21,6 +20,12 @@ import type {
   PreparedDatasetCacheEntry,
   PreparedDatasetStoreOptions,
 } from './types';
+import {
+  createDescribeDatasetSql,
+  geometryColumnsNeedingWkbWrap,
+  parseDescribeSqlColumns,
+  wrapSqlGeometryColumnsAsWkb,
+} from './wrapGeometryAsWkb';
 
 /**
  * Internal store state for the prepared-dataset cache.
@@ -47,10 +52,9 @@ type PreparedDatasetStoreState = {
   /**
    * Ensure a cache entry exists for the given dataset key.
    *
-   * If an entry already exists, this is a no-op other than touching its LRU
-   * metadata. Otherwise the store creates a `loading` entry, resolves the
-   * source table through DuckDB if needed, runs `prepareDeckDataset(...)`, and
-   * stores the resulting `ready` or `error` state.
+   * If an entry already exists, this is a no-op besides refreshing the
+   * in-place LRU timestamp. Subscribers are not notified: a cache hit is not
+   * a dataset change, and notifying would rebuild every mounted map's layers.
    */
   ensureEntry: (options: {
     cacheKey: string;
@@ -147,13 +151,9 @@ export function createPreparedDatasetStore(
       const existing = get().entries[cacheKey];
       if (existing) {
         if (existing.status !== 'loading') {
-          set((state) => ({
-            ...state,
-            entries: {
-              ...state.entries,
-              [cacheKey]: touchEntry(existing),
-            },
-          }));
+          // Mutate the timestamp in place so LRU still works without replacing
+          // `entries` and forcing every DeckJsonMap to reconvert layers.
+          existing.lastAccessedAt = nextAccessTimestamp();
         }
         return;
       }
@@ -161,13 +161,49 @@ export function createPreparedDatasetStore(
       const promise = Promise.resolve().then(async () => {
         try {
           let table = resolveArrowTable(input);
+          let geometryEncodingHint = input.geometryEncodingHint;
           if (
             !table &&
             (isSqlDatasetInput(input) || isTableDatasetInput(input))
           ) {
-            const sql = isSqlDatasetInput(input)
+            const baseSql = isSqlDatasetInput(input)
               ? input.sqlQuery
               : createDeckTableDatasetSql(input);
+
+            // Probe DuckDB logical types and project native GEOMETRY columns
+            // through ST_AsWKB so prepare/decode never sees undecodable blobs.
+            // Authored SQL is left intact — the wrap is a pipeline outer query.
+            let sql = baseSql;
+            try {
+              const describeHandle = await executeSql(
+                createDescribeDatasetSql(baseSql),
+              );
+              if (describeHandle) {
+                const describeTable = await describeHandle;
+                const geometryColumns = geometryColumnsNeedingWkbWrap(
+                  parseDescribeSqlColumns(describeTable),
+                );
+                const wrapped = wrapSqlGeometryColumnsAsWkb(
+                  baseSql,
+                  geometryColumns,
+                );
+                if (wrapped) {
+                  sql = wrapped;
+                  // Only force the dataset-level hint to WKB when the configured
+                  // geometry column was among the wrapped columns (or unset).
+                  // An unrelated native GEOMETRY column must not make a WKT /
+                  // GeoArrow geometryColumn decode as WKB.
+                  const resolvedGeom = input.geometryColumn;
+                  if (!resolvedGeom || geometryColumns.includes(resolvedGeom)) {
+                    geometryEncodingHint = 'wkb';
+                  }
+                }
+              }
+            } catch {
+              // If DESCRIBE fails (e.g. missing spatial), fall through to the
+              // original SQL — prepare still surfaces decode errors.
+            }
+
             const queryHandle = await executeSql(sql);
             if (!queryHandle) {
               throw new Error(
@@ -186,7 +222,7 @@ export function createPreparedDatasetStore(
             datasetId,
             table,
             geometryColumn: input.geometryColumn,
-            geometryEncodingHint: input.geometryEncodingHint,
+            geometryEncodingHint,
           });
 
           set((state) => ({

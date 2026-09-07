@@ -1,4 +1,4 @@
-import type {DocumentAsset} from '../../DocumentsSliceConfig';
+import type {DocumentAsset} from '../../DocumentAsset';
 
 export function documentAssetToDataUrl(
   asset: DocumentAsset | undefined,

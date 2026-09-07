@@ -1,0 +1,456 @@
+import {describe, expect, jest, test} from '@jest/globals';
+import {
+  createOrUpdateDeckMapResource,
+  type CreateOrUpdateDeckMapResourceHost,
+} from '../src/createOrUpdateDeckMapResource';
+import type {DeckMapConfig} from '../src/mapConfig';
+
+const config: DeckMapConfig = {
+  spec: {
+    layers: [
+      {
+        '@@type': 'GeoArrowScatterplotLayer',
+        _sqlroomsBinding: {dataset: 'places'},
+      },
+    ],
+  },
+  datasets: {places: {source: {tableName: 'places'}}},
+};
+
+function host(overrides: Partial<CreateOrUpdateDeckMapResourceHost> = {}) {
+  const value: CreateOrUpdateDeckMapResourceHost = {
+    ensureBlockDocument: jest.fn(),
+    findMapBlock: jest.fn(() => undefined),
+    findMap: jest.fn(() => undefined),
+    createMapBlock: jest.fn(async ({mapId}) => ({blockId: 'block-1', mapId})),
+    updateBlockMetadata: jest.fn(),
+    ensureMap: jest.fn(),
+    writeMap: jest.fn(),
+    findTable: jest.fn(() => ({
+      tableIdentity: 'main.places',
+      columns: [{name: 'longitude'}, {name: 'latitude'}],
+    })),
+    ...overrides,
+  };
+  return value;
+}
+
+describe('createOrUpdateDeckMapResource', () => {
+  test('rejects a non-resource dataset config before creating durable state', async () => {
+    const h = host();
+    const invalidConfig = {
+      configMode: 'custom',
+      datasets: {
+        coffee_shops: {
+          geometryColumn: 'geom',
+          sql: 'SELECT name, geom FROM coffee_shops_nyc',
+        },
+      },
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoJsonLayer',
+            data: '@@#coffee_shops',
+          },
+        ],
+      },
+    } as unknown as DeckMapConfig;
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'document-1',
+        config: invalidConfig,
+        tableName: 'coffee_shops_nyc',
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow(
+      'datasets.coffee_shops.source: must define source.tableName or source.sqlQuery; top-level sql is not supported',
+    );
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.ensureMap).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
+  test('creates a durable map and returns no panel identity', async () => {
+    const h = host();
+    const result = await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'document-1',
+      config,
+      title: 'Places',
+      createMapId: () => 'map-1',
+    });
+    expect(result).toMatchObject({
+      mapId: 'map-1',
+      blockId: 'block-1',
+      created: true,
+    });
+    expect(result).not.toHaveProperty('panelId');
+    expect(h.writeMap).toHaveBeenCalledWith({
+      mapId: 'map-1',
+      title: 'Places',
+      config: {
+        ...config,
+        datasets: {
+          places: {source: {tableName: 'main.places'}},
+        },
+      },
+      selectedTable: 'main.places',
+    });
+  });
+
+  test('normalizes serialized point-layer bindings before writing', async () => {
+    const h = host();
+    const serializedConfig: DeckMapConfig = {
+      spec: JSON.stringify({
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {
+              dataset: 'places',
+              longitudeColumn: 'old_lon',
+              latitudeColumn: 'old_lat',
+            },
+          },
+        ],
+      }),
+      datasets: {places: {source: {tableName: 'places'}}},
+    };
+
+    await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'document-1',
+      config: serializedConfig,
+      pointBinding: {
+        dataset: 'places',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+        geometryColumn: 'geom',
+      },
+      createMapId: () => 'map-1',
+    });
+
+    expect(h.writeMap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          spec: {
+            layers: [
+              expect.objectContaining({
+                _sqlroomsBinding: {
+                  dataset: 'places',
+                  geometryColumn: 'geom',
+                },
+              }),
+            ],
+          },
+        }),
+      }),
+    );
+  });
+
+  test('rejects point geometry aliases that collide with source columns', async () => {
+    const h = host({
+      findTable: jest.fn(() => ({
+        tableIdentity: 'main.places',
+        columns: [
+          {name: 'longitude'},
+          {name: 'latitude'},
+          {name: '__sqlrooms_geom'},
+        ],
+      })),
+    });
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'document-1',
+        config,
+        pointBinding: {
+          dataset: 'places',
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+        },
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow(
+      'Point binding geometryColumn "__sqlrooms_geom" conflicts with an existing source column.',
+    );
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.ensureMap).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
+  test('rejects missing point coordinate columns before writing', async () => {
+    const h = host();
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'document-1',
+        config,
+        pointBinding: {
+          dataset: 'places',
+          longitudeColumn: 'lon',
+          latitudeColumn: 'latitude',
+        },
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow(
+      'Point binding longitudeColumn "lon" was not found in source columns.',
+    );
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.ensureMap).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
+  test('rejects a selected table that would override the point-bound source', async () => {
+    const h = host({
+      findTable: jest.fn((tableName) => {
+        if (tableName === 'places') {
+          return {
+            tableIdentity: 'main.places',
+            columns: [{name: 'longitude'}, {name: 'latitude'}],
+          };
+        }
+        if (tableName === 'cities') {
+          return {
+            tableIdentity: 'main.cities',
+            columns: [{name: 'longitude'}, {name: 'latitude'}],
+          };
+        }
+        return undefined;
+      }),
+    });
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'document-1',
+        config,
+        tableName: 'cities',
+        pointBinding: {
+          dataset: 'places',
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+        },
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow(
+      'Point binding dataset "places" resolves to table "main.places", but selected table "main.cities" would override it.',
+    );
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.ensureMap).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
+  test('canonicalizes table-backed dataset sources before writing', async () => {
+    const h = host({
+      findTable: jest.fn((tableName) =>
+        tableName === 'analytics.events'
+          ? {
+              tableIdentity: '"analytics"."events"',
+              columns: [{name: 'longitude'}, {name: 'latitude'}],
+            }
+          : undefined,
+      ),
+    });
+    const transformedConfig: DeckMapConfig = {
+      ...config,
+      datasets: {
+        places: {
+          source: {
+            tableName: 'analytics.events',
+            transformSql:
+              'SELECT * FROM __sqlrooms_source WHERE longitude IS NOT NULL',
+          },
+        },
+      },
+    };
+
+    await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'document-1',
+      config: transformedConfig,
+      createMapId: () => 'map-1',
+    });
+
+    expect(h.writeMap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          datasets: {
+            places: {
+              source: {
+                tableName: '"analytics"."events"',
+                transformSql:
+                  'SELECT * FROM __sqlrooms_source WHERE longitude IS NOT NULL',
+              },
+            },
+          },
+        }),
+      }),
+    );
+  });
+
+  test('rejects table transforms that bypass the reserved source relation', async () => {
+    const h = host();
+    const invalidTransformConfig: DeckMapConfig = {
+      ...config,
+      datasets: {
+        places: {
+          source: {
+            tableName: 'places',
+            transformSql: 'SELECT * FROM places',
+          },
+        },
+      },
+    };
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'document-1',
+        config: invalidTransformConfig,
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow(
+      'Deck table dataset transformSql must reference __sqlrooms_source.',
+    );
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
+  test('rejects unresolved ambiguous dataset table sources', async () => {
+    const h = host({findTable: jest.fn(() => undefined)});
+    const ambiguousConfig: DeckMapConfig = {
+      ...config,
+      datasets: {
+        places: {source: {tableName: 'events'}},
+      },
+    };
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'document-1',
+        config: ambiguousConfig,
+        tableName: 'analytics.events',
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow('Dataset "places" table "events" was not found.');
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
+  test('uses a requested map id when create mode recovers a missing block', async () => {
+    const h = host();
+    const createMapId = jest.fn(() => 'generated-map');
+
+    const result = await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'document-1',
+      config,
+      mapId: 'requested-map',
+      missingMapBlockBehavior: 'create',
+      createMapId,
+    });
+
+    expect(result.mapId).toBe('requested-map');
+    expect(h.createMapBlock).toHaveBeenCalledWith(
+      expect.objectContaining({mapId: 'requested-map'}),
+    );
+    expect(createMapId).not.toHaveBeenCalled();
+  });
+
+  test('generates a map id in create mode when none is requested', async () => {
+    const h = host();
+
+    const result = await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'document-1',
+      config,
+      missingMapBlockBehavior: 'create',
+      createMapId: () => 'generated-map',
+    });
+
+    expect(result.mapId).toBe('generated-map');
+  });
+
+  test('preserves a meaningful caption before the resource title', async () => {
+    const h = host({
+      findMapBlock: jest.fn(() => ({
+        blockId: 'block-1',
+        mapId: 'map-1',
+        caption: 'Saved caption',
+      })),
+      findMap: jest.fn(() => ({id: 'map-1', title: 'Saved title', config})),
+    });
+    await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'document-1',
+      mapId: 'map-1',
+      config,
+    });
+    expect(h.writeMap).toHaveBeenCalledWith(
+      expect.objectContaining({title: 'Saved caption'}),
+    );
+  });
+
+  test('ignores a blank saved caption when preserving the resource title', async () => {
+    const h = host({
+      findMapBlock: jest.fn(() => ({
+        blockId: 'block-1',
+        mapId: 'map-1',
+        caption: '   ',
+      })),
+      findMap: jest.fn(() => ({id: 'map-1', title: 'Saved title', config})),
+    });
+
+    await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'document-1',
+      mapId: 'map-1',
+      config,
+    });
+
+    expect(h.writeMap).toHaveBeenCalledWith(
+      expect.objectContaining({title: 'Saved title'}),
+    );
+    expect(h.updateBlockMetadata).toHaveBeenCalledWith(
+      expect.objectContaining({caption: 'Saved title'}),
+    );
+  });
+
+  test('updates metadata only after the map write succeeds', async () => {
+    const order: string[] = [];
+    const h = host({
+      findMapBlock: jest.fn(() => ({
+        blockId: 'block-1',
+        mapId: 'map-1',
+        caption: 'Old',
+      })),
+      findMap: jest.fn(() => ({id: 'map-1', title: 'Old', config})),
+      writeMap: jest.fn(async () => {
+        order.push('map');
+      }),
+      updateBlockMetadata: jest.fn(async () => {
+        order.push('metadata');
+      }),
+    });
+    await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'document-1',
+      mapId: 'map-1',
+      title: 'New',
+      config,
+    });
+    expect(order).toEqual(['map', 'metadata']);
+  });
+
+  test('does not update metadata after a failed map write', async () => {
+    const updateBlockMetadata = jest.fn();
+    const h = host({
+      findMapBlock: jest.fn(() => ({blockId: 'block-1', mapId: 'map-1'})),
+      findMap: jest.fn(() => ({id: 'map-1', title: 'Old', config})),
+      writeMap: jest.fn(async () => {
+        throw new Error('write failed');
+      }),
+      updateBlockMetadata,
+    });
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'document-1',
+        mapId: 'map-1',
+        title: 'New',
+        config,
+      }),
+    ).rejects.toThrow('write failed');
+    expect(updateBlockMetadata).not.toHaveBeenCalled();
+  });
+});

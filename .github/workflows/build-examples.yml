@@ -30,8 +30,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        # See https://github.com/pnpm/pnpm/issues/8840
-        run: pnpm install --shamefully-hoist
+        run: pnpm install
 
       - name: Cache for Turbo
         uses: actions/cache@v5

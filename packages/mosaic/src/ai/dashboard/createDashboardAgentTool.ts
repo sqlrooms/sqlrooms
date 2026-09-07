@@ -135,6 +135,9 @@ type DashboardAgentInputSchema = z.infer<typeof DashboardAgentInputSchema>;
  * @param options.databaseAdapter - Adapter for database operations and queries
  * @param options.chartToolsOptions - Optional chart configuration and type restrictions
  * @param options.extraTools - Optional factory for additional custom tools (e.g., map panels)
+ * @param options.authorizeDashboard - Optional host authorization checked at
+ * agent entry and again before every dashboard mutation. A denial fails the
+ * operation and never causes implicit selection of another dashboard.
  * @returns Tool instance that orchestrates multi-turn dashboard creation via a ToolLoopAgent
  */
 export function createDashboardAgentTool<
@@ -166,10 +169,26 @@ IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using t
       const {dashboardId, maxSteps} = params;
       const {intent} = params;
 
-      const dashboardAdapter = createDashboardAiAdapter(store, dashboardId);
-
       try {
         const state = store.getState();
+        if (!state.mosaicDashboard.getDashboard(dashboardId)) {
+          throw new AiAgentError(`Dashboard "${dashboardId}" was not found.`);
+        }
+        if (options.authorizeDashboard) {
+          try {
+            await options.authorizeDashboard({dashboardId, state});
+          } catch (error) {
+            throw new AiAgentError(
+              error instanceof Error ? error.message : String(error),
+            );
+          }
+        }
+
+        const dashboardAdapter = createDashboardAiAdapter(
+          store,
+          dashboardId,
+          options.authorizeDashboard,
+        );
         const tableName =
           params.tableName ?? dashboardAdapter.getSelectedTable?.();
 

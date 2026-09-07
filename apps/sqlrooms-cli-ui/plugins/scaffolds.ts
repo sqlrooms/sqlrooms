@@ -1,7 +1,7 @@
 import type {Plugin} from 'vite';
 import * as path from 'path';
 import {fileURLToPath} from 'node:url';
-import {generateScaffoldsModule} from './generateScaffolds';
+import {generateScaffoldsModule} from './generateScaffolds.ts';
 
 export default function scaffoldsPlugin(): Plugin {
   const __filename = fileURLToPath(import.meta.url);

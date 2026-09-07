@@ -23,6 +23,13 @@ export function arrowTableToJson(
  * @returns
  */
 function convertValue(value: unknown) {
+  if (
+    value === null ||
+    typeof value === 'boolean' ||
+    typeof value === 'string'
+  ) {
+    return value;
+  }
   if (typeof value === 'bigint') {
     if (value >= Number.MIN_SAFE_INTEGER && value <= Number.MAX_SAFE_INTEGER) {
       return Number(value);

@@ -1,9 +1,11 @@
-import baseConfig from './base.js';
+import baseConfig, {resolveJestEnvironment} from './base.js';
 
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 export default {
   ...baseConfig,
-  testEnvironment: 'jsdom',
+  // Absolute path, not 'jsdom' — see resolveJestEnvironment. This one happens to
+  // resolve to a matching major in the known nested install, but by luck.
+  testEnvironment: resolveJestEnvironment('jest-environment-jsdom'),
   setupFilesAfterEnv: ['@testing-library/jest-dom'],
   moduleNameMapper: {
     ...baseConfig.moduleNameMapper,

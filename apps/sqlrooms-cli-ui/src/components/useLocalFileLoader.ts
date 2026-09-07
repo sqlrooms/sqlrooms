@@ -1,11 +1,13 @@
 import {
   BlockDocumentStatefulBlockBlock,
+  blockDocumentNodeToBlock,
   createDefaultBlockDocumentBlockId,
 } from '@sqlrooms/documents';
 import {toast} from '@sqlrooms/ui';
 import {convertToUniqueColumnOrTableName} from '@sqlrooms/utils';
 import {useCallback} from 'react';
-import {useRoomStore} from '../store';
+import {useCliRoomStoreApi, useRoomStore} from '../roomStoreHooks';
+import {cliCapabilityProfile} from '../runtimeEnvironment';
 import type {RoomState} from '../store-types';
 
 export const LOCAL_DATA_ACCEPTED_FORMATS = {
@@ -16,7 +18,7 @@ export const LOCAL_DATA_ACCEPTED_FORMATS = {
   'application/geo+json': ['.geojson'],
 };
 
-function getCurrentOrFirstWorksheetArtifactId(
+function getCurrentOrFirstDocumentArtifactId(
   state: RoomState,
 ): string | undefined {
   const currentArtifactId = state.artifacts.config.currentArtifactId;
@@ -24,57 +26,67 @@ function getCurrentOrFirstWorksheetArtifactId(
     ? state.artifacts.config.artifactsById[currentArtifactId]
     : undefined;
 
-  if (currentArtifact?.type === 'worksheet') {
+  if (currentArtifact?.type === 'block-document') {
     return currentArtifactId;
   }
 
   return state.artifacts.config.artifactOrder.find(
     (artifactId) =>
-      state.artifacts.config.artifactsById[artifactId]?.type === 'worksheet',
+      state.artifacts.config.artifactsById[artifactId]?.type ===
+      'block-document',
   );
 }
 
-function ensureImportWorksheetForTable(tableName: string) {
-  const state = useRoomStore.getState();
-  const worksheetArtifactId =
-    getCurrentOrFirstWorksheetArtifactId(state) ??
+function ensureImportDocumentForTable(
+  getState: () => RoomState,
+  tableName: string,
+  createDataTableBlock: boolean,
+) {
+  const state = getState();
+  const documentArtifactId =
+    getCurrentOrFirstDocumentArtifactId(state) ??
     state.artifacts.createArtifact({
-      type: 'worksheet',
-      title: 'Worksheet',
+      type: 'block-document',
+      title: 'Document',
     });
 
-  state.artifacts.setCurrentArtifact(worksheetArtifactId);
-  state.blockDocuments.ensureBlockDocument(worksheetArtifactId);
+  state.artifacts.setCurrentArtifact(documentArtifactId);
+  state.blockDocuments.ensureBlockDocument(documentArtifactId);
+  if (!createDataTableBlock) return;
 
-  const nextState = useRoomStore.getState();
+  const nextState = getState();
   const existingBlocks =
-    nextState.blockDocuments.config.artifacts[worksheetArtifactId]?.content
+    nextState.blockDocuments.config.artifacts[documentArtifactId]?.content
       .content ?? [];
-  const hasDataTableExplorer = existingBlocks.some(
-    (block) =>
-      block.type === 'statefulBlock' &&
+  const hasDataTableExplorer = existingBlocks.some((node) => {
+    const block = blockDocumentNodeToBlock(node);
+    return (
+      block?.type === 'statefulBlock' &&
       block.blockType === 'data-table' &&
-      block.title === tableName,
-  );
+      block.tableName === tableName
+    );
+  });
 
   if (hasDataTableExplorer) {
     return;
   }
 
+  const blockId = createDefaultBlockDocumentBlockId();
   const block: BlockDocumentStatefulBlockBlock = {
     type: 'statefulBlock',
-    id: createDefaultBlockDocumentBlockId(),
-    blockInstanceId: createDefaultBlockDocumentBlockId(),
+    id: blockId,
+    blockInstanceId: blockId,
     blockType: 'data-table',
-    title: tableName,
+    tableName,
     caption: `${tableName} profile`,
     intent: `Initial profile for imported table ${tableName}`,
   };
 
-  nextState.blockDocuments.appendBlocks(worksheetArtifactId, [block]);
+  nextState.blockDocuments.appendBlocks(documentArtifactId, [block]);
 }
 
 export function useLocalFileLoader() {
+  const roomStore = useCliRoomStoreApi();
   const connector = useRoomStore((state) => state.db.connector);
   const refreshTableSchemas = useRoomStore(
     (state) => state.db.refreshTableSchemas,
@@ -114,7 +126,11 @@ export function useLocalFileLoader() {
         return;
       }
       for (const {tableName} of createdTables) {
-        ensureImportWorksheetForTable(tableName);
+        ensureImportDocumentForTable(
+          roomStore.getState,
+          tableName,
+          cliCapabilityProfile.blocks.stateful.includes('data-table'),
+        );
       }
       for (const {fileName, tableName} of createdTables) {
         toast.success('Table created', {
@@ -122,6 +138,6 @@ export function useLocalFileLoader() {
         });
       }
     },
-    [connector, refreshTableSchemas],
+    [connector, refreshTableSchemas, roomStore],
   );
 }

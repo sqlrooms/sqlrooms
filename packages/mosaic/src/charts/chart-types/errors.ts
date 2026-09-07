@@ -16,9 +16,12 @@ export class RequiredFieldsError extends ChartSpecError {
   readonly fieldNames: string[];
 
   constructor(fieldNames: string | string[]) {
-    super('Required fields are missing');
+    const normalizedFieldNames = Array.isArray(fieldNames)
+      ? fieldNames
+      : [fieldNames];
+    super(`Required fields are missing: ${normalizedFieldNames.join(', ')}`);
 
-    this.fieldNames = Array.isArray(fieldNames) ? fieldNames : [fieldNames];
+    this.fieldNames = normalizedFieldNames;
     this.name = 'RequiredFieldsError';
   }
 }

@@ -24,8 +24,8 @@ function createMockStore({
   const state = {
     artifacts: {
       getArtifact: (artifactId: string) =>
-        artifactId === 'worksheet-1'
-          ? {id: artifactId, type: 'worksheet', title: 'Worksheet'}
+        artifactId === 'document-1'
+          ? {id: artifactId, type: 'block-document', title: 'Document'}
           : undefined,
       setCurrentArtifact,
     },
@@ -57,18 +57,18 @@ describe('createCliBlockDocumentAiAdapter', () => {
     const block: BlockDocumentBlock = {
       id: 'paragraph-1',
       type: 'paragraph',
-      text: 'Summary',
+      text: [{type: 'text', text: 'Summary'}],
     };
 
-    await expect(adapter.addBlock('worksheet-1', block)).resolves.toBe(
+    await expect(adapter.addBlock('document-1', block)).resolves.toBe(
       'paragraph-1',
     );
 
-    expect(ensureBlockDocument).toHaveBeenCalledWith('worksheet-1');
+    expect(ensureBlockDocument).toHaveBeenCalledWith('document-1');
     expect(invokeCommand).toHaveBeenCalledWith(
       BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID,
       {
-        artifactId: 'worksheet-1',
+        artifactId: 'document-1',
         blocks: [block],
       },
       {
@@ -89,10 +89,10 @@ describe('createCliBlockDocumentAiAdapter', () => {
     const adapter = createCliBlockDocumentAiAdapter(store);
 
     await expect(
-      adapter.addBlock('worksheet-1', {
+      adapter.addBlock('document-1', {
         id: 'paragraph-1',
         type: 'paragraph',
-        text: 'Summary',
+        text: [{type: 'text', text: 'Summary'}],
       }),
     ).rejects.toThrow('Command failed');
   });

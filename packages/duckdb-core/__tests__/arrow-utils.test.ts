@@ -39,6 +39,18 @@ describe('arrow-utils', () => {
       expect(result).toEqual(expected);
     });
 
+    it('should preserve boolean and null values', () => {
+      const table = arrow.tableFromJSON([
+        {enabled: true, deleted: false, optional: null},
+        {enabled: false, deleted: true, optional: 'present'},
+      ]);
+
+      expect(arrowTableToJson(table)).toEqual([
+        {enabled: true, deleted: false, optional: null},
+        {enabled: false, deleted: true, optional: 'present'},
+      ]);
+    });
+
     it('should handle timestamps and dates', () => {
       const timestamp = new Date('2024-02-05T12:30:45.123Z');
       const date = new Date('2024-02-05');

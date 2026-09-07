@@ -1,17 +1,20 @@
 import {getRunningAiSessionCountsByArtifact} from '@sqlrooms/artifacts/ai';
 import {useCallback, useMemo} from 'react';
 import {CLI_ARTIFACT_TYPES, type CliArtifactType} from '../../artifactTypeIds';
-import {useRoomStore} from '../../store';
+import {useRoomStore} from '../../roomStoreHooks';
 
 export function useCliArtifactSidebarTabs() {
   const artifactsConfig = useRoomStore((state) => state.artifacts.config);
   const artifactTypes = useRoomStore((state) => state.artifacts.artifactTypes);
   const aiSessions = useRoomStore((state) => state.ai.config.sessions);
-  const aiSessionArtifacts = useRoomStore(
-    (state) => state.artifactAi.config.aiSessionArtifacts,
+  const sessionArtifactLinks = useRoomStore(
+    (state) => state.artifactAi.config.sessionArtifactLinks,
   );
   const currentArtifactId = useRoomStore(
     (state) => state.artifacts.config.currentArtifactId,
+  );
+  const pinnedArtifactIds = useRoomStore(
+    (state) => state.artifacts.config.pinnedArtifactIds,
   );
   const setCurrentArtifact = useRoomStore(
     (state) => state.artifacts.setCurrentArtifact,
@@ -22,6 +25,9 @@ export function useCliArtifactSidebarTabs() {
   const renameArtifactInStore = useRoomStore(
     (state) => state.artifacts.renameArtifact,
   );
+  const togglePinArtifact = useRoomStore(
+    (state) => state.artifacts.togglePinArtifact,
+  );
   const setShowArtifactChooser = useRoomStore(
     (state) => state.workspaceUi.setShowArtifactChooser,
   );
@@ -29,9 +35,9 @@ export function useCliArtifactSidebarTabs() {
   const runningSessionCountsByArtifact = useMemo(() => {
     return getRunningAiSessionCountsByArtifact({
       sessions: aiSessions,
-      aiSessionArtifacts,
+      sessionArtifactLinks,
     });
-  }, [aiSessionArtifacts, aiSessions]);
+  }, [sessionArtifactLinks, aiSessions]);
 
   const tabs = useMemo(
     () =>
@@ -49,11 +55,18 @@ export function useCliArtifactSidebarTabs() {
           id: artifact.id,
           name: artifact.title,
           type: artifact.type,
+          isPinned: pinnedArtifactIds.includes(artifact.id),
           runningSessionCount: runningSessionCountsByArtifact[artifact.id] ?? 0,
-        })),
+        }))
+        .sort((left, right) => {
+          const leftPinned = pinnedArtifactIds.includes(left.id);
+          const rightPinned = pinnedArtifactIds.includes(right.id);
+          return Number(rightPinned) - Number(leftPinned);
+        }),
     [
       artifactsConfig.artifactOrder,
       artifactsConfig.artifactsById,
+      pinnedArtifactIds,
       runningSessionCountsByArtifact,
     ],
   );
@@ -71,7 +84,7 @@ export function useCliArtifactSidebarTabs() {
       currentArtifactId &&
       tabs.some((artifact) => artifact.id === currentArtifactId)
         ? currentArtifactId
-        : tabs[0]?.id,
+        : undefined,
     [currentArtifactId, tabs],
   );
 
@@ -96,5 +109,6 @@ export function useCliArtifactSidebarTabs() {
     selectedTabId,
     selectArtifact,
     tabs,
+    togglePinArtifact,
   };
 }

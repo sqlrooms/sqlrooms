@@ -19,6 +19,7 @@ export const ChartBuilderActions: FC<ChartBuilderActionsProps> = ({
     (state) => state.selectedTemplateId,
   );
   const fieldValues = useChartBuilderStore((state) => state.fieldValues);
+  const chartOptions = useChartBuilderStore((state) => state.chartOptions);
   const reset = useChartBuilderStore((state) => state.reset);
 
   const selectedTemplate = useMemo(
@@ -35,6 +36,7 @@ export const ChartBuilderActions: FC<ChartBuilderActionsProps> = ({
 
     const title = buildChartTypeTitle(selectedTemplate, fieldValues);
     onCreateChart(title, {
+      ...chartOptions,
       chartType: selectedTemplateId,
       settings: fieldValues,
     } as ChartConfig);
@@ -44,6 +46,7 @@ export const ChartBuilderActions: FC<ChartBuilderActionsProps> = ({
     canCreate,
     selectedTemplateId,
     fieldValues,
+    chartOptions,
     onCreateChart,
     reset,
   ]);

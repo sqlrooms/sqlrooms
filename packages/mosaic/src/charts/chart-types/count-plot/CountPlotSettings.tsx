@@ -13,8 +13,8 @@ import {
 } from './schema';
 
 const METRIC_OPTIONS = [
-  {value: 'count', label: 'Count'},
-  {value: 'aggregate', label: 'Aggregate'},
+  {value: 'count', label: 'Row count'},
+  {value: 'aggregate', label: 'Aggregate numeric field'},
 ] as const satisfies readonly {value: CountPlotMetric; label: string}[];
 
 const SORT_OPTIONS = [
@@ -69,7 +69,7 @@ export const CountPlotSettingsComponent: FC = () => {
           onChange={(field) => onChangeConfig('field', field)}
         />
       </Field>
-      <Field label="Metric">
+      <Field label="Bar value">
         <OptionSelector
           value={metric}
           options={METRIC_OPTIONS}

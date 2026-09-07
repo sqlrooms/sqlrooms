@@ -4,7 +4,7 @@
 
 ## Environment
 
-- Node.js >=22 and pnpm are provided via nvm (pre-installed; see `package.json#engines` and `package.json#packageManager` for exact versions)
+- Node.js >=24.9 and pnpm are provided via nvm (pre-installed; see `package.json#engines` and `package.json#packageManager` for exact versions)
 - The update script runs `pnpm install` and `pnpm build` on startup — all `@sqlrooms/*` packages will be built and ready
 
 ## Running Example Apps

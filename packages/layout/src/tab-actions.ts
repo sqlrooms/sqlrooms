@@ -194,6 +194,17 @@ export function createTabActions<S extends LayoutStateShape>(
         const found = findNodeById(draft.layout.config, id); // Ensure size is set before collapsing
 
         if (!found || isLayoutNodeKey(found.node) || !found.node.collapsible) {
+          if (process.env.NODE_ENV !== 'production') {
+            const reason = !found
+              ? 'node not found'
+              : isLayoutNodeKey(found.node)
+                ? 'node is a tab key, not a collapsible panel'
+                : 'node is not collapsible';
+
+            console.warn(
+              `[layout] setCollapsed("${id}", ${collapsed}) ignored: ${reason}.`,
+            );
+          }
           return;
         }
 

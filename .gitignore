@@ -23,6 +23,10 @@ docs/.vitepress/cache
 
 .pnpm-store/
 
+# Evaluation outputs
+/artifacts/
+/.promptfoo/
+
 .cursor/plans/
 
 .worktrees/

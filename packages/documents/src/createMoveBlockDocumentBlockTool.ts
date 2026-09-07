@@ -51,7 +51,7 @@ export function createMoveBlockDocumentBlockTool({
     MoveBlockDocumentBlockToolOutput
   >({
     description: `Move a top-level block in the block document to a new index.
-Use this after listing blocks when the user asks to reorder worksheet content, such as moving a paragraph to the top.`,
+Use this after listing blocks when the user asks to reorder block document content, such as moving a paragraph to the top.`,
     inputSchema: MoveBlockDocumentBlockToolInput,
     execute: async ({blockId, toIndex}) => {
       try {

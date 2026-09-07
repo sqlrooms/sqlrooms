@@ -35,10 +35,10 @@ import {
   CosmosGraph,
   CosmosGraphControls,
   CosmosSimulationControls,
+  type GraphConfig,
 } from '@sqlrooms/cosmos';
-import {GraphConfigInterface} from '@cosmos.gl/graph';
 
-const config: GraphConfigInterface = {
+const config: GraphConfig = {
   backgroundColor: 'transparent',
   simulationGravity: 0.2,
   simulationRepulsion: 1,
@@ -73,6 +73,33 @@ export function GraphView() {
     </CosmosGraph>
   );
 }
+```
+
+## Migrating from Cosmos 2
+
+Cosmos 3 renamed the default link arrow option. Replace `linkArrows` with
+`linkDefaultArrows` in room configuration. Persisted SQLRooms workspace data is
+migrated automatically when it is rehydrated:
+
+```ts
+const config = {
+  // linkArrows: true,
+  linkDefaultArrows: true,
+};
+```
+
+Cosmos 3 also requires Vite to prefer the ESM entry for `gl-bench`; its browser
+entry is a global script. Add the following resolution order to Vite apps that
+consume `@sqlrooms/cosmos`:
+
+```ts
+import {defineConfig} from 'vite';
+
+export default defineConfig({
+  resolve: {
+    mainFields: ['module', 'browser', 'jsnext:main', 'jsnext'],
+  },
+});
 ```
 
 ## Update simulation programmatically

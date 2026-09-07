@@ -1,7 +1,7 @@
 import {Notebook} from '@sqlrooms/notebook';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {useEffect} from 'react';
-import {useRoomStore} from '../../store';
+import {useRoomStore} from '../../roomStoreHooks';
 
 export const NotebookArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId = (meta?.artifactId as string) ?? panelId;

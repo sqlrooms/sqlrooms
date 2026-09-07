@@ -9,9 +9,7 @@ import {
   getAiRunContextPrimaryItem,
   createAiSettingsSlice,
   createAiSlice,
-  createDefaultAiInstructions,
   createDefaultAiToolRenderers,
-  createDefaultAiTools,
 } from '@sqlrooms/ai';
 import {
   createHtmlAppRuntimeSlice,
@@ -23,11 +21,11 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
-import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck';
+import {createDeckMapsSlice, DeckMapsSliceConfig} from '@sqlrooms/deck';
+import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck/mosaic';
 import {
   arrowTableToJson,
   createDefaultLoadTableSchemasFilter,
-  createWebSocketDuckDbConnector,
   defaultLoadSchemaCatalogFilter,
   escapeVal,
   makeQualifiedTableName,
@@ -45,7 +43,6 @@ import {
   createDefaultChartTypes,
   createDefaultMosaicDashboardPanelRenderers,
   createDashboardFeatureSlices,
-  createMosaicDashboardCommands,
   createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicSlice,
   defaultAddPanelActions,
@@ -54,11 +51,7 @@ import {
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {createPivotSlice, PivotSliceConfig} from '@sqlrooms/pivot';
-import {
-  createPythonBlockCommands,
-  createPythonSlice,
-  PythonSliceConfig,
-} from '@sqlrooms/python/block';
+import {createPythonSlice, PythonSliceConfig} from '@sqlrooms/python/block';
 import {
   createPyodidePythonRuntimeAdapter,
   type PythonRuntimeHost,
@@ -71,8 +64,6 @@ import {
   DEFAULT_ROOM_TITLE,
   LayoutConfig,
   persistSliceConfigs,
-  registerCommandsForOwner,
-  unregisterCommandsForOwner,
 } from '@sqlrooms/room-shell';
 import {createSqlEditorSlice, SqlEditorSliceConfig} from '@sqlrooms/sql-editor';
 import {
@@ -94,32 +85,34 @@ import {
 } from '@sqlrooms/db-settings';
 import {
   BlockDocumentsSliceConfig,
-  createBlockDocumentCommands,
   createBlockDocumentsSlice,
-  createDocumentCommands,
-  createDocumentsSlice,
-  DocumentsSliceConfig,
+  createMarkdownDocumentsSlice,
+  MarkdownDocumentsSliceConfig,
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
-import {createArtifactChatHandoffController} from './artifactChatHandoff';
+import {artifactChatAssociationMiddleware} from './artifactChatAssociation';
 import {createCliArtifactTypes} from './artifactTypes';
-import {addCliDatabaseInitializationDiagnostics} from './cliDatabaseInitialization';
-import {blockDocumentAgentTool} from './createBlockDocumentAgent';
-import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
 import {formatRunContextInstructions} from './context/formatRunContextInstructions';
 import {getRunContext} from './context/getRunContext';
-import {
-  createDashboardCommands,
-  DASHBOARD_COMMAND_OWNER,
-} from './createDashboardCommands';
-import {
-  createHtmlAppRevisionCommands,
-  HTML_APP_REVISION_COMMAND_OWNER,
-} from './createHtmlAppRevisionCommands';
+import {createCliAiInstructions} from './createCliAiInstructions';
+import {createCliAiTools} from './createCliAiTools';
+import {createRenderedSurfaceAiToolkit} from './ai/createRenderedSurfaceAiToolkit';
+import {dashboardAgentTool} from './createDashboardAgent';
+import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {getDefaultScaffoldTree} from './helpers';
 import {createLayout, migrateCliLayoutConfig} from './layout';
-import {fetchRuntimeConfig, type RuntimeConfig} from './runtimeConfig';
+import {migrateCliPersistedWorkspace} from './migrateCliPersistedWorkspace';
+import {
+  cliDuckDbConnector as connector,
+  MOSAIC_PREAGG_SCHEMA_REF,
+} from './duckDbRuntime';
+import type {RuntimeConfig} from './runtimeConfig';
+import {
+  aiDevtoolsEnabled,
+  cliCapabilityProfile,
+  runtimeConfig,
+} from './runtimeEnvironment';
 import {
   createDuckDbPersistStorage,
   saveAiSettingsToServer,
@@ -131,65 +124,21 @@ import {
   RoomState,
 } from './store-types';
 import {
-  createStatefulBlockCommandTypes,
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
 } from './statefulBlockArtifactConfigs';
-import {dashboardAgentTool} from './createDashboardAgent';
-import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {
-  CLI_BLOCK_DOCUMENT_COMMAND_OWNER,
-  createCliBlockDocumentCommands,
-} from './createCliBlockDocumentCommands';
-import {
-  KnownBlockDocumentTools,
-  CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME,
-} from './ai/constants';
+  registerCliCapabilityProfileCommands,
+  unregisterCliCapabilityProfileCommands,
+} from './registerCliCapabilityProfileCommands';
 
 export type {RoomState} from './store-types';
 
-const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
-const MOSAIC_DASHBOARD_COMMAND_OWNER = '@sqlrooms/mosaic/dashboard';
-const BLOCK_DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents/block-document';
-const BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER = '@sqlrooms/python/block-document';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
-const STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS = `
-In the SQLRooms CLI app, a Worksheet is a block document artifact. When the user asks to create, edit, inspect, or add content to a worksheet, target the current worksheet artifact using block-document commands and block-document agent tools. Use the word Worksheet in user-facing replies, but use block-document tool names and command IDs when invoking tools. The artifact type may still be "worksheet"; its editable content model is a block document.
 
-When the user's primary context artifact is a worksheet or dashboard and they ask to add, update, or create a visualization, chart, or dashboard surface, mutate that artifact through the appropriate agent tool instead of creating a separate artifact, chat-only chart, or markdown image.
-
-- Use ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} when the primary artifact is a worksheet, or when the user explicitly asks to create/edit a top-level worksheet artifact.
-- For dashboard artifacts, call dashboard_agent.
-- Use the standalone chart and chart_image_for_markdown tools only when the user wants an inline chat visualization or no target artifact is available.
-`;
-const EXPERIMENTAL_SQLROOMS_CLI_AI_INSTRUCTIONS = `
-Experimental SQLRooms tools are available in this session. Use them for app, map, and generated interactive visualization requests when they match the user's target artifact.
-
-- If the primary artifact is a worksheet and the user asks for an app, HTML app, D3 app, Chart.js app, browser app, or generated interactive visualization inside it, call ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME}. The worksheet agent should create/reuse the worksheet html-app block, then call ${KnownBlockDocumentTools.embedded_html_app_agent} with the block's appId.
-- Do not use top-level html_app_agent to populate worksheet stateful blocks inside worksheets.
-- For worksheet map requests, call ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME}. It should add or reuse a direct worksheet map block, not create a dashboard block just to hold the map.
-- For generated HTML, D3, Chart.js, or browser app visualizations only when the primary artifact is an html-app artifact or no worksheet/dashboard artifact is the requested target, write through html_app_agent. html_app_agent requires appId and never creates artifacts or worksheet blocks.
-- If the primary artifact is an html-app artifact, call html_app_agent with appId set to the current artifact id and update it instead of creating a new html-app artifact.
-- For incremental edits to an existing html-app artifact, such as changing title, labels, colors, styles, layout, controls, or interactions, call html_app_agent directly with the current appId and the user's edit request. Do not inspect tables or schemas first unless the user explicitly asks to change the app's data/query behavior.
-- If a new top-level html-app artifact is needed, first execute the html-app.create-artifact command, then call html_app_agent with appId set to the returned artifactId.
-- For HTML app undo, redo, or restoring an earlier version, use list_commands and execute_command with html-app.undo-revision, html-app.redo-revision, or html-app.restore-revision. Do not rewrite, delete, or edit chat messages to perform app undo/redo.
-- If an embedded worksheet HTML app target is ambiguous, ask the user to select the app/block or provide appId instead of mutating a guessed app.
-`;
-
-const BLOCK_DOCUMENT_OPTIONS = {
-  artifactType: 'worksheet',
-  artifactLabel: 'Worksheet',
-  commandNamespace: 'block-document',
-  commandGroup: 'Worksheet',
-  defaultTitle: 'Worksheet',
-  blockDocumentAgentToolName: CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME,
-} as const;
-
-export const runtimeConfig = await fetchRuntimeConfig();
-export const aiDevtoolsEnabled =
-  import.meta.env.DEV || Boolean(runtimeConfig.aiDevtools);
-export const experimentalEnabled = Boolean(runtimeConfig.experimentalEnabled);
-const cliArtifactTypes = createCliArtifactTypes({experimentalEnabled});
+const cliArtifactTypes = createCliArtifactTypes({
+  profile: cliCapabilityProfile,
+});
 const defaultWorkspaceTitle = getDefaultWorkspaceTitle(runtimeConfig);
 const runtimeAiSettings = runtimeConfig.aiSettings || {};
 const runtimeAiProviders =
@@ -202,9 +151,6 @@ const defaultModelFromProvider =
   runtimeAiProviders[defaultProviderFromConfig]?.models?.[0]?.modelName;
 const defaultModelFromConfig =
   runtimeConfig.llmModel || defaultModelFromProvider || 'gpt-4o-mini';
-const MOSAIC_PREAGG_DATABASE = '__sqlrooms_mosaic_cache';
-const MOSAIC_PREAGG_SCHEMA = 'mosaic';
-const MOSAIC_PREAGG_SCHEMA_REF = `${MOSAIC_PREAGG_DATABASE}.${MOSAIC_PREAGG_SCHEMA}`;
 const CLI_PYTHON_EXECUTION_TIMEOUT_MS = 120_000;
 const CRDT_STORAGE_KEY = [
   'sqlrooms-cli',
@@ -274,26 +220,6 @@ function createDisabledCrdtState(): CrdtSliceState {
     },
   };
 }
-
-const runtimeWsUrl = runtimeConfig.wsUrl || 'ws://localhost:4000';
-const connector = createWebSocketDuckDbConnector({
-  wsUrl: runtimeWsUrl,
-  authToken: runtimeConfig.wsAuthToken,
-  initializationQuery: [
-    'INSTALL spatial',
-    'LOAD spatial',
-    `ATTACH IF NOT EXISTS ':memory:' AS ${MOSAIC_PREAGG_DATABASE}`,
-    `CREATE SCHEMA IF NOT EXISTS ${MOSAIC_PREAGG_SCHEMA_REF}`,
-  ].join('; '),
-});
-addCliDatabaseInitializationDiagnostics(connector, {
-  runtimeConfig,
-  wsUrl: runtimeWsUrl,
-  authToken: runtimeConfig.wsAuthToken,
-});
-
-export const cliDuckDbWsUrl = runtimeWsUrl;
-export const cliDuckDbConnector = connector;
 
 const baseLoadFile = connector.loadFile.bind(connector);
 connector.loadFile = async (file, desiredTableName, options) => {
@@ -643,6 +569,9 @@ function getRuntimeBridgeConfig() {
   return undefined;
 }
 
+// Capability profiles gate exposed behavior, not lifecycle state. Keep every
+// persisted slice registered so disabled content round-trips through narrower
+// profiles and can be restored when its capability is enabled again.
 const sliceConfigSchemas = {
   room: BaseRoomConfig,
   layout: LayoutConfig,
@@ -653,13 +582,14 @@ const sliceConfigSchemas = {
   cells: CellsSliceConfig,
   notebook: NotebookSliceConfig,
   canvas: CanvasSliceConfig,
-  documents: DocumentsSliceConfig,
+  markdownDocuments: MarkdownDocumentsSliceConfig,
   blockDocuments: BlockDocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   htmlApps: HtmlAppRuntimeConfig,
   appProject: AppBuilderProjectConfigSchema,
   artifactAi: ArtifactAiConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
+  deckMaps: DeckMapsSliceConfig,
   pivot: PivotSliceConfig,
   python: PythonSliceConfig,
 } as const;
@@ -697,10 +627,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       storage: cliUiPersistStorage,
       partialize: persistHelpers.partialize,
       merge: (persistedState, currentState) => {
-        const persistedRecord = (persistedState ?? {}) as Record<
-          string,
-          unknown
-        >;
+        const persistedRecord = migrateCliPersistedWorkspace(
+          persistedState ?? {},
+        );
         const persistedCells = CellsSliceConfig.parse(
           persistedRecord.cells ?? currentState.cells.config,
         );
@@ -730,7 +659,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
     },
     (set, get, store) => {
-      const artifactChatHandoff = createArtifactChatHandoffController(store);
       const getFirstDashboardArtifactId = () =>
         Object.values(get().artifacts.config.artifactsById).find(
           (artifact) => artifact.type === 'dashboard',
@@ -747,67 +675,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
       const dashboardSlice: RoomState['dashboard'] = {
         initialize: async () => {
-          registerCommandsForOwner(
+          registerCliCapabilityProfileCommands(
             store,
-            DASHBOARD_COMMAND_OWNER,
-            createDashboardCommands({artifactTypes: cliArtifactTypes}),
+            cliCapabilityProfile,
+            cliArtifactTypes,
           );
-          registerCommandsForOwner(
-            store,
-            MOSAIC_DASHBOARD_COMMAND_OWNER,
-            createMosaicDashboardCommands<RoomState>(),
-          );
-          if (experimentalEnabled) {
-            registerCommandsForOwner(
-              store,
-              DOCUMENT_COMMAND_OWNER,
-              createDocumentCommands<RoomState>(),
-            );
-          }
-          registerCommandsForOwner(
-            store,
-            BLOCK_DOCUMENT_COMMAND_OWNER,
-            createBlockDocumentCommands<RoomState>({
-              ...BLOCK_DOCUMENT_OPTIONS,
-              statefulBlockTypes: createStatefulBlockCommandTypes({
-                experimentalEnabled,
-              }),
-            }),
-          );
-          registerCommandsForOwner(
-            store,
-            CLI_BLOCK_DOCUMENT_COMMAND_OWNER,
-            createCliBlockDocumentCommands(),
-          );
-          if (experimentalEnabled) {
-            registerCommandsForOwner(
-              store,
-              BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER,
-              createPythonBlockCommands<RoomState>({
-                artifactType: BLOCK_DOCUMENT_OPTIONS.artifactType,
-                artifactLabel: BLOCK_DOCUMENT_OPTIONS.artifactLabel,
-                commandNamespace: BLOCK_DOCUMENT_OPTIONS.commandNamespace,
-                commandGroup: BLOCK_DOCUMENT_OPTIONS.commandGroup,
-              }),
-            );
-            registerCommandsForOwner(
-              store,
-              HTML_APP_REVISION_COMMAND_OWNER,
-              createHtmlAppRevisionCommands(),
-            );
-          }
         },
         destroy: async () => {
-          unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
-          unregisterCommandsForOwner(store, MOSAIC_DASHBOARD_COMMAND_OWNER);
-          unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
-          unregisterCommandsForOwner(store, BLOCK_DOCUMENT_COMMAND_OWNER);
-          unregisterCommandsForOwner(store, CLI_BLOCK_DOCUMENT_COMMAND_OWNER);
-          unregisterCommandsForOwner(
-            store,
-            BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER,
-          );
-          unregisterCommandsForOwner(store, HTML_APP_REVISION_COMMAND_OWNER);
+          unregisterCliCapabilityProfileCommands(store);
         },
         ensureDashboardArtifact: (artifactId) => {
           const artifact = get().artifacts.getArtifact(artifactId);
@@ -965,7 +840,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           createCommandProps: {
             // createRoomShellSlice is typed to the base room state, but this
             // app middleware needs the composed CLI RoomState at runtime.
-            middleware: [artifactChatHandoff.commandMiddleware as any],
+            middleware: [artifactChatAssociationMiddleware as any],
           },
           createDbProps: {
             duckDb: {
@@ -1019,8 +894,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
+        ...createDeckMapsSlice()(set, get, store),
+
         ...createDashboardFeatureSlices(
-          experimentalEnabled
+          cliCapabilityProfile.dashboard.deckMaps
             ? createDeckMapDashboardSliceOptions()
             : {
                 addPanelActions: defaultAddPanelActions,
@@ -1049,29 +926,26 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createCanvasSlice()(set, get, store),
 
-        ...createDocumentsSlice()(set, get, store),
+        ...createMarkdownDocumentsSlice()(set, get, store),
 
         ...createBlockDocumentsSlice<RoomState>({
           onCreateOwnedStatefulBlock: ({
             blockInstanceId,
             blockType,
             getState,
-            title,
           }) => {
             if (!isStatefulBlockArtifactType(blockType)) {
               console.warn('Unknown stateful block type on create', {
                 blockType,
                 blockInstanceId,
-                title,
               });
               return;
             }
             const config = getStatefulBlockArtifactConfig(blockType);
-            config.ensureState(
-              getState(),
-              blockInstanceId,
-              title ?? config.embeddedTitle,
-            );
+            // Do not pass embeddedTitle here: create-stateful-block already
+            // called ensureState with the command-provided title. Re-running
+            // with the generic embedded title would overwrite it.
+            config.ensureState(getState(), blockInstanceId);
           },
           onDeleteOwnedStatefulBlock: ({
             blockInstanceId,
@@ -1088,25 +962,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             const config = getStatefulBlockArtifactConfig(blockType);
             config.deleteState(getState(), blockInstanceId);
           },
-          onRenameOwnedStatefulBlock: ({
-            blockInstanceId,
-            blockType,
-            getState,
-            title,
-          }) => {
-            if (!isStatefulBlockArtifactType(blockType)) {
-              console.warn('Unknown stateful block type on rename', {
-                blockType,
-                blockInstanceId,
-                title,
-              });
-              return;
-            }
-            const config = getStatefulBlockArtifactConfig(blockType);
-            if (config.renameState) {
-              config.renameState(getState(), blockInstanceId, title);
-            }
-          },
         })(set, get, store),
 
         ...(runtimeConfig.syncEnabled
@@ -1114,9 +969,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
               sync: createCliCrdtSyncConnector(),
               mirrors: {
-                documentState: createDocumentsCrdtMirror<RoomState>({
-                  blockDocumentArtifactTypes: ['worksheet'],
-                }),
+                documentState: createDocumentsCrdtMirror<RoomState>(),
               },
             })(set, get, store)
           : createDisabledCrdtState()),
@@ -1150,6 +1003,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...(() => {
           const webContainerToolkit = createWebContainerToolkit(store);
+          const renderedSurfaceToolkit = createRenderedSurfaceAiToolkit();
+          const tools = createCliAiTools({
+            store,
+            profile: cliCapabilityProfile,
+            webContainerTools: webContainerToolkit.tools,
+            createDashboardAgentTool: dashboardAgentTool,
+            createHtmlAppAgentTool: htmlAppAgentTool,
+            createStandaloneChartTool: createVegaChartTool,
+            createChartImageTool: createChartImageForMarkdownTool,
+            createRenderedSurfaceImageTools: () => renderedSurfaceToolkit.tools,
+          });
           return createAiSlice({
             config: AiSliceConfig.parse({sessions: []}),
             defaultProvider: defaultProviderFromConfig as any,
@@ -1160,41 +1024,18 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               get().aiSettings.config.providers[provider]?.apiKey || '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              [
-                createDefaultAiInstructions(store),
-                STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS.trim(),
-                experimentalEnabled
-                  ? EXPERIMENTAL_SQLROOMS_CLI_AI_INSTRUCTIONS.trim()
-                  : '',
-              ]
-                .filter(Boolean)
-                .join('\n\n'),
-            getRunContext: (sessionId) => getRunContext(store, sessionId),
+              createCliAiInstructions(store, cliCapabilityProfile),
+            getRunContext: (sessionId) =>
+              getRunContext(store, sessionId, {
+                profile: cliCapabilityProfile,
+              }),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),
-            onChatFinish: artifactChatHandoff.onChatFinish,
-            tools: {
-              ...createDefaultAiTools(store, {query: {}}),
-              ...createArtifactContextAiTools(store),
-              dashboard_agent: dashboardAgentTool(store, {
-                deckMapsEnabled: experimentalEnabled,
-              }),
-              ...(experimentalEnabled
-                ? {html_app_agent: htmlAppAgentTool(store)}
-                : {}),
-              [CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME]: blockDocumentAgentTool(
-                store,
-                {
-                  experimentalEnabled,
-                },
-              ),
-              ...webContainerToolkit.tools,
-              chart: createVegaChartTool(),
-              chart_image_for_markdown: createChartImageForMarkdownTool(store),
-            },
+            tools,
             toolRenderers: {
               ...createDefaultAiToolRenderers(),
               ...webContainerToolkit.toolRenderers,
+              ...renderedSurfaceToolkit.toolRenderers,
               chart: VegaChartToolResult,
             },
             devtools: {

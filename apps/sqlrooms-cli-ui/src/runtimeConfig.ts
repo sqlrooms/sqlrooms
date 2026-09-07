@@ -32,6 +32,8 @@ export type RuntimeConfig = {
   llmProvider?: string;
   llmModel?: string;
   configWritable?: boolean;
+  capabilityProfile?: string;
+  /** @deprecated Use capabilityProfile. Kept for older Python runtimes. */
   experimentalEnabled?: boolean;
   aiDevtools?: boolean;
   syncEnabled?: boolean;
@@ -67,6 +69,11 @@ export type RuntimeConfig = {
   dbPath?: string;
   metaNamespace?: string;
   startupStatus?: RuntimeStartupStatus;
+  mcp?: {
+    enabled: boolean;
+    url: string;
+    bridgeUrl: string;
+  };
   dbBridge?: {
     id: string;
     connections: Array<{
@@ -106,6 +113,37 @@ export type RuntimeConfig = {
     >;
   };
 };
+
+function webSocketUrl(pageUrl: string, pathname: string): string {
+  const url = new URL(pathname, pageUrl);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  return url.toString();
+}
+
+/**
+ * Route development connections through Vite using the page's actual origin.
+ * Explicit external URLs are preserved for tunnels and other custom setups.
+ */
+export function resolveCliDevProxyConfig(
+  config: RuntimeConfig,
+  pageUrl: string,
+  {proxyWebSockets = false}: {proxyWebSockets?: boolean} = {},
+): RuntimeConfig {
+  if (config.apiBaseUrl) return config;
+
+  const wsUrl = webSocketUrl(pageUrl, '/ws/duckdb');
+  return {
+    ...config,
+    apiBaseUrl: '',
+    ...(proxyWebSockets ? {wsUrl, crdtWsUrl: wsUrl} : {}),
+    mcp: config.mcp
+      ? {
+          ...config.mcp,
+          bridgeUrl: webSocketUrl(pageUrl, '/ws/mcp-bridge'),
+        }
+      : undefined,
+  };
+}
 
 const RUNTIME_CONFIG_TIMEOUT_MS = 20_000;
 const RUNTIME_CONFIG_RETRY_DELAY_MS = 250;

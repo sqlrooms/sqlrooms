@@ -1,7 +1,15 @@
 import {spawn, spawnSync} from 'node:child_process';
 import net from 'node:net';
-import {tmpdir} from 'node:os';
 import path from 'node:path';
+import {
+  getForwardedCliArgs,
+  getCliDevHosts,
+  getPythonCliDevArgs,
+  hasOption,
+  readOptionValue,
+  shouldProxyCliDevWebSockets,
+} from './cli-dev-args.mjs';
+import {waitForCliApi} from './cli-dev-readiness.mjs';
 
 /**
  * Dev entrypoint for this monorepo.
@@ -38,12 +46,6 @@ const targetConfig =
 const resolvedTarget = targetConfig?.packageName ?? null;
 const filter = resolvedTarget ? `${resolvedTarget}...` : '@sqlrooms/*';
 
-function unwrapForwardedArgs(args) {
-  const separatorIndex = args.indexOf('--');
-  if (separatorIndex === -1) return args;
-  return args.slice(separatorIndex + 1);
-}
-
 function getControlArgs(args) {
   const separatorIndex = args.indexOf('--');
   if (separatorIndex === -1) return args;
@@ -54,8 +56,11 @@ const controlArgs = getControlArgs(restArgs);
 const forwardedCliArgs =
   restArgs.indexOf('--') === -1
     ? controlArgs.filter((arg) => arg !== '--dry' && !arg.startsWith('--dry='))
-    : unwrapForwardedArgs(restArgs);
+    : getForwardedCliArgs(restArgs, {
+        stripScriptSeparator: Boolean(process.env.npm_execpath),
+      });
 const cliArgs = target === 'cli' ? forwardedCliArgs : [];
+const proxyCliDevWebSockets = shouldProxyCliDevWebSockets(cliArgs);
 const turboArgsForTarget = target === 'cli' ? [] : restArgs;
 const isDryRun = controlArgs.some(
   (arg) => arg === '--dry' || arg.startsWith('--dry='),
@@ -85,28 +90,6 @@ const childEnv = {
 };
 const CLI_DEV_API_DEFAULT_PORT = 4273;
 const CLI_DEV_UI_DEFAULT_PORT = 3100;
-
-function readOptionValue(args, name) {
-  const prefix = `${name}=`;
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === name) return args[index + 1] ?? null;
-    if (arg.startsWith(prefix)) return arg.slice(prefix.length);
-  }
-  return null;
-}
-
-function hasOption(args, name) {
-  return readOptionValue(args, name) !== null;
-}
-
-function publicHost(host) {
-  return host === '0.0.0.0' || host === '::' ? 'localhost' : host;
-}
-
-function hostForUrl(host) {
-  return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
-}
 
 function portProbeHosts(host) {
   return host === 'localhost' ? ['127.0.0.1', '::1'] : [host];
@@ -171,45 +154,8 @@ function parsePortOption(args, name) {
   return Number.isFinite(port) ? port : null;
 }
 
-function hasDbPathArg(args) {
-  if (
-    readOptionValue(args, '--db-path') !== null ||
-    readOptionValue(args, '-d') !== null
-  ) {
-    return true;
-  }
-
-  const optionsWithValue = new Set([
-    '--config',
-    '--db-path',
-    '--host',
-    '--meta-db',
-    '--meta-namespace',
-    '--port',
-    '--ui',
-    '--ws-port',
-    '-d',
-  ]);
-
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === '--') {
-      return args.slice(index + 1).some((value) => !value.startsWith('-'));
-    }
-    if (arg.startsWith('--') && arg.includes('=')) continue;
-    if (optionsWithValue.has(arg)) {
-      index += 1;
-      continue;
-    }
-    if (!arg.startsWith('-')) return true;
-  }
-
-  return false;
-}
-
 async function getCliDevPorts(args) {
-  const host = readOptionValue(args, '--host') ?? '127.0.0.1';
-  const proxyHost = hostForUrl(publicHost(host));
+  const {host, proxyHost} = getCliDevHosts(args);
   const explicitApiPort = parsePortOption(args, '--port');
   const explicitWsPort = parsePortOption(args, '--ws-port');
   const reservedPorts = new Set(
@@ -229,22 +175,6 @@ async function getCliDevPorts(args) {
     uiReservedPorts,
   );
   return {apiPort, proxyHost, uiPort};
-}
-
-function getPythonCliDevArgs(args, apiPort, uiPort) {
-  const apiPortArgs = hasOption(args, '--port')
-    ? args
-    : ['--port', String(apiPort), ...args];
-  const experimentalArgs = apiPortArgs.includes('--experimental')
-    ? apiPortArgs
-    : ['--experimental', ...apiPortArgs];
-  return hasDbPathArg(experimentalArgs)
-    ? experimentalArgs
-    : [
-        '--db-path',
-        path.join(tmpdir(), `sqlrooms-${uiPort}.db`),
-        ...experimentalArgs,
-      ];
 }
 
 function turboRunArgs(task, filters, extraArgs = []) {
@@ -335,17 +265,19 @@ if (target !== 'cli') {
   const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
   const pythonCliArgs = getPythonCliDevArgs(cliArgs, apiPort, uiPort);
   console.log(
-    `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} ./node_modules/.bin/vite --host --port ${uiPort})`,
-  );
-  console.log(
     `(cd python/sqlrooms && SQLROOMS_CLI_DEV_ARGS=${JSON.stringify(
       pythonCliArgs,
     )} node scripts/dev.mjs)`,
+  );
+  console.log(`(wait for http://${proxyHost}:${apiPort}/api/status)`);
+  console.log(
+    `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS=${proxyCliDevWebSockets} ./node_modules/.bin/vite --host --port ${uiPort})`,
   );
   process.exit(0);
 }
 
 const children = new Set();
+const cliStartupController = new AbortController();
 let exiting = false;
 
 function stopChildren(signal = 'SIGTERM') {
@@ -416,12 +348,14 @@ function startProcess(
 
 process.on('SIGINT', () => {
   exiting = true;
+  cliStartupController.abort();
   stopChildren('SIGINT');
   setTimeout(() => process.exit(130), 1000).unref();
 });
 
 process.on('SIGTERM', () => {
   exiting = true;
+  cliStartupController.abort();
   stopChildren('SIGTERM');
   setTimeout(() => process.exit(143), 1000).unref();
 });
@@ -429,17 +363,6 @@ process.on('SIGTERM', () => {
 if (target === 'cli') {
   const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
   const pythonCliArgs = getPythonCliDevArgs(cliArgs, apiPort, uiPort);
-  startProcess(
-    'sqlrooms CLI UI dev server',
-    ['--host', '--port', String(uiPort)],
-    {
-      command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
-      cwd: path.resolve('apps/sqlrooms-cli-ui'),
-      env: {
-        SQLROOMS_CLI_API_PROXY_TARGET: `http://${proxyHost}:${apiPort}`,
-      },
-    },
-  );
   startProcess('sqlrooms Python CLI dev server', ['scripts/dev.mjs'], {
     command: process.execPath,
     cwd: path.resolve('python/sqlrooms'),
@@ -447,6 +370,31 @@ if (target === 'cli') {
       SQLROOMS_CLI_DEV_ARGS: JSON.stringify(pythonCliArgs),
     },
   });
+  const apiStatusUrl = `http://${proxyHost}:${apiPort}/api/status`;
+  try {
+    await waitForCliApi(apiStatusUrl, {signal: cliStartupController.signal});
+  } catch (error) {
+    if (!exiting) {
+      exiting = true;
+      stopChildren();
+      console.error('SQLRooms CLI API failed to become ready.', error);
+      process.exit(1);
+    }
+  }
+  if (!exiting) {
+    startProcess(
+      'sqlrooms CLI UI dev server',
+      ['--host', '--port', String(uiPort)],
+      {
+        command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
+        cwd: path.resolve('apps/sqlrooms-cli-ui'),
+        env: {
+          SQLROOMS_CLI_API_PROXY_TARGET: `http://${proxyHost}:${apiPort}`,
+          VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS: String(proxyCliDevWebSockets),
+        },
+      },
+    );
+  }
 } else {
   startProcess(
     'turbo dependency dev watchers',

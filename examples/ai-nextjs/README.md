@@ -34,7 +34,7 @@ The client-side code is similar to the `ai-core` example but configured to use a
 
 ### Prerequisites
 
-- Node.js >= 22
+- Node.js >= 24.9
 - OpenAI API key (or other supported AI provider)
 - pnpm package manager
 
@@ -100,6 +100,8 @@ To add your own tools, modify the `app/lib/tools.ts` file:
 2. **Client-side tools**: Add to `clientTools` array - these execute in the browser
 
 Both tool types are automatically registered with the AI system through the `getServerAiSDKTools()` and `getClientTools()` functions.
+Also list hybrid client-side tool names in `remoteClientToolNames` in
+`app/store.ts` so pending browser output is not confused with server execution.
 
 ### Using Different AI Models
 

@@ -42,6 +42,35 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 );
 ```
 
+When `coordinator` is omitted, `createMosaicSlice()` obtains a connector from
+the room's DuckDB slice. To use another query engine, supply an already
+configured Mosaic coordinator. In that mode the room store does not need a
+DuckDB slice:
+
+```tsx
+import {Coordinator} from '@uwdata/mosaic-core';
+import {createMosaicSlice, type MosaicSliceState} from '@sqlrooms/mosaic';
+import {
+  createBaseRoomSlice,
+  createRoomStore,
+  type BaseRoomStoreState,
+} from '@sqlrooms/room-store';
+
+type RoomState = BaseRoomStoreState & MosaicSliceState;
+const coordinator = new Coordinator();
+
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  (set, get, store) => ({
+    ...createBaseRoomSlice()(set, get, store),
+    ...createMosaicSlice({coordinator})(set, get, store),
+  }),
+);
+```
+
+The supplied coordinator owns query execution and connector lifecycle. If no
+coordinator is supplied, the store must include a DuckDB slice; initialization
+otherwise reports a configuration error.
+
 Mosaic's pre-aggregation optimization creates `preagg_*` cache tables lazily
 when users interact with cross-filtered selections. By default Mosaic writes
 those tables to the persistent `mosaic` schema. If the DuckDB database is a user
@@ -221,6 +250,48 @@ function CodeView({value}: {value: string}) {
 }
 ```
 
+### Line Chart Row Counts
+
+Line charts support `metric: "count"` for raw observations. This emits
+`COUNT(*)`, including rows whose identifiers are null; it does not sum or count
+a selected numeric column. For example:
+
+```ts
+const settings = {x: 'DateTime', xInterval: 'month', metric: 'count'};
+```
+
+Omit `yFields` in count mode. Numeric series alongside `metric: "count"` are
+rejected, rather than silently ignored. Without `xInterval`, counts group by
+the exact X value. Counts aggregate the full source without truncation, but
+retain the default **10,000 result-point limit**, including binned counts:
+distinct timestamps or overly fine bins can still produce too many points.
+Use a coarser temporal interval or reduce the distinct X values when the limit
+is exceeded. This limits rendered results, not the number of rows counted. AI
+tools persist the host-configured result limit in the chart config, so custom
+limits remain effective when the chart renders.
+
+Existing configs remain numeric line charts when `metric` is omitted or is
+`"aggregate"`. They still use `yFields` with `sum`, `avg`, `min`, or `max` for
+temporal aggregation. For already summarized counts, select that numeric
+measure instead of counting the summary rows. Both the chart settings UI and
+the AI tools expose the same metric choice, including document chart tools.
+
+Switching a populated chart to Row count preserves its numeric series in the
+chart-local `lastAggregateYFields` config field, outside active `settings`.
+Switching back to Numeric fields restores their fields, aggregations, and
+colors, even after saving and reopening the chart. The saved series are removed
+from that field on restoration and are never rendered or passed as count-mode
+Y fields. Count charts created without prior numeric series still require a Y
+selection when first switched to Numeric fields.
+
+`xInterval` is valid only with a temporal X column. Numeric X columns group by
+their exact values and reject temporal intervals rather than silently ignoring
+the requested grouping.
+
+The chart builder retains chart-local config options separately from active
+field values and carries them into the created chart. Resetting the builder or
+selecting another chart type clears those options.
+
 ### Count Plot Settings
 
 `count-plot` chart configs support categorical counts by default and can also
@@ -234,6 +305,14 @@ aggregate a numeric `valueField` per category:
 - `maxBars`: maximum number of displayed category bars; defaults to `10`.
 - `leftMargin`: optional manual left margin in pixels. When omitted, SQLRooms
   derives a bounded left margin from chart metadata.
+
+Choose the metric from the source-table grain. Use `"count"` for raw rows where
+each row is an observation and category values repeat. Use `"aggregate"` for a
+summarized table that already has a numeric measure, such as one row per
+category with a `venue_count` column. The AI chart tool requires this choice
+in its guidance, while tolerating omitted optional fields for model-provider
+compatibility. When `metric` is omitted, a provided `valueField` implies
+`"aggregate"`; otherwise the backwards-compatible default is `"count"`.
 
 Count plots cap the visible categories instead of folding the hidden tail into
 `Others` so the generated vgplot spec continues to cross-filter against the
@@ -473,7 +552,15 @@ database adapter.
 Mutation callbacks may return promises, so hosts can route dashboard table and
 panel writes through room commands such as `dashboard.set-selected-table`,
 `dashboard.add-panel`, `dashboard.update-panel`, and `dashboard.remove-panel`
-while preserving the reusable Mosaic AI surface.
+while preserving the reusable Mosaic AI surface. These commands reject unknown
+dashboard IDs instead of implicitly creating dashboard state.
+
+`createDashboardAgentTool` also accepts an optional `authorizeDashboard`
+callback. Use it when a host needs to enforce product-specific ownership before
+the agent mutates an existing dashboard, for example to prove that an embedded
+dashboard belongs to the captured block document. The callback receives the
+resolved `dashboardId` and current store state. It runs once before the agent
+starts and again immediately before every table or panel mutation.
 
 ```ts
 import {

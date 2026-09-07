@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/artifacts",
-  "version": "0.29.0-rc.9",
+  "version": "0.29.0-rc.12",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sqlrooms/sqlrooms.git"
@@ -15,9 +15,15 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js",
+      "default": "./dist/config.js"
+    },
     "./ai": {
       "types": "./dist/ai/index.d.ts",
-      "import": "./dist/ai/index.js"
+      "import": "./dist/ai/index.js",
+      "default": "./dist/ai/index.js"
     }
   },
   "main": "dist/index.js",

@@ -38,6 +38,7 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
       ...createAiSlice({
         // Point to the Next.js API route
         chatEndPoint: '/api/chat',
+        remoteClientToolNames: ['weather'],
 
         getInstructions: () => {
           return 'You are a helpful assistant that can answer questions and help with tasks';

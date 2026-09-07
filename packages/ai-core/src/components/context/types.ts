@@ -50,6 +50,8 @@ export type ContextSelectorBadgeProps = {
 export type ContextSelectorSearchDropdownProps = {
   className?: string;
   align?: 'start' | 'center' | 'end';
+  side?: 'top' | 'right' | 'bottom' | 'left';
+  avoidCollisions?: boolean;
   searchPlaceholder?: string;
   emptyLabel?: ReactNode;
 };

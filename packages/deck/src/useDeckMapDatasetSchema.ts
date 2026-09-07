@@ -7,10 +7,10 @@ import {
 import * as arrow from 'apache-arrow';
 import {useEffect, useMemo, useState} from 'react';
 import {
-  isDeckMapDashboardSqlDatasetSource,
-  isDeckMapDashboardTableDatasetSource,
-  type DeckMapDashboardDatasetSource,
-} from './dashboardConfig';
+  isDeckMapSqlDatasetSource,
+  isDeckMapTableDatasetSource,
+  type DeckMapDatasetSource,
+} from './mapConfig';
 import {createDeckTableDatasetSql} from './datasets/tableDatasetSql';
 
 const EMPTY_COLUMNS: TableColumn[] = [];
@@ -21,7 +21,7 @@ const GENERATED_COLUMN_NAMES = new Set([
   'timestamps',
 ]);
 
-/** Resolved source and output column sets for a dashboard map dataset. */
+/** Resolved source and output column sets for a Deck map dataset. */
 export type DeckMapResolvedDatasetSchema = {
   sourceColumns: TableColumn[];
   outputColumns: TableColumn[];
@@ -44,8 +44,8 @@ function cleanSql(sql: string) {
   return sql.trim().replace(/(?:\s*;+\s*)+$/, '');
 }
 
-function createDatasetOutputSql(source: DeckMapDashboardDatasetSource) {
-  if (isDeckMapDashboardSqlDatasetSource(source)) {
+function createDatasetOutputSql(source: DeckMapDatasetSource) {
+  if (isDeckMapSqlDatasetSource(source)) {
     return cleanSql(source.sqlQuery);
   }
 
@@ -54,7 +54,7 @@ function createDatasetOutputSql(source: DeckMapDashboardDatasetSource) {
 
 /** Builds a zero-row SQL query that exposes a map dataset's output schema. */
 export function createDeckMapDatasetOutputSchemaSql(
-  source: DeckMapDashboardDatasetSource,
+  source: DeckMapDatasetSource,
 ): string {
   return [
     'SELECT *',
@@ -92,20 +92,17 @@ export function resolveDeckMapDatasetSchema(options: {
 }
 
 function hasTableTransformSql(
-  source: DeckMapDashboardDatasetSource | undefined,
+  source: DeckMapDatasetSource | undefined,
 ): boolean {
   return Boolean(
-    isDeckMapDashboardTableDatasetSource(source) && source.transformSql?.trim(),
+    isDeckMapTableDatasetSource(source) && source.transformSql?.trim(),
   );
 }
 
-function shouldInspectOutputSchema(
-  source: DeckMapDashboardDatasetSource | undefined,
-) {
+function shouldInspectOutputSchema(source: DeckMapDatasetSource | undefined) {
   return Boolean(
     source &&
-    (isDeckMapDashboardSqlDatasetSource(source) ||
-      hasTableTransformSql(source)),
+    (isDeckMapSqlDatasetSource(source) || hasTableTransformSql(source)),
   );
 }
 
@@ -123,7 +120,7 @@ function arrowSchemaToTableColumns(table: arrow.Table): TableColumn[] {
 
 /** Inspects the active map dataset and returns source/output schema columns. */
 export function useDeckMapDatasetSchema(options: {
-  source: DeckMapDashboardDatasetSource | undefined;
+  source: DeckMapDatasetSource | undefined;
   sourceColumns: TableColumn[];
 }): DeckMapDatasetSchemaState {
   const connector = useDuckDb();
@@ -138,9 +135,9 @@ export function useDeckMapDatasetSchema(options: {
   });
 
   const shouldInspect = shouldInspectOutputSchema(options.source);
-  const sourceKey = isDeckMapDashboardSqlDatasetSource(options.source)
+  const sourceKey = isDeckMapSqlDatasetSource(options.source)
     ? options.source.sqlQuery
-    : isDeckMapDashboardTableDatasetSource(options.source)
+    : isDeckMapTableDatasetSource(options.source)
       ? `${options.source.tableName}\n${options.source.transformSql ?? ''}`
       : '';
 

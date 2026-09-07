@@ -5,10 +5,12 @@ from typer.testing import CliRunner
 from sqlrooms.cli import (
     DEFAULT_CONFIG_PATH,
     DEFAULT_HTTP_PORT,
+    _load_capability_profile,
     _load_ai_runtime_config,
     _load_connector_config,
     _normalize_config_string,
     _resolve_config_path,
+    _resolve_capability_profile,
     _resolve_http_port,
     app,
 )
@@ -25,8 +27,10 @@ def test_cli_help():
     assert "my-project.duckdb" in stdout
     assert "--version" in stdout
     assert "--ai-devtools" in stdout
+    assert "--ai-rendering-tools" not in stdout
     assert "--debug" in stdout
     assert "--experimental" in stdout
+    assert "--profile" in stdout
     assert "--experimental-sync" in stdout
     assert "--sync" not in stdout
     assert "next free port" in stdout
@@ -61,6 +65,133 @@ def test_experimental_sync_requires_experimental():
 
     assert result.exit_code == 1
     assert "--experimental-sync requires --experimental" in result.stderr
+
+
+def test_load_capability_profile_from_config(tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[app]\nprofile = "experimental"\n', encoding="utf-8")
+
+    assert _load_capability_profile(config_path) == "experimental"
+
+
+def test_resolve_capability_profile_defaults_and_alias():
+    assert _resolve_capability_profile(None, None, experimental=False) == "default"
+    assert _resolve_capability_profile(None, None, experimental=True) == "experimental"
+    assert (
+        _resolve_capability_profile("experimental", None, experimental=False)
+        == "experimental"
+    )
+    assert (
+        _resolve_capability_profile(None, "default", experimental=True)
+        == "experimental"
+    )
+
+
+def test_resolve_capability_profile_prefers_cli_over_config():
+    assert (
+        _resolve_capability_profile("default", "experimental", experimental=False)
+        == "default"
+    )
+
+
+def test_resolve_capability_profile_rejects_unknown_and_conflicting_alias():
+    try:
+        _resolve_capability_profile("unknown", None, experimental=False)
+    except RuntimeError as exc:
+        assert "Unknown SQLRooms capability profile" in str(exc)
+    else:
+        raise AssertionError("Expected unknown profile failure")
+
+    try:
+        _resolve_capability_profile("default", None, experimental=True)
+    except RuntimeError as exc:
+        assert "--experimental conflicts" in str(exc)
+    else:
+        raise AssertionError("Expected conflicting profile failure")
+
+
+def test_cli_rejects_empty_explicit_profile():
+    result = runner.invoke(
+        app,
+        ["--no-config", "--profile", "", ":memory:"],
+    )
+
+    assert result.exit_code == 1
+    assert "Unknown SQLRooms capability profile" in result.stderr
+
+
+def test_cli_passes_named_profile_to_server(monkeypatch):
+    captured = {}
+
+    class FakeServer:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        async def start(self):
+            return None
+
+    monkeypatch.setattr("sqlrooms.cli.SqlroomsHttpServer", FakeServer)
+    monkeypatch.setattr("sqlrooms.cli._resolve_http_port", lambda *args: 3000)
+
+    result = runner.invoke(
+        app,
+        ["--no-config", "--no-open-browser", "--profile", "experimental", ":memory:"],
+    )
+
+    assert result.exit_code == 0
+    assert captured["capability_profile"] == "experimental"
+
+
+def test_cli_passes_document_charts_maps_profile_to_server(monkeypatch):
+    captured = {}
+
+    class FakeServer:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        async def start(self):
+            return None
+
+    monkeypatch.setattr("sqlrooms.cli.SqlroomsHttpServer", FakeServer)
+    monkeypatch.setattr("sqlrooms.cli._resolve_http_port", lambda *args: 3000)
+
+    result = runner.invoke(
+        app,
+        [
+            "--no-config",
+            "--no-open-browser",
+            "--profile",
+            "document-charts-maps",
+            ":memory:",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert captured["capability_profile"] == "document-charts-maps"
+
+
+def test_cli_loads_profile_from_config(monkeypatch, tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[app]\nprofile = "experimental"\n', encoding="utf-8")
+    captured = {}
+
+    class FakeServer:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        async def start(self):
+            return None
+
+    monkeypatch.setattr("sqlrooms.cli.SqlroomsHttpServer", FakeServer)
+    monkeypatch.setattr("sqlrooms.cli._resolve_http_port", lambda *args: 3000)
+
+    result = runner.invoke(
+        app,
+        ["--no-open-browser", "--config", str(config_path), ":memory:"],
+    )
+
+    assert result.exit_code == 0
+    assert captured["capability_profile"] == "experimental"
 
 
 def test_legacy_sync_flag_is_hidden_and_rejected():
@@ -101,6 +232,19 @@ def test_resolve_http_port_reserves_explicit_ws_port(monkeypatch):
     monkeypatch.setattr("sqlrooms.cli._pick_free_port", fake_pick_free_port)
 
     assert _resolve_http_port("127.0.0.1", None, ws_port=3000) == 3001
+    assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT, {3000})]
+
+
+def test_resolve_http_port_reserves_explicit_mcp_port(monkeypatch):
+    calls = []
+
+    def fake_pick_free_port(host, start_port=None, *, reserved_ports=None):
+        calls.append((host, start_port, reserved_ports))
+        return 3001
+
+    monkeypatch.setattr("sqlrooms.cli._pick_free_port", fake_pick_free_port)
+
+    assert _resolve_http_port("127.0.0.1", None, mcp_port=3000) == 3001
     assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT, {3000})]
 
 

@@ -37,7 +37,10 @@ export type PreparedGeoArrowLayerData = {
 export type PreparedDeckDataset = {
   datasetId: string;
   table: arrow.Table;
+  /** Dataset-level geometry column used when preparing this payload. */
   datasetGeometryColumn?: string;
+  /** Dataset-level encoding hint used when preparing this payload. */
+  datasetGeometryEncodingHint?: GeometryEncodingHint;
   resolveGeometry: (geometryColumn?: string) => ResolvedGeometryColumn;
   getGeoArrowLayerData: (geometryColumn?: string) => PreparedGeoArrowLayerData;
   getGeoJsonBinaryData: (geometryColumn?: string) => unknown;

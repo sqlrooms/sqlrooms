@@ -43,6 +43,8 @@ npx giget gh:sqlrooms/examples/get-started my-new-app/
 
 <!--@include: ../examples/deckgl-mosaic/README.md-->
 
+<!--@include: ../examples/deckgl-mosaic-datafusion/README.md-->
+
 <!--@include: ../examples/kepler/README.md-->
 
 <!--@include: ../examples/deckgl/README.md-->

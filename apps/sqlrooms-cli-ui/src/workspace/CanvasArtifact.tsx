@@ -1,7 +1,7 @@
 import {Canvas} from '@sqlrooms/canvas';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {useEffect} from 'react';
-import {useRoomStore} from '../store';
+import {useRoomStore} from '../roomStoreHooks';
 
 export const CanvasArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId = (meta?.artifactId as string) ?? panelId;

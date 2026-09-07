@@ -30,16 +30,55 @@ has a command registry:
 - `list_commands` for broad command-registry debugging.
 
 Model-facing flows should prefer
-`search_commands -> get_command -> execute_command` instead of repeatedly
-listing the full command catalog. `execute_command` refuses high-risk or
+`search_commands -> get_command (when input schema is needed) -> execute_command`
+instead of repeatedly listing the full command catalog. Keep schemas out of
+search results by default; commands with `requiresInput: false` can run with
+default input without a schema lookup. Search covers registered commands only;
+other directly available AI tools should be called directly.
+
+Search requires text relevance before applying resource/action hints or
+availability bonuses. It ignores common filler words and matches query tokens
+as words or command-ID segments. Read requests (`get`, `read`, `list`, `show`,
+`inspect`) favor relevant read-only commands; exact command IDs retain priority.
+Resource and action parameters remain ranking hints, while `riskLevel` is a
+filter. Unmatched queries return zero commands; an empty query can still browse
+the catalog. The reported match count is computed before the result limit.
+
+`execute_command` refuses high-risk or
 confirmation-required commands until the caller sets `confirmed: true` after an
 explicit user confirmation. Skill runtimes can pass `skillId`, `toolCallId`,
 `traceId`, and metadata through tool execution options; the command invocation
-receives those fields for trace callbacks. `DEFAULT_SKILL_RUNTIME_TOOL_POLICY`
+receives those fields for trace callbacks. When the current AI run has a
+primary artifact context item, command tools also propagate it as the
+invocation target. They read the mutable tool execution context first and fall
+back to the invoking session's stored run context, never the visibly selected
+chat. This keeps omitted artifact targets stable for the turn while allowing
+`set_primary_context_artifact` to retarget later calls in the same turn.
+`DEFAULT_SKILL_RUNTIME_TOOL_POLICY`
 documents the default command, artifact-context, table/query, and high-level
 agent tool policy for future skill runtimes. Hosts with product-specific agent
 tool names can call `createSkillRuntimeToolPolicy()` to substitute names such
 as their own block document agent while keeping the package defaults generic.
+
+Hosts can scope a command tool instance with `commandGuard`. Denied descriptors
+are omitted from `search_commands`, `list_commands`, and `get_command`, and
+`execute_command` refuses them before validation, confirmation, or invocation.
+The refusal uses `command-not-available-to-caller` unless the guard supplies a
+custom code; a custom message can direct the model to an owning agent tool.
+Direct `store.commands.invokeCommand` calls are unaffected.
+
+```tsx
+const commandTools = createCommandTools(store, {
+  commandGuard: (descriptor) =>
+    descriptor.id.startsWith('block-document.') && !descriptor.readOnly
+      ? {
+          allowed: false,
+          code: 'use-document-agent',
+          message: 'Use the document agent tool for document edits.',
+        }
+      : {allowed: true},
+});
+```
 
 ## Installation
 
@@ -87,8 +126,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createDefaultAiTools(store),
       },
       getInstructions: () => createDefaultAiInstructions(store),
-      // Optional: observe completed, non-aborted turns for app-owned follow-up
-      // behavior such as handoff into a newly selected workspace artifact.
+      // Optional: observe completed, non-aborted turns for app-owned behavior
+      // such as audit logging or analytics.
       onChatFinish: ({sessionId, messages}) => {
         void sessionId;
         void messages;
@@ -122,12 +161,87 @@ function AiPanel() {
             updateProvider(provider, {apiKey});
           }}
         />
+        <Chat.Composer.Attachments />
         <Chat.ModelSelector />
       </Chat.Composer>
     </Chat>
   );
 }
 ```
+
+`Chat.Composer.Attachments` is opt-in. It accepts images plus plain-text and
+Markdown files through explicit choices in the paperclip menu, shows removable
+previews before sending, and renders posted attachments as clickable previews
+that open in a larger dialog.
+
+### Customize chat presentation
+
+`Chat.Rendering` accepts a partial set of presentation slots. Unspecified slots
+keep the SQLRooms defaults, so an app can replace one region or row without
+reimplementing the rest of the chat. `ToolActivity` is used for top-level and
+nested tool rows; recursive agent progress and non-hoisted rich tool content
+remain pre-wired when that row is customized.
+
+```tsx
+import {
+  Chat,
+  type ChatActivityProps,
+  type ChatToolActivityProps,
+} from '@sqlrooms/ai';
+
+function AppActivity({children, isRunning}: ChatActivityProps) {
+  return <section aria-busy={isRunning}>{children}</section>;
+}
+
+function AppToolActivity({toolCall, isAgent}: ChatToolActivityProps) {
+  return (
+    <div>
+      {isAgent ? 'Agent' : 'Tool'}: {toolCall.toolName}
+    </div>
+  );
+}
+
+function AiMessages() {
+  return (
+    <Chat.Rendering
+      components={{
+        Activity: AppActivity,
+        ToolActivity: AppToolActivity,
+      }}
+    >
+      <Chat.Messages />
+    </Chat.Rendering>
+  );
+}
+```
+
+Use the `Turn` slot for a custom overall layout. Its semantic regions expose
+pre-wired `Content` components, while activity items and action capabilities
+remain available for deeper composition.
+
+## Block-scoped Ask AI actions
+
+`createAskAiBlockHeaderAction(...)` builds a block-header actions renderer for
+hosts that expose Ask AI on selected block types. The host controls the
+`supportsAiEditing` policy and owns the submit flow; `onSubmit` receives the
+block-document target context plus the submitted prompt. Pass the returned
+renderer to the block-document chart/stateful renderer providers.
+
+```tsx
+import {createAskAiBlockHeaderAction} from '@sqlrooms/ai';
+
+const renderBlockHeaderActions = createAskAiBlockHeaderAction({
+  supportsAiEditing: (blockType) => ['chart', 'map'].includes(blockType),
+  onSubmit: (target, prompt) => {
+    void openBlockScopedChat({target, prompt});
+  },
+});
+```
+
+`BlockAiPromptPopover` is also re-exported for hosts that need a custom trigger
+or placement. The public integration types are
+`AskAiBlockHeaderActionRenderContext`, `CreateAskAiBlockHeaderActionOptions`,
+and `BlockAiPromptPopoverProps`.
 
 ## Generate Chat Titles
 
@@ -181,6 +295,54 @@ const blocks: ChatSearchBlock[] = [
 ];
 const matches = findChatSearchMatches(blocks, query);
 ```
+
+**Keeping highlighting in a replaced slot.** A host that swaps out a chat leaf
+slot renders its own text, so it loses the highlighting the default slot got for
+free. `HighlightedChatSearchText` restores it. Pass the same `blockId` the turn
+model registered for that part; without it there are no matches to highlight and
+the component renders the text unchanged.
+
+```tsx
+import {HighlightedChatSearchText} from '@sqlrooms/ai';
+
+function AppPrompt({prompt, searchBlockId}: ChatPromptProps) {
+  return (
+    <MyPromptBubble>
+      <HighlightedChatSearchText text={prompt} blockId={searchBlockId} />
+    </MyPromptBubble>
+  );
+}
+```
+
+Matches are wrapped in `<mark>`, and the active match carries the match id as its
+DOM id, so a host can scroll it into view. `useOptionalChatSearch()` exposes the
+same state directly (`activeMatchId`, `getMatchesForBlock`) for slots that need
+to do their own anchoring. It returns `null` outside a `ChatSearchProvider`, so a
+component rendered away from `Chat.Root` degrades instead of throwing.
+
+Indexing follows what actually rendered, not just what got registered. A slot
+that returns `null`, or a region hidden behind a user preference, never mounts
+`HighlightedChatSearchText` and so contributes no matches. Nothing is indexed
+without something on screen to highlight. The text a slot renders is also the
+text that gets indexed: a slot showing a transformed or shortened string is
+searchable by what it actually displays, not by whatever text the block was
+originally registered with.
+
+Custom Markdown components are opaque rendering boundaries. Text beneath an
+overridden Markdown element is excluded from automatic search because the
+component may replace or hide its children; other default-rendered text in the
+same message stays searchable. Overriding `mark` disables automatic search for
+that message because generated highlights may never reach the DOM.
+
+A slot that paints its own matches instead of rendering through
+`HighlightedChatSearchText` must call `useReportRenderedChatSearchBlock(blockId)`
+itself, or its block never counts as rendered and contributes no matches.
+
+A slot that hides its content behind a disclosure or a toggle can key an effect
+on `useActiveChatSearchMatchKey(blockId)` to reveal that content for every
+selection attempt, including repeated navigation to the same match. This keeps
+scrolling from landing on something still hidden and is what the default
+reasoning disclosure uses to open itself.
 
 ## Chat Session Types
 
@@ -242,6 +404,7 @@ not be stored.
 ## Add custom tools
 
 ```tsx
+import {tool} from 'ai';
 import {z} from 'zod';
 import {
   createAiSlice,
@@ -253,19 +416,16 @@ import {
 createAiSlice({
   tools: {
     ...createDefaultAiTools(store),
-    echo: {
-      name: 'echo',
+    echo: tool({
       description: 'Return user text back to the chat',
-      parameters: z.object({
+      inputSchema: z.object({
         text: z.string(),
       }),
       execute: async ({text}) => ({
-        llmResult: {
-          success: true,
-          details: `Echo: ${text}`,
-        },
+        success: true,
+        details: `Echo: ${text}`,
       }),
-    },
+    }),
   },
   getInstructions: () => createDefaultAiInstructions(store),
 })(set, get, store);

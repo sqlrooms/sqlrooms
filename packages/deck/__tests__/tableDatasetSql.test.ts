@@ -84,4 +84,40 @@ describe('createDeckTableDatasetSql', () => {
       `Deck table dataset transformSql must reference ${DECK_TABLE_DATASET_SOURCE_RELATION}.`,
     );
   });
+
+  it('does not rewrite SELECT *, ST_AsWKB(geom) AS geom (validator owns collisions)', () => {
+    const sql = createDeckTableDatasetSql({
+      tableName: 'buildings',
+      transformSql: `SELECT *, ST_AsWKB(geom) as geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    });
+    expect(sql).toContain(
+      `SELECT *, ST_AsWKB(geom) as geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    );
+    expect(sql).not.toContain('EXCLUDE');
+  });
+
+  it('preserves SELECT *, ST_AsWKB(ST_Point(...)) AS geom', () => {
+    const sql = createDeckTableDatasetSql({
+      tableName: 'earthquakes',
+      transformSql: `SELECT *, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    });
+    expect(sql).toContain(
+      `SELECT *, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    );
+  });
+
+  it('preserves SELECT * FROM (… ST_AsWKB AS geom …) sample wrappers', () => {
+    const inner = [
+      'SELECT DateTime, Latitude, Longitude, Magnitude,',
+      'ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom',
+      `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+      'WHERE Latitude IS NOT NULL',
+    ].join(' ');
+    const sql = createDeckTableDatasetSql({
+      tableName: 'earthquakes',
+      transformSql: `SELECT * FROM (${inner}) USING SAMPLE 100000 ROWS`,
+    });
+    expect(sql).toContain('ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom');
+    expect(sql).toContain('USING SAMPLE 100000 ROWS');
+  });
 });

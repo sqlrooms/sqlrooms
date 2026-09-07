@@ -2,13 +2,14 @@ import {AiSettingsSliceState, AiSliceState} from '@sqlrooms/ai';
 import {HtmlAppRuntimeSliceState} from '@sqlrooms/app-runtime';
 import {ArtifactsSliceState} from '@sqlrooms/artifacts';
 import {type ArtifactAiSliceState} from '@sqlrooms/artifacts/ai';
+import type {DeckMapsSliceState} from '@sqlrooms/deck';
 import {CanvasSliceState} from '@sqlrooms/canvas';
 import {CellsSliceState} from '@sqlrooms/cells';
 import {CrdtSliceState} from '@sqlrooms/crdt';
 import {
   BlockDocumentsSliceState,
   BlockSettingsSliceState,
-  DocumentsSliceState,
+  MarkdownDocumentsSliceState,
 } from '@sqlrooms/documents';
 import type {
   MosaicDashboardLayoutType,
@@ -47,6 +48,7 @@ export type RoomState = RoomShellSliceState &
   ArtifactAiSliceState &
   MosaicSliceState &
   MosaicDashboardSliceState &
+  DeckMapsSliceState &
   AiSliceState &
   SqlEditorSliceState &
   AiSettingsSliceState &
@@ -56,7 +58,7 @@ export type RoomState = RoomShellSliceState &
   PivotSliceState &
   PythonSliceState &
   CanvasSliceState &
-  DocumentsSliceState &
+  MarkdownDocumentsSliceState &
   BlockDocumentsSliceState &
   BlockSettingsSliceState &
   CrdtSliceState &

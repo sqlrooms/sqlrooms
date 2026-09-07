@@ -5,6 +5,7 @@ import {
   createBlockDocumentCommandAiAdapter,
   type BlockDocumentBlock,
 } from '../src';
+import {BLOCK_DOCUMENT_UPDATE_BLOCK_COMMAND_ID} from '../src/createBlockDocumentCommandAiAdapter';
 
 function createMockStore({
   artifactType = 'block-document',
@@ -140,16 +141,45 @@ describe('createBlockDocumentCommandAiAdapter', () => {
     ]);
   });
 
-  it('allows hosts to recognize compatible block-document artifact types', () => {
-    const {store} = createMockStore({artifactType: 'analysis-doc'});
-    const adapter = createBlockDocumentCommandAiAdapter({
-      store,
-      isBlockDocumentArtifact: (artifact) => artifact.type === 'analysis-doc',
-    });
+  it('updates blocks through the canonical block document command', async () => {
+    const {store, ensureBlockDocumentCalls, invokeCommandCalls} =
+      createMockStore();
+    const adapter = createBlockDocumentCommandAiAdapter({store});
+    const block: BlockDocumentBlock = {
+      id: 'existing',
+      type: 'paragraph',
+      text: 'Updated',
+    };
 
-    expect(adapter.getBlocks('doc-1')).toEqual([
-      {id: 'existing', type: 'paragraph', text: 'Hi'},
+    await expect(
+      adapter.updateBlock?.('doc-1', 'existing', block),
+    ).resolves.toBeUndefined();
+
+    expect(ensureBlockDocumentCalls).toEqual([['doc-1']]);
+    expect(invokeCommandCalls).toEqual([
+      [
+        BLOCK_DOCUMENT_UPDATE_BLOCK_COMMAND_ID,
+        {
+          artifactId: 'doc-1',
+          blockId: 'existing',
+          block,
+        },
+        {
+          surface: 'ai',
+          actor: BLOCK_DOCUMENT_AGENT_ACTOR,
+        },
+      ],
     ]);
+  });
+
+  it('does not recognize custom artifact type names', () => {
+    const {store} = createMockStore({artifactType: 'analysis-doc'});
+    const adapter = createBlockDocumentCommandAiAdapter({store});
+
+    expect(adapter.getBlocks('doc-1')).toBeUndefined();
+    expect(() => adapter.ensureBlockDocument('doc-1')).toThrow(
+      'Artifact doc-1 is not a block document',
+    );
   });
 
   it('throws when ensuring an incompatible artifact type', () => {
@@ -209,5 +239,24 @@ describe('createBlockDocumentCommandAiAdapter', () => {
     await expect(adapter.moveBlock('doc-1', 'paragraph-1', 0)).rejects.toThrow(
       'Move failed',
     );
+  });
+
+  it('throws command errors when update command invocation fails', async () => {
+    const {store} = createMockStore({
+      invokeCommand: async () => ({
+        success: false,
+        commandId: BLOCK_DOCUMENT_UPDATE_BLOCK_COMMAND_ID,
+        error: 'Update failed',
+      }),
+    });
+    const adapter = createBlockDocumentCommandAiAdapter({store});
+
+    await expect(
+      adapter.updateBlock?.('doc-1', 'existing', {
+        id: 'existing',
+        type: 'paragraph',
+        text: 'Updated',
+      }),
+    ).rejects.toThrow('Update failed');
   });
 });

@@ -14,7 +14,6 @@ export type HtmlAppBlockDocumentBlock = {
   blockInstanceId: string;
   ownership: 'owned';
   intent?: string;
-  title: string;
   caption: string;
   height: number;
 };
@@ -24,7 +23,7 @@ export type CreateHtmlAppBlockDocumentBlockOptions = {
   appId: string;
   /** Document block id. Defaults to appId. */
   blockId?: string;
-  /** Visible app and block title. */
+  /** Visible app title used as the initial document-local caption. */
   title: string;
   /** Optional durable natural-language objective for the app block. */
   intent?: string;
@@ -54,7 +53,6 @@ export function createHtmlAppBlockDocumentBlock({
       blockInstanceId: appId,
       ownership: 'owned',
       intent,
-      title,
       caption: title,
       height,
     },

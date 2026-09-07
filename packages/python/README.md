@@ -1,3 +1,7 @@
+# @sqlrooms/python
+
+> **Experimental:** This package's API and behavior may change between releases.
+
 Python runtime and block primitives for SQLRooms block documents.
 
 This package provides:
@@ -86,17 +90,7 @@ expose:
 - `block-document.run-python-block`
 - `block-document.clear-python-block-result`
 
-Hosts can pass `artifactType`, `artifactLabel`, and `commandNamespace` to expose
-the same Python block operations under product-specific artifact names. For
-example, the SQLRooms CLI app uses:
-
-```ts
-createPythonBlockCommands({
-  artifactType: 'worksheet',
-  artifactLabel: 'Worksheet',
-  commandNamespace: 'block-document',
-});
-```
-
-That keeps Worksheet as the host-facing artifact label while registering
-block-document command IDs such as `block-document.add-python-block`.
+Python block commands target `block-document` artifacts and use canonical
+`block-document.*` IDs and “block document” descriptions. Hosts can customize
+`commandGroup` for UI grouping; artifact type, label, and command namespace
+overrides are not supported.

@@ -155,4 +155,266 @@ describe('createArtifactContextAiTools', () => {
         'Artifact "doc-2" is not in the current run context. Use set_primary_context_artifact before reading it as context.',
     });
   });
+
+  it('enforces artifact eligibility across every context operation', async () => {
+    const store = createTestStore();
+    let runContext: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'doc-1',
+          type: 'document',
+          title: 'Doc',
+        },
+        {
+          kind: 'artifact',
+          id: 'dashboard-1',
+          type: 'dashboard',
+          title: 'Dashboard',
+        },
+      ],
+      primaryItemId: 'dashboard-1',
+      capturedAt: 1,
+    };
+    const readArtifactCalls: string[] = [];
+    const readArtifact = ({artifactId}: {artifactId: string}) => {
+      readArtifactCalls.push(artifactId);
+      return {
+        success: true as const,
+        artifact: {
+          artifactId,
+          title: 'Doc',
+          type: 'document',
+        },
+        payload: undefined,
+      };
+    };
+    const tools = createArtifactContextAiTools({
+      store,
+      isArtifactAllowed: ({artifact}) => artifact.type === 'document',
+      readArtifact,
+    });
+    const executionContext = {
+      getAiRunContext: () => runContext,
+      setAiRunContext: (nextContext: AiRunContext) => {
+        runContext = nextContext;
+      },
+    };
+
+    const listResult = await (tools.list_context_artifacts as any).execute(
+      {},
+      executionContext,
+    );
+    expect(listResult.llmResult.artifacts).toMatchObject([
+      {artifactId: 'doc-1', role: 'primary'},
+    ]);
+    expect(listResult.llmResult.primaryArtifactId).toBe('doc-1');
+
+    await (tools.read_context_artifact as any).execute({}, executionContext);
+    expect(readArtifactCalls).toEqual(['doc-1']);
+    readArtifactCalls.length = 0;
+
+    const setResult = await (tools.set_primary_context_artifact as any).execute(
+      {artifactId: 'dashboard-1'},
+      executionContext,
+    );
+    expect(setResult.llmResult).toEqual({
+      success: false,
+      errorMessage: 'Artifact "dashboard-1" is not available as AI context.',
+    });
+
+    const allowedSetResult = await (
+      tools.set_primary_context_artifact as any
+    ).execute({artifactId: 'doc-1'}, executionContext);
+    expect(allowedSetResult.llmResult).toMatchObject({
+      success: true,
+      primaryArtifactId: 'doc-1',
+      contextItems: [{id: 'doc-1'}],
+    });
+
+    const readResult = await (tools.read_context_artifact as any).execute(
+      {artifactId: 'dashboard-1'},
+      executionContext,
+    );
+    expect(readResult.llmResult).toMatchObject({
+      success: false,
+      errorMessage: expect.stringContaining(
+        'is not in the current run context',
+      ),
+    });
+    expect(readArtifactCalls).toEqual([]);
+  });
+
+  it('preserves non-artifact context when changing the primary artifact', async () => {
+    const store = createTestStore();
+    let runContext: AiRunContext | undefined = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'dashboard-1',
+          type: 'dashboard',
+          title: 'Dashboard',
+        },
+        {
+          kind: 'table',
+          id: 'main.sales',
+          type: 'table',
+          title: 'Sales',
+        },
+        {
+          kind: 'block',
+          id: 'doc-1:chart-1',
+          type: 'chart',
+          title: 'Revenue chart',
+        },
+      ],
+      primaryItemId: 'dashboard-1',
+      capturedAt: 1,
+    };
+    const tools = createArtifactContextAiTools({
+      store,
+      isArtifactAllowed: ({artifact}) => artifact.type === 'document',
+    });
+
+    const result = await (tools.set_primary_context_artifact as any).execute(
+      {artifactId: 'doc-1'},
+      {
+        getAiRunContext: () => runContext,
+        setAiRunContext: (nextContext: AiRunContext) => {
+          runContext = nextContext;
+        },
+      },
+    );
+
+    expect(result.llmResult).toMatchObject({
+      success: true,
+      primaryArtifactId: 'doc-1',
+    });
+    expect(runContext?.items.map(({kind, id}) => ({kind, id}))).toEqual([
+      {kind: 'artifact', id: 'doc-1'},
+      {kind: 'table', id: 'main.sales'},
+      {kind: 'block', id: 'doc-1:chart-1'},
+    ]);
+  });
+
+  it('prefers a full adapter setter when filtering artifact context', async () => {
+    const store = createTestStore();
+    const runContext: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'dashboard-1',
+          type: 'dashboard',
+          title: 'Dashboard',
+        },
+      ],
+      primaryItemId: 'dashboard-1',
+      capturedAt: 1,
+    };
+    let persistedContext: AiRunContext | undefined;
+    const partialSetterCalls: string[] = [];
+    const tools = createArtifactContextAiTools({
+      store,
+      getRunContext: () => runContext,
+      setRunContext: ({runContext: nextContext}) => {
+        persistedContext = nextContext;
+      },
+      isArtifactAllowed: ({artifact}) => artifact.type === 'document',
+    });
+
+    const result = await (tools.set_primary_context_artifact as any).execute(
+      {artifactId: 'doc-1'},
+      {
+        setPrimaryRunContextItem: (item: {id: string}) => {
+          partialSetterCalls.push(item.id);
+        },
+      },
+    );
+
+    expect(result.llmResult).toMatchObject({
+      success: true,
+      primaryArtifactId: 'doc-1',
+    });
+    expect(persistedContext?.items.map(({id}) => id)).toEqual(['doc-1']);
+    expect(partialSetterCalls).toEqual([]);
+  });
+
+  it('rejects filtered updates when only the primary-item setter is available', async () => {
+    const store = createTestStore();
+    const runContext: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'dashboard-1',
+          type: 'dashboard',
+          title: 'Dashboard',
+        },
+      ],
+      primaryItemId: 'dashboard-1',
+      capturedAt: 1,
+    };
+    const partialSetterCalls: string[] = [];
+    const contextChangeCalls: string[][] = [];
+    const tools = createArtifactContextAiTools({
+      store,
+      isArtifactAllowed: ({artifact}) => artifact.type === 'document',
+      onContextItemsChanged: ({items}) => {
+        contextChangeCalls.push(items.map(({id}) => id));
+      },
+    });
+
+    const result = await (tools.set_primary_context_artifact as any).execute(
+      {artifactId: 'doc-1'},
+      {
+        getAiRunContext: () => runContext,
+        setPrimaryRunContextItem: (item: {id: string}) => {
+          partialSetterCalls.push(item.id);
+        },
+      },
+    );
+
+    expect(result.llmResult).toEqual({
+      success: false,
+      errorMessage:
+        'Cannot change the primary context artifact because capability filtering requires a full run-context setter.',
+    });
+    expect(partialSetterCalls).toEqual([]);
+    expect(contextChangeCalls).toEqual([]);
+  });
+
+  it('rejects filtered updates when no run-context setter is available', async () => {
+    const store = createTestStore();
+    const runContext: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'dashboard-1',
+          type: 'dashboard',
+          title: 'Dashboard',
+        },
+      ],
+      primaryItemId: 'dashboard-1',
+      capturedAt: 1,
+    };
+    const contextChangeCalls: string[][] = [];
+    const tools = createArtifactContextAiTools({
+      store,
+      isArtifactAllowed: ({artifact}) => artifact.type === 'document',
+      onContextItemsChanged: ({items}) => {
+        contextChangeCalls.push(items.map(({id}) => id));
+      },
+    });
+
+    const result = await (tools.set_primary_context_artifact as any).execute(
+      {artifactId: 'doc-1'},
+      {getAiRunContext: () => runContext},
+    );
+
+    expect(result.llmResult).toEqual({
+      success: false,
+      errorMessage:
+        'Cannot change the primary context artifact because capability filtering requires a full run-context setter.',
+    });
+    expect(contextChangeCalls).toEqual([]);
+  });
 });

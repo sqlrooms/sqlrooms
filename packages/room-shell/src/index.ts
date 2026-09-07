@@ -3,7 +3,7 @@
  * @packageDocumentation
  */
 
-export {RoomShell} from './RoomShell';
+export {RoomShell, type RoomShellBaseState} from './RoomShell';
 export {RoomDndProvider} from '@sqlrooms/layout';
 export {RoomShellCommandPalette} from './RoomShellCommandPalette';
 export type {
@@ -66,6 +66,7 @@ export {
   getCommandKeystrokes,
   getCommandShortcut,
   hasCommandSliceState,
+  invokeCommandWithPolicy,
   invokeCommandFromStore,
   isRoomSliceWithDestroy,
   isRoomSliceWithInitialize,
@@ -85,9 +86,11 @@ export type {
   BaseRoomStoreState,
   CommandCliAdapter,
   CommandCliAdapterOptions,
+  CommandInvocationPolicyOptions,
   CommandMcpAdapter,
   CommandMcpAdapterOptions,
   CommandMcpToolDescriptor,
+  GuardedCommandInvocationOptions,
   CommandSliceState,
   CreateBaseRoomSliceProps,
   CreateCommandSliceProps,

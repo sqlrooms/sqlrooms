@@ -7,6 +7,8 @@ export type GeometryEncodingHint = z.infer<typeof GeometryEncodingHint>;
 export const ColorScaleFunction = z.intersection(
   z.object({
     '@@function': z.literal('colorScale'),
+    /** Per-accessor opacity 0–1. */
+    opacity: z.number().min(0).max(1).optional(),
   }),
   ColorScaleConfig,
 );
@@ -56,10 +58,17 @@ export const DeckJsonMapLayerSpec = z.looseObject({
   radiusUnits: z.string().optional(),
   radiusMinPixels: z.number().optional(),
   radiusMaxPixels: z.number().optional(),
+  pointRadiusScale: z.number().optional(),
+  pointRadiusUnits: z.string().optional(),
+  pointRadiusMinPixels: z.number().optional(),
+  pointRadiusMaxPixels: z.number().optional(),
   lineWidthMinPixels: z.number().optional(),
+  lineWidthMaxPixels: z.number().optional(),
   lineWidthScale: z.number().optional(),
   lineWidthUnits: z.string().optional(),
   getRadius: JsonAccessor.optional(),
+  getPointRadius: JsonAccessor.optional(),
+  getLineWidth: JsonAccessor.optional(),
   getFillColor: JsonAccessor.optional(),
   getLineColor: JsonAccessor.optional(),
   getColor: JsonAccessor.optional(),

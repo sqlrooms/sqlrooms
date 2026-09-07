@@ -141,6 +141,56 @@ function getApiHeaders(config: RuntimeConfig): HeadersInit {
   };
 }
 
+export type McpRuntimeStatus = {
+  status: 'off' | 'waiting' | 'ready' | 'working' | 'error';
+  enabled: boolean;
+  url: string;
+  bridge: {
+    status: 'waiting' | 'ready';
+    pageId?: string;
+    lastSeen?: number;
+    pendingRequests: number;
+    recentActivity?: boolean;
+  };
+  lastError?: string;
+};
+
+export async function fetchMcpStatus(
+  config: RuntimeConfig,
+): Promise<McpRuntimeStatus> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1_000);
+  try {
+    const response = await fetch(`${getApiBaseUrl(config)}/api/mcp/status`, {
+      headers: getApiHeaders(config),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`MCP status failed: ${response.status}`);
+    return (await response.json()) as McpRuntimeStatus;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function setMcpEnabled(
+  config: RuntimeConfig,
+  enabled: boolean,
+): Promise<McpRuntimeStatus> {
+  const response = await fetch(
+    `${getApiBaseUrl(config)}/api/mcp/${enabled ? 'start' : 'stop'}`,
+    {method: 'POST', headers: getApiHeaders(config)},
+  );
+  const body = (await response.json().catch(() => ({}))) as McpRuntimeStatus & {
+    error?: string;
+  };
+  if (!response.ok) {
+    throw new Error(
+      body.lastError || body.error || `Server returned ${response.status}`,
+    );
+  }
+  return body;
+}
+
 export async function saveAiSettingsToServer(
   config: RuntimeConfig,
   payload: {

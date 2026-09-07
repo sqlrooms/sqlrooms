@@ -5,7 +5,7 @@ import type {
   BlockDocumentNode,
 } from '../BlockDocumentSliceConfig';
 import type {BlockDocumentMutationMetadata} from '../BlockDocumentsSlice';
-import type {DocumentAsset} from '../DocumentsSliceConfig';
+import type {DocumentAsset} from '../DocumentAsset';
 
 export type BlockDocumentEditorChangeHandler = (
   value: BlockDocumentContent,

@@ -4,6 +4,7 @@ import {
   createListBlockDocumentBlocksTool,
   createMoveBlockDocumentBlockTool,
   type BlockDocumentAiAdapter,
+  type BlockDocumentBlock,
   type BlockDocumentMoveBlockAiAdapter,
   type BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
@@ -16,6 +17,8 @@ import {
 } from '@sqlrooms/mosaic/ai';
 import {createAddHtmlAppBlockDocumentBlockTool} from './createAddHtmlAppBlockDocumentBlockTool';
 import {KnownBlockDocumentTools} from './constants';
+import {getMapBlockRuntimeIssues} from './getMapBlockRuntimeIssues';
+import type {RoomState} from '../store-types';
 
 export type ExtraBlockDocumentAiToolsParams = {
   /** ID of the block document artifact being edited. */
@@ -35,19 +38,23 @@ export type CreateCliBlockDocumentAiToolsOptions = {
   databaseAdapter: DatabaseAiAdapter;
   blockDocumentAdapter: BlockDocumentAiAdapter &
     BlockDocumentMoveBlockAiAdapter;
-  dashboardAgentTool: Tool;
+  getState?: () => RoomState;
+  dashboardAgentTool?: Tool;
   chartToolsOptions?: ChartToolsOptions;
   blockDocumentId: string;
+  targetBlockId?: string;
   extraTools?: ExtraBlockDocumentAiToolsFactory;
   htmlAppBlocksEnabled?: boolean;
-  createDashboardBlock: (params: {
+  dashboardBlocksEnabled?: boolean;
+  dataTableBlocksEnabled?: boolean;
+  createDashboardBlock?: (params: {
     title: string;
     tableName: string;
     intent?: string;
   }) =>
     | {dashboardId: string; block: BlockDocumentStatefulBlockBlock}
     | Promise<{dashboardId: string; block: BlockDocumentStatefulBlockBlock}>;
-  createDataTableExplorerBlock: (params: {
+  createDataTableExplorerBlock?: (params: {
     title: string;
     tableName: string;
     intent?: string;
@@ -105,9 +112,13 @@ export function createCliBlockDocumentAiTools({
   databaseAdapter,
   chartToolsOptions,
   blockDocumentId,
+  targetBlockId,
+  getState,
   dashboardAgentTool,
   extraTools,
   htmlAppBlocksEnabled = false,
+  dashboardBlocksEnabled = true,
+  dataTableBlocksEnabled = true,
   createDashboardBlock,
   createDataTableExplorerBlock,
   createHtmlAppBlock,
@@ -120,6 +131,7 @@ export function createCliBlockDocumentAiTools({
     blockDocumentAdapter,
     chartToolsOptions,
     blockDocumentId,
+    targetBlockId,
   });
 
   const addTextBlockTool = createAddBlockDocumentTextBlockTool({
@@ -127,33 +139,64 @@ export function createCliBlockDocumentAiTools({
     blockDocumentId,
   });
 
-  const addDashboardBlockTool = createAddMosaicDashboardBlockTool({
-    blockDocumentAdapter,
-    blockDocumentId,
-    addDashboardBlock: addDashboardBlock
-      ? (params) => addDashboardBlock({blockDocumentId, ...params})
-      : undefined,
-    createDashboardBlock,
-  });
+  const addDashboardBlockTool =
+    dashboardBlocksEnabled && createDashboardBlock
+      ? createAddMosaicDashboardBlockTool({
+          blockDocumentAdapter,
+          blockDocumentId,
+          addDashboardBlock: addDashboardBlock
+            ? (params) => addDashboardBlock({blockDocumentId, ...params})
+            : undefined,
+          createDashboardBlock,
+        })
+      : undefined;
 
-  const addDataTableExplorerTool = createBlockDocumentDataTableExplorerTool({
-    databaseAdapter,
-    blockDocumentAdapter,
-    blockDocumentId,
-    addDataTableExplorerBlock: addDataTableExplorerBlock
-      ? (params) => addDataTableExplorerBlock({blockDocumentId, ...params})
-      : undefined,
-    createDataTableExplorerBlock,
-  });
+  const addDataTableExplorerTool =
+    dataTableBlocksEnabled && createDataTableExplorerBlock
+      ? createBlockDocumentDataTableExplorerTool({
+          databaseAdapter,
+          blockDocumentAdapter,
+          blockDocumentId,
+          addDataTableExplorerBlock: addDataTableExplorerBlock
+            ? (params) =>
+                addDataTableExplorerBlock({blockDocumentId, ...params})
+            : undefined,
+          createDataTableExplorerBlock,
+        })
+      : undefined;
 
   const listBlocksTool = createListBlockDocumentBlocksTool({
     blockDocumentAdapter,
     blockDocumentId,
-    usageHint: `Use this before updating an existing worksheet dashboard, map, or app block. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId. For dashboard blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_dashboard_agent} as dashboardId. For map blocks, pass statefulBlock.blockInstanceId to a direct worksheet map tool when available.${
-      htmlAppBlocksEnabled
-        ? ` For html-app blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_html_app_agent} as appId. For a new worksheet HTML app, use ${KnownBlockDocumentTools.add_html_app_block} first.`
+    usageHint: `Use this before updating an existing stateful block in the Document or reordering blocks. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId.${
+      dashboardBlocksEnabled
+        ? ` For dashboard blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_dashboard_agent} as dashboardId.`
         : ''
-    }`,
+    } For map blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.create_block_document_map_block} as mapId when the direct document map tool is available.${
+      htmlAppBlocksEnabled
+        ? ` For html-app blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_html_app_agent} as appId. For a new document HTML app, use ${KnownBlockDocumentTools.add_html_app_block} first.`
+        : ''
+    } If a map block has runtimeIssues, repair the map config in place instead of creating a replacement block.`,
+    augmentBlockSummary: ({block}) => {
+      if (
+        !getState ||
+        block.type !== 'statefulBlock' ||
+        block.blockType !== 'map' ||
+        !block.blockInstanceId
+      ) {
+        return undefined;
+      }
+
+      const runtimeIssues = getMapBlockRuntimeIssues(
+        getState(),
+        block.blockInstanceId,
+      );
+      return runtimeIssues.length > 0 ? {runtimeIssues} : undefined;
+    },
+  } as Parameters<typeof createListBlockDocumentBlocksTool>[0] & {
+    augmentBlockSummary: (params: {
+      block: BlockDocumentBlock;
+    }) => Record<string, unknown> | undefined;
   });
 
   const moveBlockTool = createMoveBlockDocumentBlockTool({
@@ -182,9 +225,19 @@ export function createCliBlockDocumentAiTools({
     [KnownBlockDocumentTools.list_blocks]: listBlocksTool,
     [KnownBlockDocumentTools.move_block]: moveBlockTool,
     [KnownBlockDocumentTools.add_text_block]: addTextBlockTool,
-    [KnownBlockDocumentTools.add_dashboard_block]: addDashboardBlockTool,
-    [KnownBlockDocumentTools.add_data_table_explorer]: addDataTableExplorerTool,
-    [KnownBlockDocumentTools.embedded_dashboard_agent]: dashboardAgentTool,
+    ...(addDashboardBlockTool && dashboardAgentTool
+      ? {
+          [KnownBlockDocumentTools.add_dashboard_block]: addDashboardBlockTool,
+          [KnownBlockDocumentTools.embedded_dashboard_agent]:
+            dashboardAgentTool,
+        }
+      : {}),
+    ...(addDataTableExplorerTool
+      ? {
+          [KnownBlockDocumentTools.add_data_table_explorer]:
+            addDataTableExplorerTool,
+        }
+      : {}),
     ...(htmlAppBlocksEnabled
       ? {
           [KnownBlockDocumentTools.add_html_app_block]:

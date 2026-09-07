@@ -4,4 +4,4 @@ dist
 .vitepress/temp
 .vitepress/.temp
 .vitepress/*.timestamp-*.mjs
-
+.vitepress/api-release.generated.json

@@ -52,6 +52,10 @@ export type ArtifactsSliceState = {
     deleteArtifact: (id: string) => void;
     setCurrentArtifact: (id?: string) => void;
     setArtifactOrder: (artifactOrder: string[]) => void;
+    /** Pins an artifact when unpinned, or unpins it when already pinned. */
+    togglePinArtifact: (id: string) => void;
+    /** Returns whether an artifact is pinned in the workspace. */
+    isPinnedArtifact: (id: string) => boolean;
     getArtifact: (id: string) => ArtifactMetadataType | undefined;
   };
 };
@@ -222,6 +226,10 @@ export function createArtifactsSlice<
               draft.artifacts.config.artifactOrder.filter(
                 (candidate: string) => candidate !== id,
               );
+            draft.artifacts.config.pinnedArtifactIds =
+              draft.artifacts.config.pinnedArtifactIds.filter(
+                (candidate: string) => candidate !== id,
+              );
             if (draft.artifacts.config.currentArtifactId === id) {
               draft.artifacts.config.currentArtifactId = getFirstArtifactId(
                 draft.artifacts.config,
@@ -258,6 +266,26 @@ export function createArtifactsSlice<
             }
           }),
         );
+      },
+
+      togglePinArtifact(id) {
+        set((state) =>
+          produce(state, (draft) => {
+            if (!draft.artifacts.config.artifactsById[id]) return;
+            const pinnedArtifactIds = draft.artifacts.config.pinnedArtifactIds;
+            const index = pinnedArtifactIds.indexOf(id);
+            if (index === -1) {
+              pinnedArtifactIds.push(id);
+            } else {
+              draft.artifacts.config.pinnedArtifactIds =
+                pinnedArtifactIds.filter((candidate) => candidate !== id);
+            }
+          }),
+        );
+      },
+
+      isPinnedArtifact(id) {
+        return get().artifacts.config.pinnedArtifactIds.includes(id);
       },
 
       getArtifact(id) {

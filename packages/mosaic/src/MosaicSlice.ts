@@ -9,9 +9,11 @@ import {
   createSlice,
   useBaseRoomStore,
   type SliceFunctions,
+  type StateCreator,
 } from '@sqlrooms/room-store';
 import type {
   ArrowQueryRequest,
+  ConnectorQueryRequest,
   ExecQueryRequest,
   JSONQueryRequest,
 } from '@uwdata/mosaic-core';
@@ -124,16 +126,56 @@ export function createDefaultMosaicConfig(
   return {...props} as MosaicSliceConfig;
 }
 
-export type CreateMosaicSliceProps = {
+type CreateMosaicSliceBaseProps = {
   config?: Partial<MosaicSliceConfig>;
-  coordinator?: Coordinator;
   preagg?: MosaicPreAggregateOptions;
 };
+
+/** Configure Mosaic with a caller-supplied coordinator and no database slice. */
+export type CreateCoordinatorMosaicSliceProps = CreateMosaicSliceBaseProps & {
+  coordinator: Coordinator;
+};
+
+/** Configure Mosaic to create its coordinator from the room's DuckDB slice. */
+export type CreateDuckDbMosaicSliceProps = CreateMosaicSliceBaseProps & {
+  coordinator?: never;
+};
+
+/**
+ * Configuration for creating a Mosaic slice.
+ *
+ * Supply a coordinator to use Mosaic without a database slice, or omit it to
+ * create a coordinator from the room's DuckDB slice.
+ */
+export type CreateMosaicSliceProps =
+  | CreateCoordinatorMosaicSliceProps
+  | CreateDuckDbMosaicSliceProps;
+
+type CoordinatorMosaicStoreState = BaseRoomStoreState & MosaicSliceState;
+type DuckDbMosaicStoreState = CoordinatorMosaicStoreState & DuckDbSliceState;
+
+/**
+ * Create a Mosaic slice backed by a supplied coordinator.
+ *
+ * This mode does not require a DuckDB slice in the room store.
+ */
+export function createMosaicSlice(
+  props: CreateCoordinatorMosaicSliceProps,
+): StateCreator<CoordinatorMosaicStoreState, [], [], MosaicSliceState>;
+
+/**
+ * Create a Mosaic slice backed by the room's DuckDB connector.
+ *
+ * The room store must include a DuckDB slice when no coordinator is supplied.
+ */
+export function createMosaicSlice(
+  props?: CreateDuckDbMosaicSliceProps,
+): StateCreator<DuckDbMosaicStoreState, [], [], MosaicSliceState>;
 
 export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
   return createSlice<
     MosaicSliceState,
-    BaseRoomStoreState & DuckDbSliceState & MosaicSliceState
+    CoordinatorMosaicStoreState & Partial<DuckDbSliceState>
   >((set, get, store) => ({
     mosaic: {
       config: createDefaultMosaicConfig(props?.config),
@@ -154,7 +196,13 @@ export function createMosaicSlice(props: CreateMosaicSliceProps = {}) {
             resolvedCoordinator = props.coordinator;
             applyMosaicPreAggregateOptions(resolvedCoordinator, props.preagg);
           } else {
-            const dbConnector = await get().db.getConnector();
+            const db = get().db;
+            if (!db) {
+              throw new Error(
+                'createMosaicSlice() requires a DuckDB slice when no coordinator is supplied. Pass a coordinator or include a database slice in the room store.',
+              );
+            }
+            const dbConnector = await db.getConnector();
             resolvedCoordinator = coordinator();
             mosaicConnector = isWasmDuckDbConnector(dbConnector)
               ? await wasmConnector({
@@ -478,30 +526,37 @@ export function useStoreWithMosaic<T>(
  * `Table`, which is the shape Mosaic consumers expect (with `.toColumns()`).
  * For `'json'` queries, rows are materialized with {@link Array.from} which
  * may have performance/memory implications for very large result sets.
- * The `as any` casts on the return type are an intentional adapter trade-off
- * to satisfy the polymorphic {@link Connector['query']} signature.
  */
 function createDuckDbMosaicConnector(connector: DuckDbConnector): Connector {
-  return {
-    query: (async (
-      query: ArrowQueryRequest | ExecQueryRequest | JSONQueryRequest,
-    ) => {
-      const queryType = query.type ?? 'arrow';
-      if (queryType === 'exec') {
-        await connector.execute(query.sql);
-        return undefined as any;
-      }
-      if (queryType === 'json') {
-        const rows = await connector.queryJson<Record<string, unknown>>(
-          query.sql,
-        );
-        return Array.from(rows) as any;
-      }
-      if (queryType === 'arrow') {
-        const arrowTable = await connector.query(query.sql);
-        return createMosaicTableFromArrowTable(arrowTable) as any;
-      }
-      throw new Error(`Unsupported Mosaic query type "${queryType}".`);
-    }) as Connector['query'],
-  };
+  function query(
+    request: ArrowQueryRequest,
+  ): Promise<ReturnType<typeof createMosaicTableFromArrowTable>>;
+  function query(request: ExecQueryRequest): Promise<void>;
+  function query(request: JSONQueryRequest): Promise<Record<string, unknown>[]>;
+  async function query(
+    request: ConnectorQueryRequest,
+  ): Promise<
+    | ReturnType<typeof createMosaicTableFromArrowTable>
+    | Record<string, unknown>[]
+    | void
+  > {
+    const queryType = request.type ?? 'arrow';
+    if (queryType === 'exec') {
+      await connector.execute(request.sql);
+      return;
+    }
+    if (queryType === 'json') {
+      const rows = await connector.queryJson<Record<string, unknown>>(
+        request.sql,
+      );
+      return Array.from(rows);
+    }
+    if (queryType === 'arrow') {
+      const arrowTable = await connector.query(request.sql);
+      return createMosaicTableFromArrowTable(arrowTable);
+    }
+    throw new Error(`Unsupported Mosaic query type "${queryType}".`);
+  }
+
+  return {query};
 }

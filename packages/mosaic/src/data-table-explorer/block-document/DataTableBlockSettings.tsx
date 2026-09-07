@@ -42,7 +42,7 @@ export const DataTableBlockSettings: FC<BlockSettingsComponentProps> = ({
     (state) => state.blockDocuments.updateBlock,
   );
   const getSelection = useStoreWithMosaic((state) => state.mosaic.getSelection);
-  const dataTable = useDataTable(dataTableBlock?.title);
+  const dataTable = useDataTable(dataTableBlock?.tableName);
 
   if (!dataTableBlock || !dashboardId) {
     return (
@@ -63,7 +63,7 @@ export const DataTableBlockSettings: FC<BlockSettingsComponentProps> = ({
     ).reset();
     updateBlock(dashboardId, blockId, {
       ...dataTableBlock,
-      title: getTableIdentity(table.table),
+      tableName: getTableIdentity(table.table),
     });
   };
 

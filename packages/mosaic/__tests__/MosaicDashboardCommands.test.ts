@@ -1,4 +1,5 @@
 import {createStore} from 'zustand';
+import {Coordinator} from '@uwdata/mosaic-core';
 import {createLayoutSlice} from '@sqlrooms/layout';
 import {
   createBaseRoomSlice,
@@ -25,7 +26,7 @@ function createTestStore() {
     ...createBaseRoomSlice()(...args),
     ...createCommandSlice<TestRoomState>()(...args),
     ...createLayoutSlice()(...args),
-    ...createMosaicSlice()(...args),
+    ...createMosaicSlice({coordinator: new Coordinator()})(...args),
     ...createMosaicDashboardSlice()(...args),
   }));
   store
@@ -65,6 +66,7 @@ describe('Mosaic dashboard commands', () => {
   it('adds, updates, and removes dashboard panels', async () => {
     const store = createTestStore();
     const dashboardId = 'dashboard-1';
+    store.getState().mosaicDashboard.ensureDashboard(dashboardId);
     const panel = createMosaicDashboardChartPanelConfig('Magnitude', {
       chartType: 'histogram',
       settings: {field: 'magnitude'},
@@ -123,6 +125,42 @@ describe('Mosaic dashboard commands', () => {
     expect(
       store.getState().mosaicDashboard.getDashboard(dashboardId)?.panels,
     ).toEqual([]);
+  });
+
+  it('rejects selected-table and panel additions for a missing dashboard', async () => {
+    const store = createTestStore();
+    const dashboardId = 'missing-dashboard';
+    const panel = createMosaicDashboardChartPanelConfig('Magnitude', {
+      chartType: 'histogram',
+      settings: {field: 'magnitude'},
+    });
+
+    const selectedTableResult = await store
+      .getState()
+      .commands.invokeCommand(MOSAIC_DASHBOARD_COMMAND_IDS.setSelectedTable, {
+        dashboardId,
+        tableName: 'earthquakes',
+      });
+    const addPanelResult = await store
+      .getState()
+      .commands.invokeCommand(MOSAIC_DASHBOARD_COMMAND_IDS.addPanel, {
+        dashboardId,
+        panel,
+      });
+
+    expect(selectedTableResult).toMatchObject({
+      success: false,
+      commandId: MOSAIC_DASHBOARD_COMMAND_IDS.setSelectedTable,
+      code: 'dashboard-not-found',
+    });
+    expect(addPanelResult).toMatchObject({
+      success: false,
+      commandId: MOSAIC_DASHBOARD_COMMAND_IDS.addPanel,
+      code: 'dashboard-not-found',
+    });
+    expect(
+      store.getState().mosaicDashboard.getDashboard(dashboardId),
+    ).toBeUndefined();
   });
 
   it('returns a command failure when updating a missing panel', async () => {

@@ -36,8 +36,10 @@ export const InlineApiKeyInput: React.FC<InlineApiKeyInputProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
 
+  // Resolve the provider even when no session exists yet (lazy session
+  // creation), so a first-time API key can be saved for the default provider.
   const modelProvider = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.modelProvider,
+    (s) => s.ai.getSelectedModel().modelProvider,
   );
 
   useEffect(() => {

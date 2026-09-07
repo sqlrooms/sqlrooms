@@ -10,7 +10,8 @@ import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSet
  * Includes temporal granularity selector when X field is temporal.
  */
 export const LineChartXFieldSelector: FC = () => {
-  const {onChangeConfig, config} = useMosaicChartSettingsContext('line-chart');
+  const {onChange, onChangeConfig, config} =
+    useMosaicChartSettingsContext('line-chart');
 
   const {columns} = useColumnsContext();
   const xColumn = columns.find((c) => c.name === config.settings.x);
@@ -27,7 +28,19 @@ export const LineChartXFieldSelector: FC = () => {
     >
       <ColumnSelector.Quantitative
         value={config.settings.x}
-        onChange={(x) => onChangeConfig('x', x)}
+        onChange={(x) => {
+          const selectedColumn = columns.find((column) => column.name === x);
+          if (selectedColumn && isTemporalType(selectedColumn.type)) {
+            onChange({
+              ...config,
+              settings: {...config.settings, x},
+            });
+            return;
+          }
+          const settings = {...config.settings};
+          delete settings.xInterval;
+          onChange({...config, settings: {...settings, x}});
+        }}
       />
       {isXFieldTemporal && (
         <TemporalGranularitySelector

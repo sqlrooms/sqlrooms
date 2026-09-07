@@ -1,6 +1,13 @@
 import {tool} from 'ai';
 import type {Tool, ToolSet} from 'ai';
-import {hasCommandSliceState} from '@sqlrooms/room-shell';
+import {
+  getAiRunContextPrimaryItem,
+  type AiRunContext,
+} from '@sqlrooms/ai-config';
+import {
+  hasCommandSliceState,
+  invokeCommandWithPolicy,
+} from '@sqlrooms/room-shell';
 import type {
   BaseRoomStoreState,
   RoomCommandDescriptor,
@@ -189,12 +196,25 @@ export type ExecuteCommandToolLlmResult = {
 
 type CommandToolExecutionContext = {
   sessionId?: string;
+  aiRunContext?: AiRunContext;
+  getAiRunContext?: () => AiRunContext | undefined;
   skillId?: string;
   traceId?: string;
   toolCallId?: string;
   metadata?: Record<string, unknown>;
 };
 
+/** The caller-scoped access decision for a room command descriptor. */
+export type CommandGuardResult = {
+  /** Whether the command tools may expose and execute the command. */
+  allowed: boolean;
+  /** Optional machine-readable refusal code returned by `execute_command`. */
+  code?: string;
+  /** Optional refusal or redirect message returned by `execute_command`. */
+  message?: string;
+};
+
+/** Options for configuring the model-facing room command tools. */
 export type CommandToolsOptions = {
   searchToolName?: string;
   getToolName?: string;
@@ -207,6 +227,12 @@ export type CommandToolsOptions = {
   defaultMetadata?: Record<string, unknown>;
   includeInvisibleCommandsByDefault?: boolean;
   includeDisabledCommandsInList?: boolean;
+  /**
+   * Restricts which commands this tool instance may expose or execute.
+   * Denied commands are omitted from discovery and details. Execution returns
+   * `command-not-available-to-caller` unless the decision supplies a code.
+   */
+  commandGuard?: (descriptor: CommandToolDescriptor) => CommandGuardResult;
 };
 
 const DEFAULT_SEARCH_TOOL_NAME = 'search_commands';
@@ -251,7 +277,8 @@ export function createCommandTools<RS extends BaseRoomStoreState>(
   return {
     [searchToolName]: tool({
       description: `Search available room commands by intent or command ID.
-Use this for routine command discovery before calling ${getToolName} for the selected command schema and ${executeToolName} to run it.`,
+This searches the command registry, not the separately available AI tools; call a matching AI tool directly.
+Keep includeInputSchema false for discovery. Use ${getToolName} only when you need the selected command's input schema, then ${executeToolName} to run it. Commands with requiresInput false can be run with default input without a schema lookup.`,
       inputSchema: SearchCommandsToolParameters,
       execute: async (
         params: SearchCommandsToolParameters,
@@ -273,12 +300,16 @@ Use this for routine command discovery before calling ${getToolName} for the sel
             params.surface ?? defaultSurface,
             options,
             context,
+            state,
           ),
           includeInvisible: params.includeHidden,
           includeDisabled: params.includeDisabled,
           includeInputSchema: params.includeInputSchema,
         });
-        const rankedCommands = rankCommandDescriptors(descriptors, params);
+        const rankedCommands = rankCommandDescriptors(
+          filterGuardedCommandDescriptors(descriptors, options),
+          params,
+        );
 
         return {
           success: true,
@@ -317,13 +348,16 @@ Call this after ${searchToolName} and before ${executeToolName} when the command
             params.surface ?? defaultSurface,
             options,
             context,
+            state,
           ),
           includeInvisible: params.includeHidden,
           includeDisabled: params.includeDisabled,
           includeInputSchema: true,
         });
         const command = descriptors.find(
-          (descriptor) => descriptor.id === params.commandId,
+          (descriptor) =>
+            descriptor.id === params.commandId &&
+            isCommandAllowed(descriptor, options),
         );
         if (!command) {
           return {
@@ -355,16 +389,20 @@ For routine command use, prefer ${searchToolName}, then ${getToolName} for the s
           } satisfies ListCommandsToolLlmResult;
         }
 
-        const descriptors = state.commands.listCommands({
-          ...createCommandToolInvocationOptions(
-            defaultSurface,
-            options,
-            context,
-          ),
-          includeInvisible: params.includeInvisible,
-          includeDisabled: params.includeDisabled,
-          includeInputSchema: params.includeInputSchema,
-        });
+        const descriptors = filterGuardedCommandDescriptors(
+          state.commands.listCommands({
+            ...createCommandToolInvocationOptions(
+              defaultSurface,
+              options,
+              context,
+              state,
+            ),
+            includeInvisible: params.includeInvisible,
+            includeDisabled: params.includeDisabled,
+            includeInputSchema: params.includeInputSchema,
+          }),
+          options,
+        );
 
         return {
           success: true,
@@ -407,12 +445,30 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
               defaultSurface,
               options,
               context,
+              state,
             ),
             includeInvisible: true,
             includeDisabled: true,
             includeInputSchema: false,
           })
           .find((command) => command.id === commandId);
+        const guardResult = descriptor
+          ? options?.commandGuard?.(descriptor)
+          : undefined;
+        if (guardResult && !guardResult.allowed) {
+          const message =
+            guardResult.message ??
+            `Command "${commandId}" is not available to this caller.`;
+          return {
+            success: false,
+            commandId,
+            errorMessage: message,
+            result: {
+              code: guardResult.code ?? 'command-not-available-to-caller',
+              message,
+            },
+          } satisfies ExecuteCommandToolLlmResult;
+        }
         if (
           descriptor &&
           !confirmed &&
@@ -434,10 +490,17 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
           } satisfies ExecuteCommandToolLlmResult;
         }
 
-        const result = await state.commands.invokeCommand(
+        const result = await invokeCommandWithPolicy(
+          store,
           commandId,
           input,
-          createCommandToolInvocationOptions(defaultSurface, options, context),
+          createCommandToolInvocationOptions(
+            defaultSurface,
+            options,
+            context,
+            state,
+          ),
+          {confirmed: confirmed === true},
         );
         if (result.success) {
           return {
@@ -468,6 +531,22 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
   } as DefaultCommandTools;
 }
 
+function filterGuardedCommandDescriptors(
+  descriptors: RoomCommandDescriptor[],
+  options: CommandToolsOptions | undefined,
+): RoomCommandDescriptor[] {
+  return options?.commandGuard
+    ? descriptors.filter((descriptor) => isCommandAllowed(descriptor, options))
+    : descriptors;
+}
+
+function isCommandAllowed(
+  descriptor: RoomCommandDescriptor,
+  options: CommandToolsOptions | undefined,
+): boolean {
+  return options?.commandGuard?.(descriptor).allowed ?? true;
+}
+
 type RankedCommandDescriptor = {
   descriptor: RoomCommandDescriptor;
   score: number;
@@ -477,6 +556,7 @@ function createCommandToolInvocationOptions(
   surface: RoomCommandSurface,
   options: CommandToolsOptions | undefined,
   context: CommandToolExecutionContext | undefined,
+  state: unknown,
 ) {
   const metadata: Record<string, unknown> = {
     ...(options?.defaultMetadata ?? {}),
@@ -492,6 +572,11 @@ function createCommandToolInvocationOptions(
   if (typeof context?.toolCallId === 'string') {
     metadata.toolCallId = context.toolCallId;
   }
+  const primaryArtifactId = getCommandToolPrimaryArtifactId(
+    context,
+    state,
+    metadata,
+  );
   const traceId =
     context?.traceId ?? options?.defaultTraceId ?? context?.toolCallId;
 
@@ -499,8 +584,40 @@ function createCommandToolInvocationOptions(
     surface,
     ...(options?.defaultActor ? {actor: options.defaultActor} : {}),
     ...(traceId ? {traceId} : {}),
+    ...(primaryArtifactId
+      ? {target: {kind: 'artifact', id: primaryArtifactId}}
+      : {}),
     ...(Object.keys(metadata).length > 0 ? {metadata} : {}),
   };
+}
+
+function getCommandToolPrimaryArtifactId(
+  context: CommandToolExecutionContext | undefined,
+  state: unknown,
+  metadata: Record<string, unknown>,
+): string | undefined {
+  const sessionId =
+    context?.sessionId ??
+    (typeof metadata.aiSessionId === 'string'
+      ? metadata.aiSessionId
+      : undefined);
+  const executionRunContext =
+    context?.getAiRunContext?.() ?? context?.aiRunContext;
+  const runContext =
+    executionRunContext ??
+    (sessionId
+      ? (
+          state as {
+            ai?: {
+              getSessionRunContext?: (
+                sessionId: string,
+              ) => AiRunContext | undefined;
+            };
+          }
+        ).ai?.getSessionRunContext?.(sessionId)
+      : undefined);
+  const primaryItem = getAiRunContextPrimaryItem(runContext);
+  return primaryItem?.kind === 'artifact' ? primaryItem.id : undefined;
 }
 
 function rankCommandDescriptors(
@@ -512,32 +629,67 @@ function rankCommandDescriptors(
     params.resourceType ? normalizeSearchText(params.resourceType) : '',
     params.action ? normalizeSearchText(params.action) : '',
   ].filter(Boolean);
-  const tokens = tokenizeSearchText([query, ...hints].join(' '));
+  const tokens = tokenizeSearchText(query);
+  const hintTokens = tokenizeSearchText(hints.join(' '));
   const hasSearchTerms = Boolean(query || hints.length > 0);
+  const preferReadOnly = isReadCommandSearch(params);
 
-  return descriptors
-    .filter((descriptor) =>
-      params.riskLevel ? descriptor.riskLevel === params.riskLevel : true,
-    )
-    .map((descriptor) => ({
-      descriptor,
-      score: scoreCommandDescriptor(
+  return (
+    descriptors
+      .filter((descriptor) =>
+        params.riskLevel ? descriptor.riskLevel === params.riskLevel : true,
+      )
+      .map((descriptor) => ({
         descriptor,
-        query,
-        tokens,
-        params.riskLevel,
-      ),
-    }))
-    .filter(({score}) => !hasSearchTerms || score > 0)
-    .sort(compareRankedCommandDescriptors);
+        score: scoreCommandDescriptor(
+          descriptor,
+          query,
+          query ? tokens : hintTokens,
+        ),
+      }))
+      .filter(({score}) => !hasSearchTerms || score > 0)
+      // Hints and availability can improve a match, but cannot create one.
+      .map(({descriptor, score}) => ({
+        descriptor,
+        score:
+          score +
+          (query ? scoreCommandDescriptor(descriptor, '', hintTokens) : 0) +
+          (preferReadOnly && descriptor.readOnly ? 200 : 0) +
+          (params.riskLevel ? 20 : 0) +
+          (descriptor.enabled ? 10 : 0) +
+          (descriptor.visible ? 5 : 0),
+      }))
+      .sort(compareRankedCommandDescriptors)
+  );
+}
+
+function isReadCommandSearch(params: SearchCommandsToolParameters): boolean {
+  const tokens = tokenizeSearchText(params.action?.trim() || params.query);
+  const readActions = ['get', 'read', 'list', 'show', 'inspect'];
+  const writeActions = [
+    'create',
+    'add',
+    'update',
+    'edit',
+    'rename',
+    'remove',
+    'delete',
+    'insert',
+    'append',
+    'move',
+  ];
+  return (
+    tokens.some((token) => readActions.includes(token)) &&
+    !tokens.some((token) => writeActions.includes(token))
+  );
 }
 
 function scoreCommandDescriptor(
   descriptor: RoomCommandDescriptor,
   query: string,
   tokens: string[],
-  riskLevel?: RoomCommandRiskLevel,
 ): number {
+  if (tokens.length === 0) return 0;
   let score = 0;
   const id = normalizeSearchText(descriptor.id);
   const name = normalizeSearchText(descriptor.name);
@@ -545,28 +697,33 @@ function scoreCommandDescriptor(
   const group = normalizeSearchText(descriptor.group);
   const keywords = (descriptor.keywords ?? []).map(normalizeSearchText);
   const shortcut = normalizeSearchText(descriptor.shortcut);
+  const idTokens = tokenizeSearchText(id);
+  const nameTokens = tokenizeSearchText(name);
+  const descriptionTokens = tokenizeSearchText(description);
+  const groupTokens = tokenizeSearchText(group);
+  const keywordTokens = keywords.flatMap(tokenizeSearchText);
 
   if (query) {
     if (id === query) {
       score += 1000;
-    } else if (id.includes(query)) {
+    } else if (containsSearchPhrase(id, query)) {
       score += 300;
     }
     if (name === query) {
       score += 500;
-    } else if (name.includes(query)) {
+    } else if (containsSearchPhrase(name, query)) {
       score += 220;
     }
     if (keywords.includes(query)) {
       score += 180;
     }
-    if (description.includes(query)) {
+    if (containsSearchPhrase(description, query)) {
       score += 80;
     }
-    if (group.includes(query)) {
+    if (containsSearchPhrase(group, query)) {
       score += 60;
     }
-    if (shortcut && shortcut.includes(query)) {
+    if (shortcut && containsSearchPhrase(shortcut, query)) {
       score += 40;
     }
   }
@@ -574,36 +731,23 @@ function scoreCommandDescriptor(
   for (const token of tokens) {
     if (id === token) {
       score += 120;
-    } else if (id.includes(token)) {
+    } else if (idTokens.includes(token)) {
       score += 50;
     }
-    if (name.includes(token)) {
+    if (nameTokens.includes(token)) {
       score += 45;
     }
     if (keywords.some((keyword) => keyword === token)) {
       score += 40;
-    } else if (keywords.some((keyword) => keyword.includes(token))) {
+    } else if (keywordTokens.includes(token)) {
       score += 20;
     }
-    if (description.includes(token)) {
+    if (descriptionTokens.includes(token)) {
       score += 15;
     }
-    if (group.includes(token)) {
+    if (groupTokens.includes(token)) {
       score += 10;
     }
-  }
-
-  if (riskLevel && descriptor.riskLevel === riskLevel) {
-    score += 20;
-  }
-  if (descriptor.enabled) {
-    score += 10;
-  }
-  if (descriptor.visible) {
-    score += 5;
-  }
-  if (descriptor.requiresInput) {
-    score += 1;
   }
 
   return score;
@@ -653,15 +797,15 @@ function createCommandMatchReason(
     const group = normalizeSearchText(descriptor.group);
     if (id === query) {
       matches.push('exact command ID match');
-    } else if (id.includes(query)) {
+    } else if (containsSearchPhrase(id, query)) {
       matches.push('command ID match');
-    } else if (name.includes(query)) {
+    } else if (containsSearchPhrase(name, query)) {
       matches.push('name match');
     } else if (keywords.includes(query)) {
       matches.push('keyword match');
-    } else if (description.includes(query)) {
+    } else if (containsSearchPhrase(description, query)) {
       matches.push('description match');
-    } else if (group.includes(query)) {
+    } else if (containsSearchPhrase(group, query)) {
       matches.push('group match');
     }
   }
@@ -674,6 +818,9 @@ function createCommandMatchReason(
   }
   if (params.riskLevel && descriptor.riskLevel === params.riskLevel) {
     matches.push(`risk ${params.riskLevel}`);
+  }
+  if (descriptor.readOnly && isReadCommandSearch(params)) {
+    matches.push('read-only command');
   }
   if (descriptor.enabled) {
     matches.push('enabled');
@@ -727,9 +874,33 @@ function compareRankedCommandDescriptors(
   return first.descriptor.id.localeCompare(second.descriptor.id);
 }
 
-function tokenizeSearchText(value: string): string[] {
+const SEARCH_STOP_WORDS = new Set([
+  'a',
+  'an',
+  'the',
+  'in',
+  'on',
+  'of',
+  'for',
+  'to',
+  'with',
+  'and',
+  'or',
+]);
+
+function containsSearchPhrase(text: string, query: string): boolean {
+  const words = text.replace(/[._:-]+/g, ' ');
+  const phrase = query.replace(/[._:-]+/g, ' ');
+  return ` ${words} `.includes(` ${phrase} `);
+}
+
+function tokenizeSearchText(value: string | undefined): string[] {
   return Array.from(
-    new Set(normalizeSearchText(value).split(' ').filter(Boolean)),
+    new Set(
+      normalizeSearchText(value)
+        .split(/[\s._:-]+/)
+        .filter((token) => token && !SEARCH_STOP_WORDS.has(token)),
+    ),
   );
 }
 

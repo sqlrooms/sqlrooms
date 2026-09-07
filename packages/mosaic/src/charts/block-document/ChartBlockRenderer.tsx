@@ -26,6 +26,7 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
   onTableNameChange,
   onConfigChange,
   onCaptionChange,
+  headerActions,
 }) => {
   const tables = useTablesWithColumns();
   const selectedTable = useDataTable(tableName);
@@ -86,6 +87,7 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
         selected={selected}
         onCaptionChange={onCaptionChange}
         onSettingsOpenChange={handleSettingsOpenChange}
+        headerActions={headerActions}
         readOnly={readOnly}
       />
       <div className="min-h-0 flex-1">

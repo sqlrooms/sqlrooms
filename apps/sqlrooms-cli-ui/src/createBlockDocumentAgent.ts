@@ -7,9 +7,11 @@ import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 import {createCliBlockDocumentAiAdapter} from './createCliBlockDocumentAiAdapter';
 import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
-import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck';
+import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck/mosaic';
+import {getDeckMapResourceAiInstructions} from '@sqlrooms/deck';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {createDefaultBlockDocumentBlockId} from '@sqlrooms/documents';
+import {CLI_WORKSPACE_CATALOG} from './cliWorkspaceCatalog';
 import {
   createCliBlockDocumentAgentTool,
   type CreateCliBlockDocumentAgentToolOptions,
@@ -19,6 +21,10 @@ import {
   KnownBlockDocumentTools,
 } from './ai/constants';
 import {BlockDocumentMapBlockToolParameters} from './createCliBlockDocumentCommands';
+import {
+  DEFAULT_CLI_CAPABILITY_PROFILE,
+  type CliCapabilityProfile,
+} from './profiles';
 
 const BlockDocumentMapBlockToolInput = BlockDocumentMapBlockToolParameters.omit(
   {
@@ -31,9 +37,11 @@ function createBlockDocumentMapBlockTool(
   blockDocumentId: string,
 ): Tool {
   return tool({
-    description: `Create or update a direct worksheet map block from a native Deck JSON map config.
+    description: `Create or update a direct document map block from a native Deck JSON map config.
 
-Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, or location visualizations inside a worksheet. This creates a worksheet map block directly; do not create a dashboard block just to show a map.`,
+Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, or location visualizations inside a document. This creates a document map block directly; do not create a dashboard block just to show a map.
+
+${getDeckMapResourceAiInstructions()}`,
     inputSchema: BlockDocumentMapBlockToolInput,
     execute: async (params) => {
       try {
@@ -48,14 +56,13 @@ Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, 
           throw new Error(
             result.error ??
               result.message ??
-              'Failed to add worksheet map block.',
+              'Failed to add document map block.',
           );
         }
         const data = result.data as
           | {
               mapId?: string;
               blockId?: string;
-              panelId?: string;
             }
           | undefined;
 
@@ -63,7 +70,6 @@ Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, 
           success: true,
           mapId: data?.mapId,
           blockId: data?.blockId,
-          panelId: data?.panelId,
           message: result.message,
         };
       } catch (error) {
@@ -79,9 +85,11 @@ Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, 
 export function blockDocumentAgentTool(
   store: StoreApi<RoomState>,
   {
-    experimentalEnabled = false,
+    profile = DEFAULT_CLI_CAPABILITY_PROFILE,
+    getModel,
   }: {
-    experimentalEnabled?: boolean;
+    profile?: CliCapabilityProfile;
+    getModel?: BaseAgentToolOptions<RoomState>['getModel'];
   } = {},
 ) {
   const blockDocumentAdapter = createCliBlockDocumentAiAdapter(store);
@@ -89,40 +97,83 @@ export function blockDocumentAgentTool(
 
   const baseOptions: BaseAgentToolOptions<RoomState> = {
     store,
-    getModel: ({state}) => {
-      const currentSession = state.ai.getCurrentSession();
-      const provider = currentSession?.modelProvider || 'openai';
-      const modelId = currentSession?.model || 'gpt-4.1';
+    getModel:
+      getModel ??
+      (({state}) => {
+        const currentSession = state.ai.getCurrentSession();
+        const provider = currentSession?.modelProvider || 'openai';
+        const modelId = currentSession?.model || 'gpt-4.1';
 
-      return createOpenAICompatible({
-        apiKey: state.ai.getApiKeyFromSettings(),
-        name: provider || '',
-        baseURL:
-          state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
-      }).chatModel(modelId);
-    },
+        return createOpenAICompatible({
+          apiKey: state.ai.getApiKeyFromSettings(),
+          name: provider || '',
+          baseURL:
+            state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
+        }).chatModel(modelId);
+      }),
     createDataTools: () =>
       createDefaultAiTools(store, {query: {}, tables: true, commands: false}),
     runSubAgent: ({agent, prompt, parentToolCallId, abortSignal}) =>
       streamSubAgent(agent, prompt, store, parentToolCallId, abortSignal),
   };
 
-  const dashboardAgentTool = (
-    experimentalEnabled
-      ? createDashboardAgentToolWithDeckMaps
-      : createDashboardAgentTool
-  )({
-    ...baseOptions,
-    databaseAdapter,
-  });
+  const dashboardAgentTool = (blockDocumentId: string) =>
+    profile.dashboard.deckMaps
+      ? createDashboardAgentToolWithDeckMaps({
+          ...baseOptions,
+          databaseAdapter,
+          stripCatalogNames: [CLI_WORKSPACE_CATALOG],
+          authorizeDashboard: ({dashboardId, state}) => {
+            const ownsDashboard = state.blockDocuments
+              .getBlocks(blockDocumentId)
+              .some(
+                (block) =>
+                  block.type === 'statefulBlock' &&
+                  block.blockType === 'dashboard' &&
+                  (block.ownership ?? 'owned') === 'owned' &&
+                  block.blockInstanceId === dashboardId,
+              );
+
+            if (!ownsDashboard) {
+              throw new Error(
+                `Dashboard "${dashboardId}" is not owned by document "${blockDocumentId}".`,
+              );
+            }
+          },
+        })
+      : createDashboardAgentTool({
+          ...baseOptions,
+          databaseAdapter,
+          authorizeDashboard: ({dashboardId, state}) => {
+            const ownsDashboard = state.blockDocuments
+              .getBlocks(blockDocumentId)
+              .some(
+                (block) =>
+                  block.type === 'statefulBlock' &&
+                  block.blockType === 'dashboard' &&
+                  (block.ownership ?? 'owned') === 'owned' &&
+                  block.blockInstanceId === dashboardId,
+              );
+
+            if (!ownsDashboard) {
+              throw new Error(
+                `Dashboard "${dashboardId}" is not owned by document "${blockDocumentId}".`,
+              );
+            }
+          },
+        });
 
   const blockDocumentAgentOptions: CreateCliBlockDocumentAgentToolOptions = {
     ...baseOptions,
     databaseAdapter,
     blockDocumentAdapter,
-    dashboardAgentTool,
-    htmlAppBlocksEnabled: experimentalEnabled,
-    mapBlocksEnabled: experimentalEnabled,
+    htmlAppBlocksEnabled: profile.blocks.stateful.includes('html-app'),
+    mapBlocksEnabled: profile.blocks.stateful.includes('map'),
+    dashboardBlocksEnabled: profile.blocks.stateful.includes('dashboard'),
+    dataTableBlocksEnabled: profile.blocks.stateful.includes('data-table'),
+    ...(profile.ai.nestedAgents.includes('document-dashboard')
+      ? {dashboardAgentTool}
+      : {}),
     addDashboardBlock: async ({blockDocumentId, title, tableName, intent}) => {
       const result = await store
         .getState()
@@ -209,23 +260,23 @@ export function blockDocumentAgentTool(
       blockInstanceId: createDefaultBlockDocumentBlockId(),
       blockType: 'data-table',
       intent,
-      title: tableName,
+      tableName,
       caption: title,
     }),
-    additionalInstructions: experimentalEnabled
+    additionalInstructions: profile.ai.instructionSets.includes('experimental')
       ? EXPERIMENTAL_BLOCK_DOCUMENT_AGENT_INSTRUCTIONS
       : undefined,
     extraTools: ({blockDocumentId}) => {
-      if (experimentalEnabled) {
-        return {
-          [KnownBlockDocumentTools.embedded_html_app_agent]:
-            htmlAppAgentTool(store),
-          [KnownBlockDocumentTools.create_block_document_map_block]:
-            createBlockDocumentMapBlockTool(store, blockDocumentId),
-        };
+      const tools: Record<string, Tool> = {};
+      if (blockDocumentAgentOptions.htmlAppBlocksEnabled) {
+        tools[KnownBlockDocumentTools.embedded_html_app_agent] =
+          htmlAppAgentTool(store);
       }
-
-      return {} as Record<string, Tool>;
+      if (blockDocumentAgentOptions.mapBlocksEnabled) {
+        tools[KnownBlockDocumentTools.create_block_document_map_block] =
+          createBlockDocumentMapBlockTool(store, blockDocumentId);
+      }
+      return tools;
     },
   };
 

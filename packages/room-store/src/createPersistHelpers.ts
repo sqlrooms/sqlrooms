@@ -1,35 +1,107 @@
 import z from 'zod';
-import {persist, PersistOptions} from 'zustand/middleware';
+import {
+  createJSONStorage,
+  persist,
+  PersistOptions,
+  StateStorage,
+} from 'zustand/middleware';
 import {StateCreator} from './BaseRoomStore';
 
 type PersistedSliceConfigs<T extends Record<string, z.ZodType>> = {
   [K in keyof T]: z.infer<T[K]>;
 };
 
+const unavailableStorage: StateStorage = {
+  getItem: () => null,
+  setItem: () => undefined,
+  removeItem: () => undefined,
+};
+
+function warnStorageFailure(operation: string, error: unknown) {
+  console.warn(
+    `Persist storage ${operation} failed; persistence was skipped:`,
+    error instanceof Error ? error.message : error,
+  );
+}
+
+function runSafeStorageOperation<T>(
+  operation: string,
+  callback: () => T,
+  fallback: T,
+): T {
+  try {
+    const result = callback();
+    if (result instanceof Promise) {
+      return result.catch((error) => {
+        warnStorageFailure(operation, error);
+        return fallback;
+      }) as T;
+    }
+    return result;
+  } catch (error) {
+    warnStorageFailure(operation, error);
+    return fallback;
+  }
+}
+
+function createSafeBrowserStorage(base: StateStorage): StateStorage {
+  const originalGetItem = base.getItem.bind(base);
+  const originalSetItem = base.setItem.bind(base);
+  const originalRemoveItem = base.removeItem.bind(base);
+
+  return {
+    getItem: (...args) =>
+      runSafeStorageOperation('getItem', () => originalGetItem(...args), null),
+    setItem: (...args) =>
+      runSafeStorageOperation(
+        'setItem',
+        () => originalSetItem(...args),
+        undefined,
+      ),
+    removeItem: (...args) =>
+      runSafeStorageOperation(
+        'removeItem',
+        () => originalRemoveItem(...args),
+        undefined,
+      ),
+  };
+}
+
+function getBrowserStorage(): StateStorage {
+  try {
+    const storage = window.localStorage;
+    return storage ? createSafeBrowserStorage(storage) : unavailableStorage;
+  } catch {
+    return unavailableStorage;
+  }
+}
+
 /**
- * Wraps a Zustand persist storage so that `setItem` silently drops writes
- * whose serialised payload exceeds the engine's string-length limit (or any
- * other serialisation error).  This prevents `RangeError: Invalid string
- * length` from crashing the app when the state grows unexpectedly large.
+ * Protects storage writes and removals so failures do not prevent normal state
+ * updates. This also protects serialisation from errors such as `RangeError:
+ * Invalid string length` when state grows unexpectedly.
  */
 function createSafeStorage<S, PersistedState>(
   base: PersistOptions<S, PersistedState>['storage'],
 ): PersistOptions<S, PersistedState>['storage'] {
   if (!base) return base;
-  const originalSetItem = base.setItem?.bind(base);
-  if (!originalSetItem) return base;
+  const originalSetItem = base.setItem.bind(base);
+  const originalRemoveItem = base.removeItem.bind(base);
+
   return {
     ...base,
-    setItem: (...args: Parameters<typeof originalSetItem>) => {
-      try {
-        return originalSetItem(...args);
-      } catch (error) {
-        console.warn(
-          'Persist storage setItem failed (payload too large?):',
-          error instanceof Error ? error.message : error,
-        );
-      }
-    },
+    setItem: (...args: Parameters<typeof originalSetItem>) =>
+      runSafeStorageOperation(
+        'setItem',
+        () => originalSetItem(...args),
+        undefined,
+      ),
+    removeItem: (...args: Parameters<typeof originalRemoveItem>) =>
+      runSafeStorageOperation(
+        'removeItem',
+        () => originalRemoveItem(...args),
+        undefined,
+      ),
   };
 }
 
@@ -168,7 +240,7 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
  * @param options.sliceConfigSchemas - Map of slice names to Zod schemas for their configs
  * @param options.partialize - Optional custom partialize function (overrides auto-generated one)
  * @param options.merge - Optional custom merge function (overrides auto-generated one)
- * @param options.storage - Custom storage implementation (optional, defaults to localStorage)
+ * @param options.storage - Custom storage implementation (optional, defaults to localStorage with a no-op fallback)
  * @param options.version - Schema version for migrations (optional)
  * @param options.migrate - Migration function for version changes (optional)
  * @param options.skipHydration - Skip auto-hydration for SSR (optional)
@@ -239,7 +311,9 @@ export function persistSliceConfigs<
     options;
   const helpers = createPersistHelpers(sliceConfigSchemas);
 
-  const safeStorage = createSafeStorage(storage);
+  const safeStorage = createSafeStorage(
+    storage ?? createJSONStorage<PersistedState>(getBrowserStorage),
+  );
 
   return persist<S, [], [], PersistedState>(stateCreator, {
     ...persistOptions,

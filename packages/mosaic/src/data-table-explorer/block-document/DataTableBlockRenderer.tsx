@@ -19,14 +19,14 @@ export const DataTableBlockRenderer: FC<
   caption,
   documentId,
   onCaptionChange,
-  onTitleChange,
+  onTableNameChange,
   readOnly,
-  title,
+  tableName,
 }) => {
   const connection = useStoreWithMosaic((state) => state.mosaic.connection);
 
   const tables = useTablesWithColumns();
-  const selectedTable = useDataTable(title);
+  const selectedTable = useDataTable(tableName);
 
   const selectionName = `block-document:${documentId}:data-table:${blockId}:brush`;
   const selection = useStoreWithMosaic(
@@ -36,9 +36,9 @@ export const DataTableBlockRenderer: FC<
   const handleTableChange = useCallback(
     (table: DataTable) => {
       (selection ?? getSelection(selectionName, 'crossfilter')).reset();
-      onTitleChange?.(getTableIdentity(table.table));
+      onTableNameChange?.(getTableIdentity(table.table));
     },
-    [getSelection, onTitleChange, selection, selectionName],
+    [getSelection, onTableNameChange, selection, selectionName],
   );
 
   if (!blockInstanceId || blockType !== 'data-table') {
@@ -51,7 +51,7 @@ export const DataTableBlockRenderer: FC<
 
   const content = !selectedTable ? (
     <DataTableSelectorEmptyState
-      disabled={readOnly || !onTitleChange}
+      disabled={readOnly || !onTableNameChange}
       onChange={handleTableChange}
       tables={tables}
     />

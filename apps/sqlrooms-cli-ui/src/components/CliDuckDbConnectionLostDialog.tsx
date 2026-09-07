@@ -9,7 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@sqlrooms/ui';
-import {cliDuckDbConnector, cliDuckDbWsUrl, roomStore} from '../store';
+import {cliDuckDbConnector, cliDuckDbWsUrl} from '../duckDbRuntime';
+import {useCliRoomStoreApi} from '../roomStoreHooks';
 
 const AUTO_RECONNECT_INITIAL_DELAY_MS = 1_000;
 const AUTO_RECONNECT_MAX_DELAY_MS = 30_000;
@@ -45,6 +46,7 @@ function useDuckDbConnectionStatus() {
  * @returns Dialog content for lost SQLRooms server connections.
  */
 export function CliDuckDbConnectionLostDialog() {
+  const roomStore = useCliRoomStoreApi();
   const status = useDuckDbConnectionStatus();
   const serverEndpoint = React.useMemo(
     () => formatServerEndpoint(cliDuckDbWsUrl),
@@ -72,33 +74,36 @@ export function CliDuckDbConnectionLostDialog() {
     }
   }, [status]);
 
-  const retryConnection = React.useCallback(async (showPending: boolean) => {
-    if (retryInFlightRef.current) return false;
-    retryInFlightRef.current = true;
-    if (showPending) {
-      setIsRetrying(true);
-      setRetryError(null);
-    }
-    try {
-      await cliDuckDbConnector.reconnect();
-      void roomStore.getState().db.refreshTableSchemas();
-      return true;
-    } catch (error) {
+  const retryConnection = React.useCallback(
+    async (showPending: boolean) => {
+      if (retryInFlightRef.current) return false;
+      retryInFlightRef.current = true;
       if (showPending) {
-        setRetryError(
-          error instanceof Error
-            ? error.message
-            : 'Could not reconnect to the SQLRooms server.',
-        );
+        setIsRetrying(true);
+        setRetryError(null);
       }
-      return false;
-    } finally {
-      retryInFlightRef.current = false;
-      if (showPending) {
-        setIsRetrying(false);
+      try {
+        await cliDuckDbConnector.reconnect();
+        void roomStore.getState().db.refreshTableSchemas();
+        return true;
+      } catch (error) {
+        if (showPending) {
+          setRetryError(
+            error instanceof Error
+              ? error.message
+              : 'Could not reconnect to the SQLRooms server.',
+          );
+        }
+        return false;
+      } finally {
+        retryInFlightRef.current = false;
+        if (showPending) {
+          setIsRetrying(false);
+        }
       }
-    }
-  }, []);
+    },
+    [roomStore],
+  );
 
   React.useEffect(() => {
     if (!hasConnectedRef.current || status !== 'disconnected') return;
@@ -106,9 +111,7 @@ export function CliDuckDbConnectionLostDialog() {
     let timeoutId: number | undefined;
 
     const scheduleNextAttempt = () => {
-      const delayMs = getAutoReconnectDelayMs(
-        autoReconnectAttemptRef.current,
-      );
+      const delayMs = getAutoReconnectDelayMs(autoReconnectAttemptRef.current);
       timeoutId = window.setTimeout(async () => {
         if (cancelled) return;
         const reconnected = await retryConnection(false);

@@ -16,7 +16,7 @@ export const KnownBlockDocumentTools = {
   create_block_document_map_block: 'create_block_document_map_block',
 } as const;
 
-export const EXPERIMENTAL_BLOCK_DOCUMENT_AGENT_INSTRUCTIONS = `Direct worksheet map blocks are available in this CLI app.
-In this app, a Worksheet is a block document artifact, and direct map blocks are block-document map blocks.
-For worksheet map requests, call ${KnownBlockDocumentTools.create_block_document_map_block}. Do not create a dashboard block just to hold a map.
-If updating an existing worksheet map, call ${KnownBlockDocumentTools.list_blocks} first and pass its statefulBlock.blockInstanceId as mapId to ${KnownBlockDocumentTools.create_block_document_map_block}.`;
+export const EXPERIMENTAL_BLOCK_DOCUMENT_AGENT_INSTRUCTIONS = `Direct document map blocks are available in this CLI app.
+In this app, a Document is a block document artifact, and direct map blocks are block-document map blocks.
+For document map requests, call ${KnownBlockDocumentTools.create_block_document_map_block}. Do not create a dashboard block just to hold a map.
+If updating an existing document map, call ${KnownBlockDocumentTools.list_blocks} first and pass its statefulBlock.blockInstanceId as mapId to ${KnownBlockDocumentTools.create_block_document_map_block}.`;

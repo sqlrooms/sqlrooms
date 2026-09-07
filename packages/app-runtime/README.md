@@ -1,5 +1,7 @@
 # @sqlrooms/app-runtime
 
+> **Experimental:** This package's API and behavior may change between releases.
+
 `@sqlrooms/app-runtime` defines the iframe runtime bridge used by generated
 HTML apps in SQLRooms. It owns the protocol between a sandboxed app iframe and
 the SQLRooms host; it does not own project authoring, bundling, or WebContainer
@@ -80,7 +82,10 @@ updates:
 
 ```ts
 const commands = createHtmlAppRevisionCommands({
-  resolveCurrentAppId: (state) => state.currentHtmlAppId,
+  resolveCurrentAppId: (state, context) =>
+    context.invocation.target?.kind === 'artifact'
+      ? context.invocation.target.id
+      : state.currentHtmlAppId,
   getHtmlAppIds: (state) => Object.keys(state.htmlApps.config.appsById),
   getHtmlAppState: (state, appId) => state.htmlApps.getApp(appId),
   renameHtmlApp: (state, appId, title) =>

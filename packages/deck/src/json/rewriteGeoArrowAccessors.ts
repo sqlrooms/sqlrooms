@@ -7,6 +7,32 @@ function isSimpleColumnReference(expression: string) {
 }
 
 function canUseDirectVectorAccessor(propName: string, vector: arrow.Vector) {
+  // H3 index columns are safe as Vectors — DeckH3HexagonLayer reads them
+  // directly and converts BigInt → hex string when needed.
+  if (propName === 'getHexagon') {
+    const type = vector.type;
+    return (
+      arrow.DataType.isUtf8(type) ||
+      arrow.DataType.isLargeUtf8(type) ||
+      // DuckDB UBIGINT often arrives as Int(true, 64), not instanceof Int64.
+      (arrow.DataType.isInt(type) && type.bitWidth === 64)
+    );
+  }
+
+  const firstChunk = vector.data[0];
+  if (!firstChunk) {
+    return false;
+  }
+
+  // Heatmap weights are a scalar column. Passing a float Vector through lets
+  // GeoArrow put them in binary attributes instead of a new function on every
+  // JSON convert (which would look like a data change). Integer columns stay
+  // on the function accessor: GeoArrow only uploads float weights, and Int64
+  // values are bigint / BigInt64Array which deck.gl cannot use as GPU data.
+  if (propName === 'getWeight') {
+    return arrow.DataType.isFloat(firstChunk.type);
+  }
+
   // Direct numeric vectors (for example `getRadius`) currently end up in deck's
   // binary attribute path and trigger `Float64Array` initialization failures in the
   // GeoArrow scatterplot wrapper. Re-test which direct vector accessors are safe
@@ -15,12 +41,7 @@ function canUseDirectVectorAccessor(propName: string, vector: arrow.Vector) {
     return false;
   }
 
-  const firstChunk = vector.data[0];
-  if (!firstChunk || !arrow.DataType.isFixedSizeList(firstChunk.type)) {
-    return false;
-  }
-
-  return true;
+  return arrow.DataType.isFixedSizeList(firstChunk.type);
 }
 
 export function rewriteGeoArrowAccessors(options: {

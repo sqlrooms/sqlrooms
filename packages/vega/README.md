@@ -75,7 +75,11 @@ import {
   createDefaultAiInstructions,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
-import {createVegaChartTool} from '@sqlrooms/vega';
+import {
+  createVegaChartTool,
+  VegaChartToolResult,
+  type VegaChartToolResultProps,
+} from '@sqlrooms/vega';
 
 // inside your createRoomStore composer
 createAiSlice({
@@ -95,6 +99,41 @@ createAiSlice({
 - `editable`: whether users can edit SQL/spec in the chart UI
 - `editorMode`: which editors to render (`'none' | 'sql' | 'vega' | 'both'`)
 
+### AI chart result sizing
+
+`VegaChartToolResult` retains its default 16:9 layout when no sizing props are
+provided. Use `height="auto"` to opt into data-driven sizing for
+category-dense horizontal bar charts:
+
+```tsx
+const CategoryAwareChartResult = (props: VegaChartToolResultProps) => (
+  <VegaChartToolResult {...props} height="auto" />
+);
+
+createAiSlice({
+  toolRenderers: {
+    chart: CategoryAwareChartResult,
+  },
+  tools: {
+    chart: createVegaChartTool(),
+  },
+});
+```
+
+The automatic policy inspects the parsed Vega-Lite encoding and counts distinct
+values in the loaded Arrow data. Horizontal bar charts with at least 12
+categories use `clamp(280, 48 + categoryCount * 22, 800)` pixels; other charts
+continue to use `aspectRatio` (16:9 by default). Transformed and concatenated
+multi-view specs also use the aspect ratio because raw Arrow rows do not reflect
+their rendered data or panel layout. A numeric `height` fixes the outer chart
+viewport while preserving responsive width. Applications can also provide
+`getHeight={({spec, arrowTable}) => ...}` for a custom sizing policy; returning
+`'auto'` delegates to the built-in category-aware policy.
+
+Sizing is based on loaded query data rather than an LLM-provided row count, so
+it stays accurate when SQL results or application filters change. The Vega-Lite
+spec remains responsible for visualization semantics, not React layout.
+
 ### LLM invocation / Zod schema fields
 
 At runtime, the tool call payload is validated by a Zod schema.  
@@ -107,9 +146,12 @@ These fields are supplied by the LLM when invoking the tool (not passed into
 
 ## Markdown document image assets
 
+The host store must include `MarkdownDocumentsSliceState`; image assets are stored
+in `store.markdownDocuments` alongside the document’s Markdown content.
+
 `createChartImageForMarkdownTool(store)` creates an AI-only companion tool that
 renders a Vega chart to SVG or PNG, stores it as an asset on a
-`@sqlrooms/documents` Markdown artifact, and returns a ready-to-insert Markdown
+`@sqlrooms/documents` `markdown-document` artifact, and returns a ready-to-insert Markdown
 image link such as:
 
 ```md
@@ -129,5 +171,4 @@ and written into the SVG/PNG as a concrete color. The tool also accepts
 
 ## Example apps
 
-- Vega example: https://github.com/sqlrooms/examples/tree/main/vega
 - AI example (with chart tool): https://github.com/sqlrooms/examples/tree/main/ai

@@ -30,7 +30,12 @@ export const SplitLayoutPanel: FC<SplitLayoutPanelProps> = ({
   const isLast = nodeIndex === parentNode.children.length - 1;
   const isResizable = parentNode.resizable !== false;
 
-  const handleElement = handleComponent || <SplitLayoutPanelResizableHandle />;
+  const handleElement = handleComponent || (
+    <SplitLayoutPanelResizableHandle
+      data-layout-panel-handle-after={panelId}
+      data-layout-panel-collapsed={collapsed ? 'true' : 'false'}
+    />
+  );
 
   if (!isResizable) {
     return (

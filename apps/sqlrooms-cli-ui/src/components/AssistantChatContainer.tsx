@@ -1,5 +1,4 @@
-import {Chat, isChatSessionEmpty} from '@sqlrooms/ai';
-import {isAiSessionVisibleForArtifact} from '@sqlrooms/artifacts/ai';
+import {Chat, type ChatTurnSlotProps} from '@sqlrooms/ai';
 import {
   Button,
   ResizableHandle,
@@ -8,13 +7,11 @@ import {
   SkeletonPane,
 } from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
-import React, {useCallback, useMemo, useState} from 'react';
-import {useRoomStore} from '../store';
+import React, {useCallback} from 'react';
+import {useRoomStore} from '../roomStoreHooks';
 import {AssistantContextSelector} from './AssistantContextSelector';
-import {
-  isDefaultAssistantSessionName,
-  useGenSessionTitle,
-} from './useGenSessionTitle';
+import {isCreateSessionDisabled} from './sessionCreation';
+import {useGenSessionTitle} from './useGenSessionTitle';
 
 interface AssistantChatContainerProps {
   contextDropTarget: {
@@ -22,13 +19,33 @@ interface AssistantChatContainerProps {
     canAccept: (data: unknown) => boolean;
     onDrop: (data: unknown) => void;
   };
-  beforeCreateSessionAction?: React.ReactNode;
   debugPanel?: React.ReactNode;
 }
 
+const CliChatTurn: React.FC<ChatTurnSlotProps> = ({turn}) => {
+  const Prompt = turn.prompt.Content;
+  const Timeline = turn.timeline.Content;
+  const Error = turn.error?.Content;
+  const Actions = turn.actions.Content;
+
+  return (
+    <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
+      <div className="mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-100">
+        <Prompt />
+      </div>
+      <div className="flex w-full flex-col gap-2">
+        <Timeline />
+        {Error && <Error />}
+        <Actions />
+      </div>
+    </div>
+  );
+};
+
+const CLI_CHAT_RENDERING_COMPONENTS = {Turn: CliChatTurn};
+
 export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   contextDropTarget,
-  beforeCreateSessionAction,
   debugPanel,
 }) => {
   const currentSessionId = useRoomStore(
@@ -38,62 +55,39 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   const currentArtifactId = useRoomStore(
     (s) => s.artifacts.config.currentArtifactId,
   );
-  const sessions = useRoomStore((s) => s.ai.config.sessions);
-  const aiSessionArtifacts = useRoomStore(
-    (s) => s.artifactAi.config.aiSessionArtifacts,
-  );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
   const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
   const createArtifactScopedSession = useRoomStore(
     (s) => s.artifactAi.createArtifactScopedSession,
   );
+  const createSession = useRoomStore((s) => s.ai.createSession);
 
-  const [showHistory, setShowHistory] = useState(false);
   useGenSessionTitle();
 
-  const createSessionDisabled = Boolean(
-    currentSession &&
-    isChatSessionEmpty(currentSession) &&
-    isDefaultAssistantSessionName(currentSession.name),
-  );
+  const createSessionDisabled = isCreateSessionDisabled(currentSession);
 
   const handleCreateSession = useCallback(() => {
     if (createSessionDisabled) {
       return;
     }
-    createArtifactScopedSession();
-  }, [createArtifactScopedSession, createSessionDisabled]);
-
-  const filterSession = useCallback(
-    (session: (typeof sessions)[number]) =>
-      isAiSessionVisibleForArtifact(
-        aiSessionArtifacts,
-        session.id,
-        currentArtifactId,
-      ),
-    [aiSessionArtifacts, currentArtifactId],
-  );
-
-  const historyIsRunning = useMemo(() => {
-    if (!currentArtifactId || currentSession?.isRunning) {
-      return false;
+    if (currentArtifactId) {
+      createArtifactScopedSession();
+    } else {
+      createSession();
     }
-    return sessions.some(
-      (session) =>
-        session.isRunning &&
-        session.id !== currentSession?.id &&
-        isAiSessionVisibleForArtifact(
-          aiSessionArtifacts,
-          session.id,
-          currentArtifactId,
-        ),
-    );
-  }, [aiSessionArtifacts, currentArtifactId, currentSession, sessions]);
+  }, [
+    createArtifactScopedSession,
+    createSession,
+    createSessionDisabled,
+    currentArtifactId,
+  ]);
 
   const messagesPane = (
     <div className="print-container h-full min-h-0 grow overflow-hidden">
       {isDataAvailable ? (
-        <Chat.Messages key={currentSessionId} hoistedRenderers={['chart']} />
+        <Chat.Rendering components={CLI_CHAT_RENDERING_COMPONENTS}>
+          <Chat.Messages key={currentSessionId} hoistedRenderers={['chart']} />
+        </Chat.Rendering>
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center">
           <SkeletonPane className="p-4" />
@@ -113,88 +107,58 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
               variant="outline"
               className="h-12 gap-2 px-4"
               onClick={handleCreateSession}
-              disabled={!currentArtifactId}
+              disabled={createSessionDisabled}
             >
               <PlusIcon className="h-4 w-4" />
-              New session
+              New chat
             </Button>
           </div>
         ) : (
-          <>
-            {!showHistory && (
-              <Chat.Header
-                onHistoryClick={() => setShowHistory(true)}
-                onCreateSession={handleCreateSession}
-                createSessionDisabled={createSessionDisabled}
-                historyIsRunning={historyIsRunning}
-                beforeCreateSessionAction={beforeCreateSessionAction}
-                className={debugPanel ? 'mb-2' : 'mb-4'}
-              />
-            )}
-            {showHistory ? (
-              <Chat.History
-                onBack={() => setShowHistory(false)}
-                onCreateSession={handleCreateSession}
-                createSessionDisabled={createSessionDisabled}
-                filterSession={filterSession}
-                emptyLabel="No chats for this item yet"
-                onSelectChat={(sessionId) => {
-                  const switchSession =
-                    useRoomStore.getState().ai.switchSession;
-                  switchSession(sessionId);
-                  setShowHistory(false);
-                }}
-                className="flex-1"
-              />
+          <div className="min-h-0 flex-1">
+            {debugPanel ? (
+              <ResizablePanelGroup
+                orientation="vertical"
+                className="h-full min-h-0"
+              >
+                <ResizablePanel
+                  id="ai-debug-panel"
+                  defaultSize={50}
+                  minSize={20}
+                  className="min-h-0 overflow-hidden"
+                >
+                  {debugPanel}
+                </ResizablePanel>
+                <ResizableHandle withHandle className="my-1" />
+                <ResizablePanel
+                  id="ai-chat-panel"
+                  defaultSize={50}
+                  minSize={20}
+                  className="min-h-0 pt-2"
+                >
+                  {messagesPane}
+                </ResizablePanel>
+              </ResizablePanelGroup>
             ) : (
-              <div className="min-h-0 flex-1">
-                {debugPanel ? (
-                  <ResizablePanelGroup
-                    orientation="vertical"
-                    className="h-full min-h-0"
-                  >
-                    <ResizablePanel
-                      id="ai-debug-panel"
-                      defaultSize={50}
-                      minSize={20}
-                      className="min-h-0 overflow-hidden"
-                    >
-                      {debugPanel}
-                    </ResizablePanel>
-                    <ResizableHandle withHandle className="my-1" />
-                    <ResizablePanel
-                      id="ai-chat-panel"
-                      defaultSize={50}
-                      minSize={20}
-                      className="min-h-0 pt-2"
-                    >
-                      {messagesPane}
-                    </ResizablePanel>
-                  </ResizablePanelGroup>
-                ) : (
-                  messagesPane
-                )}
-              </div>
+              messagesPane
             )}
-          </>
+          </div>
         )}
-        {currentSessionId && !showHistory && (
-          <>
-            <Chat.Composer
-              placeholder="What would you like to learn about the data?"
-              contextDropTarget={contextDropTarget}
-            >
-              <Chat.InlineApiKeyInput
-                onSaveApiKey={(provider, apiKey) => {
-                  updateProvider(provider, {apiKey});
-                }}
-              />
-              <AssistantContextSelector />
-              <div className="flex min-w-0 items-center justify-end">
-                <Chat.ModelSelector />
-              </div>
-            </Chat.Composer>
-          </>
+        {currentSessionId && (
+          <Chat.Composer
+            placeholder="What would you like to learn about the data?"
+            contextDropTarget={contextDropTarget}
+          >
+            <Chat.InlineApiKeyInput
+              onSaveApiKey={(provider, apiKey) => {
+                updateProvider(provider, {apiKey});
+              }}
+            />
+            <AssistantContextSelector />
+            <Chat.Composer.Attachments />
+            <div className="flex min-w-0 items-center justify-end">
+              <Chat.ModelSelector />
+            </div>
+          </Chat.Composer>
         )}
       </div>
     </Chat.Root>

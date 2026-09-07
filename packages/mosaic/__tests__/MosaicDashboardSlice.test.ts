@@ -1,6 +1,6 @@
 import {jest} from '@jest/globals';
 import {createStore} from 'zustand';
-import {clausePoint} from '@uwdata/mosaic-core';
+import {clausePoint, Coordinator} from '@uwdata/mosaic-core';
 import {createLayoutSlice} from '@sqlrooms/layout';
 import {
   createBaseRoomSlice,
@@ -26,7 +26,7 @@ function createTestStore(props: CreateMosaicDashboardSliceProps = {}) {
   return createStore<BaseRoomStoreState & any>()((...args) => ({
     ...createBaseRoomSlice()(...args),
     ...createLayoutSlice()(...args),
-    ...createMosaicSlice()(...args),
+    ...createMosaicSlice({coordinator: new Coordinator()})(...args),
     ...createMosaicDashboardSlice(props)(...args),
   }));
 }
@@ -157,6 +157,23 @@ describe('MosaicDashboardSlice generic panels', () => {
     expect(dashboard.layoutType).toBe('grid');
     expect(dashboard.layout?.type).toBe('grid');
     expect(dashboard.layout?.id).toBe(getMosaicDashboardGridId(dashboardId));
+  });
+
+  it('keeps an existing dashboard title when ensuring layout without a title', () => {
+    const store = createTestStore();
+    const dashboardId = 'renamed-embedded-dashboard';
+
+    store
+      .getState()
+      .mosaicDashboard.ensureDashboard(dashboardId, 'Sales Explorer');
+    store
+      .getState()
+      .mosaicDashboard.ensureDashboard(dashboardId, undefined, 'grid');
+
+    const dashboard =
+      store.getState().mosaicDashboard.config.dashboardsById[dashboardId]!;
+    expect(dashboard.title).toBe('Sales Explorer');
+    expect(dashboard.layoutType).toBe('grid');
   });
 
   it('adds and removes grid dashboard panels with persisted grid layouts', () => {

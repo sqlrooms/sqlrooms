@@ -11,7 +11,7 @@ function getForwardedArgs() {
 
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? unwrapForwardedArgs(parsed.map(String)) : [];
+    return Array.isArray(parsed) ? parsed.map(String) : [];
   } catch {
     return [];
   }

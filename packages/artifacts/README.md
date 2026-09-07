@@ -1,3 +1,5 @@
+# @sqlrooms/artifacts
+
 `@sqlrooms/artifacts` provides a room-store slice and React/layout helpers for
 workspace artifacts such as dashboards, notebooks, canvas documents, pivot
 tables, and apps.
@@ -9,6 +11,10 @@ entries.
 Artifacts are workspace-level entries. Embedded document content should be
 modeled as blocks, usually hosted stateful blocks, rather than as hidden child
 artifacts in the artifact registry.
+
+See the
+[Artifacts developer guide](https://sqlrooms.org/artifacts)
+for the workspace model, lifecycle guidance, and end-to-end setup.
 
 ## Usage
 
@@ -93,6 +99,7 @@ Config uses artifact terminology throughout:
 
 - `artifacts.config.artifactsById`
 - `artifacts.config.artifactOrder`
+- `artifacts.config.pinnedArtifactIds`
 - `artifacts.config.currentArtifactId`
 
 - `artifacts.createArtifact({type, title?, id?})`
@@ -102,6 +109,8 @@ Config uses artifact terminology throughout:
 - `artifacts.deleteArtifact(id)`
 - `artifacts.setCurrentArtifact(id?)`
 - `artifacts.setArtifactOrder(order)`
+- `artifacts.togglePinArtifact(id)`
+- `artifacts.isPinnedArtifact(id)`
 - `artifacts.getArtifact(id)`
 
 `closeArtifact` is non-destructive. It runs close lifecycle cleanup, while the
@@ -151,6 +160,37 @@ The artifact shell still owns workspace metadata such as id, title, tabs,
 current selection, and AI context. The stateful block definition owns the
 feature-specific rendering and backing-state lifecycle.
 
+## Entry Points
+
+| Import                       | Contains                                                                                                            | Pulls React |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `@sqlrooms/artifacts`        | Slices, components, artifact types — the full package                                                               | Yes         |
+| `@sqlrooms/artifacts/config` | Serializable shapes only: `ArtifactMetadata`, `ArtifactsSliceConfig`, `ArtifactType`, `ArtifactSessionLink(Schema)` | No          |
+| `@sqlrooms/artifacts/ai`     | Assistant tools for artifact context                                                                                | No          |
+
+Prefer `@sqlrooms/artifacts/config` when you only need the persisted data model
+and want to stay out of the React dependency — a test runner, a config
+migration, or server-side code:
+
+```ts
+import {
+  ArtifactMetadata,
+  ArtifactSessionLinkSchema,
+} from '@sqlrooms/artifacts/config';
+
+const link = ArtifactSessionLinkSchema.parse(row);
+```
+
+Import these shapes from `/config` rather than from an internal module path such
+as `@sqlrooms/artifacts/dist/ArtifactsSliceConfig`. The subpath is the supported
+surface and will keep working when the underlying modules are reorganized;
+internal paths have moved before.
+
+All entries target bundlers and transpilers (`moduleResolution: "bundler"`), so
+emitted re-exports are extensionless. Being React-free is what makes `/config`
+and `/ai` usable from Node toolchains, not native `node` resolution of the
+published files.
+
 ## AI Context Tools
 
 `@sqlrooms/artifacts/ai` provides reusable assistant tools for artifact context:
@@ -162,14 +202,16 @@ feature-specific rendering and backing-state lifecycle.
 Use `createArtifactContextAiTools({store, readArtifact})` in apps that combine
 `@sqlrooms/artifacts` with `@sqlrooms/ai`. The factory handles primary artifact
 selection and run-context updates; the app supplies artifact payload readers for
-domain-specific types such as documents or dashboards.
+domain-specific types such as documents or dashboards. Apps with capability
+profiles can pass `isArtifactAllowed` to apply the same eligibility rule when
+listing, reading, or selecting a primary context artifact.
 
-Commands and tools that create or select the user's primary working artifact
-can include `artifactTargetChange` in their result data. The exported
-`ArtifactTargetChange` type is a small metadata shape for host apps that want
-to compose command results with artifact-scoped AI behavior. It does not trigger
-chat changes by itself; apps still own the policy for when an AI chat should
-continue in a new artifact.
+Artifact-aware room commands can use `resolveArtifactTargetId()` to preserve
+the same per-turn target. Its precedence is an explicit command artifact ID,
+then an AI invocation's captured artifact target, then the live current artifact
+for non-AI and compatibility fallback behavior. The helper depends only on room
+command invocation data; it does not require artifact-owned sessions or a
+context-selector UI.
 
 ## Artifact-Owned AI Sessions
 
@@ -204,23 +246,39 @@ const store = createRoomStore<RoomState>(
 );
 ```
 
-The slice stores:
+The slice stores a list of links between sessions and artifacts:
 
 ```ts
-aiSessionArtifacts: Record<string, string>; // sessionId -> artifactId
+sessionArtifactLinks: ArtifactSessionLink[];
 ```
 
+`sessionArtifactLinks` is the only supported persisted and runtime
+representation. The prerelease-only `aiSessionArtifacts` and
+`artifactCreators` fields were removed without an automatic migration. Update
+persisted prerelease configs before parsing them with `ArtifactAiConfigSchema`.
+
+The link type is exported from `@sqlrooms/artifacts`:
+
+- `ArtifactSessionLink` — a single association:
+  `{sessionId, artifactId, linkedAt}`. `linkedAt` is a Unix timestamp in
+  milliseconds. A session may be associated with multiple artifacts.
+- `ArtifactSessionLinkSchema` — the Zod schema used to validate a link (for
+  example when persisting `ArtifactAiConfigSchema`).
+
+Links intentionally describe association only. If an app needs creation
+provenance, store it with the artifact's domain metadata instead of overloading
+the chat association.
+
+All artifact AI session helpers accept `sessionArtifactLinks`; they do not
+accept a parallel one-to-one association map.
+
 Use `artifactAi.createArtifactScopedSession()` when creating chats from an
-artifact-scoped assistant. For default session creation, it reuses the most
-recently opened other empty, non-running session for the current artifact before
-creating a new one. This avoids duplicate blank drafts in history while still
-letting the selected empty draft start a separate chat when the host UI exposes
-a New session action. Calls that provide an explicit `name`, `modelProvider`, or
-`model` always create a fresh session so those options are preserved.
+artifact-scoped assistant. It creates a fresh session and associates it with
+the current artifact.
 `artifactAi.selectLatestSessionForArtifact()` and
 `artifactAi.syncCurrentArtifactAiSession()` keep the current AI session aligned
-with `artifacts.config.currentArtifactId`. Sessions without explicit artifact
-ownership are ignored by artifact-scoped history.
+with `artifacts.config.currentArtifactId`. Sessions without an explicit
+artifact association are ignored by artifact-scoped history.
 
 Reusable helpers include:
 

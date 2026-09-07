@@ -1,4 +1,8 @@
-import type {BaseRoomStoreState, RoomCommand} from '@sqlrooms/room-store';
+import type {
+  BaseRoomStoreState,
+  RoomCommand,
+  RoomCommandExecutionContext,
+} from '@sqlrooms/room-store';
 import {z} from 'zod';
 import type {
   CommitHtmlAppRevisionMetadata,
@@ -91,8 +95,11 @@ type HtmlAppRenameCommandInput = z.infer<typeof HtmlAppRenameCommandInput>;
 export type CreateHtmlAppRevisionCommandsOptions<
   TRoomState extends BaseRoomStoreState,
 > = {
-  /** Resolve the current host-selected HTML app id, when any. */
-  resolveCurrentAppId?: (state: TRoomState) => string | undefined;
+  /** Resolve the host-selected or invocation-scoped HTML app id, when any. */
+  resolveCurrentAppId?: (
+    state: TRoomState,
+    context: RoomCommandExecutionContext<TRoomState>,
+  ) => string | undefined;
   /** Return all HTML app ids known to the host. */
   getHtmlAppIds: (state: TRoomState) => string[];
   /** Return an HTML app by id. */
@@ -133,6 +140,7 @@ export type CreateHtmlAppRevisionCommandsOptions<
 function resolveHtmlAppCommandAppId<TRoomState extends BaseRoomStoreState>(
   state: TRoomState,
   options: CreateHtmlAppRevisionCommandsOptions<TRoomState>,
+  context: RoomCommandExecutionContext<TRoomState>,
   inputAppId?: string,
 ) {
   if (inputAppId) {
@@ -142,7 +150,7 @@ function resolveHtmlAppCommandAppId<TRoomState extends BaseRoomStoreState>(
     return inputAppId;
   }
 
-  const currentAppId = options.resolveCurrentAppId?.(state);
+  const currentAppId = options.resolveCurrentAppId?.(state, context);
   if (currentAppId && options.getHtmlAppState(state, currentAppId)) {
     return currentAppId;
   }
@@ -181,8 +189,8 @@ export function createHtmlAppRevisionCommands<
         idempotent: false,
         riskLevel: 'medium',
       },
-      execute: ({getState}, input) => {
-        const state = getState();
+      execute: (context, input) => {
+        const state = context.getState();
         const {appId, patch, metadata} =
           input as HtmlAppWriteRevisionCommandInput;
         const app = options.getHtmlAppState(state, appId);
@@ -229,8 +237,8 @@ export function createHtmlAppRevisionCommands<
         idempotent: false,
         riskLevel: 'low',
       },
-      execute: ({getState}, input) => {
-        const state = getState();
+      execute: (context, input) => {
+        const state = context.getState();
         const {appId, title, files, metadata} =
           input as HtmlAppRenameCommandInput;
         const app = options.getHtmlAppState(state, appId);
@@ -296,11 +304,16 @@ export function createHtmlAppRevisionCommands<
         idempotent: false,
         riskLevel: 'medium',
       },
-      execute: ({getState}, input) => {
-        const state = getState();
+      execute: (context, input) => {
+        const state = context.getState();
         const {appId: inputAppId, revisionId} =
           input as HtmlAppRestoreRevisionCommandInput;
-        const appId = resolveHtmlAppCommandAppId(state, options, inputAppId);
+        const appId = resolveHtmlAppCommandAppId(
+          state,
+          options,
+          context,
+          inputAppId,
+        );
         const revision = options.restoreHtmlAppRevision(
           state,
           appId,
@@ -336,11 +349,16 @@ export function createHtmlAppRevisionCommands<
         idempotent: false,
         riskLevel: 'medium',
       },
-      execute: ({getState}, input) => {
-        const state = getState();
+      execute: (context, input) => {
+        const state = context.getState();
         const {appId: inputAppId} =
           ((input as HtmlAppRevisionCommandInput | undefined) ?? {}) || {};
-        const appId = resolveHtmlAppCommandAppId(state, options, inputAppId);
+        const appId = resolveHtmlAppCommandAppId(
+          state,
+          options,
+          context,
+          inputAppId,
+        );
         const revision = options.undoHtmlAppRevision(state, appId);
         if (!revision) {
           throw new Error(`HTML app "${appId}" has no revision to undo.`);
@@ -370,11 +388,16 @@ export function createHtmlAppRevisionCommands<
         idempotent: false,
         riskLevel: 'medium',
       },
-      execute: ({getState}, input) => {
-        const state = getState();
+      execute: (context, input) => {
+        const state = context.getState();
         const {appId: inputAppId} =
           ((input as HtmlAppRevisionCommandInput | undefined) ?? {}) || {};
-        const appId = resolveHtmlAppCommandAppId(state, options, inputAppId);
+        const appId = resolveHtmlAppCommandAppId(
+          state,
+          options,
+          context,
+          inputAppId,
+        );
         const revision = options.redoHtmlAppRevision(state, appId);
         if (!revision) {
           throw new Error(`HTML app "${appId}" has no revision to redo.`);

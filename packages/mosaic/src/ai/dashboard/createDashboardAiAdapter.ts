@@ -2,7 +2,10 @@ import {
   hasCommandSliceState,
   type RoomCommandResult,
 } from '@sqlrooms/room-store';
-import {DashboardAiAdapter} from './dashboard-types';
+import {
+  type AuthorizeDashboard,
+  type DashboardAiAdapter,
+} from './dashboard-types';
 import {MosaicDashboardStoreState} from '../../dashboard/MosaicDashboardSlice';
 import {MOSAIC_DASHBOARD_COMMAND_IDS} from '../../dashboard/MosaicDashboardCommands';
 import {AiStore} from '../types';
@@ -28,23 +31,53 @@ function assertCommandSuccess(result: RoomCommandResult, commandId: string) {
 }
 
 /**
+ * Revalidates the fixed dashboard target immediately before an AI write.
+ *
+ * This closes the gap between the dashboard agent's entry-time authorization
+ * and later mutations in a multi-step run. It rejects deleted dashboards and
+ * delegates host-specific ownership checks to `authorizeDashboard` using the
+ * latest state. A denial is propagated to the caller; this function never
+ * searches for or switches to another dashboard.
+ */
+async function authorizeDashboardMutation<
+  TState extends MosaicDashboardStoreState,
+>(
+  store: AiStore<TState>,
+  dashboardId: string,
+  authorizeDashboard?: AuthorizeDashboard<TState>,
+) {
+  const state = store.getState();
+  if (!state.mosaicDashboard.getDashboard(dashboardId)) {
+    throw new Error(`Unknown dashboard "${dashboardId}".`);
+  }
+  await authorizeDashboard?.({dashboardId, state});
+}
+
+/**
  * Creates a dashboard adapter for AI operations scoped to a specific dashboard.
  * The adapter provides methods for managing panels, tables, and dashboard state.
  *
  * @template TState - Store state type extending MosaicDashboardStoreState
  * @param store - Zustand store instance with dashboard management capabilities
  * @param dashboardId - ID of the dashboard to scope adapter operations to
+ * @param authorizeDashboard - Optional host authorization re-run before each
+ * mutation. Throwing or rejecting blocks that mutation without retargeting.
  * @returns Dashboard adapter instance with panel and table management methods
  */
 export function createDashboardAiAdapter<
   TState extends MosaicDashboardStoreState,
->(store: AiStore<TState>, dashboardId: string): DashboardAiAdapter {
+>(
+  store: AiStore<TState>,
+  dashboardId: string,
+  authorizeDashboard?: AuthorizeDashboard<TState>,
+): DashboardAiAdapter {
   return {
     getSelectedTable: () =>
       store.getState().mosaicDashboard.getDashboard(dashboardId)?.selectedTable,
     getPanels: () =>
       store.getState().mosaicDashboard.getDashboard(dashboardId)?.panels ?? [],
     setSelectedTable: async (tableName) => {
+      await authorizeDashboardMutation(store, dashboardId, authorizeDashboard);
       const commandId = MOSAIC_DASHBOARD_COMMAND_IDS.setSelectedTable;
       if (!hasCommand(store, commandId)) {
         store
@@ -60,6 +93,7 @@ export function createDashboardAiAdapter<
       assertCommandSuccess(result, commandId);
     },
     addPanel: async (panel) => {
+      await authorizeDashboardMutation(store, dashboardId, authorizeDashboard);
       const commandId = MOSAIC_DASHBOARD_COMMAND_IDS.addPanel;
       if (!hasCommand(store, commandId)) {
         return store.getState().mosaicDashboard.addPanel(dashboardId, panel);
@@ -75,6 +109,7 @@ export function createDashboardAiAdapter<
       );
     },
     updatePanel: async (panelId, patch) => {
+      await authorizeDashboardMutation(store, dashboardId, authorizeDashboard);
       const commandId = MOSAIC_DASHBOARD_COMMAND_IDS.updatePanel;
       if (!hasCommand(store, commandId)) {
         store
@@ -90,6 +125,7 @@ export function createDashboardAiAdapter<
       assertCommandSuccess(result, commandId);
     },
     removePanel: async (panelId) => {
+      await authorizeDashboardMutation(store, dashboardId, authorizeDashboard);
       const commandId = MOSAIC_DASHBOARD_COMMAND_IDS.removePanel;
       if (!hasCommand(store, commandId)) {
         store.getState().mosaicDashboard.removePanel(dashboardId, panelId);

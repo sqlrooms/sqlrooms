@@ -7,9 +7,12 @@ import remarkGfm from 'remark-gfm';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import type {AgentToolCall} from '../types';
 import {isDynamicToolPart, isToolPart} from '../utils';
-import {AiThinkingDots} from './AiThinkingDots';
+import {getChatActiveStatus} from './ChatActiveStatus';
+import {useChatRenderingComponents} from './ChatRenderingContext';
 import {useToolRenderBehavior} from './FlatAgentRenderer';
 import {useChatRuntime} from './ChatRuntimeContext';
+import {ChatAttachmentPreview} from './ChatAttachmentPreview';
+import type {ChatAttachmentPart} from '../chatAttachments';
 
 export type LocalAgentChatMessagesProps = {
   className?: string;
@@ -19,6 +22,12 @@ export const LocalAgentChatMessages: FC<LocalAgentChatMessagesProps> = ({
   className,
 }) => {
   const runtime = useChatRuntime();
+  const toolRenderBehavior = useToolRenderBehavior();
+  const activeStatus =
+    runtime.mode === 'local-agent'
+      ? getChatActiveStatus(runtime.messages, toolRenderBehavior)
+      : undefined;
+  const ActiveStatus = useChatRenderingComponents().ActiveStatus;
   const containerRef = useRef<HTMLDivElement>(null);
   const {showScrollButton, scrollToBottom} = useScrollToBottom({
     containerRef,
@@ -35,8 +44,8 @@ export const LocalAgentChatMessages: FC<LocalAgentChatMessagesProps> = ({
           {runtime.messages.map((message) => (
             <LocalAgentMessageView key={message.id} message={message} />
           ))}
-          {runtime.isStreaming && (
-            <AiThinkingDots className="text-muted-foreground px-1" />
+          {runtime.isStreaming && activeStatus && (
+            <ActiveStatus status={activeStatus} className="px-1" />
           )}
           <div className="h-4 w-full shrink-0" />
         </div>
@@ -93,6 +102,13 @@ const LocalAgentMessagePart: FC<{
   }
   if (type === 'reasoning') {
     return <ReasoningPart text={(part as {text?: string}).text ?? ''} />;
+  }
+  if (type === 'file') {
+    return (
+      <div className="bg-muted max-w-[75%] rounded-md border p-2">
+        <ChatAttachmentPreview attachment={part as ChatAttachmentPart} />
+      </div>
+    );
   }
   if (type === 'dynamic-tool' || type.startsWith('tool-')) {
     return <LocalAgentToolActivityLine part={part} />;

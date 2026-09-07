@@ -1,12 +1,22 @@
+import type {Layer} from '@deck.gl/core';
 import {JSONConverter} from '@deck.gl/json';
 import {MapboxOverlay} from '@deck.gl/mapbox';
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
-import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
+import {useBaseRoomStore} from '@sqlrooms/room-store';
+import {
+  cn,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+  useTheme,
+} from '@sqlrooms/ui';
+import {ChevronRightIcon} from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -16,22 +26,26 @@ import {forwardRef} from 'react';
 import Map, {useControl} from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
+import {resolveDeckMapStyle, type DeckMapBasemapProvider} from './basemap';
+import {useDeckMapDefaultStyles} from './DeckMapDefaultStylesProvider';
+import type {DeckMapsSliceState} from './DeckMapsSlice';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
 import {usePreparedDatasetStates} from './datasets/usePreparedDatasetStates';
 import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
+import {buildDeckMapJumpToOptions} from './mapFit';
 import type {
   DeckJsonMapHandle,
   DeckJsonMapProps,
   PreparedDeckDatasetState,
 } from './types';
 
-const DEFAULT_MAP_STYLES: Record<ResolvedTheme, string> = {
-  light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-};
+const DEFAULT_MAP_STYLES = {
+  light: 'https://tiles.openfreemap.org/styles/positron',
+  dark: 'https://tiles.openfreemap.org/styles/dark',
+} as const;
 
 function parseSpec(spec: DeckJsonMapProps['spec']) {
   try {
@@ -215,6 +229,18 @@ const TripsTimeControl: FC<{
   );
 };
 
+function getDeckLayerTypeName(layer: unknown): string {
+  if (!layer || typeof layer !== 'object') return '?';
+  const ctor = (
+    layer as {
+      constructor?: {layerName?: string; name?: string};
+    }
+  ).constructor;
+  // Prefer static layerName: table-to-RecordBatch adapters all share
+  // constructor.name "Adapter", which would miss heatmap ↔ scatterplot swaps.
+  return ctor?.layerName ?? ctor?.name ?? '?';
+}
+
 // Workaround for deck.gl HeatmapLayer not releasing its WebGL framebuffer
 // when replaced by another layer type (e.g. switching heatmap → scatterplot).
 // We detect layer class changes and clear layers for one animation frame,
@@ -229,16 +255,19 @@ function DeckOverlayControl({
   );
   const prevLayerKeyRef = useRef<string>('');
   const [clearing, setClearing] = useState(false);
+  const captureStatusRef = useRef<HTMLSpanElement>(null);
 
   const layers = deckProps.layers as unknown[] | undefined;
+  const captureLayers = useMemo(
+    () => (layers?.flat(Infinity).filter(Boolean) ?? []) as Layer[],
+    [layers],
+  );
+  useLayoutEffect(() => {
+    // A previous frame no longer represents the current layers.
+    captureStatusRef.current?.setAttribute('data-sqlrooms-map-loading', 'true');
+  }, [layers, clearing]);
   const layerKey = Array.isArray(layers)
-    ? layers
-        .map((l) => {
-          if (!l || typeof l !== 'object') return '?';
-          const ctor = (l as {constructor?: {name?: string}}).constructor;
-          return ctor?.name ?? '?';
-        })
-        .join(',')
+    ? layers.map(getDeckLayerTypeName).join(',')
     : '';
 
   useEffect(() => {
@@ -254,16 +283,63 @@ function DeckOverlayControl({
 
   useEffect(() => {
     if (clearing && overlay) {
-      overlay.setProps({layers: []});
+      // The temporary empty frame must not advertise capture readiness.
+      overlay.setProps({layers: [], onAfterRender: () => {}});
       requestAnimationFrame(() => setClearing(false));
     }
   }, [clearing, overlay]);
 
-  if (!clearing && overlay) {
-    overlay.setProps(deckProps);
-  }
+  useLayoutEffect(() => {
+    if (clearing || !overlay) return;
+    overlay.setProps({
+      ...deckProps,
+      onLoad: () => {
+        // The separate canvas is created asynchronously. Mark it once deck
+        // initializes, including when the host supplies a custom canvas ID.
+        overlay.getCanvas()?.setAttribute('data-sqlrooms-deck-canvas', '');
+        if (typeof deckProps.onLoad === 'function') deckProps.onLoad();
+      },
+      onAfterRender: (context) => {
+        const loaded = captureLayers.every((layer) => layer.isLoaded);
+        captureStatusRef.current?.setAttribute(
+          'data-sqlrooms-map-loading',
+          String(!loaded),
+        );
+        if (typeof deckProps.onAfterRender === 'function') {
+          deckProps.onAfterRender(context);
+        }
+      },
+    });
+  }, [clearing, overlay, deckProps, captureLayers]);
 
-  return null;
+  return (
+    <span hidden ref={captureStatusRef} data-sqlrooms-map-loading="true" />
+  );
+}
+
+function DeckMapRenderingErrorOverlay({error}: {error: Error}) {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+      <div className="max-w-sm rounded-md border border-red-200 bg-red-50/95 p-4 text-sm text-red-700 shadow-sm">
+        <Collapsible>
+          <div className="flex items-start gap-1">
+            <span>{"Map couldn't be rendered"}</span>
+            <CollapsibleTrigger
+              className="group mt-0.5 shrink-0 rounded p-0.5 hover:bg-red-100"
+              aria-label="Show error details"
+            >
+              <ChevronRightIcon className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-90" />
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent>
+            <pre className="mt-2 max-h-40 overflow-auto font-mono text-xs whitespace-pre-wrap">
+              {error.message}
+            </pre>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+    </div>
+  );
 }
 
 export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
@@ -272,6 +348,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       spec,
       datasets,
       mapStyle,
+      basemapProvider,
       interleaved = true,
       deckProps,
       mapProps,
@@ -287,11 +364,16 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       () => normalizeDatasets(datasets),
       [datasets],
     );
+    const datasetIdKey = JSON.stringify(Object.keys(normalizedDatasets).sort());
     const datasetIds = useMemo(
-      () => Object.keys(normalizedDatasets),
-      [normalizedDatasets],
+      () => JSON.parse(datasetIdKey) as string[],
+      [datasetIdKey],
     );
     const datasetStates = usePreparedDatasetStates(normalizedDatasets);
+    const [mapReady, setMapReady] = useState(false);
+    const datasetsLoading = datasetIds.some(
+      (id) => !datasetStates[id] || datasetStates[id]?.status === 'loading',
+    );
     const onDatasetStatesChangeRef = useRef(onDatasetStatesChange);
 
     const {spec: parsedSpec, error: specError} = useMemo(
@@ -509,12 +591,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       ref,
       () => ({
         jumpTo(opts) {
-          const jumpOpts = {
-            center: [opts.longitude, opts.latitude] as [number, number],
-            zoom: opts.zoom,
-            bearing: opts.bearing ?? 0,
-            pitch: opts.pitch ?? 0,
-          };
+          const jumpOpts = buildDeckMapJumpToOptions(opts);
           if (mapRef.current) {
             mapRef.current.jumpTo(jumpOpts);
           } else {
@@ -540,11 +617,28 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
     );
 
     const {resolvedTheme} = useTheme();
+    const hostDefaultMapStyles = useDeckMapDefaultStyles();
+    const roomBasemapProvider = useBaseRoomStore<
+      Partial<DeckMapsSliceState>,
+      DeckMapBasemapProvider | undefined
+    >((state) => state.deckMaps?.basemapProvider);
 
     const mergedMapProps = {
       ...extraMapProps,
-      mapStyle:
-        mapStyle ?? mapProps?.mapStyle ?? DEFAULT_MAP_STYLES[resolvedTheme],
+      // DOM image capture reads the canvas after the render frame has ended.
+      // Interleaved deck layers share this buffer with the basemap.
+      canvasContextAttributes: {
+        preserveDrawingBuffer: true,
+        ...mapProps?.canvasContextAttributes,
+      },
+      mapStyle: resolveDeckMapStyle({
+        mapStyle,
+        mapPropsMapStyle: mapProps?.mapStyle,
+        basemapProvider: basemapProvider ?? roomBasemapProvider,
+        hostDefaultStyles: hostDefaultMapStyles,
+        resolvedTheme,
+        fallbackStyles: DEFAULT_MAP_STYLES,
+      }),
     };
     const legends = useMemo(
       () =>
@@ -555,17 +649,16 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
               datasetStates,
             })
           : [],
-      [availableSpec, datasetIds, datasetStates, showLegends],
+      [availableSpec, datasetIds, showLegends, datasetStates],
     );
 
     return (
-      <div className={cn('relative h-full w-full', className)}>
-        {hasRenderingError && !onRenderingError ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
-            <div className="max-w-sm rounded-md border border-red-200 bg-red-50/95 p-4 text-sm text-red-700 shadow-sm">
-              {`Map couldn't be rendered. Check the console for details.`}
-            </div>
-          </div>
+      <div
+        className={cn('relative h-full w-full', className)}
+        data-sqlrooms-map-loading={!mapReady || datasetsLoading}
+      >
+        {finalDeckPropsResult.error ? (
+          <DeckMapRenderingErrorOverlay error={finalDeckPropsResult.error} />
         ) : null}
 
         <Map
@@ -575,6 +668,18 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
             ? {initialViewState: initialViewState as object}
             : {})}
           onLoad={handleMapLoad}
+          onData={(event) => {
+            setMapReady(false);
+            mapProps?.onData?.(event);
+          }}
+          onMoveStart={(event) => {
+            setMapReady(false);
+            mapProps?.onMoveStart?.(event);
+          }}
+          onRender={(event) => {
+            setMapReady(event.target.loaded());
+            mapProps?.onRender?.(event);
+          }}
           style={{width: '100%', height: '100%', ...mapProps?.style}}
         >
           <DeckOverlayControl interleaved={interleaved} {...overlayDeckProps} />

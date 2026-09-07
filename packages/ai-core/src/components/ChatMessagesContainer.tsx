@@ -1,4 +1,4 @@
-import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
+import {cn} from '@sqlrooms/ui';
 import {ChevronDown, SplitIcon} from 'lucide-react';
 import type {UIMessage} from 'ai';
 import React, {useEffect, useRef} from 'react';
@@ -6,8 +6,10 @@ import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {ChatTurnView} from './ChatTurnView';
-import {AiThinkingDots} from './AiThinkingDots';
+import {getChatActiveStatus} from './ChatActiveStatus';
+import {useChatRenderingComponents} from './ChatRenderingContext';
 import type {ErrorMessageComponentProps} from './ErrorMessage';
+import {useToolRenderBehavior} from './FlatAgentRenderer';
 import {getChatTurnsFromUiMessages} from '../chatTurns';
 import type {AiSessionForkOrigin, ChatSessionSchema} from '@sqlrooms/ai-config';
 
@@ -44,6 +46,19 @@ function ChatForkProvenance({
   );
 }
 
+function RunningDots() {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-5 w-5 items-center justify-center gap-0.5"
+    >
+      <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:-0.3s] motion-reduce:animate-none" />
+      <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:-0.15s] motion-reduce:animate-none" />
+      <span className="h-1 w-1 animate-bounce rounded-full bg-current motion-reduce:animate-none" />
+    </span>
+  );
+}
+
 export const ChatMessagesContainer: React.FC<{
   className?: string;
   customMarkdownComponents?: Partial<Components>;
@@ -68,6 +83,12 @@ export const ChatMessagesContainer: React.FC<{
   const uiMessages = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.uiMessages,
   );
+  const toolRenderBehavior = useToolRenderBehavior();
+  const activeStatus = getChatActiveStatus(
+    uiMessages as UIMessage[] | undefined,
+    toolRenderBehavior,
+  );
+  const ActiveStatus = useChatRenderingComponents().ActiveStatus;
   const chatTurns = React.useMemo(
     () =>
       getChatTurnsFromUiMessages(uiMessages as UIMessage[] | undefined, {
@@ -116,11 +137,11 @@ export const ChatMessagesContainer: React.FC<{
 
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
-      <ScrollArea
-        viewportRef={containerRef}
-        className="flex w-full grow flex-col gap-5"
+      <div
+        ref={containerRef}
+        className="scrollbar-thin flex min-h-0 w-full min-w-0 grow flex-col gap-5 overflow-x-hidden overflow-y-auto"
       >
-        <div className="pr-3">
+        <div className="px-3">
           {chatTurns.map((chatTurn) => (
             <React.Fragment key={chatTurn.id}>
               <ChatTurnView
@@ -140,13 +161,10 @@ export const ChatMessagesContainer: React.FC<{
               )}
             </React.Fragment>
           ))}
-          {isRunning && (
-            <AiThinkingDots className="text-muted-foreground p-4" />
-          )}
+          {isRunning && <ActiveStatus status={activeStatus} className="pb-4" />}
           <div className="h-10 w-full shrink-0" />
         </div>
-        <ScrollBar orientation="vertical" />
-      </ScrollArea>
+      </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
         <button
           onClick={scrollToBottom}
@@ -157,7 +175,7 @@ export const ChatMessagesContainer: React.FC<{
           )}
           aria-label="Scroll to bottom"
         >
-          <ChevronDown className="h-5 w-5" />
+          {isRunning ? <RunningDots /> : <ChevronDown className="h-5 w-5" />}
         </button>
       </div>
     </div>

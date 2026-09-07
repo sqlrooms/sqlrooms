@@ -5,13 +5,22 @@ const SQLROOMS_COLOR_SCALE_MARKER = Symbol.for(
   '@sqlrooms/deck/sqlrooms-color-scale',
 );
 
+/**
+ * `@sqlrooms/color-scales` config plus optional Deck per-accessor opacity.
+ * `opacity` is a SQLRooms `colorScale` JSON extension, not a color-scales field.
+ */
+export type DeckColorScaleConfig = ColorScaleConfig & {
+  /** Per-accessor opacity 0–1; multiplied into compiled RGBA alpha. */
+  opacity?: number;
+};
+
 export type ColorScaleMarker = {
-  colorScale: ColorScaleConfig;
+  colorScale: DeckColorScaleConfig;
   [SQLROOMS_COLOR_SCALE_MARKER]: true;
 };
 
 export function createColorScaleMarker(
-  value: ColorScaleConfig,
+  value: DeckColorScaleConfig,
 ): ColorScaleMarker {
   return {
     colorScale: value,
@@ -55,7 +64,7 @@ export const COLOR_SCALE_PROP_NAMES: readonly ColorScalePropName[] = [
 export function getColorScale(props: Record<string, unknown>):
   | {
       propName: ColorScalePropName;
-      colorScale: ColorScaleConfig;
+      colorScale: DeckColorScaleConfig;
     }
   | undefined {
   const all = getAllColorScales(props);
@@ -65,11 +74,11 @@ export function getColorScale(props: Record<string, unknown>):
 /** Returns every color scale entry found across all known accessor props on the layer. */
 export function getAllColorScales(props: Record<string, unknown>): Array<{
   propName: ColorScalePropName;
-  colorScale: ColorScaleConfig;
+  colorScale: DeckColorScaleConfig;
 }> {
   const results: Array<{
     propName: ColorScalePropName;
-    colorScale: ColorScaleConfig;
+    colorScale: DeckColorScaleConfig;
   }> = [];
 
   for (const propName of COLOR_SCALE_PROP_NAMES) {

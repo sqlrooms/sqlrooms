@@ -18,6 +18,7 @@ import {
   quoteDeckMapSqlTableReference,
 } from '../src/mapConfigUtils';
 import type {MosaicDashboardEntry} from '@sqlrooms/mosaic';
+import type {DeckMapConfig} from '../src/mapConfig';
 
 const scatterConfig = {
   spec: {
@@ -50,15 +51,26 @@ const scatterConfig = {
 };
 
 const normalizedScatterConfig = {
-  spec: scatterConfig.spec,
+  spec: {
+    ...scatterConfig.spec,
+    layers: [
+      {
+        ...scatterConfig.spec.layers[0],
+        _sqlroomsBinding: {
+          dataset: 'earthquakes',
+          geometryColumn: '__sqlrooms_geom',
+        },
+      },
+    ],
+  },
   datasets: {
     earthquakes: {
       source: {
         tableName: 'earthquakes',
         transformSql:
-          'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
+          'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "__sqlrooms_geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
       },
-      geometryColumn: 'geom',
+      geometryColumn: '__sqlrooms_geom',
       geometryEncodingHint: 'wkb',
     },
   },
@@ -78,7 +90,6 @@ const multiLayerConfig = {
         '@@type': 'GeoArrowHeatmapLayer',
         id: 'earthquakes-density',
         _sqlroomsBinding: {dataset: 'earthquakes'},
-        getWeight: 'magnitude',
       },
     ],
   },
@@ -298,7 +309,7 @@ describe('createDeckMapConfigTool', () => {
       kind: 'deck-map-config',
       type: DECK_MAP_DASHBOARD_PANEL_TYPE,
       title: 'Standalone earthquake map',
-      config: normalizedScatterConfig,
+      config: {...normalizedScatterConfig, mapStyle: 'light'},
     });
   });
 
@@ -312,9 +323,13 @@ describe('createDeckMapConfigTool', () => {
     });
 
     expect(result.llmResult.success).toBe(true);
-    expect(result.llmResult.data.config.spec.layers).toEqual(
-      multiLayerConfig.spec.layers,
-    );
+    expect(result.llmResult.data.config.spec.layers).toEqual([
+      {
+        ...multiLayerConfig.spec.layers[0],
+        getFillColor: [56, 189, 248, 180],
+      },
+      multiLayerConfig.spec.layers[1],
+    ]);
   });
 
   it('preserves configMode in the created panel config', async () => {
@@ -351,9 +366,181 @@ describe('createDeckMapConfigTool', () => {
     expect(result.llmResult.success).toBe(true);
     expect(result.llmResult.data.config.configMode).toBeUndefined();
   });
+
+  it('rejects unsupported layer types', async () => {
+    const tool = createDeckMapConfigTool();
+
+    const result = await (tool as any).execute({
+      title: 'Polygon map',
+      config: {
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowSolidPolygonLayer',
+              id: 'buildings',
+              _sqlroomsBinding: {dataset: 'buildings', geometryColumn: 'geom'},
+            },
+          ],
+        },
+        datasets: {
+          buildings: {
+            source: {tableName: 'buildings'},
+            geometryColumn: 'geom',
+            geometryEncodingHint: 'wkb',
+          },
+        },
+      },
+      reasoning: 'show building footprints',
+    });
+
+    expect(result.llmResult.success).toBe(false);
+    expect(result.llmResult.errorMessage).toMatch(
+      /use a supported Deck map layer type \(.*\) — "GeoArrowSolidPolygonLayer" is not allowed/,
+    );
+  });
 });
 
 describe('createDeckMapDashboardTool', () => {
+  describe('basemap persistence', () => {
+    const originalDocument = Object.getOwnPropertyDescriptor(
+      globalThis,
+      'document',
+    );
+    const customStyle = {version: 8, sources: {}, layers: []};
+
+    function setAppTheme(theme: 'light' | 'dark') {
+      Object.defineProperty(globalThis, 'document', {
+        configurable: true,
+        value: {
+          documentElement: {
+            classList: {contains: (value: string) => value === theme},
+          },
+        },
+      });
+    }
+
+    afterEach(() => {
+      if (originalDocument)
+        Object.defineProperty(globalThis, 'document', originalDocument);
+      else Reflect.deleteProperty(globalThis, 'document');
+    });
+
+    it.each(['dark', 'light'] as const)(
+      'snapshots %s only when creating a new panel',
+      async (theme) => {
+        const {dashboards, dashboardAdapter, databaseAdapter} =
+          createTestAdapters();
+        const tool = createDeckMapDashboardTool({
+          dashboardAdapter,
+          databaseAdapter,
+        });
+        setAppTheme(theme);
+        const created = await (tool as any).execute({
+          config: scatterConfig,
+          reasoning: 'create map',
+        });
+        expect(created.llmResult.success).toBe(true);
+        expect(created.llmResult.data.config.mapStyle).toBe(theme);
+
+        setAppTheme(theme === 'dark' ? 'light' : 'dark');
+        const updated = await (tool as any).execute({
+          panelId: created.llmResult.data.panelId,
+          config: multiLayerConfig,
+          reasoning: 'add a density layer',
+        });
+        expect(updated.llmResult.success).toBe(true);
+        expect(updated.llmResult.data.config.mapStyle).toBe(theme);
+        expect(dashboards['dashboard-1']!.panels[0].config).toEqual(
+          updated.llmResult.data.config,
+        );
+      },
+    );
+
+    const styles: Array<
+      [string, Pick<DeckMapConfig, 'mapStyle' | 'mapProps'>]
+    > = [
+      ['saved basemap', {mapStyle: 'dark'}],
+      ['custom URL', {mapStyle: 'https://example.com/custom.json'}],
+      [
+        'map-prop URL',
+        {mapProps: {mapStyle: 'https://example.com/custom.json'}},
+      ],
+      ['map-prop object', {mapProps: {mapStyle: customStyle}}],
+      ['legacy theme-following map', {}],
+    ];
+    it.each(styles)(
+      'preserves a %s when the update omits style fields',
+      async (_name, style) => {
+        const {dashboards, dashboardAdapter, databaseAdapter} =
+          createTestAdapters();
+        const panelId = await dashboardAdapter.addPanel({
+          id: 'existing-map',
+          type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+          title: 'Existing map',
+          config: {...scatterConfig, ...style},
+        });
+        setAppTheme('light');
+        const tool = createDeckMapDashboardTool({
+          dashboardAdapter,
+          databaseAdapter,
+        });
+        const result = await (tool as any).execute({
+          panelId,
+          config: {...multiLayerConfig, mapProps: {attributionControl: false}},
+          reasoning: 'add a density layer',
+        });
+        expect(result.llmResult.success).toBe(true);
+        const config = result.llmResult.data.config;
+        expect(config.mapStyle).toBe(style.mapStyle);
+        expect(config.mapProps).toEqual({
+          attributionControl: false,
+          ...style.mapProps,
+        });
+        expect(config.datasets).toEqual(multiLayerConfig.datasets);
+        expect(config.spec.layers).toHaveLength(2);
+        expect(dashboards['dashboard-1']!.panels[0].config).toEqual(config);
+      },
+    );
+
+    it.each(styles.slice(0, 4))(
+      'allows an explicit style to replace a %s',
+      async (_name, style) => {
+        const {dashboards, dashboardAdapter, databaseAdapter} =
+          createTestAdapters();
+        const panelId = await dashboardAdapter.addPanel({
+          id: 'existing-map',
+          type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+          title: 'Existing map',
+          config: {...scatterConfig, ...style},
+        });
+        const tool = createDeckMapDashboardTool({
+          dashboardAdapter,
+          databaseAdapter,
+        });
+        for (const replacement of [
+          {mapStyle: 'light'},
+          {mapProps: {mapStyle: customStyle}},
+        ]) {
+          const result = await (tool as any).execute({
+            panelId,
+            config: {...multiLayerConfig, ...replacement},
+            reasoning: 'change basemap',
+          });
+          expect(result.llmResult.success).toBe(true);
+          expect(result.llmResult.data.config.mapStyle).toBe(
+            replacement.mapStyle,
+          );
+          expect(result.llmResult.data.config.mapProps).toEqual(
+            replacement.mapProps,
+          );
+          expect(dashboards['dashboard-1']!.panels[0].config).toEqual(
+            result.llmResult.data.config,
+          );
+        }
+      },
+    );
+  });
+
   it('registers the dashboard map tool under the shared map tool key', () => {
     const {dashboardAdapter, databaseAdapter} = createTestAdapters();
     const tools = createDeckMapDashboardAiTools({
@@ -386,9 +573,13 @@ describe('createDeckMapDashboardTool', () => {
   });
 
   it('includes deck map guidance in reusable dashboard instructions', () => {
-    expect(getDashboardWithDeckMapAiInstructions()).toContain(
-      'create_dashboard_map',
-    );
+    const instructions = getDashboardWithDeckMapAiInstructions();
+    expect(instructions).toContain('create_dashboard_map');
+    expect(instructions).toContain('Shared Deck map authoring rules');
+    expect(instructions).toContain('Never set mapStyle to a mapbox://');
+    expect(instructions).toContain('omit getWeight');
+    expect(instructions).toContain('COLOR SCALE FIELD VARIANCE');
+    expect(instructions).toContain('min < max');
   });
 
   it('provides default dashboard slice options with the deck map panel action', () => {
@@ -447,6 +638,128 @@ describe('createDeckMapDashboardTool', () => {
       title: 'Earthquake map',
       config: normalizedScatterConfig,
     });
+  });
+
+  it('validates and selects the prepared dataset table name', async () => {
+    const selectedTables: string[] = [];
+    const resolvedTables: string[] = [];
+    const tool = createDeckMapDashboardTool({
+      stripCatalogNames: ['sqlrooms-cli'],
+      databaseAdapter: {
+        getTables: () => [],
+        findTable: (tableName) => {
+          const name =
+            typeof tableName === 'string' ? tableName : tableName.toString();
+          resolvedTables.push(name);
+          return name === 'main.earthquakes'
+            ? ({tableName: name, columns: []} as any)
+            : undefined;
+        },
+      },
+      dashboardAdapter: {
+        setSelectedTable: (tableName) => {
+          selectedTables.push(tableName);
+        },
+        addPanel: () => 'panel-1',
+        updatePanel: () => {},
+        removePanel: () => {},
+        getPanel: () => undefined,
+        getPanelIssue: () => undefined,
+      },
+    });
+
+    const result = await (tool as any).execute({
+      title: 'Earthquake map',
+      config: {
+        ...scatterConfig,
+        datasets: {
+          earthquakes: {
+            ...scatterConfig.datasets.earthquakes,
+            source: {tableName: 'sqlrooms-cli.main.earthquakes'},
+          },
+        },
+      },
+      reasoning: 'show locations',
+    });
+
+    expect(result.llmResult.success).toBe(true);
+    expect(resolvedTables).toContain('main.earthquakes');
+    expect(selectedTables).toEqual(['main.earthquakes']);
+    expect(
+      result.llmResult.data.config.datasets.earthquakes.source.tableName,
+    ).toBe('main.earthquakes');
+  });
+
+  it('rejects unknown colorScale fields on bare tableName sources', async () => {
+    const {dashboardAdapter, databaseAdapter} = createTestAdapters();
+    const tool = createDeckMapDashboardTool({
+      dashboardAdapter,
+      databaseAdapter,
+    });
+
+    const result = await (tool as any).execute({
+      title: 'Bad color field',
+      config: {
+        ...scatterConfig,
+        spec: {
+          ...scatterConfig.spec,
+          layers: [
+            {
+              ...scatterConfig.spec.layers[0],
+              getFillColor: {
+                '@@function': 'colorScale',
+                field: 'mag',
+                type: 'sequential',
+                scheme: 'Viridis',
+                domain: 'auto',
+              },
+            },
+          ],
+        },
+      },
+      reasoning: 'typo field',
+    });
+
+    expect(result.llmResult.success).toBe(false);
+    expect(result.llmResult.errorMessage).toMatch(
+      /colorScale field "mag" is not a column/,
+    );
+  });
+
+  it('fixes colorScale field casing via prepare on dashboard create', async () => {
+    const {dashboards, dashboardAdapter, databaseAdapter} =
+      createTestAdapters();
+    const tool = createDeckMapDashboardTool({
+      dashboardAdapter,
+      databaseAdapter,
+    });
+
+    const result = await (tool as any).execute({
+      title: 'Cased color field',
+      config: {
+        ...scatterConfig,
+        spec: {
+          ...scatterConfig.spec,
+          layers: [
+            {
+              ...scatterConfig.spec.layers[0],
+              getFillColor: {
+                '@@function': 'colorScale',
+                field: 'Magnitude',
+                type: 'sequential',
+                scheme: 'Viridis',
+                domain: 'auto',
+              },
+            },
+          ],
+        },
+      },
+      reasoning: 'fix casing',
+    });
+
+    expect(result.llmResult.success).toBe(true);
+    const layer = dashboards['dashboard-1']!.panels[0].config.spec.layers[0];
+    expect(layer.getFillColor.field).toBe('magnitude');
   });
 
   it('updates an existing map panel from a native Deck JSON config', async () => {

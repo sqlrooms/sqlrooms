@@ -46,7 +46,7 @@ describe('block document AI helpers', () => {
     const result = await (tool as any).execute({
       reasoning: 'Add a short summary.',
       type: 'paragraph',
-      text: 'A compact summary.',
+      text: [{type: 'text', text: 'A compact summary.'}],
     });
 
     expect(result).toEqual({
@@ -59,7 +59,7 @@ describe('block document AI helpers', () => {
       expect.objectContaining({
         id: result.blockId,
         type: 'paragraph',
-        text: 'A compact summary.',
+        text: [{type: 'text', text: 'A compact summary.'}],
       }),
     ]);
   });
@@ -86,7 +86,7 @@ describe('block document AI helpers', () => {
     const result = await (tool as any).execute({
       reasoning: 'Add a short summary.',
       type: 'paragraph',
-      text: 'A compact summary.',
+      text: [{type: 'text', text: 'A compact summary.'}],
     });
 
     expect(result).toEqual({
@@ -117,7 +117,7 @@ describe('block document AI helpers', () => {
       reasoning: 'Add a short heading.',
       type: 'heading',
       level: 2,
-      text: 'Summary',
+      text: [{type: 'text', text: 'Summary'}],
     });
 
     expect(result).toEqual({
@@ -128,7 +128,7 @@ describe('block document AI helpers', () => {
     expect(addedBlocks).toEqual([
       expect.objectContaining({
         type: 'heading',
-        text: 'Summary',
+        text: [{type: 'text', text: 'Summary'}],
       }),
     ]);
   });
@@ -151,7 +151,7 @@ describe('block document AI helpers', () => {
           id: 'block-2',
           blockType: 'html-app',
           blockInstanceId: 'html-app-1',
-          title: 'Country Explorer',
+          caption: 'Country Explorer',
         }),
       ],
       addBlock: (_blockDocumentId, block) => block.id,
@@ -166,6 +166,8 @@ describe('block document AI helpers', () => {
 
     expect(result).toEqual({
       success: true,
+      blockDocumentId: 'document-1',
+      documentExists: true,
       blocks: [
         {
           blockId: 'block-1',
@@ -182,7 +184,7 @@ describe('block document AI helpers', () => {
           blockId: 'block-2',
           index: 1,
           type: 'statefulBlock',
-          title: 'Country Explorer',
+          caption: 'Country Explorer',
           statefulBlock: {
             blockType: 'html-app',
             blockInstanceId: 'html-app-1',
@@ -192,6 +194,95 @@ describe('block document AI helpers', () => {
     });
     expect(result.blocks[0]).not.toHaveProperty('dashboardId');
     expect(result.blocks[1]).not.toHaveProperty('htmlAppId');
+  });
+
+  it('allows hosts to augment block summaries with runtime metadata', async () => {
+    const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
+      ensureBlockDocument: () => {},
+      getBlocks: () => [
+        blockDocumentBlockToNode({
+          type: 'statefulBlock',
+          id: 'block-1',
+          blockType: 'map',
+          blockInstanceId: 'map-1',
+        }),
+      ],
+      addBlock: (_blockDocumentId, block) => block.id,
+    };
+
+    const tool = createListBlockDocumentBlocksTool({
+      blockDocumentAdapter,
+      blockDocumentId: 'document-1',
+      augmentBlockSummary: ({block}) =>
+        block.type === 'statefulBlock' && block.blockType === 'map'
+          ? {
+              runtimeIssues: [
+                {
+                  kind: 'render-error',
+                  message: 'Layer failed to render',
+                },
+              ],
+            }
+          : undefined,
+    });
+
+    const result = await (tool as any).execute({});
+
+    expect(result).toEqual({
+      success: true,
+      blockDocumentId: 'document-1',
+      documentExists: true,
+      blocks: [
+        {
+          blockId: 'block-1',
+          index: 0,
+          type: 'statefulBlock',
+          statefulBlock: {
+            blockType: 'map',
+            blockInstanceId: 'map-1',
+          },
+          runtimeIssues: [
+            {
+              kind: 'render-error',
+              message: 'Layer failed to render',
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('distinguishes an empty block document from a missing one', async () => {
+    const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
+      ensureBlockDocument: () => {},
+      getBlocks: (blockDocumentId) =>
+        blockDocumentId === 'empty-document' ? [] : undefined,
+      addBlock: (_blockDocumentId, block) => block.id,
+    };
+
+    const emptyDocumentTool = createListBlockDocumentBlocksTool({
+      blockDocumentAdapter,
+      blockDocumentId: 'empty-document',
+    });
+    const missingDocumentTool = createListBlockDocumentBlocksTool({
+      blockDocumentAdapter,
+      blockDocumentId: 'missing-document',
+    });
+
+    await expect((emptyDocumentTool as any).execute({})).resolves.toEqual({
+      success: true,
+      blockDocumentId: 'empty-document',
+      documentExists: true,
+      blocks: [],
+    });
+    await expect((missingDocumentTool as any).execute({})).resolves.toEqual({
+      success: true,
+      blockDocumentId: 'missing-document',
+      documentExists: false,
+      blocks: [],
+    });
   });
 
   it('moves a top-level block through the block document adapter', async () => {

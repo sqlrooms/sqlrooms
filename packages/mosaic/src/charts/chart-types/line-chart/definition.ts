@@ -7,7 +7,7 @@ import {LineChart} from 'lucide-react';
 import {createLineChartSpec} from './spec';
 import {DEFAULT_CHART_MAX_DATA_POINTS} from '../../../chart-runtime';
 
-const DESCRIPTION = 'Create a line chart of two fields';
+const DESCRIPTION = 'Create a line chart of numeric measures or row counts';
 
 export const lineChartChartType: SpecChartTypeDefinition<LineChartConfig> = {
   id: 'line-chart',
@@ -19,13 +19,15 @@ export const lineChartChartType: SpecChartTypeDefinition<LineChartConfig> = {
   settingsComponent: LineChartSettingsComponent,
   buildTitle: titleFromDescription(DESCRIPTION),
   createTool: createLineChartAiTool,
+  // Count queries can still return one point per distinct X value. Limit the
+  // result, even with an interval: binning does not guarantee low cardinality.
   getDataPolicy: ({config}) =>
-    config.settings.xInterval
+    config.settings.metric !== 'count' && config.settings.xInterval
       ? null
       : {
           maxRows: DEFAULT_CHART_MAX_DATA_POINTS,
           reason:
-            'Unaggregated line charts render source rows. Add a temporal interval or use an aggregated chart for larger datasets.',
+            'Line charts render one point per result row. Use a coarser temporal interval or reduce the distinct X values for larger results.',
         },
   createSpec: createLineChartSpec,
 };

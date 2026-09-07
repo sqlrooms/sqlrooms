@@ -14,6 +14,9 @@ export type {
   ArtifactType as ArtifactTypeType,
 } from './ArtifactsSliceConfig';
 
+export {ArtifactSessionLinkSchema} from './ai/ArtifactSessionLink';
+export type {ArtifactSessionLink} from './ai/ArtifactSessionLink';
+
 export {
   createArtifactTypeFromStatefulBlock,
   defineArtifactTypes,
@@ -44,6 +47,8 @@ export type {
   UseArtifactWorkspaceOptions,
   UseArtifactWorkspaceResult,
 } from './artifactWorkspace';
+
+export {resolveArtifactTargetId} from './artifactTarget';
 
 export {
   ArtifactTabs,

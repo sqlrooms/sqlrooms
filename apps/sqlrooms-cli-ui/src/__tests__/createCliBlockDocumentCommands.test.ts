@@ -1,375 +1,366 @@
 import {jest} from '@jest/globals';
-import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck';
+import {createDeckMapPointTransformSql} from '@sqlrooms/deck';
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
-import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
 import {createCliBlockDocumentCommands} from '../createCliBlockDocumentCommands';
+import {
+  DEFAULT_CLI_CAPABILITY_PROFILE,
+  EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
+  DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+} from '../profiles';
 
-const earthquakesTable = {
+const table = {
   table: makeQualifiedTableName({schema: 'main', table: 'earthquakes'}),
   tableName: 'earthquakes',
   schema: 'main',
   isView: false,
-  columns: [{name: 'id', type: 'INTEGER'}],
+  columns: [
+    {name: 'longitude', type: 'DOUBLE'},
+    {name: 'latitude', type: 'DOUBLE'},
+  ],
 };
-const earthquakesTableIdentity = '"main"."earthquakes"';
 
-function createCommandContext(state: unknown) {
-  return {
-    getState: () => state as any,
-    store: {getState: () => state} as any,
-    invocation: {surface: 'unknown' as const},
-  };
-}
-
-function getCommand(id: string) {
-  const command = createCliBlockDocumentCommands().find(
-    (candidate) => candidate.id === id,
+function command(id: string) {
+  const result = createCliBlockDocumentCommands().find(
+    (item) => item.id === id,
   );
-  if (!command) {
-    throw new Error(`Missing command "${id}".`);
-  }
-  return command;
+  if (!result) throw new Error(`Missing ${id}`);
+  return result;
 }
 
-function createState() {
+function profileCommand(
+  id: string,
+  statefulBlockTypes: readonly (
+    | 'dashboard'
+    | 'data-table'
+    | 'html-app'
+    | 'map'
+  )[],
+) {
+  const result = createCliBlockDocumentCommands({statefulBlockTypes}).find(
+    (item) => item.id === id,
+  );
+  if (!result) throw new Error(`Missing ${id}`);
+  return result;
+}
+
+function setup() {
   const blocks: any[] = [
     {
       id: 'block-1',
       type: 'statefulBlock',
       blockType: 'map',
       blockInstanceId: 'map-1',
-      title: 'Map',
+      caption: 'Earthquake Explorer',
     },
   ];
-  const invokeCommand = jest.fn(async (commandId: string, input: any) => {
-    if (commandId === 'block-document.create-stateful-block') {
+  const mapsById: Record<string, any> = {
+    'map-1': {
+      id: 'map-1',
+      title: 'Earthquake Explorer',
+      config: {
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              id: 'earthquakes',
+              _sqlroomsBinding: {dataset: 'earthquakes'},
+            },
+            {
+              '@@type': 'GeoArrowHeatmapLayer',
+              id: 'stale-heatmap',
+              _sqlroomsBinding: {dataset: 'stale'},
+            },
+          ],
+        },
+        datasets: {
+          earthquakes: {source: {tableName: 'earthquakes'}},
+          stale: {source: {tableName: 'missing_table'}},
+        },
+      },
+    },
+  };
+  const invokeCommand = jest.fn(async (id: string, input: any) => {
+    if (id === 'block-document.create-stateful-block') {
       return {
         success: true,
-        commandId,
+        commandId: id,
         data: {
           blockId: `${input.blockType}-block`,
-          blockInstanceId: input.blockInstanceId ?? `${input.blockType}-id`,
+          blockInstanceId:
+            input.blockInstanceId ?? `${input.blockType}-instance`,
         },
       };
     }
-    if (commandId.startsWith('dashboard.')) {
-      return {success: true, commandId, data: input};
-    }
-    return {success: true, commandId, data: input};
+    return {success: true, commandId: id, data: input};
   });
-  const updateBlock = jest.fn(
-    (blockDocumentId: string, blockId: string, block) => {
-      const index = blocks.findIndex((candidate) => candidate.id === blockId);
-      if (blockDocumentId !== 'worksheet-1' || index < 0) return false;
-      blocks[index] = block;
-      return true;
+  const state: any = {
+    commands: {invokeCommand},
+    artifacts: {
+      getArtifact: () => ({
+        id: 'document-1',
+        type: 'block-document',
+        title: 'Document',
+      }),
     },
-  );
-
-  return {
-    blocks,
-    state: {
-      commands: {invokeCommand},
-      artifacts: {
-        getArtifact: (artifactId: string) =>
-          artifactId === 'worksheet-1'
-            ? {id: artifactId, type: 'worksheet', title: 'Worksheet'}
-            : undefined,
-      },
-      blockDocuments: {
-        ensureBlockDocument: jest.fn(),
-        getBlocks: () => blocks,
-        updateBlock,
-      },
-      db: {
-        findTable: (tableName: string) =>
-          tableName === 'earthquakes' || tableName === earthquakesTableIdentity
-            ? earthquakesTable
-            : undefined,
-      },
-      mosaicDashboard: {
-        ensureDashboard: jest.fn(),
-        getDashboard: jest.fn(() => ({
-          panels: [] as MosaicDashboardPanelConfigType[],
-        })),
-      },
+    blockDocuments: {
+      ensureBlockDocument: jest.fn(),
+      getBlocks: () => blocks,
+      updateBlock: jest.fn(() => true),
     },
-    invokeCommand,
-    updateBlock,
+    db: {
+      findTable: (name: string) => (name === 'earthquakes' ? table : undefined),
+    },
+    deckMaps: {
+      config: {mapsById},
+      getMap: (id: string) => mapsById[id],
+      ensureMap: jest.fn((id: string, options: any) => {
+        mapsById[id] ??= {
+          id,
+          title: options.title,
+          config: {spec: {}, datasets: {}},
+        };
+      }),
+      updateMap: jest.fn((id: string, patch: any) =>
+        Object.assign(mapsById[id], patch),
+      ),
+    },
+    mosaicDashboard: {ensureDashboard: jest.fn()},
   };
+  return {state, invokeCommand, mapsById};
 }
 
 describe('createCliBlockDocumentCommands', () => {
-  it('registers the block document command IDs for worksheet stateful blocks', () => {
-    expect(
-      createCliBlockDocumentCommands().map((command) => command.id),
-    ).toEqual([
-      'block-document.add-dashboard-block',
-      'block-document.add-data-table-block',
+  it('only exposes block-creating commands enabled by the profile', () => {
+    const defaultCommandIds = createCliBlockDocumentCommands({
+      statefulBlockTypes: DEFAULT_CLI_CAPABILITY_PROFILE.blocks.stateful,
+    }).map(({id}) => id);
+    expect(defaultCommandIds).toEqual(
+      expect.arrayContaining([
+        'block-document.add-dashboard-block',
+        'block-document.add-data-table-block',
+      ]),
+    );
+    expect(defaultCommandIds).not.toContain(
       'block-document.add-html-app-block',
+    );
+    expect(defaultCommandIds).not.toContain('block-document.add-map-block');
+
+    const experimentalCommandIds = createCliBlockDocumentCommands({
+      statefulBlockTypes: EXPERIMENTAL_CLI_CAPABILITY_PROFILE.blocks.stateful,
+    }).map(({id}) => id);
+    expect(experimentalCommandIds).toEqual(
+      expect.arrayContaining([
+        'block-document.add-dashboard-block',
+        'block-document.add-data-table-block',
+        'block-document.add-html-app-block',
+        'block-document.add-map-block',
+      ]),
+    );
+
+    const documentCommandIds = createCliBlockDocumentCommands({
+      statefulBlockTypes:
+        DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
+    }).map(({id}) => id);
+    expect(documentCommandIds).toEqual([
       'block-document.update-block-metadata',
       'block-document.add-map-block',
     ]);
   });
 
-  it('adds dashboard blocks through block document and dashboard commands', async () => {
-    const {state, invokeCommand} = createState();
-    const result = await getCommand(
-      'block-document.add-dashboard-block',
-    ).execute(createCommandContext(state), {
-      blockDocumentId: 'worksheet-1',
-      title: 'Dashboard',
-      tableName: 'earthquakes',
-      intent: 'show trends',
-    });
-
-    expect(result).toMatchObject({
-      success: true,
-      data: {
-        blockDocumentId: 'worksheet-1',
-        blockId: 'dashboard-block',
-        dashboardId: 'dashboard-id',
-        selectedTable: earthquakesTableIdentity,
-      },
-    });
-    expect(invokeCommand).toHaveBeenCalledWith(
-      'block-document.create-stateful-block',
-      expect.objectContaining({
-        artifactId: 'worksheet-1',
-        blockType: 'dashboard',
-        title: 'Dashboard',
-      }),
-      {surface: 'ai', actor: 'block-document-command'},
-    );
-    expect(invokeCommand).toHaveBeenCalledWith(
-      'dashboard.set-selected-table',
-      {dashboardId: 'dashboard-id', tableName: earthquakesTableIdentity},
-      {surface: 'ai', actor: 'block-document-command'},
-    );
-  });
-
-  it('adds data table and HTML app blocks through block document commands', async () => {
-    const {state, invokeCommand} = createState();
-
-    await expect(
-      getCommand('block-document.add-data-table-block').execute(
-        createCommandContext(state),
-        {
-          blockDocumentId: 'worksheet-1',
-          title: 'Profile',
-          tableName: 'earthquakes',
-        },
-      ),
-    ).resolves.toMatchObject({
-      success: true,
-      data: {
-        blockId: 'data-table-block',
-        dataTableId: 'data-table-id',
-        selectedTable: earthquakesTableIdentity,
-      },
-    });
-    expect(invokeCommand).toHaveBeenCalledWith(
-      'block-document.create-stateful-block',
-      expect.objectContaining({
-        artifactId: 'worksheet-1',
-        blockType: 'data-table',
-        title: earthquakesTableIdentity,
-      }),
-      {surface: 'ai', actor: 'block-document-command'},
-    );
-
-    await expect(
-      getCommand('block-document.add-html-app-block').execute(
-        createCommandContext(state),
-        {
-          blockDocumentId: 'worksheet-1',
-          title: 'Explorer App',
-        },
-      ),
-    ).resolves.toMatchObject({
-      success: true,
-      data: {blockId: 'html-app-block', appId: 'html-app-id'},
-    });
-  });
-
-  it('adds map blocks with canonical selected table identity', async () => {
-    const {state, invokeCommand} = createState();
-
-    await expect(
-      getCommand('block-document.add-map-block').execute(
-        createCommandContext(state),
-        {
-          blockDocumentId: 'worksheet-1',
-          title: 'Map',
-          mapId: 'map-1',
-          tableName: 'earthquakes',
-          reasoning: 'show earthquake points',
-          config: {
-            spec: {},
-            datasets: {
-              earthquakes: {source: {tableName: 'earthquakes'}},
-            },
-          },
-        },
-      ),
-    ).resolves.toMatchObject({
-      success: true,
-      data: {
-        blockId: 'block-1',
-        mapId: 'map-1',
-        selectedTable: earthquakesTableIdentity,
-      },
-    });
-    expect(invokeCommand).toHaveBeenCalledWith(
-      'dashboard.set-selected-table',
-      {dashboardId: 'map-1', tableName: earthquakesTableIdentity},
-      {surface: 'ai', actor: 'block-document-command'},
-    );
-  });
-
-  it('updates block document block metadata through the block document slice', async () => {
-    const {state, updateBlock} = createState();
-
-    const result = await getCommand(
-      'block-document.update-block-metadata',
-    ).execute(createCommandContext(state), {
-      blockDocumentId: 'worksheet-1',
-      blockId: 'block-1',
-      title: 'Updated Map',
-      caption: 'Updated Map',
-    });
-
-    expect(result).toMatchObject({
-      success: true,
-      data: {
-        blockDocumentId: 'worksheet-1',
-        blockId: 'block-1',
-        title: 'Updated Map',
-        caption: 'Updated Map',
-      },
-    });
-    expect(updateBlock).toHaveBeenCalledWith(
-      'worksheet-1',
-      'block-1',
-      expect.objectContaining({
-        id: 'block-1',
-        title: 'Updated Map',
-        caption: 'Updated Map',
-      }),
-    );
-  });
-
-  it('does not mutate dashboard state when map block creation fails', async () => {
-    const {state, invokeCommand} = createState();
-    invokeCommand.mockImplementation(async (commandId: string, input: any) => {
-      if (
-        commandId === 'block-document.create-stateful-block' &&
-        input.blockType === 'map'
-      ) {
-        return {
-          success: false,
-          commandId,
-          error: 'Unsupported block type: map',
-          data: undefined,
-        };
-      }
-      if (commandId.startsWith('dashboard.')) {
-        return {success: true, commandId, data: input};
-      }
-      return {success: true, commandId, data: input};
-    });
-
-    await expect(
-      getCommand('block-document.add-map-block').execute(
-        createCommandContext(state),
-        {
-          blockDocumentId: 'worksheet-1',
-          title: 'Map',
-          reasoning: 'show earthquake points',
-          config: {
-            spec: {},
-            datasets: {
-              earthquakes: {source: {tableName: 'earthquakes'}},
-            },
-          },
-        },
-      ),
-    ).rejects.toThrow('Unsupported block type: map');
-
-    expect(state.mosaicDashboard.ensureDashboard).not.toHaveBeenCalled();
-    expect(invokeCommand).not.toHaveBeenCalledWith(
-      'dashboard.set-selected-table',
-      expect.anything(),
-      expect.anything(),
-    );
-    expect(invokeCommand).not.toHaveBeenCalledWith(
-      'dashboard.add-panel',
-      expect.anything(),
-      expect.anything(),
-    );
-  });
-
-  it('updates a map panel seeded by stateful block creation instead of adding a duplicate', async () => {
-    const {state, invokeCommand} = createState();
-    let mapStateSeeded = false;
-    const seededPanel: MosaicDashboardPanelConfigType = {
-      id: 'seeded-map-panel',
-      type: DECK_MAP_DASHBOARD_PANEL_TYPE,
-      title: 'Seeded Map',
-      config: {},
-    };
-    state.mosaicDashboard.getDashboard.mockImplementation(() => ({
-      panels: mapStateSeeded ? [seededPanel] : [],
-    }));
-    invokeCommand.mockImplementation(async (commandId: string, input: any) => {
-      if (
-        commandId === 'block-document.create-stateful-block' &&
-        input.blockType === 'map'
-      ) {
-        mapStateSeeded = true;
-        return {
-          success: true,
-          commandId,
-          data: {
-            blockId: 'map-block',
-            blockInstanceId: input.blockInstanceId,
-          },
-        };
-      }
-      if (commandId.startsWith('dashboard.')) {
-        return {success: true, commandId, data: input};
-      }
-      return {success: true, commandId, data: input};
-    });
-
-    const result = await getCommand('block-document.add-map-block').execute(
-      createCommandContext(state),
+  it('rejects metadata edits for stateful blocks disabled by the profile', async () => {
+    const {state} = setup();
+    state.blockDocuments.getBlocks = () => [
       {
-        blockDocumentId: 'worksheet-1',
-        title: 'Map',
-        reasoning: 'show earthquake points',
+        id: 'dashboard-block',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-1',
+        caption: 'Dashboard',
+      },
+    ];
+    const updateMetadata = profileCommand(
+      'block-document.update-block-metadata',
+      DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
+    );
+
+    expect(() =>
+      updateMetadata.execute({getState: () => state} as any, {
+        blockDocumentId: 'document-1',
+        blockId: 'dashboard-block',
+        caption: 'Changed',
+      }),
+    ).toThrow(
+      'Stateful block type dashboard is not available in the selected capability profile',
+    );
+    expect(state.blockDocuments.updateBlock).not.toHaveBeenCalled();
+  });
+
+  it('creates a direct document map without a model or dashboard command', async () => {
+    const {state, invokeCommand, mapsById} = setup();
+    const result = await command('block-document.add-map-block').execute(
+      {getState: () => state} as any,
+      {
+        blockDocumentId: 'document-1',
+        title: 'New Earthquake Map',
+        tableName: 'earthquakes',
         config: {
-          spec: {},
-          datasets: {
-            earthquakes: {source: {tableName: 'earthquakes'}},
+          datasets: {earthquakes: {source: {tableName: 'earthquakes'}}},
+          spec: {
+            layers: [
+              {
+                '@@type': 'GeoArrowScatterplotLayer',
+                _sqlroomsBinding: {dataset: 'earthquakes'},
+              },
+            ],
           },
         },
       },
     );
 
-    expect(result).toMatchObject({
-      success: true,
-      data: {blockId: 'map-block', panelId: 'seeded-map-panel'},
-    });
-    expect(invokeCommand).toHaveBeenCalledWith(
-      'dashboard.update-panel',
-      expect.objectContaining({
-        panelId: 'seeded-map-panel',
-      }),
-      {surface: 'ai', actor: 'block-document-command'},
+    expect(result).toMatchObject({success: true});
+    const mapId = (result as any).data.mapId as string;
+    expect(mapsById[mapId]).toMatchObject({title: 'New Earthquake Map'});
+    expect(mapsById[mapId].config.datasets.earthquakes.source.tableName).toBe(
+      '"main"."earthquakes"',
     );
-    expect(invokeCommand).not.toHaveBeenCalledWith(
-      'dashboard.add-panel',
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'block-document.create-stateful-block',
+      expect.objectContaining({blockType: 'map', blockInstanceId: mapId}),
+      expect.anything(),
+    );
+    expect(
+      invokeCommand.mock.calls.some(([id]) =>
+        String(id).startsWith('dashboard.'),
+      ),
+    ).toBe(false);
+  });
+
+  it('generates canonical point geometry from structured provenance', async () => {
+    const {state, mapsById} = setup();
+    const result = await command('block-document.add-map-block').execute(
+      {getState: () => state} as any,
+      {
+        blockDocumentId: 'document-1',
+        title: 'Earthquake Points',
+        tableName: 'earthquakes',
+        pointBinding: {
+          dataset: 'earthquakes',
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+          geometryColumn: 'geom',
+        },
+        config: {
+          datasets: {
+            earthquakes: {
+              source: {
+                tableName: 'earthquakes',
+                transformSql:
+                  'SELECT * EXCLUDE (latitude, longitude), ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM __sqlrooms_source',
+              },
+            },
+          },
+          spec: {
+            layers: [
+              {
+                '@@type': 'GeoArrowScatterplotLayer',
+                _sqlroomsBinding: {dataset: 'earthquakes'},
+              },
+            ],
+          },
+        },
+      },
+    );
+
+    expect(result).toMatchObject({success: true});
+    const mapId = (result as any).data.mapId as string;
+    const config = mapsById[mapId].config;
+    expect(config.datasets.earthquakes).toMatchObject({
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+      source: {
+        tableName: '"main"."earthquakes"',
+        transformSql: createDeckMapPointTransformSql({
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+          geometryColumn: 'geom',
+        }),
+      },
+    });
+    expect(config.spec.layers[0]._sqlroomsBinding).toEqual({
+      dataset: 'earthquakes',
+      geometryColumn: 'geom',
+    });
+    expect(config.fitToData).toMatchObject({
+      dataset: 'earthquakes',
+      geometryColumn: 'geom',
+    });
+  });
+
+  it('updates document maps as resources without dashboard commands or panelId', async () => {
+    const {state, invokeCommand, mapsById} = setup();
+    const result = await command('block-document.add-map-block').execute(
+      {getState: () => state} as any,
+      {
+        blockDocumentId: 'document-1',
+        mapId: 'map-1',
+        reasoning: 'change colors',
+        replaceLayers: true,
+        replaceDatasets: true,
+        config: {
+          spec: {
+            layers: [
+              {
+                '@@type': 'GeoArrowScatterplotLayer',
+                _sqlroomsBinding: {
+                  dataset: 'earthquakes',
+                  geometryColumn: '__sqlrooms_geom',
+                },
+              },
+            ],
+          },
+          datasets: {earthquakes: {source: {tableName: 'earthquakes'}}},
+        },
+      },
+    );
+    expect(result).toMatchObject({success: true, data: {mapId: 'map-1'}});
+    expect((result as any).data).not.toHaveProperty('panelId');
+    expect(mapsById['map-1'].title).toBe('Earthquake Explorer');
+    expect(mapsById['map-1'].config.spec.layers).toHaveLength(1);
+    expect(Object.keys(mapsById['map-1'].config.datasets)).toEqual([
+      'earthquakes',
+    ]);
+    expect(mapsById['map-1'].config.datasets.earthquakes).toMatchObject({
+      geometryColumn: '__sqlrooms_geom',
+      geometryEncodingHint: 'wkb',
+      source: {
+        tableName: '"main"."earthquakes"',
+        transformSql: expect.stringContaining('ST_AsWKB'),
+      },
+    });
+    expect(mapsById['map-1'].config.fitToData).toMatchObject({
+      dataset: 'earthquakes',
+      geometryColumn: '__sqlrooms_geom',
+    });
+    expect(state.mosaicDashboard.ensureDashboard).not.toHaveBeenCalled();
+    expect(
+      invokeCommand.mock.calls.some(([id]) =>
+        String(id).startsWith('dashboard.'),
+      ),
+    ).toBe(false);
+  });
+
+  it('keeps actual dashboard block creation on Mosaic commands', async () => {
+    const {state, invokeCommand} = setup();
+    await command('block-document.add-dashboard-block').execute(
+      {getState: () => state} as any,
+      {
+        blockDocumentId: 'document-1',
+        title: 'Dashboard',
+        tableName: 'earthquakes',
+      },
+    );
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'dashboard.set-selected-table',
       expect.anything(),
       expect.anything(),
     );

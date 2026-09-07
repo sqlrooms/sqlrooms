@@ -5,12 +5,6 @@ import {FC, PropsWithChildren, ReactNode, useCallback} from 'react';
 import {useStoreWithCanvas} from '../CanvasSlice';
 import {AddNodePopover} from './AddNodePopover';
 
-const PROMPT_PLACEHOLDER = {
-  sql: 'What would you like to learn about the data?',
-  vega: 'How would you like to visualize the data?',
-  default: 'What would you like to do?',
-};
-
 /**
  * Container applied to every canvas node. Provides resizing, connection handles,
  * and a standard "add child" affordance that creates downstream nodes.
@@ -56,28 +50,6 @@ export const CanvasNodeContainer: FC<
             <div className="flex items-center gap-2">{headerRight}</div>
           </div>
         )}
-        {/* <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="default"
-              className="h-8 w-8 -translate-y-1/2 rounded-full"
-            >
-              <SparklesIcon className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="max-h-[50vh] w-[400px] overflow-auto">
-            <QueryControls
-              placeholder={`✨ ${
-                PROMPT_PLACEHOLDER[
-                  (cell?.type ?? 'default') as keyof typeof PROMPT_PLACEHOLDER
-                ]
-              }`}
-              onRun={() => {
-                setAssistantOpen?.(true);
-              }}
-            />
-          </PopoverContent>
-        </Popover> */}
         <div className="w-full flex-1 overflow-auto">{children}</div>
       </div>
       <AddNodePopover

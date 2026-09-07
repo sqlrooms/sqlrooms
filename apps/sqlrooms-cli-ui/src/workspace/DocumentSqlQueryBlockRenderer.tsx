@@ -1,0 +1,20 @@
+import {SqlQueryBlock, SQL_QUERY_BLOCK_TYPE} from '@sqlrooms/sql-editor';
+import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
+
+export const DocumentSqlQueryBlockRenderer = ({
+  blockInstanceId,
+  blockType,
+  readOnly,
+}: BlockDocumentStatefulBlockRendererProps) => {
+  if (!blockInstanceId || blockType !== SQL_QUERY_BLOCK_TYPE) {
+    return (
+      <div className="text-muted-foreground p-4 text-sm">
+        Unsupported stateful block type: {blockType || 'Unconfigured'}
+      </div>
+    );
+  }
+
+  return (
+    <SqlQueryBlock queryId={blockInstanceId} readOnly={readOnly} compact />
+  );
+};

@@ -7,12 +7,14 @@ import {defaultTypeLabel} from './utils';
 
 type ContextSelectorItemProps = {
   item: ContextSelectorItem;
+  selected: boolean;
   running: boolean;
   onSelect: () => void;
 };
 
 export const ContextSelectorItemComponent: FC<ContextSelectorItemProps> = ({
   item,
+  selected,
   running,
   onSelect,
 }) => {
@@ -40,7 +42,7 @@ export const ContextSelectorItemComponent: FC<ContextSelectorItemProps> = ({
       className="flex items-center gap-2 text-xs"
     >
       {renderItem ? (
-        renderItem({item, selected: false, main: false, running})
+        renderItem({item, selected, main: false, running})
       ) : (
         <>
           <span className="shrink-0">
@@ -57,9 +59,9 @@ export const ContextSelectorItemComponent: FC<ContextSelectorItemProps> = ({
           <span className="text-muted-foreground text-xs capitalize">
             {defaultTypeLabel(item)}
           </span>
-          {running && (
+          {selected && (
             <UiBadge variant="secondary" className="h-5 px-1.5 text-[10px]">
-              Running
+              Selected
             </UiBadge>
           )}
         </>

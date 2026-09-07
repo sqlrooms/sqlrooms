@@ -162,7 +162,19 @@ import {
   continuousDivergingSchemes,
   binnedNumericSchemes,
   categoricalSchemes,
+  allKnownColorSchemeNames,
+  formatColorSchemePromptLists,
 } from '@sqlrooms/color-scales';
+```
+
+For Jest / non-browser contexts that must avoid d3 and React, import the
+d3-free name lists from the subpath:
+
+```ts
+import {
+  allKnownColorSchemeNames,
+  formatColorSchemePromptLists,
+} from '@sqlrooms/color-scales/colorSchemeNames';
 ```
 
 It also exports the registries used internally for interpolation and discrete

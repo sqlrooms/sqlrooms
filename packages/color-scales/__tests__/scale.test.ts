@@ -50,4 +50,22 @@ describe('@sqlrooms/color-scales', () => {
       expect(legend.items).toHaveLength(3);
     }
   });
+
+  it('samples continuous schemes (Viridis) into quantile bins', () => {
+    const mapper = createColorScaleMapper({
+      colorScale: {
+        field: 'value',
+        type: 'quantile',
+        // Runtime AI configs may pair continuous schemes with quantile;
+        // discrete ColorBrewer tables are preferred but interpolators work.
+        scheme: 'Viridis' as 'Blues',
+        bins: 5,
+      },
+      values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    });
+
+    expect(mapper(1)).toHaveLength(4);
+    expect(mapper(10)).toHaveLength(4);
+    expect(mapper(1)).not.toEqual(mapper(10));
+  });
 });

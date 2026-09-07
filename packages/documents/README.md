@@ -1,5 +1,11 @@
+# @sqlrooms/documents
+
 Artifact-scoped Markdown documents, structured block documents, and
 knowledge-index utilities for SQLRooms.
+
+See the
+[Blocks and Block Documents developer guide](https://sqlrooms.org/blocks-and-documents)
+for the conceptual model, ownership rules, and a focused host setup.
 
 ## Usage
 
@@ -9,12 +15,12 @@ import {
   BlockDocumentsSliceConfig,
   BlockDocumentChartRendererProvider,
   BlockDocumentStatefulBlockRendererProvider,
-  DocumentsSliceConfig,
+  MarkdownDocumentsSliceConfig,
   buildKnowledgeIndex,
   createBlockDocumentCommands,
   createBlockDocumentFeatureSlices,
-  createDocumentCommands,
-  createDocumentsSlice,
+  createMarkdownDocumentCommands,
+  createMarkdownDocumentsSlice,
   createMarkdownDocumentBlockDefinition,
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
@@ -23,10 +29,12 @@ import {
   defineArtifactTypes,
 } from '@sqlrooms/artifacts';
 
-const documentBlockDefinition = createMarkdownDocumentBlockDefinition();
+const markdownBlockDefinition = createMarkdownDocumentBlockDefinition();
 
 const artifactTypes = defineArtifactTypes({
-  document: createArtifactTypeFromStatefulBlock(documentBlockDefinition),
+  'markdown-document': createArtifactTypeFromStatefulBlock(
+    markdownBlockDefinition,
+  ),
   'block-document': {
     label: 'Block Document',
     defaultTitle: 'Block Document',
@@ -48,12 +56,12 @@ const roomStore = createRoomStore(
     {
       name: 'my-room',
       sliceConfigSchemas: {
-        documents: DocumentsSliceConfig,
+        markdownDocuments: MarkdownDocumentsSliceConfig,
         blockDocuments: BlockDocumentsSliceConfig,
       },
     },
     (set, get, store) => ({
-      ...createDocumentsSlice()(set, get, store),
+      ...createMarkdownDocumentsSlice()(set, get, store),
       ...createBlockDocumentFeatureSlices({
         onDeleteOwnedStatefulBlock: ({
           blockType,
@@ -96,18 +104,18 @@ be opened alongside it and edits the same canonical Markdown string:
 />
 ```
 
-Document Markdown can reference document-owned assets with `asset://` URLs:
+Markdown artifacts can reference artifact-owned assets with `asset://` URLs:
 
 ```md
 ![Revenue by week](asset://chart-revenue-week)
 ```
 
-Pass the document asset map to `MarkdownDocumentEditor` to render those links as
+Pass the artifact asset map to `MarkdownDocumentEditor` to render those links as
 browser-loadable image data while preserving the canonical `asset://` link in
 Markdown source. `MarkdownDocument` handles this automatically for artifacts
-stored in the documents slice.
+stored in the `markdownDocuments` slice.
 
-The documents slice exposes `upsertAsset`, `removeAsset`, and `getAsset` for
+The `markdownDocuments` slice exposes `upsertAsset`, `removeAsset`, and `getAsset` for
 managing image assets alongside Markdown content. SVG assets may use `utf8` or
 `base64` encoding; PNG assets must use `base64` encoding.
 
@@ -173,6 +181,10 @@ const tools = {
 };
 ```
 
+The block-listing tool returns the target `blockDocumentId` and a
+`documentExists` flag alongside `blocks`, so agents can distinguish an empty
+document from a missing or incompatible artifact.
+
 `BlockDocumentAiAdapter.addBlock` may return a block ID synchronously or from a
 promise. Hosts that already expose block-document mutations as room commands can
 therefore use `createBlockDocumentCommandAiAdapter` to invoke the canonical
@@ -185,9 +197,74 @@ const blockDocumentAdapter = createBlockDocumentCommandAiAdapter({
 });
 ```
 
-Hosts with persisted compatibility artifact types can pass
-`isBlockDocumentArtifact` without adding that product vocabulary to the shared
-adapter API.
+The adapter accepts only `block-document` artifacts.
+
+### Block-Scoped Ask AI
+
+`startBlockScopedChat(...)` opens or reuses an artifact-scoped AI session for a
+specific block in a block document. It is exported from `@sqlrooms/documents`
+so hosts can wire Ask AI buttons, block header actions, or context menus
+without duplicating session-selection rules.
+
+The helper intentionally depends on a small action adapter instead of importing
+a room store. Hosts provide artifact validation, session ownership, prompt
+updates, and assistant visibility through `StartBlockScopedChatActions`:
+
+```ts
+import {
+  startBlockScopedChat,
+  type StartBlockScopedChatActions,
+} from '@sqlrooms/documents';
+
+const actions: StartBlockScopedChatActions = {
+  getArtifact: (artifactId) =>
+    store.getState().artifacts.getArtifact(artifactId),
+  getCurrentArtifactId: () => store.getState().artifacts.currentArtifactId,
+  setCurrentArtifact: (artifactId) =>
+    store.getState().artifacts.setCurrentArtifact(artifactId),
+  getAiSessions: () => store.getState().ai.config.sessions,
+  getSessionArtifactLinks: () =>
+    store.getState().artifactAi.config.sessionArtifactLinks,
+  createArtifactScopedSession: () =>
+    store.getState().artifactAi.createArtifactScopedSession(),
+  switchSession: (sessionId) => store.getState().ai.switchSession(sessionId),
+  getSessionDraftContextItemIds: (sessionId) =>
+    store.getState().ai.getSessionDraftContextItemIds(sessionId),
+  setSessionDraftContextItemIds: (sessionId, ids) =>
+    store.getState().ai.setSessionDraftContextItemIds(sessionId, ids),
+  setPrompt: (sessionId, prompt) =>
+    store.getState().ai.setPrompt(sessionId, prompt),
+  startAnalysisWhenReady: (sessionId) =>
+    store.getState().ai.startAnalysisWhenReady(sessionId),
+};
+
+await startBlockScopedChat({
+  target: {
+    blockDocumentId,
+    blockId,
+    blockType: 'map',
+    blockInstanceId: mapId,
+  },
+  prompt: 'Repair this map',
+  revealAssistant: () => setAssistantOpen(true),
+  actions,
+  isValidBlockDocumentArtifact: (artifact) =>
+    artifact.type === 'block-document',
+});
+```
+
+`isValidBlockDocumentArtifact` is required because hosts may use
+product-specific artifact type names or compatibility aliases. The helper
+validates the target artifact before mutating UI state, switches to the target
+artifact when needed, and derives the block context item with
+`blockContextItemId(...)` unless `contextItemId` is provided.
+
+Only running sessions for the same artifact and context item block a new Ask AI
+turn. Finished sessions that already contain the block context are reused,
+their prompt is replaced, and their draft context is left untouched if it
+already includes the block item. When a matching running session exists, the
+helper switches to it, shows a toast, and returns without revealing the
+assistant, changing the prompt, or starting another analysis.
 
 The slice can create block documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs
@@ -221,7 +298,6 @@ does not import Mosaic, pivot, or other feature packages:
             blockType: 'dashboard',
             blockInstanceId: createDashboardBlockState(blockId),
             ownership: 'owned',
-            title: 'Dashboard',
             caption: '',
           },
         }),
@@ -239,11 +315,51 @@ does not import Mosaic, pivot, or other feature packages:
 </BlockDocumentChartRendererProvider>
 ```
 
+Hosts can customize a chart block's outer frame with
+`getBlockFrameClassName`. The callback receives the document ID, block ID,
+block type, and current selection state. Its classes are merged after the
+built-in frame classes, which is useful for host-owned states such as an
+in-progress AI edit:
+
+```tsx
+<BlockDocumentChartRendererProvider
+  renderer={MosaicBlockDocumentChartRenderer}
+  getBlockFrameClassName={({blockId, selected}) =>
+    editingBlockIds.has(blockId)
+      ? 'border-amber-500 ring-1 ring-amber-500'
+      : selected
+        ? 'border-primary'
+        : undefined
+  }
+>
+  <BlockDocumentArtifact artifactId={blockDocumentArtifactId} />
+</BlockDocumentChartRendererProvider>
+```
+
+Descendants implementing custom chart node views can read the same optional
+callback with `useBlockDocumentChartGetBlockFrameClassName()`. The getter is a
+plain function rather than a hook; hosts should subscribe to reactive state in
+their provider component and pass a fresh callback when frame styling changes.
+
+Stateful blocks carry document-local label/binding attributes, surfaced to
+renderers via `BlockDocumentStatefulBlockRendererProps`:
+
+- `caption` — the block's user-facing label in the document flow
+  (`onCaptionChange`).
+- `tableName` — the table a table-bound block reads from (e.g. `data-table`),
+  resolved via `db.findTable` like the `chart` block's `tableName`
+  (`onTableNameChange`). Block types that keep their data binding inside their
+  own backing state leave this unset.
+
 If no renderer is registered, chart and stateful blocks render a clear
 unsupported state while preserving their Tiptap JSON attributes. `blockTypes`
-controls the host-specific entries shown in the plus menu. Chart renderers also
-receive a `selected` flag so their controls can reflect whether the block is the
-active Tiptap node selection.
+controls both the host-specific entries shown in the plus menu and which
+stateful block types are editable. A persisted stateful block with a registered
+renderer but no matching `blockTypes` entry renders read-only and cannot be
+turned into, dragged, or deleted with the editor's shared block controls. This
+lets hosts preserve disabled blocks as placeholders without making the rest of
+the document read-only. Chart renderers also receive a `selected` flag so their
+controls can reflect whether the block is the active Tiptap node selection.
 When a block is converted through the handle menu, custom `createNode`
 callbacks receive an optional `{initialText}` value with the source block text;
 hosts can use it to seed stateful blocks such as embedded Markdown documents.
@@ -255,6 +371,12 @@ handle just below the block for writable documents. Interactive blocks can also 
 document and show a short hint, while Cmd+scroll on macOS or Ctrl+scroll
 elsewhere scrolls nested overflow regions inside the block. Use
 `scrollHintLabel` to customize the hint target text.
+
+The backing instance owns its own display name. Hosts should seed that name
+when creating the backing state (for example from the registered block type's
+`label` or command `defaultTitle`) and resolve it from the instance when a UI
+needs the current name. Shared block-document state does not persist a
+stateful-block `title` mirror.
 
 Block and panel definitions can provide reusable settings components. The
 host settings shell is owned by `@sqlrooms/documents`, while feature packages
@@ -289,7 +411,7 @@ blockDocuments.appendBlocks(blockDocumentArtifactId, [
     blockType: 'pivot',
     blockInstanceId: 'pivot-instance-1',
     ownership: 'owned',
-    title: 'Embedded Pivot Table',
+    caption: 'Pivot table',
   },
 ]);
 ```
@@ -330,11 +452,10 @@ reference appears, and `onDeleteOwnedStatefulBlock` to clean it up when an owned
 block is removed from a document or when its owning block document is deleted.
 Blocks with `ownership: 'shared'` or `ownership: 'external'` are not cleaned up
 by the documents slice.
-Hosts can also pass `onRenameOwnedStatefulBlock` to synchronize block `title`
-changes into the backing feature state. Captions stay local to the blocks
-document. Stateful block renderers receive `onTitleChange` and
-`onCaptionChange` callbacks when a writable document lets the embedded surface
-edit its own block metadata.
+Captions stay local to the block document. Backing instance names are changed
+through the owning feature's UI or commands, not by editing a block attribute.
+Stateful block renderers receive `onCaptionChange` when a writable document
+lets the embedded surface edit the document-local caption.
 
 The editor normalizes pasted or duplicated owned stateful blocks by assigning
 fresh top-level block IDs and fresh `blockInstanceId` values when a duplicate
@@ -381,16 +502,16 @@ layout, or when dashboard AI tools are the natural authoring path.
 
 ## Commands
 
-`createDocumentCommands()` registers AI- and palette-friendly commands for
-document artifacts:
+`createMarkdownDocumentCommands()` registers AI- and palette-friendly commands for
+Markdown artifacts:
 
-- `document.list`
-- `document.get`
-- `document.create`
-- `document.set-markdown`
-- `document.append-markdown`
+- `markdown-document.list`
+- `markdown-document.get`
+- `markdown-document.create`
+- `markdown-document.set-markdown`
+- `markdown-document.append-markdown`
 
-`createBlockDocumentCommands()` registers commands for structured blocks
+`createBlockDocumentCommands()` registers commands for structured block
 document artifacts. By default the command IDs are:
 
 - `block-document.list`
@@ -404,18 +525,25 @@ document artifacts. By default the command IDs are:
 - `block-document.create-chart-block`
 - `block-document.create-stateful-block`
 
-Hosts can pass `artifactType`, `artifactLabel`, and `commandNamespace` options
-to expose the same command surface under product-specific names while keeping
-the package API generic.
+The artifact type is always `block-document`, command IDs always use
+`block-document.*`, and command descriptions use “block document”. Artifact type,
+label, and command namespace overrides are not supported. Hosts can customize
+UI labels in their artifact registry, and pass `commandGroup` and `defaultTitle`
+without changing the AI vocabulary.
 
 Hosts can pass `statefulBlockTypes` to expose supported feature-backed block
 types to `block-document.create-stateful-block`.
+
+Hosts with a narrower block surface can also pass `allowedBlockTypes`. The
+generic create, append, insert, and update commands then reject other block
+kinds; allowed `statefulBlock` payloads are additionally restricted to the
+configured `statefulBlockTypes`.
 
 Block mutation command results include the full refreshed document data plus
 focused mutation payloads such as `blockId`, `blockIds`, `blockType`,
 `blockTypes`, and `affectedBlocks`. Chart and stateful block creation also
 return follow-up IDs such as `tableName`, `blockInstanceId`,
-`statefulBlockType`, and chosen `title` or `caption` values.
+`statefulBlockType`, the seed `instanceTitle`, and chosen `caption` values.
 
 Structured block payloads may include an optional `intent` string. Use it for
 the durable natural-language purpose of an agent- or command-created block,
@@ -435,20 +563,14 @@ createCrdtSlice({
 });
 ```
 
-`createDocumentsCrdtMirror()` syncs Markdown document bodies, block document
-Tiptap JSON content, document-owned assets, standalone chart block configs,
-block document/document artifact metadata, and document artifact tab order.
+`createDocumentsCrdtMirror()` syncs Markdown bodies, block document Tiptap JSON
+content, document-owned assets, standalone chart block configs, block document
+and Markdown artifact metadata, and their artifact tab order.
 The current artifact selection is kept local.
 
-By default, the mirror treats `block-document` artifacts as block documents.
-Hosts with their own artifact type names can pass
-`blockDocumentArtifactTypes`, for example:
-
-```ts
-createDocumentsCrdtMirror({
-  blockDocumentArtifactTypes: ['report'],
-});
-```
+The mirror syncs `block-document` and `markdown-document` artifact metadata without
+legacy aliases. Pre-release sync snapshots and saved AI context are not migrated;
+reset incompatible development state when upgrading.
 
 Hosted dashboard state should continue to use the host app's Mosaic persistence,
 or a future Mosaic-specific CRDT mirror.
@@ -459,11 +581,28 @@ or a future Mosaic-specific CRDT mirror.
 
 ```ts
 const index = buildKnowledgeIndex({
-  documents: roomStore.getState().documents.config,
+  markdownDocuments: roomStore.getState().markdownDocuments.config,
   artifacts: roomStore.getState().artifacts.config,
 });
 ```
 
 It extracts `[[Document Title]]` wikilinks, body hashtags such as `#metrics`,
-and optional frontmatter tags. Links are resolved against document artifact
+and optional frontmatter tags. Links are resolved against Markdown artifact
 titles. Missing or ambiguous titles are reported as unresolved links.
+
+## Markdown document naming and persistence
+
+Markdown artifacts and embeddable blocks use `markdown-document`; their commands
+use `markdown-document.*`. Use `createMarkdownDocumentsSlice`,
+`MarkdownDocumentsSliceConfig`, `MarkdownDocumentsSliceState`, and
+`useStoreWithMarkdownDocuments` with the `markdownDocuments` store key.
+`createMarkdownDocumentCommands` provides the command family. These replace the
+former generic `DocumentsSlice*` APIs and `markdown.*` commands.
+
+The room state and CRDT field both use `markdownDocuments`. The CLI migrates local
+workspace snapshots from the persisted `documents` slice and `markdown` artifact/block
+types, preserving document content and assets. If both slice keys exist, canonical
+records take precedence while disjoint legacy records are retained. Experimental
+CRDT snapshots and saved AI context are not migrated; reset incompatible development
+sync and saved-session state when upgrading.
+`DocumentAsset` stays shared by both document families.

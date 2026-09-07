@@ -1,6 +1,7 @@
 import {ToolLoopAgent, ToolSet, UIMessageChunk, createAgentUIStream} from 'ai';
 import {ToolAbortError} from '../utils';
 import {TOOL_CALL_CANCELLED} from '../constants';
+import {ChatTimeoutError} from '../timeouts';
 import type {
   AgentProgressSnapshot,
   AgentStreamOutput,
@@ -40,6 +41,42 @@ interface AgentStreamStore {
       ) => AgentProgressSnapshot | undefined;
     };
   };
+}
+
+/**
+ * Carries text `onError` already produced, so the failure path does not format
+ * it a second time. A caller's `formatError` sees each error exactly once.
+ */
+class FormattedStreamError extends Error {}
+
+/**
+ * Message handed to the parent model when a sub-agent stream fails.
+ *
+ * The raw exception goes to the console instead. A child agent may run on a
+ * different provider than its parent, and callers serialize the thrown message
+ * into a tool result the parent model receives, so a provider error carrying an
+ * endpoint, account detail, or credential would cross that boundary. Pass
+ * `formatError` to opt into the raw text once the trust boundary is known.
+ */
+export const SUB_AGENT_ERROR_MESSAGE =
+  'The sub-agent request failed. See the browser console for the underlying error.';
+
+/**
+ * Extracts the underlying message from a thrown value.
+ *
+ * Local stand-in for `getErrorMessage`, which ai-core does not depend on.
+ * Exported so a host that has verified parent and child share a trust boundary
+ * can pass it as `formatError` to get the unredacted text back.
+ */
+export function getSubAgentErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (error === undefined || error === null) return 'unknown error';
+  try {
+    return JSON.stringify(error) ?? String(error);
+  } catch {
+    return String(error);
+  }
 }
 
 function getAgentAvailableTools(
@@ -163,6 +200,7 @@ function summarizeOutput(output: unknown): unknown {
  */
 function markPendingToolCallsAsCancelled(
   toolCallMap: Map<string, AgentToolCall>,
+  errorText: string = TOOL_CALL_CANCELLED,
 ): void {
   const now = Date.now();
   for (const [id, tc] of toolCallMap) {
@@ -170,7 +208,7 @@ function markPendingToolCallsAsCancelled(
       toolCallMap.set(id, {
         ...tc,
         state: 'error',
-        errorText: TOOL_CALL_CANCELLED,
+        errorText,
         completedAt: now,
         approvalId: undefined,
       });
@@ -292,6 +330,10 @@ export function formatAbortSnapshot(
  * @param store - Store providing updateAgentProgress / clearAgentProgress / approval methods
  * @param parentToolCallId - The parent tool call ID for progress tracking
  * @param abortSignal - Optional abort signal for cancellation
+ * @param options - Optional overrides. `formatError` replaces the redacted
+ *   {@link SUB_AGENT_ERROR_MESSAGE} thrown on a stream failure; pass
+ *   {@link getSubAgentErrorMessage} when the parent and child are known to
+ *   share a trust boundary. The raw error always reaches the console.
  * @returns The final text and collected tool calls from the agent
  */
 export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
@@ -300,10 +342,15 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
   store: AgentStreamStore,
   parentToolCallId: string,
   abortSignal?: AbortSignal,
+  options?: {formatError?: (error: unknown) => string},
 ): Promise<AgentStreamOutput> {
+  const getAbortMessage = () =>
+    abortSignal?.reason instanceof ChatTimeoutError
+      ? abortSignal.reason.message
+      : TOOL_CALL_CANCELLED;
   const throwIfAborted = () => {
     if (abortSignal?.aborted) {
-      throw new ToolAbortError(TOOL_CALL_CANCELLED);
+      throw new ToolAbortError(getAbortMessage());
     }
   };
 
@@ -325,6 +372,45 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
       parentToolCallId,
       Array.from(toolCallMap.values()).map((tc) => ({...tc})),
     );
+  };
+
+  /**
+   * The parent model sees this text; the console keeps the original. Callers
+   * serialize it into a tool result, and the child may run on a different
+   * provider than the parent.
+   */
+  const toModelFacingMessage = (error: unknown) => {
+    console.error('Sub-agent stream error:', error);
+    return options?.formatError
+      ? options.formatError(error)
+      : SUB_AGENT_ERROR_MESSAGE;
+  };
+
+  /** Ends the run, converting an abort into a snapshot and anything else into
+   * a redacted throw. */
+  const failStream: (err: unknown) => never = (err) => {
+    const abortMessage = getAbortMessage();
+    markPendingToolCallsAsCancelled(toolCallMap, abortMessage);
+    pushProgress();
+
+    if (abortSignal?.aborted) {
+      const snapshot = buildAbortSnapshot(
+        parentToolCallId,
+        toolCallMap,
+        finalText,
+        store,
+      );
+      store.getState().ai.writeAbortSnapshot?.(parentToolCallId, snapshot);
+      throw new ToolAbortError(abortMessage, snapshot);
+    }
+    if (
+      err instanceof ToolAbortError ||
+      err instanceof ChatTimeoutError ||
+      err instanceof FormattedStreamError
+    ) {
+      throw err;
+    }
+    throw new Error(toModelFacingMessage(err));
   };
 
   // Build the initial uiMessages for the agent stream
@@ -349,11 +435,20 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
       toolCallId: string;
     } | null = null;
 
-    const stream = await createAgentUIStream({
-      agent,
-      uiMessages,
-      abortSignal,
-    });
+    let stream;
+    try {
+      stream = await createAgentUIStream({
+        agent,
+        uiMessages,
+        abortSignal,
+        onError: toModelFacingMessage,
+      });
+    } catch (err) {
+      // Creating the stream can reject before `onError` is ever wired up, and
+      // that rejection reaches the parent model the same way a stream error
+      // does.
+      failStream(err);
+    }
 
     // Accumulated assistant tool parts for the current stream iteration,
     // keyed by toolCallId. If the stream ends with a pending approval we
@@ -367,6 +462,17 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
     try {
       for await (const chunk of stream) {
         throwIfAborted();
+
+        // A stream-level error (e.g. an API 401 / provider failure) is delivered
+        // as an `error` chunk rather than a thrown exception, because the AI SDK
+        // routes it through `streamText`'s `onError`. Surface it as a thrown
+        // error so callers can react (revert, show a retry) instead of silently
+        // treating the run as a successful no-op.
+        if (chunk.type === 'error') {
+          throw new FormattedStreamError(
+            chunk.errorText || 'The AI request failed.',
+          );
+        }
 
         if (chunk.type === 'text-delta') {
           finalText += chunk.delta;
@@ -473,20 +579,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
         }
       }
     } catch (err) {
-      markPendingToolCallsAsCancelled(toolCallMap);
-      pushProgress();
-
-      if (abortSignal?.aborted) {
-        const snapshot = buildAbortSnapshot(
-          parentToolCallId,
-          toolCallMap,
-          finalText,
-          store,
-        );
-        store.getState().ai.writeAbortSnapshot?.(parentToolCallId, snapshot);
-        throw new ToolAbortError(TOOL_CALL_CANCELLED, snapshot);
-      }
-      throw err;
+      failStream(err);
     }
 
     // If no approval was requested, we're done
@@ -577,7 +670,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
   // of relying on agentToolCalls embedded in the tool output (which would
   // bloat the main orchestrator's message context).
   if (abortSignal?.aborted) {
-    markPendingToolCallsAsCancelled(toolCallMap);
+    markPendingToolCallsAsCancelled(toolCallMap, getAbortMessage());
   }
 
   pushProgress();
@@ -590,7 +683,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
       store,
     );
     store.getState().ai.writeAbortSnapshot?.(parentToolCallId, snapshot);
-    throw new ToolAbortError(TOOL_CALL_CANCELLED, snapshot);
+    throw new ToolAbortError(getAbortMessage(), snapshot);
   }
 
   return {

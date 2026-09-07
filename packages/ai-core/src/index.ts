@@ -9,7 +9,19 @@ export type {
   AiSliceState,
   AiSliceOptions,
   ForkSessionFromMessageArgs,
+  ModelSelection,
 } from './AiSlice';
+export type {AiTimeoutOptions} from './timeouts';
+export {
+  measureProviderContext,
+  tryMeasureProviderContext,
+} from './devtools/providerContextDiagnostics';
+export type {MeasureProviderContextArgs} from './devtools/providerContextDiagnostics';
+export type {ProviderContextDiagnostic} from './types';
+export {
+  ChatActiveStatus,
+  getChatActiveStatus,
+} from './components/ChatActiveStatus';
 export {ChatMessagesContainer} from './components/ChatMessagesContainer';
 /** @deprecated Use `Chat.Messages` instead. */
 export {ChatMessagesContainer as AnalysisResultsContainer} from './components/ChatMessagesContainer';
@@ -46,6 +58,112 @@ export type {
 } from './hooks/useGenerateSessionTitle';
 export {Chat, type LocalAgentChatRootProps} from './components/Chat';
 export {
+  ChatRendering,
+  useChatRendering,
+  useChatRenderingComponents,
+  useChatNestedActivityMode,
+  mergeChatRenderingComponents,
+} from './components/ChatRenderingContext';
+export type {
+  ChatActiveStatusInfo,
+  ChatActiveStatusProps,
+  ChatComponentType,
+  ChatRenderingProps,
+  ChatRenderingComponents,
+  ChatRenderingValue,
+  ChatNestedActivityMode,
+  ChatTurnSlotProps,
+  ChatTurnPresentation,
+  ChatPromptRegion,
+  ChatActivityRegion,
+  ChatActivityItem,
+  ChatTextRegion,
+  ChatTextItem,
+  ChatOutputRegion,
+  ChatOutputItem,
+  ChatCopyAction,
+  ChatForkAction,
+  ChatErrorRegion,
+  ChatActionsRegion,
+  ChatTimelineRegion,
+  ChatToolState,
+  ChatPromptProps,
+  ChatActivityProps,
+  ChatReasoningProps,
+  ChatTextOutputProps,
+  ChatToolActivityProps,
+  ChatHoistedOutputProps,
+  ChatErrorProps,
+  ChatActionsProps,
+} from './components/ChatRenderingContext';
+export {
+  DefaultChatTurn,
+  DefaultChatPrompt,
+  DefaultChatActivity,
+  DefaultChatReasoning,
+  DefaultChatTextOutput,
+  DefaultChatToolActivity,
+  DefaultChatHoistedOutput,
+  DefaultChatError,
+  DefaultChatActions,
+  defaultChatRenderingComponents,
+} from './components/defaultChatRendering';
+export {
+  LocalAgentChatRuntimeProvider,
+  SessionChatRuntimeProvider,
+} from './components/ChatRuntimeContext';
+export {
+  useChatComposer,
+  useRegisterBeforeSend,
+  useBlockSends,
+  ChatComposerStateBoundary,
+  Input as ChatComposerInput,
+  Send as ChatComposerSend,
+  Stop as ChatComposerStop,
+  DropTarget as ChatComposerDropTarget,
+  Attachments as ChatComposerAttachments,
+  useChatAttachments,
+} from './components/composer';
+export type {
+  ChatComposerMode,
+  ChatComposerState,
+  BeforeSendHandler,
+  ChatComposerInputProps,
+  ChatComposerSendProps,
+  ChatComposerStopProps,
+  ChatComposerDropTargetProps,
+  ChatComposerAttachmentsProps,
+  ChatAttachmentsState,
+} from './components/composer';
+export {
+  fileToChatAttachmentPart,
+  getChatAttachmentMediaType,
+  getChatAttachmentText,
+  getChatMessageAttachments,
+  isMarkdownAttachment,
+  isSupportedChatAttachment,
+  isTextAttachmentFilename,
+  isTextAttachmentMediaType,
+} from './chatAttachments';
+export type {ChatAttachmentPart} from './chatAttachments';
+export {
+  usePromptSuggestions,
+  ChatSuggestionsStateBoundary,
+  Root as ChatSuggestionsRoot,
+  Item as ChatSuggestionsItem,
+  VisibilityToggle as ChatSuggestionsVisibilityToggle,
+  Dismiss as ChatSuggestionsDismiss,
+  useControlledVisibility,
+} from './components/suggestions';
+export type {
+  ChatSuggestionsState,
+  ChatSuggestionsRootProps,
+  ChatSuggestionsItemProps,
+  ChatSuggestionsVisibilityToggleProps,
+  ChatSuggestionsDismissProps,
+  ControlledVisibility,
+} from './components/suggestions';
+export {
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,
   getChatTurnsFromUiMessages,
@@ -71,6 +189,15 @@ export {PromptSuggestions} from './components/PromptSuggestions';
 export {ModelSelector} from './components/ModelSelector';
 export {SessionControls} from './components/SessionControls';
 export {QueryControls} from './components/QueryControls';
+export {
+  BlockAiPromptPopover,
+  type BlockAiPromptPopoverProps,
+} from './components/BlockAiPromptPopover';
+export {
+  createAskAiBlockHeaderAction,
+  type AskAiBlockHeaderActionRenderContext,
+  type CreateAskAiBlockHeaderActionOptions,
+} from './components/createAskAiBlockHeaderAction';
 export {DeleteSessionDialog} from './components/session/DeleteSessionDialog';
 export {SessionActions} from './components/session/SessionActions';
 export {SessionDropdown} from './components/session/SessionDropdown';
@@ -86,13 +213,19 @@ export {
   AiSliceConfig,
   AiSessionForkOrigin,
   AnalysisSessionSchema,
+  BlockAiRunContextItemSchema,
   ChatSessionSchema,
+  createBlockContextItem,
   createDefaultAiConfig,
   getAiRunContextPrimaryItem,
   getAiRunContextItems,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
-export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
+export type {
+  AiRunContext,
+  AiRunContextItem,
+  BlockAiRunContextItem,
+} from '@sqlrooms/ai-config';
 export {
   getEffectiveSessionContextItemIds,
   getRunContextItemIds,
@@ -117,6 +250,7 @@ export type {
   StoredToolSet,
   ToolRendererProps,
   ToolRenderer,
+  ToolRendererShouldHoist,
   ToolRendererRegistry,
   ToolRenderers,
   ToolTimingEntry,
@@ -125,10 +259,14 @@ export type {
 } from './types';
 export {fixIncompleteToolCalls} from './utils';
 
+export {withRunContextTools} from './chatTransport';
+
 export {
   streamSubAgent,
   updateAgentToolCallData,
   formatAbortSnapshot,
+  getSubAgentErrorMessage,
+  SUB_AGENT_ERROR_MESSAGE,
 } from './agents/AgentUtils';
 export type {
   AgentStreamOutput,
@@ -138,8 +276,10 @@ export type {
 } from './types';
 export {ExpandableContent} from './components/ExpandableContent';
 export {ActivityBox} from './components/ActivityBox';
+export type {ActivityBoxProps} from './components/ActivityBox';
 export {
   FlatAgentRenderer,
+  HoistedToolCallRenderer,
   OrchestratorToolLogLine,
   ShowToolCallDetailsProvider,
 } from './components/FlatAgentRenderer';
@@ -148,8 +288,28 @@ export type {
   ToolStructureBehavior,
   ToolDisplayBehavior,
 } from './components/FlatAgentRenderer';
-export {collectHoistableRenderers} from './components/collectHoistableRenderers';
+export {
+  collectHoistableRenderers,
+  toolRendererAllowsHoist,
+} from './components/collectHoistableRenderers';
 export type {HoistableToolCall} from './components/collectHoistableRenderers';
+export {
+  buildChatTurnModel,
+  splitTextAroundHoists,
+  computeComputationTimeMs,
+  getToolName,
+  isAgentToolPart,
+} from './components/buildChatTurnModel';
+export type {
+  ChatTurnModel,
+  ChatTurnActivityItem,
+  ChatTurnTextItem,
+  ChatTurnSegment,
+  ToolPartWithId,
+} from './components/buildChatTurnModel';
+/** @deprecated Prefer {@link buildChatTurnModel}. Chronological presentation adapter. */
+export {buildChatTurnRenderPlan} from './components/buildChatTurnRenderPlan';
+export type {ChatTurnRenderPlan} from './components/buildChatTurnRenderPlan';
 export {ContextUsageIndicator} from './components/ContextUsageIndicator';
 export {
   HoistedRenderersProvider,
@@ -157,7 +317,15 @@ export {
 } from './components/HoistedRenderersContext';
 export {
   findChatSearchMatches,
+  HighlightedChatSearchText,
   markdownToPlainText,
   normalizeChatSearchQuery,
+  useActiveChatSearchMatchKey,
+  useOptionalChatSearch,
+  useReportRenderedChatSearchBlock,
 } from './components/ChatSearch';
-export type {ChatSearchBlock, ChatSearchMatch} from './components/ChatSearch';
+export type {
+  ChatSearchBlock,
+  ChatSearchContextValue,
+  ChatSearchMatch,
+} from './components/ChatSearch';

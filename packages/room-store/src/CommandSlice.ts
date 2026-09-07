@@ -23,17 +23,38 @@ export type RoomCommandInvocation = {
   surface: RoomCommandSurface;
   actor?: string;
   traceId?: string;
+  /** Stable resource target captured for this invocation, when available. */
+  target?: {
+    kind: string;
+    id: string;
+  };
   metadata?: Record<string, unknown>;
 };
 
-export type RoomCommandInvocationOptions = Partial<RoomCommandInvocation>;
+/**
+ * Optional invocation metadata for a room command.
+ *
+ * `signal` supports cooperative cancellation and is excluded from serializable
+ * invocation and audit data.
+ */
+export type RoomCommandInvocationOptions = Partial<RoomCommandInvocation> & {
+  /** Cancels command execution without becoming part of serializable audit data. */
+  signal?: AbortSignal;
+};
 
+/**
+ * Runtime context passed to room command predicates, validation, middleware,
+ * and execution handlers. Its signal supports cooperative cancellation and is
+ * not retained in serializable invocation or audit data.
+ */
 export type RoomCommandExecutionContext<
   RS extends BaseRoomStoreState = BaseRoomStoreState,
 > = {
   store: StoreApi<RS>;
   getState: () => RS;
   invocation: RoomCommandInvocation;
+  /** Signal supplied by the invoking surface, when it supports cancellation. */
+  signal?: AbortSignal;
 };
 
 export type RoomCommandPredicate<
@@ -312,10 +333,9 @@ export function createCommandSlice<
         },
         getCommand: (commandId) => get().commands.registry[commandId],
         listCommands: (options) => {
-          const invocation = normalizeInvocation(options);
           const context = createRoomCommandExecutionContext(
             store as StoreApi<RS>,
-            invocation,
+            options,
           );
           const includeInvisible = options?.includeInvisible ?? false;
           const includeDisabled = options?.includeDisabled ?? true;
@@ -353,10 +373,9 @@ export function createCommandSlice<
             };
           }
 
-          const invocation = normalizeInvocation(invocationOptions);
           const executionContext = createRoomCommandExecutionContext(
             store as StoreApi<RS>,
-            invocation,
+            invocationOptions,
           );
 
           if (!resolveCommandEnabled(command, executionContext)) {
@@ -466,6 +485,7 @@ export function createRoomCommandExecutionContext<
     store,
     getState: () => store.getState(),
     invocation: normalizeInvocation(invocation),
+    signal: invocation?.signal,
   };
 }
 
@@ -778,6 +798,7 @@ function normalizeInvocation(
     surface: invocation?.surface ?? DEFAULT_COMMAND_SURFACE,
     actor: invocation?.actor,
     traceId: invocation?.traceId,
+    target: invocation?.target,
     metadata: invocation?.metadata,
   };
 }

@@ -2,11 +2,23 @@
 
 This package is the **Vite/React UI** that powers the Python `sqlrooms` CLI (`python/sqlrooms`).
 
+The app's named production capability sets and their behavior-preserving
+baseline are documented in [docs/capability-profiles.md](docs/capability-profiles.md).
+
 In development it runs as a separate dev server (default `http://localhost:3100`) and **proxies API calls** to the Python server.
 
 In production (published `sqlrooms` wheel), the UI is served as **static assets** bundled into the Python package at:
 
 - `python/sqlrooms/sqlrooms/web/static/`
+
+## Map basemaps
+
+Maps use [OpenFreeMap](https://openfreemap.org/) vector tiles with **Positron**
+for light mode and **Dark** for dark mode. No API key or registration is required.
+
+New maps keep the light/dark style matching the app theme at creation, including
+after theme changes and workspace reloads. Change the saved style through
+**Map settings → Basemap**. Existing custom map styles are preserved.
 
 ## Local CLI smoke test
 
@@ -48,7 +60,7 @@ In the UI, drag in:
 /Users/ilya/Workspace/sqlrooms/python/sqlrooms/tests/fixtures/cars.csv
 ```
 
-Verify `cars` appears, create a worksheet/Mosaic chart/dashboard, stop the
+Verify `cars` appears, create a document/Mosaic chart/dashboard, stop the
 server, restart the same command, and confirm the state comes back.
 
 ## Python CLI release workflow
@@ -80,7 +92,7 @@ sqlrooms --no-open-browser /tmp/sqlrooms-smoke.duckdb
 ```
 
 Open the printed UI URL, drag in the CSV fixture listed above, create a
-worksheet/chart/dashboard, then restart against the same `/tmp/sqlrooms-smoke.duckdb` and
+document/chart/dashboard, then restart against the same `/tmp/sqlrooms-smoke.duckdb` and
 confirm the imported data and workspace state come back.
 
 1. Choose the package target:
@@ -136,7 +148,7 @@ pnpm dev cli
 This starts:
 
 - the Python API server on `http://127.0.0.1:4273` with `--experimental` and without serving static UI, or the next free port
-- the Vite UI on `http://localhost:3100`, or the next free port, proxying `/api` and `/config.json` to the selected Python API port
+- the Vite UI on `http://localhost:3100`, or the next free port, proxying `/api`, `/config.json`, and `/ws` to the selected Python API port
 - a per-session dev database named after the selected UI port, for example `sqlrooms-3100.db`
 
 If you want fixed ports, pass them to the Python server:
@@ -188,15 +200,25 @@ layout. Explicit dashboard creation commands and AI tools require `layoutType`
 so the choice is made once at creation time; auto-created dashboards from chart
 or Data Table Explorer flows use `grid`.
 
-## Worksheet Artifacts
+## Document Artifacts
 
-Worksheet artifacts are block-composed documents for active analytical work.
+Document artifacts are block-composed documents for active analytical work.
+Their canonical artifact type is `block-document`; the UI label remains
+“Document”. Loading an existing workspace migrates `worksheet` artifacts and
+`document` artifacts with block-document backing state to `block-document`.
+Markdown document artifacts and embedded blocks use `markdown-document`, commands use
+`markdown-document.*`, and their backing store and CRDT field are `markdownDocuments`.
+Local workspaces migrate the persisted `documents` slice to `markdownDocuments`
+and normalize `markdown` artifact and embedded block types to `markdown-document`.
+When both slice keys exist, disjoint records are preserved and canonical records
+take precedence for overlapping IDs. Experimental CRDT snapshots are not migrated;
+reset incompatible development sync state when upgrading.
 They can contain editable text, images, standalone Mosaic/vgplot chart blocks, and
 direct stateful blocks such as dashboards, pivot tables, Data Table Explorers,
 SQL queries, and Markdown documents.
 
 Standalone chart blocks reuse the same Mosaic chart view and settings panel as
-dashboard charts. Charts with the same `selectionGroupId` in one Worksheet share
+dashboard charts. Charts with the same `selectionGroupId` in one Document share
 a crossfilter selection; charts without a group are independent.
 Agent-created blocks can persist an `intent` string describing the purpose they
 were created to serve, which helps later edits distinguish durable intent from
@@ -204,7 +226,7 @@ raw model input.
 
 Hosted dashboards are stored as direct stateful blocks keyed by their block
 instance id. Each hosted dashboard keeps its own Mosaic dashboard state and
-selection scope, so multiple dashboards in one Worksheet crossfilter
+selection scope, so multiple dashboards in one Document crossfilter
 independently.
 
 Hosted SQL queries reuse the `@sqlrooms/sql-editor` single-query block surface.
@@ -212,7 +234,7 @@ The same query block can also be opened as a top-level SQL Query artifact tab.
 
 ## HTML App Revision History
 
-Generated `html-app` artifacts and worksheet HTML app blocks store source
+Generated `html-app` artifacts and document HTML app blocks store source
 revisions in `@sqlrooms/app-runtime` state. The CLI registers these room
 commands for palette and AI surfaces:
 
@@ -224,17 +246,17 @@ commands for palette and AI surfaces:
 
 Commands accept an optional `appId`. If omitted, the CLI resolves only a clearly
 selected top-level `html-app` artifact or a single known HTML app runtime.
-Ambiguous worksheet cases fail with a clear message so the caller can ask the
+Ambiguous document cases fail with a clear message so the caller can ask the
 user to select the target block. Chat undo/redo should execute these commands
 instead of mutating app state through hidden paths or rewriting chat messages.
 
-## Worksheet AI Block Writes
+## Document AI Block Writes
 
-Worksheet AI tools compose generic block-document helpers with CLI-specific
+Document AI tools compose generic block-document helpers with CLI-specific
 agent policy. Durable block appends route through the registered
 `block-document.append-blocks` command, so text and chart block creation use the
 same traceable mutation path as palette, API, and future skill surfaces.
-Stateful worksheet blocks use CLI-owned commands that wrap the generic document
+Stateful document blocks use CLI-owned commands that wrap the generic document
 commands and feature-specific state creation:
 
 - `block-document.add-dashboard-block`
@@ -258,3 +280,40 @@ an explicit `artifactId`; if omitted, dashboard chart tools only use an
 unambiguous primary dashboard. Reference artifacts are not implicit mutation
 targets. `set_primary_context_artifact` updates the current run and session
 context when the assistant creates or switches to a new primary artifact.
+
+## AI Rendering Tools
+
+The CLI UI always makes three read-only rendering tools available across all
+capability profiles:
+
+- `render_artifact_image`
+- `render_document_block_image`
+- `render_dashboard_panel_image`
+
+Visual-inspection requests use these tools directly. If the target block ID is
+missing, the assistant reads the Document once with `block-document.get`, then
+captures the matching block. It does not need to search for map configuration
+commands before inspecting the image. Rendering tools are separate from the
+command registry searched by `search_commands`.
+Visual-inspection instructions follow the registered toolset. Headless/eval
+stores omit browser rendering tools and tell the assistant that visual capture
+is unavailable.
+
+Each tool captures the target that is currently mounted in the workspace and
+returns a bounded PNG directly to the model. The image pixels use a small
+ephemeral cache; persisted chat history keeps only the target and capture
+metadata. Using the image results requires a vision-capable model and a provider
+that supports image tool results.
+Each rendering tool result includes a **View captured image** button showing
+the exact cached PNG, dimensions, and capture time. The preview never recaptures
+the current view. After a reload or eviction from the six-image cache, it
+explains that the capture is unavailable and must be run again.
+SQLRooms maps preserve their WebGL drawing buffer so captures include the
+basemap and interleaved deck.gl layers. Separate deck overlays preserve their
+buffer through deck.gl/luma.gl's default and are checked as well. Maps with an unavailable context or
+explicitly disabled buffer preservation return an actionable error.
+Iframe-backed content is still unsupported.
+
+Pre-release CRDT snapshots and saved AI run context are not migrated across
+document naming changes. Reset incompatible development sync state and saved
+sessions when upgrading. Existing local workspace migrations remain supported.

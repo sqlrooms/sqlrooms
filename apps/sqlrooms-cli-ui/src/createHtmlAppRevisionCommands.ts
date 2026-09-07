@@ -4,6 +4,7 @@ import {
   type HtmlAppRevisionPatch,
   type RestoreHtmlAppRevisionMetadata,
 } from '@sqlrooms/app-runtime';
+import {resolveArtifactTargetId} from '@sqlrooms/artifacts';
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import type {RoomState} from './store-types';
 
@@ -15,14 +16,15 @@ export const HTML_APP_REVISION_COMMAND_OWNER =
  */
 export function createHtmlAppRevisionCommands(): RoomCommand<RoomState>[] {
   return createRuntimeHtmlAppRevisionCommands<RoomState>({
-    resolveCurrentAppId: (state) => {
-      const currentArtifactId = state.artifacts.config.currentArtifactId;
-      const currentArtifact = currentArtifactId
-        ? state.artifacts.config.artifactsById[currentArtifactId]
+    resolveCurrentAppId: (state, context) => {
+      const artifactId = resolveArtifactTargetId({
+        invocation: context.invocation,
+        currentArtifactId: state.artifacts.config.currentArtifactId,
+      });
+      const currentArtifact = artifactId
+        ? state.artifacts.config.artifactsById[artifactId]
         : undefined;
-      return currentArtifact?.type === 'html-app'
-        ? currentArtifactId
-        : undefined;
+      return currentArtifact?.type === 'html-app' ? artifactId : undefined;
     },
     getHtmlAppIds: (state) => Object.keys(state.htmlApps.config.appsById),
     getHtmlAppState: (state, appId) => state.htmlApps.getApp(appId),

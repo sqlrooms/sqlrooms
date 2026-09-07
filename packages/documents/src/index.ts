@@ -6,11 +6,13 @@
 export {
   DocumentAsset,
   type DocumentAsset as DocumentAssetType,
-  DocumentsSliceConfig,
-  type DocumentsSliceConfig as DocumentsSliceConfigType,
+} from './DocumentAsset';
+export {
+  MarkdownDocumentsSliceConfig,
+  type MarkdownDocumentsSliceConfig as MarkdownDocumentsSliceConfigType,
   MarkdownDocumentState,
   type MarkdownDocumentState as MarkdownDocumentStateType,
-} from './DocumentsSliceConfig';
+} from './MarkdownDocumentsSliceConfig';
 export {
   BlockDocumentBlock,
   BlockDocumentChartBlock,
@@ -28,6 +30,7 @@ export {
   BlockDocumentTodoBlock,
   blockDocumentBlockToNode,
   blockDocumentContentToBlocks,
+  blockDocumentNodeId,
   blockDocumentNodeToBlock,
   createEmptyBlockDocumentContent,
   type BlockDocumentBlock as BlockDocumentBlockType,
@@ -42,7 +45,6 @@ export {
   createDefaultBlockDocumentsConfig,
   type BlockDocumentOwnedStatefulBlockCreateContext,
   type BlockDocumentOwnedStatefulBlockDeleteContext,
-  type BlockDocumentOwnedStatefulBlockRenameContext,
   type BlockDocumentOwnedStatefulBlockReference,
   type BlockDocumentMutationMetadata,
   type BlockDocumentMutationOrigin,
@@ -57,14 +59,25 @@ export {
 } from './BlockDocumentFeatureSlices';
 export {
   BlockDocumentChartRendererProvider,
+  useBlockDocumentChartRenderBlockHeaderActions,
+  useBlockDocumentChartGetBlockFrameClassName,
   useBlockDocumentChartSettings,
   useBlockDocumentChartRenderer,
   type BlockDocumentChartRenderer,
   type BlockDocumentChartRendererProps,
   type BlockDocumentChartRendererProviderProps,
+  type BlockDocumentBlockFrameContext,
+  type BlockDocumentBlockFrameClassNameGetter,
 } from './BlockDocumentChartRendererContext';
 export {
+  type BlockDocumentBlockHeaderActionsRenderContext,
+  type BlockDocumentBlockHeaderActionsRenderer,
+  type BlockDocumentBlockHeaderActionsRenderer as BlockDocumentChartHeaderActionsRenderer,
+  type BlockDocumentBlockHeaderActionsRenderer as BlockDocumentStatefulBlockHeaderActionsRenderer,
+} from './BlockDocumentBlockHeaderActions';
+export {
   BlockDocumentStatefulBlockRendererProvider,
+  useBlockDocumentRenderBlockHeaderActions,
   useBlockDocumentStatefulBlockRenderer,
   useBlockDocumentStatefulBlockSettings,
   useBlockDocumentStatefulBlockTypes,
@@ -76,13 +89,25 @@ export {
   type BlockDocumentStatefulBlockType,
 } from './BlockDocumentStatefulBlockRendererContext';
 export {
-  createDefaultDocumentsConfig,
-  createDocumentsSlice,
-  type CreateDocumentsSliceProps,
+  blockContextItemId,
+  defaultBlockTitle,
+  parseBlockContextItemId,
+  type BlockAiTarget,
+} from './BlockAiTarget';
+export {
+  startBlockScopedChat,
+  type StartBlockScopedChatActions,
+  type StartBlockScopedChatArtifact,
+  type StartBlockScopedChatOptions,
+} from './startBlockScopedChat';
+export {
+  createDefaultMarkdownDocumentsConfig,
+  createMarkdownDocumentsSlice,
+  type CreateMarkdownDocumentsSliceProps,
   type DocumentAssetInput,
-  type DocumentsSliceState,
-} from './DocumentsSlice';
-export {createDocumentCommands} from './documentCommands';
+  type MarkdownDocumentsSliceState,
+} from './MarkdownDocumentsSlice';
+export {createMarkdownDocumentCommands} from './MarkdownDocumentCommands';
 export {
   BLOCK_DOCUMENT_COMMAND_SUFFIXES,
   createBlockDocumentCommandIds,
@@ -117,6 +142,7 @@ export {
 } from './createAddBlockDocumentTextBlockTool';
 export {
   createListBlockDocumentBlocksTool,
+  type BlockDocumentBlockSummaryAugmenter,
   type CreateListBlockDocumentBlocksToolOptions,
 } from './createListBlockDocumentBlocksTool';
 export {
@@ -167,7 +193,7 @@ export {
   type MarkdownDocumentBlockRenderProps,
 } from './MarkdownDocumentBlock';
 export {useStoreWithBlockDocuments} from './useStoreWithBlockDocuments';
-export {useStoreWithDocuments} from './useStoreWithDocuments';
+export {useStoreWithMarkdownDocuments} from './useStoreWithMarkdownDocuments';
 export {
   buildKnowledgeIndex,
   type BuildKnowledgeIndexProps,

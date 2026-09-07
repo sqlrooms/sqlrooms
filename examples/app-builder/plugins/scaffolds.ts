@@ -1,7 +1,7 @@
 import type {Plugin} from 'vite';
 import * as path from 'path';
 import {fileURLToPath} from 'node:url';
-import {generateScaffoldsModule} from './generateScaffolds';
+import {generateScaffoldsModule} from './generateScaffolds.ts';
 
 /**
  * Vite plugin that generates the FileSystemTree module for app scaffolds and
@@ -23,7 +23,6 @@ export default function scaffoldsPlugin(): Plugin {
 
   return {
     name: 'sqlrooms-scaffolds',
-    apply: 'serve',
     async buildStart() {
       await runGenerate();
     },

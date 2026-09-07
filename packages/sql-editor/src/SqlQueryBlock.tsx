@@ -57,6 +57,14 @@ export const SqlQueryBlock: FC<SqlQueryBlockProps> = ({
   compact,
 }) => {
   const resolvedQueryId = queryId ?? blockId;
+  const queryTitle = useStoreWithSqlEditor((state) =>
+    resolvedQueryId
+      ? state.sqlEditor.config.queries.find(
+          (query) => query.id === resolvedQueryId,
+        )?.name
+      : undefined,
+  );
+  const displayTitle = title ?? queryTitle ?? 'SQL Query';
 
   if (!resolvedQueryId) {
     return (
@@ -70,7 +78,7 @@ export const SqlQueryBlock: FC<SqlQueryBlockProps> = ({
     return (
       <CompactSqlQueryBlock
         queryId={resolvedQueryId}
-        title={title}
+        title={displayTitle}
         readOnly={readOnly}
         className={className}
         editorClassName={editorClassName}
@@ -82,11 +90,11 @@ export const SqlQueryBlock: FC<SqlQueryBlockProps> = ({
   return (
     <SqlQuery.Root
       queryId={resolvedQueryId}
-      name={title ?? 'SQL Query'}
+      name={displayTitle}
       readOnly={readOnly}
       className={cn('bg-background h-full min-h-[420px]', className)}
     >
-      <SqlQuery.Header title={title ?? 'SQL Query'}>
+      <SqlQuery.Header title={displayTitle}>
         <SqlQuery.Actions />
       </SqlQuery.Header>
       <div className="min-h-[220px] flex-1">
