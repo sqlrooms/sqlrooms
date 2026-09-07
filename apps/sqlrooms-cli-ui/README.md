@@ -208,8 +208,11 @@ Their canonical artifact type is `block-document`; the UI label remains
 `document` artifacts with block-document backing state to `block-document`.
 Markdown document artifacts and embedded blocks use `markdown-document`, commands use
 `markdown-document.*`, and their backing store and CRDT field are `markdownDocuments`.
-Old pre-release `markdown` aliases and the `documents` store key are not migrated;
-reset incompatible development workspace and sync state when upgrading.
+Local workspaces migrate the persisted `documents` slice to `markdownDocuments`
+and normalize `markdown` artifact and embedded block types to `markdown-document`.
+When both slice keys exist, disjoint records are preserved and canonical records
+take precedence for overlapping IDs. Experimental CRDT snapshots are not migrated;
+reset incompatible development sync state when upgrading.
 They can contain editable text, images, standalone Mosaic/vgplot chart blocks, and
 direct stateful blocks such as dashboards, pivot tables, Data Table Explorers,
 SQL queries, and Markdown documents.

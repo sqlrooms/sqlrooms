@@ -593,7 +593,10 @@ use `markdown-document.*`. Use `createMarkdownDocumentsSlice`,
 `createMarkdownDocumentCommands` provides the command family. These replace the
 former generic `DocumentsSlice*` APIs and `markdown.*` commands.
 
-The room state and CRDT field both use `markdownDocuments`. Old pre-release
-`documents` state and `markdown` artifact/block aliases are not migrated. Reset
-incompatible development workspace, sync, and saved-session state when upgrading.
+The room state and CRDT field both use `markdownDocuments`. The CLI migrates local
+workspace snapshots from the persisted `documents` slice and `markdown` artifact/block
+types, preserving document content and assets. If both slice keys exist, canonical
+records take precedence while disjoint legacy records are retained. Experimental
+CRDT snapshots and saved AI context are not migrated; reset incompatible development
+sync and saved-session state when upgrading.
 `DocumentAsset` stays shared by both document families.

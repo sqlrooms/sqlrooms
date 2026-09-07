@@ -18,6 +18,7 @@ function hasArtifact(
     : false;
 }
 
+/** Normalizes legacy embedded Markdown block discriminators in document JSON. */
 function migrateEmbeddedMarkdownBlockTypes(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(migrateEmbeddedMarkdownBlockTypes);
@@ -29,7 +30,10 @@ function migrateEmbeddedMarkdownBlockTypes(value: unknown): unknown {
   const attrs = asRecord(record.attrs);
   return Object.fromEntries(
     Object.entries(record).map(([key, child]) => {
-      if (key === 'attrs' && attrs?.blockType === 'document') {
+      if (
+        key === 'attrs' &&
+        (attrs?.blockType === 'document' || attrs?.blockType === 'markdown')
+      ) {
         return [key, {...attrs, blockType: 'markdown-document'}];
       }
       return [key, migrateEmbeddedMarkdownBlockTypes(child)];
@@ -66,13 +70,27 @@ function preprocessCliPersistedWorkspace(value: unknown): unknown {
   const workspace = asRecord(value);
   if (!workspace) return value;
 
+  const legacy = asRecord(workspace.documents);
+  const canonical = asRecord(workspace.markdownDocuments);
+  const {documents: _legacyDocuments, ...currentWorkspace} = workspace;
+  if (legacy || canonical) {
+    currentWorkspace.markdownDocuments = {
+      ...legacy,
+      ...canonical,
+      artifacts: {
+        ...asRecord(legacy?.artifacts),
+        ...asRecord(canonical?.artifacts),
+      },
+    };
+  }
+
   const artifactsSlice = asRecord(workspace.artifacts);
   const artifactsById = asRecord(artifactsSlice?.artifactsById);
-  const documentsSlice = asRecord(workspace.markdownDocuments);
+  const documentsSlice = asRecord(currentWorkspace.markdownDocuments);
   const blockDocumentsSlice = asRecord(workspace.blockDocuments);
   if (!artifactsSlice || !artifactsById) {
     return {
-      ...workspace,
+      ...currentWorkspace,
       blockDocuments: migrateBlockDocumentsSlice(workspace.blockDocuments),
     };
   }
@@ -87,6 +105,8 @@ function preprocessCliPersistedWorkspace(value: unknown): unknown {
       let type = artifact.type;
       if (type === 'worksheet') {
         type = 'block-document';
+      } else if (type === 'markdown') {
+        type = 'markdown-document';
       } else if (type === 'document') {
         const hasBlockDocument = hasArtifact(blockDocumentsSlice, artifactId);
         const hasMarkdownDocument = hasArtifact(documentsSlice, artifactId);
@@ -109,7 +129,7 @@ function preprocessCliPersistedWorkspace(value: unknown): unknown {
   );
 
   return {
-    ...workspace,
+    ...currentWorkspace,
     artifacts: {...artifactsSlice, artifactsById: migratedArtifactsById},
     blockDocuments: migrateBlockDocumentsSlice(workspace.blockDocuments),
   };
