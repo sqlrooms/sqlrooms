@@ -10,6 +10,65 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### `@sqlrooms/documents`: canonical document names (breaking)
+
+The prerelease document APIs now distinguish structured block documents from
+Markdown documents. Block documents use the `block-document` artifact type
+and `block-document.*` command IDs. Markdown artifacts and embedded Markdown
+blocks use `markdown-document`, with `markdown-document.*` command IDs.
+
+Update Markdown imports, selectors, persistence schemas, artifact registries,
+and command callers:
+
+| Previous API or key                                 | Replacement                                                         |
+| --------------------------------------------------- | ------------------------------------------------------------------- |
+| `createDocumentsSlice`                              | `createMarkdownDocumentsSlice`                                      |
+| `createDefaultDocumentsConfig`                      | `createDefaultMarkdownDocumentsConfig`                              |
+| `DocumentsSliceConfig` / `DocumentsSliceConfigType` | `MarkdownDocumentsSliceConfig` / `MarkdownDocumentsSliceConfigType` |
+| `DocumentsSliceState`                               | `MarkdownDocumentsSliceState`                                       |
+| `CreateDocumentsSliceProps`                         | `CreateMarkdownDocumentsSliceProps`                                 |
+| `useStoreWithDocuments`                             | `useStoreWithMarkdownDocuments`                                     |
+| `state.documents`                                   | `state.markdownDocuments`                                           |
+| `createMarkdownCommands`                            | `createMarkdownDocumentCommands`                                    |
+| `markdown.*` command IDs                            | `markdown-document.*` command IDs                                   |
+| `markdown` artifact and embedded block type         | `markdown-document`                                                 |
+| `buildKnowledgeIndex({documents, artifacts})`       | `buildKnowledgeIndex({markdownDocuments, artifacts})`               |
+
+Persist `MarkdownDocumentsSliceConfig` under the `markdownDocuments` key.
+`DocumentAsset` and `createDocumentsCrdtMirror()` remain shared by both document
+families and keep their names.
+
+`createBlockDocumentCommands()` and `createPythonBlockCommands()` no longer
+accept `artifactType`, `artifactLabel`, or `commandNamespace`. Remove those
+options and use the canonical `block-document` type and `block-document.*`
+IDs. Keep product-specific labels in the artifact registry; `commandGroup`
+remains available for UI grouping. The block-document command factory also
+retains `defaultTitle`.
+
+`createBlockDocumentCommandIds()` no longer accepts a namespace argument.
+`createBlockDocumentCommandAiAdapter()` no longer accepts
+`isBlockDocumentArtifact`, and `createDocumentsCrdtMirror()` no longer accepts
+`blockDocumentArtifactTypes`.
+
+#### Persisted workspace data
+
+The CLI migrates local workspace snapshots from `documents` to
+`markdownDocuments` before schema validation, preserving Markdown bodies and
+owned assets. When both keys exist, it retains disjoint records and gives
+canonical records precedence for overlapping IDs. It also normalizes legacy
+`markdown` artifact and embedded block types to `markdown-document` and keeps
+its existing local `document`/`worksheet` migration to the appropriate family.
+
+Applications that persist their own workspaces must perform the equivalent
+migration before parsing with the new schema; the package schema does not
+rename the outer slice key automatically. Preserve both the Markdown content
+and the document-owned asset map when moving each record.
+
+The CRDT Markdown field is also named `markdownDocuments`. Experimental CRDT
+snapshots and saved AI context are not migrated. Reset incompatible development
+sync snapshots and saved sessions when upgrading; this does not replace the
+local workspace migration above.
+
 ### `@sqlrooms/artifacts`: artifact AI sessions use pure many-to-many associations (breaking)
 
 The prerelease-only one-to-one `artifactAi.aiSessionArtifacts` map,

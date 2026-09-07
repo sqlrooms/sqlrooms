@@ -27,8 +27,15 @@ mechanisms used by the rest of SQLRooms
 
 Reusable query blocks and artifact tabs make these surfaces easier to compose
 inside applications ([#669](https://github.com/sqlrooms/sqlrooms/pull/669)).
-The former "worksheet" terminology has been standardized on "document"
-([#878](https://github.com/sqlrooms/sqlrooms/pull/878)).
+The former "worksheet" terminology now uses block documents. Structured
+artifacts and commands use `block-document` / `block-document.*`; Markdown
+artifacts and commands use `markdown-document` / `markdown-document.*`, with
+`MarkdownDocumentsSlice*` APIs and the `markdownDocuments` store key
+([#878](https://github.com/sqlrooms/sqlrooms/pull/878),
+[#903](https://github.com/sqlrooms/sqlrooms/pull/903),
+[#904](https://github.com/sqlrooms/sqlrooms/pull/904)). See the
+[document naming migration guide](/upgrade-guide#sqlroomsdocuments-canonical-document-names-breaking)
+for API changes and local workspace preservation.
 
 The new [Artifacts](/artifacts) and
 [Blocks and Block Documents](/blocks-and-documents) developer guides explain

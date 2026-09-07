@@ -20,6 +20,28 @@ Use the layers according to the job they own:
 A block document is usually itself a top-level artifact. Its embedded stateful
 blocks are not child artifacts: they refer directly to feature-owned state.
 
+## Document families and canonical names
+
+`@sqlrooms/documents` provides two document families:
+
+| Family                    | Artifact type       | Store key           | Command IDs           |
+| ------------------------- | ------------------- | ------------------- | --------------------- |
+| Structured block document | `block-document`    | `blockDocuments`    | `block-document.*`    |
+| Markdown document         | `markdown-document` | `markdownDocuments` | `markdown-document.*` |
+
+For Markdown content, compose `createMarkdownDocumentsSlice()` and persist
+`MarkdownDocumentsSliceConfig` under `markdownDocuments`. Use
+`createMarkdownDocumentBlockDefinition()` for an embeddable Markdown document
+and `createMarkdownDocumentCommands()` for its commands. Embedded Markdown
+blocks also use the `markdown-document` type. The
+[documents package README](https://github.com/sqlrooms/sqlrooms/tree/main/packages/documents#usage)
+shows both families composed together.
+
+Artifact registry labels remain customizable. For example, a UI can call a
+`block-document` artifact “Document” while the shared commands and AI
+instructions consistently use “block document”. The command factories do not
+accept artifact type, label, or command namespace overrides.
+
 ## Block kinds
 
 `@sqlrooms/documents` supports text and interactive block DTOs that map to its
@@ -324,14 +346,19 @@ commands.
 ## Commands, AI, and collaboration
 
 `createBlockDocumentCommands()` exposes validated append, move, update, and
-remove operations for palettes and other command surfaces. AI integrations can
+remove operations under `block-document.*` for palettes and other command
+surfaces. Python block commands from `createPythonBlockCommands()` in
+`@sqlrooms/python` use the same prefix. AI integrations can
 use `createBlockDocumentCommandAiAdapter()` so tools invoke those same commands
 instead of maintaining a separate mutation path.
 
 For collaborative workspaces, `createDocumentsCrdtMirror()` from
 `@sqlrooms/documents/crdt` mirrors document configs to Loro. The room store
 remains the application-facing state model; the mirror handles synchronization
-and loop prevention.
+and loop prevention. The shared mirror covers both document families and uses
+`markdownDocuments` for its Markdown state field. Experimental CRDT snapshots
+and saved AI context are not migrated across these renamings. For local
+workspace migration requirements, see the [Upgrade Guide](/upgrade-guide#sqlroomsdocuments-canonical-document-names-breaking).
 
 See the [`@sqlrooms/blocks` API reference](/api/blocks/), the
 [`@sqlrooms/documents` API reference](/api/documents/), and

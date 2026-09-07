@@ -15,12 +15,12 @@ import {
   BlockDocumentsSliceConfig,
   BlockDocumentChartRendererProvider,
   BlockDocumentStatefulBlockRendererProvider,
-  DocumentsSliceConfig,
+  MarkdownDocumentsSliceConfig,
   buildKnowledgeIndex,
   createBlockDocumentCommands,
   createBlockDocumentFeatureSlices,
-  createMarkdownCommands,
-  createDocumentsSlice,
+  createMarkdownDocumentCommands,
+  createMarkdownDocumentsSlice,
   createMarkdownDocumentBlockDefinition,
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
@@ -32,7 +32,9 @@ import {
 const markdownBlockDefinition = createMarkdownDocumentBlockDefinition();
 
 const artifactTypes = defineArtifactTypes({
-  markdown: createArtifactTypeFromStatefulBlock(markdownBlockDefinition),
+  'markdown-document': createArtifactTypeFromStatefulBlock(
+    markdownBlockDefinition,
+  ),
   'block-document': {
     label: 'Block Document',
     defaultTitle: 'Block Document',
@@ -54,12 +56,12 @@ const roomStore = createRoomStore(
     {
       name: 'my-room',
       sliceConfigSchemas: {
-        documents: DocumentsSliceConfig,
+        markdownDocuments: MarkdownDocumentsSliceConfig,
         blockDocuments: BlockDocumentsSliceConfig,
       },
     },
     (set, get, store) => ({
-      ...createDocumentsSlice()(set, get, store),
+      ...createMarkdownDocumentsSlice()(set, get, store),
       ...createBlockDocumentFeatureSlices({
         onDeleteOwnedStatefulBlock: ({
           blockType,
@@ -111,9 +113,9 @@ Markdown artifacts can reference artifact-owned assets with `asset://` URLs:
 Pass the artifact asset map to `MarkdownDocumentEditor` to render those links as
 browser-loadable image data while preserving the canonical `asset://` link in
 Markdown source. `MarkdownDocument` handles this automatically for artifacts
-stored in the documents slice.
+stored in the `markdownDocuments` slice.
 
-The documents slice exposes `upsertAsset`, `removeAsset`, and `getAsset` for
+The `markdownDocuments` slice exposes `upsertAsset`, `removeAsset`, and `getAsset` for
 managing image assets alongside Markdown content. SVG assets may use `utf8` or
 `base64` encoding; PNG assets must use `base64` encoding.
 
@@ -500,14 +502,14 @@ layout, or when dashboard AI tools are the natural authoring path.
 
 ## Commands
 
-`createMarkdownCommands()` registers AI- and palette-friendly commands for
+`createMarkdownDocumentCommands()` registers AI- and palette-friendly commands for
 Markdown artifacts:
 
-- `markdown.list`
-- `markdown.get`
-- `markdown.create`
-- `markdown.set-markdown`
-- `markdown.append-markdown`
+- `markdown-document.list`
+- `markdown-document.get`
+- `markdown-document.create`
+- `markdown-document.set-markdown`
+- `markdown-document.append-markdown`
 
 `createBlockDocumentCommands()` registers commands for structured block
 document artifacts. By default the command IDs are:
@@ -566,8 +568,8 @@ content, document-owned assets, standalone chart block configs, block document
 and Markdown artifact metadata, and their artifact tab order.
 The current artifact selection is kept local.
 
-The mirror syncs `block-document` and `markdown` artifact metadata without legacy
-artifact aliases. Pre-release sync snapshots and saved AI context are not migrated;
+The mirror syncs `block-document` and `markdown-document` artifact metadata without
+legacy aliases. Pre-release sync snapshots and saved AI context are not migrated;
 reset incompatible development state when upgrading.
 
 Hosted dashboard state should continue to use the host app's Mosaic persistence,
@@ -579,7 +581,7 @@ or a future Mosaic-specific CRDT mirror.
 
 ```ts
 const index = buildKnowledgeIndex({
-  documents: roomStore.getState().documents.config,
+  markdownDocuments: roomStore.getState().markdownDocuments.config,
   artifacts: roomStore.getState().artifacts.config,
 });
 ```
@@ -587,3 +589,20 @@ const index = buildKnowledgeIndex({
 It extracts `[[Document Title]]` wikilinks, body hashtags such as `#metrics`,
 and optional frontmatter tags. Links are resolved against Markdown artifact
 titles. Missing or ambiguous titles are reported as unresolved links.
+
+## Markdown document naming and persistence
+
+Markdown artifacts and embeddable blocks use `markdown-document`; their commands
+use `markdown-document.*`. Use `createMarkdownDocumentsSlice`,
+`MarkdownDocumentsSliceConfig`, `MarkdownDocumentsSliceState`, and
+`useStoreWithMarkdownDocuments` with the `markdownDocuments` store key.
+`createMarkdownDocumentCommands` provides the command family. These replace the
+former generic `DocumentsSlice*` APIs and `markdown.*` commands.
+
+The room state and CRDT field both use `markdownDocuments`. The CLI migrates local
+workspace snapshots from the persisted `documents` slice and `markdown` artifact/block
+types, preserving document content and assets. If both slice keys exist, canonical
+records take precedence while disjoint legacy records are retained. Experimental
+CRDT snapshots and saved AI context are not migrated; reset incompatible development
+sync and saved-session state when upgrading.
+`DocumentAsset` stays shared by both document families.
