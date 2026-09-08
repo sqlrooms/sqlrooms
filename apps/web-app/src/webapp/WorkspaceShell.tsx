@@ -1,0 +1,692 @@
+import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
+import {Link, useNavigate} from '@tanstack/react-router';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  Input,
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+  ThemeSwitch,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+  useSidebar,
+} from '@sqlrooms/ui';
+import type {LayoutNode} from '@sqlrooms/layout';
+import type {StoreApi} from '@sqlrooms/room-store';
+import {
+  ChevronDown,
+  FolderKanban,
+  LogIn,
+  LogOut,
+  Plus,
+  Save,
+  Settings,
+} from 'lucide-react';
+import type React from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {authClient, getNeonJWTToken} from '#/lib/auth-client';
+import type {JsonObject} from '#/lib/json';
+import {syncSessionDocumentRunContext} from './assistant/sessionDocumentContext';
+import {WorkspaceFileDialogs} from './files/WorkspaceFileDialogs';
+import {useWorkspaceFileWorkflow} from './files/useWorkspaceFileWorkflow';
+import {listWorkspaceFiles} from './workspace/files';
+import {createDefaultWorkspaceContent} from './workspace/workspaceContent';
+import {
+  createDefaultWorkspaceAiConfig,
+  createDefaultWorkspaceLayout,
+  createWorkspaceRoomSnapshot,
+  type WorkspaceRoomState,
+} from './workspace/WorkspaceRoomStore';
+import {
+  WorkspaceAssistantPanelToggle,
+  WorkspaceLayoutSurface,
+} from './workspace/WorkspaceLayoutSurface';
+import {WorkspaceNavigationTabs} from './workspace/WorkspaceNavigationTabs';
+import {WorkspaceDocumentSelector} from './workspace/WorkspaceSelectors';
+import {type SaveWorkspaceRoomSnapshot} from './workspace/WorkspaceRoomProvider';
+import {useWorkspaceRoomSnapshot} from './workspace/useWorkspaceRoomSnapshot';
+import {DatabaseSidebarSection} from './workspace/WorkspaceSidebarSections';
+import {
+  createCloudWorkspace,
+  getCloudWorkspace,
+  listCloudWorkspaces,
+  renameCloudWorkspace,
+  saveWorkspaceSnapshot,
+} from './workspace/cloudWorkspaces';
+import {useWorkspaceDuckDbRuntime} from './document/useWorkspaceDuckDbRuntime';
+
+type WorkspaceShellProps =
+  | {
+      mode: 'unsaved';
+      workspaceId?: never;
+    }
+  | {
+      mode: 'saved';
+      workspaceId: string;
+    };
+
+const cloudWorkspacesQueryKey = ['cloudWorkspaces'] as const;
+
+export function WorkspaceShell(props: WorkspaceShellProps) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const {data: session} = authClient.useSession();
+  const [localWorkspaceName, setLocalWorkspaceName] =
+    useState('Untitled Workspace');
+  const [savedWorkspaceNameDraft, setSavedWorkspaceNameDraft] = useState('');
+  const [isSignInToSaveOpen, setIsSignInToSaveOpen] = useState(false);
+  const [workspaceRoomStore, setWorkspaceRoomStore] =
+    useState<StoreApi<WorkspaceRoomState> | null>(null);
+  const pendingCreatedWorkspaceRef = useRef<
+    Awaited<ReturnType<typeof createCloudWorkspace>> | undefined
+  >(undefined);
+  const savedWorkspaceId = props.mode === 'saved' ? props.workspaceId : null;
+  const activeWorkspaceId = savedWorkspaceId ?? 'unsaved-default';
+  const duckDbRuntime = useWorkspaceDuckDbRuntime(activeWorkspaceId);
+
+  const isSignedIn = Boolean(session?.user);
+  const tokenQuery = useQuery({
+    queryKey: ['neonAuthToken', session?.user.id],
+    queryFn: () => getNeonJWTToken(),
+    enabled: isSignedIn,
+  });
+  const token = tokenQuery.data ?? null;
+  const workspaceFilesQueryKey = [
+    'workspaceFiles',
+    props.mode,
+    savedWorkspaceId,
+    token,
+  ] as const;
+
+  const workspacesQuery = useQuery({
+    queryKey: [...cloudWorkspacesQueryKey, token],
+    queryFn: () => listCloudWorkspaces({data: {token: token!}}),
+    enabled: Boolean(token),
+  });
+
+  const savedWorkspaceQuery = useQuery({
+    queryKey: ['cloudWorkspace', props.mode, props.workspaceId, token],
+    queryFn: () =>
+      getCloudWorkspace({
+        data: {token: token!, workspaceId: props.workspaceId!},
+      }),
+    enabled: Boolean(token && props.mode === 'saved'),
+  });
+
+  const workspaceFilesQuery = useQuery({
+    queryKey: workspaceFilesQueryKey,
+    queryFn: () =>
+      listWorkspaceFiles({
+        data: {token: token!, workspaceId: savedWorkspaceId!},
+      }),
+    enabled: Boolean(token && props.mode === 'saved'),
+  });
+
+  const createWorkspaceMutation = useMutation({
+    mutationFn: createCloudWorkspace,
+  });
+
+  const renameWorkspaceMutation = useMutation({
+    mutationFn: renameCloudWorkspace,
+    onSuccess: async (workspace) => {
+      if (workspace) {
+        setSavedWorkspaceNameDraft(workspace.name);
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({queryKey: cloudWorkspacesQueryKey}),
+        queryClient.invalidateQueries({
+          queryKey: ['cloudWorkspace', props.mode, props.workspaceId, token],
+        }),
+      ]);
+    },
+  });
+  const currentWorkspace =
+    props.mode === 'saved' ? savedWorkspaceQuery.data : null;
+  const workspaceRevisionRef = useRef<number | null>(null);
+  const revisionWorkspaceIdRef = useRef<string | null>(null);
+  const {workspaceContentSnapshot, documents, selectedDocumentId} =
+    useWorkspaceRoomSnapshot({
+      roomStore: workspaceRoomStore,
+      workspaceContent: currentWorkspace?.content,
+    });
+  const canPersistWorkspace = Boolean(currentWorkspace);
+  const saveWorkspaceRoomSnapshot =
+    useMemo<SaveWorkspaceRoomSnapshot | null>(() => {
+      if (props.mode !== 'saved' || !token || !canPersistWorkspace) return null;
+
+      return async (snapshot) => {
+        const expectedRevision = workspaceRevisionRef.current;
+        if (expectedRevision === null) {
+          throw new Error('Workspace revision is not available.');
+        }
+        const workspace = await saveWorkspaceSnapshot({
+          data: {
+            token,
+            workspaceId: props.workspaceId,
+            content: snapshot.content,
+            layout: snapshot.layout as unknown as JsonObject,
+            aiConfig: snapshot.aiConfig,
+            expectedRevision,
+          },
+        });
+        workspaceRevisionRef.current = workspace.revision;
+      };
+    }, [canPersistWorkspace, props.mode, props.workspaceId, token]);
+  const selectedDocument = useMemo(
+    () =>
+      documents.find((document) => document.id === selectedDocumentId) ??
+      documents[0],
+    [documents, selectedDocumentId],
+  );
+  const fileWorkflow = useWorkspaceFileWorkflow({
+    mode: props.mode,
+    workspaceId: savedWorkspaceId,
+    token,
+    duckDbRuntime,
+    workspaceFiles: workspaceFilesQuery.data,
+    invalidateWorkspaceFiles: () =>
+      queryClient.invalidateQueries({queryKey: workspaceFilesQueryKey}),
+    openSignInToSave: () => setIsSignInToSaveOpen(true),
+  });
+
+  useEffect(() => {
+    if (currentWorkspace?.name) {
+      setSavedWorkspaceNameDraft(currentWorkspace.name);
+    }
+  }, [currentWorkspace?.name]);
+
+  useEffect(() => {
+    if (
+      currentWorkspace &&
+      revisionWorkspaceIdRef.current !== currentWorkspace.id
+    ) {
+      revisionWorkspaceIdRef.current = currentWorkspace.id;
+      workspaceRevisionRef.current = currentWorkspace.revision;
+    }
+  }, [currentWorkspace?.id, currentWorkspace?.revision]);
+
+  const initialWorkspaceLayout = useMemo(
+    () =>
+      props.mode === 'saved' && currentWorkspace?.layout
+        ? (currentWorkspace.layout as unknown as LayoutNode)
+        : createDefaultWorkspaceLayout(),
+    [currentWorkspace?.layout, props.mode],
+  );
+
+  const initialWorkspaceAiConfig = useMemo(
+    () =>
+      props.mode === 'saved'
+        ? (currentWorkspace?.aiConfig ?? createDefaultWorkspaceAiConfig())
+        : createDefaultWorkspaceAiConfig(),
+    [currentWorkspace?.aiConfig, props.mode],
+  );
+  const handleRoomError = useMemo(
+    () => (error: unknown) => {
+      const message = getErrorMessage(error, 'Workspace save failed.');
+      if (message.startsWith('Workspace changed in another session.')) {
+        window.alert(message);
+      } else {
+        console.error(error);
+      }
+    },
+    [],
+  );
+
+  const handleSignIn = async () => {
+    const result = await authClient.signIn.social({
+      provider: 'google',
+      callbackURL: window.location.href,
+    });
+    if (result.error?.message) {
+      window.alert(result.error.message);
+    }
+  };
+
+  const handleSaveWorkspace = async () => {
+    if (!token) {
+      setIsSignInToSaveOpen(true);
+      return;
+    }
+    const roomSnapshot = workspaceRoomStore
+      ? createWorkspaceRoomSnapshot(workspaceRoomStore.getState())
+      : null;
+
+    let workspace = pendingCreatedWorkspaceRef.current;
+    try {
+      if (workspace) {
+        workspace = await saveWorkspaceSnapshot({
+          data: {
+            token,
+            workspaceId: workspace.id,
+            content:
+              roomSnapshot?.content ??
+              workspaceContentSnapshot ??
+              (createDefaultWorkspaceContent() as JsonObject),
+            layout: (roomSnapshot?.layout ??
+              initialWorkspaceLayout) as unknown as JsonObject,
+            aiConfig: roomSnapshot?.aiConfig ?? initialWorkspaceAiConfig,
+            expectedRevision: workspace.revision,
+          },
+        });
+      } else {
+        workspace = await createWorkspaceMutation.mutateAsync({
+          data: {
+            token,
+            name: localWorkspaceName,
+            content:
+              roomSnapshot?.content ??
+              workspaceContentSnapshot ??
+              (createDefaultWorkspaceContent() as JsonObject),
+            layout: (roomSnapshot?.layout ??
+              initialWorkspaceLayout) as unknown as JsonObject,
+            aiConfig: roomSnapshot?.aiConfig ?? initialWorkspaceAiConfig,
+          },
+        });
+      }
+      pendingCreatedWorkspaceRef.current = workspace;
+    } catch (error) {
+      window.alert(getErrorMessage(error, 'Could not save workspace.'));
+      return;
+    }
+
+    try {
+      await fileWorkflow.uploadPreparedLocalFiles({
+        uploadToken: token,
+        targetWorkspaceId: workspace.id,
+      });
+    } catch (error) {
+      window.alert(
+        `Workspace saved, but files could not be uploaded: ${getErrorMessage(error, 'Unknown upload error')}. Try Save Workspace again.`,
+      );
+      return;
+    }
+
+    try {
+      await queryClient.invalidateQueries({queryKey: cloudWorkspacesQueryKey});
+      await navigate({
+        to: '/workspaces/$workspaceId',
+        params: {workspaceId: workspace.id},
+      });
+    } catch (error) {
+      window.alert(
+        getErrorMessage(error, 'Workspace saved, but could not be opened.'),
+      );
+      return;
+    }
+
+    pendingCreatedWorkspaceRef.current = undefined;
+  };
+
+  const handleCreateDocument = () => {
+    if (!workspaceRoomStore) return;
+    const state = workspaceRoomStore.getState();
+    const sessionId = state.ai.config.currentSessionId;
+    state.artifactAi.setSyncSuspended(true);
+    try {
+      const documentId = state.artifacts.createArtifact({type: 'document'});
+      state.workspace.setCurrentDocument(documentId);
+      if (sessionId) {
+        state.artifactAi.addSessionArtifactLink(sessionId, documentId);
+        syncSessionDocumentRunContext(
+          workspaceRoomStore.getState(),
+          sessionId,
+          documentId,
+        );
+      }
+    } finally {
+      state.artifactAi.setSyncSuspended(false);
+      state.artifactAi.syncCurrentArtifactAiSession();
+    }
+  };
+
+  const handleWorkspaceTitleChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    if (props.mode === 'saved') {
+      setSavedWorkspaceNameDraft(event.target.value);
+      return;
+    }
+
+    setLocalWorkspaceName(event.target.value);
+  };
+
+  const handleWorkspaceTitleCommit = async () => {
+    if (props.mode === 'unsaved') {
+      setLocalWorkspaceName(localWorkspaceName.trim() || 'Untitled Workspace');
+      return;
+    }
+
+    const currentName = currentWorkspace?.name;
+    const nextName = savedWorkspaceNameDraft.trim();
+    if (!token || !currentName || !nextName || nextName === currentName) {
+      if (!nextName && currentName) {
+        setSavedWorkspaceNameDraft(currentName);
+      }
+      return;
+    }
+
+    await renameWorkspaceMutation.mutateAsync({
+      data: {
+        token,
+        workspaceId: props.workspaceId,
+        name: nextName,
+      },
+    });
+  };
+
+  const handleWorkspaceTitleKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
+    if (event.key === 'Enter') {
+      event.currentTarget.blur();
+    }
+  };
+
+  const workspaceTitle =
+    props.mode === 'saved'
+      ? savedWorkspaceNameDraft ||
+        currentWorkspace?.name ||
+        'Loading workspace...'
+      : localWorkspaceName;
+
+  if (props.mode === 'saved' && token && savedWorkspaceQuery.isPending) {
+    return <WorkspaceLoadMessage message="Loading workspace..." />;
+  }
+
+  if (
+    props.mode === 'saved' &&
+    token &&
+    (savedWorkspaceQuery.isError || savedWorkspaceQuery.data === null)
+  ) {
+    return (
+      <WorkspaceLoadMessage message="Workspace not found or unavailable." />
+    );
+  }
+
+  return (
+    <main className="app-background sqlrooms-web-root">
+      <TooltipProvider>
+        <SidebarProvider defaultOpen>
+          <Sidebar collapsible="icon" className="sqlrooms-sidebar">
+            <SidebarHeader className="gap-3">
+              <SidebarBrand />
+              <WorkspaceDropdown
+                workspaceTitle={workspaceTitle}
+                workspaces={workspacesQuery.data ?? []}
+              />
+            </SidebarHeader>
+
+            <SidebarContent>
+              <SidebarGroup className="min-h-44 flex-1">
+                <WorkspaceNavigationTabs
+                  roomStore={workspaceRoomStore}
+                  onCreateDocument={
+                    workspaceRoomStore ? handleCreateDocument : undefined
+                  }
+                />
+              </SidebarGroup>
+
+              <SidebarGroup className="shrink-0">
+                <SidebarGroupLabel className="text-shell-subtle">
+                  Data
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <DatabaseSidebarSection
+                    tables={fileWorkflow.schemaTableItems}
+                    status={fileWorkflow.fileIngestionStatus}
+                    runtimeStatus={duckDbRuntime.status}
+                    onAddFile={fileWorkflow.addFile}
+                    onPreviewTable={(tableName) =>
+                      void fileWorkflow.previewTable(tableName)
+                    }
+                  />
+                  <input
+                    ref={fileWorkflow.fileInputRef}
+                    className="sr-only"
+                    type="file"
+                    multiple
+                    onChange={fileWorkflow.handleFileInputChange}
+                    tabIndex={-1}
+                  />
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
+
+            <SidebarFooter>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <div className="flex items-center gap-2 px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+                    <ThemeSwitch className="data-[state=checked]:bg-primary/30 data-[state=unchecked]:bg-sidebar-accent" />
+                    <span className="text-muted-foreground text-sm group-data-[collapsible=icon]:hidden">
+                      Theme
+                    </span>
+                  </div>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() =>
+                      session?.user
+                        ? void authClient.signOut()
+                        : void handleSignIn()
+                    }
+                  >
+                    {session?.user ? (
+                      <LogOut className="size-4" aria-hidden />
+                    ) : (
+                      <LogIn className="size-4" aria-hidden />
+                    )}
+                    <span>{session?.user ? 'Sign out' : 'Sign in'}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarFooter>
+            <SidebarRail />
+          </Sidebar>
+
+          <SidebarInset className="sqlrooms-workspace">
+            <header className="workspace-topbar">
+              <div className="topbar-left">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <SidebarTrigger className="topbar-icon" />
+                  </TooltipTrigger>
+                  <TooltipContent>Toggle sidebar</TooltipContent>
+                </Tooltip>
+                <Input
+                  id="workspace-title"
+                  name="workspaceTitle"
+                  className="workspace-title-input"
+                  value={workspaceTitle}
+                  disabled={
+                    props.mode === 'saved' &&
+                    (!currentWorkspace || renameWorkspaceMutation.isPending)
+                  }
+                  onBlur={() => void handleWorkspaceTitleCommit()}
+                  onChange={handleWorkspaceTitleChange}
+                  onKeyDown={handleWorkspaceTitleKeyDown}
+                  aria-label="Workspace title"
+                />
+              </div>
+              <div className="topbar-center">
+                <WorkspaceDocumentSelector roomStore={workspaceRoomStore} />
+              </div>
+              <div className="topbar-right">
+                <WorkspaceAssistantPanelToggle roomStore={workspaceRoomStore} />
+                {props.mode === 'unsaved' ? (
+                  <Button
+                    className="save-workspace-button"
+                    type="button"
+                    onClick={() => void handleSaveWorkspace()}
+                    disabled={createWorkspaceMutation.isPending}
+                  >
+                    <Save className="size-4" aria-hidden />
+                    Save Workspace
+                  </Button>
+                ) : null}
+                <Button variant="ghost" size="icon" className="topbar-icon">
+                  <Settings className="size-4" aria-hidden />
+                  <span className="sr-only">Settings</span>
+                </Button>
+              </div>
+            </header>
+
+            <WorkspaceLayoutSurface
+              workspaceKey={activeWorkspaceId}
+              layout={initialWorkspaceLayout}
+              aiConfig={initialWorkspaceAiConfig}
+              workspaceContent={currentWorkspace?.content}
+              selectedDocument={selectedDocument}
+              token={token}
+              duckDbRuntime={duckDbRuntime}
+              onRoomStoreChange={setWorkspaceRoomStore}
+              saveRoomSnapshot={saveWorkspaceRoomSnapshot}
+              onRoomError={handleRoomError}
+            />
+          </SidebarInset>
+        </SidebarProvider>
+      </TooltipProvider>
+
+      <Dialog open={isSignInToSaveOpen} onOpenChange={setIsSignInToSaveOpen}>
+        <DialogContent className="sign-in-dialog">
+          <DialogHeader className="sign-in-dialog-header">
+            <DialogTitle className="sign-in-dialog-title">
+              Sign in to save
+            </DialogTitle>
+            <DialogDescription className="sign-in-dialog-description">
+              Save this workspace to your account and keep working from any
+              browser.
+            </DialogDescription>
+          </DialogHeader>
+          <Button
+            className="google-sign-in-button"
+            type="button"
+            onClick={() => void handleSignIn()}
+          >
+            Continue with Google
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      <WorkspaceFileDialogs
+        tablePreview={fileWorkflow.tablePreview}
+        fileNameConflict={fileWorkflow.fileNameConflict}
+        onCloseTablePreview={fileWorkflow.closeTablePreview}
+        onResolveFileNameConflict={fileWorkflow.resolveFileNameConflict}
+      />
+    </main>
+  );
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function WorkspaceLoadMessage({message}: {message: string}) {
+  return (
+    <main className="app-background sqlrooms-web-root text-foreground grid place-items-center">
+      <div className="space-y-4 text-center">
+        <p>{message}</p>
+        <Button asChild variant="secondary">
+          <Link to="/">Open a new workspace</Link>
+        </Button>
+      </div>
+    </main>
+  );
+}
+
+function SidebarBrand() {
+  const {setOpen} = useSidebar();
+
+  return (
+    <button
+      className="brand-button"
+      type="button"
+      onClick={() => setOpen(true)}
+      aria-label="Open sidebar"
+    >
+      <img className="brand-logo" src="/logo.png" alt="" />
+      <div className="brand-copy">
+        <div className="brand-title">SQLRooms</div>
+        <div className="brand-subtitle">Analytics workspaces</div>
+      </div>
+    </button>
+  );
+}
+
+function WorkspaceDropdown({
+  workspaceTitle,
+  workspaces,
+}: {
+  workspaceTitle: string;
+  workspaces: Array<{id: string; name: string}>;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <SidebarMenuButton
+          className="workspace-selector"
+          type="button"
+          size="lg"
+          tooltip="Workspaces"
+        >
+          <FolderKanban className="size-4" aria-hidden />
+          <span className="truncate">{workspaceTitle}</span>
+          <ChevronDown
+            className="workspace-selector-chevron ml-auto size-4"
+            aria-hidden
+          />
+        </SidebarMenuButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        className="workspace-menu"
+        align="start"
+        side="right"
+      >
+        <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+        {workspaces.map((workspace) => (
+          <DropdownMenuItem key={workspace.id} asChild>
+            <Link
+              to="/workspaces/$workspaceId"
+              params={{workspaceId: workspace.id}}
+            >
+              <FolderKanban className="size-4" aria-hidden />
+              {workspace.name}
+            </Link>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/">
+            <Plus className="size-4" aria-hidden />
+            New Workspace
+          </Link>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}

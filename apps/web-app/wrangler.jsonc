@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sqlrooms-web-app",
+  "account_id": "26c528f8ea854bd95b362a52eea798b2",
+  "compatibility_date": "2026-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "src/server-entry.ts",
+  "r2_buckets": [
+    {
+      "binding": "USER_FILES_BUCKET",
+      "bucket_name": "sqlrooms-user-files",
+      "preview_bucket_name": "sqlrooms-user-files-preview",
+    },
+  ],
+  "vars": {
+    "APP_BASE_URL": "http://localhost:3000",
+    "AI_DAILY_MESSAGE_LIMIT": "60",
+    "OPENROUTER_APP_NAME": "SQLRooms",
+    "OPENROUTER_MODEL": "openai/gpt-4o-mini",
+    "OPENROUTER_SITE_URL": "http://localhost:3000",
+    "R2_ACCOUNT_ID": "26c528f8ea854bd95b362a52eea798b2",
+    "R2_BUCKET_NAME": "sqlrooms-user-files",
+  },
+}

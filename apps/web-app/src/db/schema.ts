@@ -1,0 +1,265 @@
+import {relations, sql} from 'drizzle-orm';
+import {
+  bigint,
+  check,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  real,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
+
+export const usersProfile = pgTable('users_profile', {
+  userId: text('user_id').primaryKey(),
+  displayName: text('display_name'),
+  createdAt: timestamp('created_at', {withTimezone: true})
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', {withTimezone: true})
+    .defaultNow()
+    .notNull(),
+});
+
+export const workspaces = pgTable(
+  'workspaces',
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    ownerId: text('owner_id').notNull(),
+    name: text().notNull(),
+    content: jsonb()
+      .notNull()
+      .default({
+        artifacts: {
+          artifactsById: {
+            'default-document': {
+              id: 'default-document',
+              type: 'document',
+              title: 'Document',
+              visibility: 'workspace',
+            },
+          },
+          artifactOrder: ['default-document'],
+          pinnedArtifactIds: [],
+          currentArtifactId: 'default-document',
+        },
+        blockDocuments: {
+          artifacts: {
+            'default-document': {
+              id: 'default-document',
+              content: {type: 'doc', content: []},
+              assets: {},
+              updatedAt: 0,
+            },
+          },
+        },
+        sqlEditor: {queries: [], selectedQueryId: '', openTabs: []},
+        mosaicDashboard: {dashboardsById: {}},
+        artifactAi: {sessionArtifactLinks: []},
+      }),
+    aiConfig: jsonb('ai_config')
+      .notNull()
+      .default({sessions: [], openSessionTabs: []}),
+    layout: jsonb()
+      .notNull()
+      .default({
+        type: 'split',
+        id: 'workspace-root-layout',
+        direction: 'row',
+        children: [
+          {
+            type: 'panel',
+            id: 'assistant-panel',
+            panel: 'assistant',
+            defaultSize: '320px',
+            minSize: '260px',
+            maxSize: '560px',
+            collapsible: true,
+            collapsedSize: 0,
+          },
+          {
+            type: 'panel',
+            id: 'document-panel',
+            panel: 'document',
+            defaultSize: '75%',
+            minSize: '360px',
+          },
+        ],
+      }),
+    revision: integer().default(0).notNull(),
+    createdAt: timestamp('created_at', {withTimezone: true})
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', {withTimezone: true})
+      .defaultNow()
+      .notNull(),
+    lastOpenedAt: timestamp('last_opened_at', {withTimezone: true}),
+  },
+  (table) => [
+    index('workspaces_owner_updated_at_idx').on(table.ownerId, table.updatedAt),
+  ],
+);
+
+export const workspaceMembers = pgTable(
+  'workspace_members',
+  {
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, {onDelete: 'cascade'}),
+    userId: text('user_id').notNull(),
+    role: text().default('owner').notNull(),
+    createdAt: timestamp('created_at', {withTimezone: true})
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.workspaceId, table.userId],
+      name: 'workspace_members_workspace_user_pk',
+    }),
+    index('workspace_members_user_idx').on(table.userId),
+    check(
+      'workspace_members_role_check',
+      sql`${table.role} in ('owner', 'editor', 'viewer')`,
+    ),
+  ],
+);
+
+export const files = pgTable(
+  'files',
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    ownerId: text('owner_id').notNull(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, {onDelete: 'cascade'}),
+    originalName: text('original_name').notNull(),
+    tableName: text('table_name').notNull(),
+    objectKey: text('object_key').notNull(),
+    mimeType: text('mime_type')
+      .default('application/vnd.apache.parquet')
+      .notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    sourceSizeBytes: integer('source_size_bytes'),
+    rowCount: integer('row_count'),
+    contentHash: text('content_hash'),
+    status: text().default('active').notNull(),
+    createdAt: timestamp('created_at', {withTimezone: true})
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('files_object_key_idx').on(table.objectKey),
+    uniqueIndex('files_workspace_table_name_idx').on(
+      table.workspaceId,
+      sql`lower(${table.tableName})`,
+    ),
+    index('files_workspace_created_at_idx').on(
+      table.workspaceId,
+      table.createdAt,
+    ),
+    index('files_owner_created_at_idx').on(table.ownerId, table.createdAt),
+  ],
+);
+
+export const fileUploadReservations = pgTable(
+  'file_upload_reservations',
+  {
+    id: uuid().primaryKey(),
+    userId: text('user_id').notNull(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, {onDelete: 'cascade'}),
+    objectKey: text('object_key').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    replaceFileId: uuid('replace_file_id'),
+    expiresAt: timestamp('expires_at', {withTimezone: true}).notNull(),
+    createdAt: timestamp('created_at', {withTimezone: true})
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('file_upload_reservations_object_key_idx').on(table.objectKey),
+    index('file_upload_reservations_user_expires_at_idx').on(
+      table.userId,
+      table.expiresAt,
+    ),
+  ],
+);
+
+export const userStorageUsage = pgTable('user_storage_usage', {
+  userId: text('user_id').primaryKey(),
+  usedBytes: bigint('used_bytes', {mode: 'number'}).default(0).notNull(),
+  limitBytes: bigint('limit_bytes', {mode: 'number'})
+    .default(100 * 1024 * 1024)
+    .notNull(),
+  updatedAt: timestamp('updated_at', {withTimezone: true})
+    .defaultNow()
+    .notNull(),
+});
+
+export const aiUsageEvents = pgTable(
+  'ai_usage_events',
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    userId: text('user_id').notNull(),
+    provider: text().notNull(),
+    model: text().notNull(),
+    purpose: text().default('chat').notNull(),
+    inputTokens: integer('input_tokens'),
+    outputTokens: integer('output_tokens'),
+    reasoningTokens: integer('reasoning_tokens'),
+    cachedInputTokens: integer('cached_input_tokens'),
+    costUsd: real('cost_usd'),
+    createdAt: timestamp('created_at', {withTimezone: true})
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('ai_usage_events_user_created_at_idx').on(
+      table.userId,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const aiUsageCounters = pgTable(
+  'ai_usage_counters',
+  {
+    userId: text('user_id').notNull(),
+    provider: text().notNull(),
+    windowStartedAt: timestamp('window_started_at', {withTimezone: true})
+      .defaultNow()
+      .notNull(),
+    messageCount: integer('message_count').default(0).notNull(),
+    updatedAt: timestamp('updated_at', {withTimezone: true})
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.userId, table.provider],
+      name: 'ai_usage_counters_user_provider_pk',
+    }),
+    check(
+      'ai_usage_counters_message_count_check',
+      sql`${table.messageCount} >= 0`,
+    ),
+  ],
+);
+
+export const workspaceRelations = relations(workspaces, ({many}) => ({
+  members: many(workspaceMembers),
+  files: many(files),
+}));
+
+export const fileRelations = relations(files, ({one}) => ({
+  workspace: one(workspaces, {
+    fields: [files.workspaceId],
+    references: [workspaces.id],
+  }),
+}));

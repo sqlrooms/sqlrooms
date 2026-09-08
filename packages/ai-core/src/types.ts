@@ -286,6 +286,8 @@ export type AiToolExecutionContext = {
  */
 export interface AiStateForTransport {
   config: AiSliceConfig;
+  /** Headers read at request time by remote chat transports. */
+  chatHeaders: Record<string, string>;
   tools: StoredToolSet;
   getProviderOptions?: GetProviderOptions;
   getCurrentSession: () => ChatSessionSchema | undefined;
@@ -390,7 +392,8 @@ export type ToolRendererProps<TOutput = unknown, TInput = unknown> = {
 type IsAny<T> = 0 extends 1 & T ? true : false;
 
 type RenderableComponent<TProps> =
-  ComponentType<TProps> | ExoticComponent<TProps>;
+  | ComponentType<TProps>
+  | ExoticComponent<TProps>;
 
 /**
  * Component type inferred from a tool or from explicit output/input.

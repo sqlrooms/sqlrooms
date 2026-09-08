@@ -608,7 +608,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         ? get().ai.getRemoteChatTransport(
             sessionId,
             trimmedEndpoint,
-            chatHeaders,
+            get().ai.chatHeaders,
           )
         : get().ai.getLocalChatTransport(sessionId);
       const chat = new Chat<UIMessage>({
