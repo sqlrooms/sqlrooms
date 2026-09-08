@@ -645,8 +645,10 @@ export function setDeckMapLayerGeometryColumn(
   };
 
   return updateDeckMapLayer(updatedConfig, layerIndex, (l) => {
-    const binding = isRecord(l._sqlroomsBinding) ? l._sqlroomsBinding : {};
-    const nextBinding = {...binding, geometryColumn};
+    const nextBinding: Record<string, unknown> = {
+      ...(isRecord(l._sqlroomsBinding) ? l._sqlroomsBinding : {}),
+      geometryColumn,
+    };
     delete nextBinding.longitudeColumn;
     delete nextBinding.latitudeColumn;
     return {
@@ -827,9 +829,12 @@ function getArcTransformGeometryAliases(
     .map((match) => match[1])
     .filter((name): name is string => Boolean(name));
   if (aliases.length < 2) return undefined;
+  const sourceGeometryColumn = aliases[0];
+  const targetGeometryColumn = aliases[1];
+  if (!sourceGeometryColumn || !targetGeometryColumn) return undefined;
   return {
-    sourceGeometryColumn: aliases[0],
-    targetGeometryColumn: aliases[1],
+    sourceGeometryColumn,
+    targetGeometryColumn,
   };
 }
 
@@ -1044,13 +1049,13 @@ export function setDeckMapLayerArcCoordinateColumns(
     delete nextBinding.targetLongitudeColumn;
   }
 
-  const hasAllCoordinates = Boolean(
-    sourceLatitudeColumn &&
-    sourceLongitudeColumn &&
-    targetLatitudeColumn &&
-    targetLongitudeColumn,
-  );
-  if (!hasAllCoordinates || !isDeckMapTableDatasetSource(dataset.source)) {
+  if (
+    !sourceLatitudeColumn ||
+    !sourceLongitudeColumn ||
+    !targetLatitudeColumn ||
+    !targetLongitudeColumn ||
+    !isDeckMapTableDatasetSource(dataset.source)
+  ) {
     return updateDeckMapLayer(config, layerIndex, (nextLayer) => ({
       ...nextLayer,
       _sqlroomsBinding: nextBinding,
