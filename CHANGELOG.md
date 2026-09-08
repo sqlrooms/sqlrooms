@@ -3,6 +3,27 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.12...v0.29.0-rc.13) (2026-09-08)
+
+### Bug Fixes
+
+* **ai-core:** route sendPrompt through getCustomModel and unmask sub-agent errors ([#894](https://github.com/sqlrooms/sqlrooms/issues/894)) ([b30d858](https://github.com/sqlrooms/sqlrooms/commit/b30d85815bfce4eb46e0767c51e23f47b0378c99))
+* **ci:** extend npm verification retry window ([#893](https://github.com/sqlrooms/sqlrooms/issues/893)) ([fbd75fb](https://github.com/sqlrooms/sqlrooms/commit/fbd75fb530517fa1e6de3a645ac1a811a7951176))
+* **documents:** preserve mouse text selection ([#896](https://github.com/sqlrooms/sqlrooms/issues/896)) ([2236434](https://github.com/sqlrooms/sqlrooms/commit/2236434b934bf565e48eb469811be78f317db0d1))
+* **mosaic:** support row-count line charts ([#900](https://github.com/sqlrooms/sqlrooms/issues/900)) ([50e16b9](https://github.com/sqlrooms/sqlrooms/commit/50e16b9b5fd5dfabe077997d5cbbca275e82f87a))
+* prevent overflow in dashboard toolbar layout ([#801](https://github.com/sqlrooms/sqlrooms/issues/801)) ([f2e48e0](https://github.com/sqlrooms/sqlrooms/commit/f2e48e08a2c9403389c8ad7931ca23c1f3ca9a5f))
+* Remove shadow effect from header div ([#901](https://github.com/sqlrooms/sqlrooms/issues/901)) ([87e0df6](https://github.com/sqlrooms/sqlrooms/commit/87e0df65c01a895449587faebd61b0bc5f53a13e))
+* **ui:** correct ScrollableRow overflow-state tracking ([#861](https://github.com/sqlrooms/sqlrooms/issues/861)) ([1d1796a](https://github.com/sqlrooms/sqlrooms/commit/1d1796aa0b648797bfd0645320254b6faddf9c08))
+
+### Features
+
+* **ai-core:** index chat search by what actually renders ([#899](https://github.com/sqlrooms/sqlrooms/issues/899)) ([016cc29](https://github.com/sqlrooms/sqlrooms/commit/016cc299aac949592494183174392d3c91ed2e47))
+* **ai:** add caller-scoped command guard ([#898](https://github.com/sqlrooms/sqlrooms/issues/898)) ([13f462d](https://github.com/sqlrooms/sqlrooms/commit/13f462dbb5f3d9872f760bf49815715ca1bc9a4e))
+* **ai:** add chat file attachments ([#890](https://github.com/sqlrooms/sqlrooms/issues/890)) ([87575ba](https://github.com/sqlrooms/sqlrooms/commit/87575ba3ab8530db22a10029eb749b31b6ff9e74))
+* **cli:** add visual rendering tools for agents ([#889](https://github.com/sqlrooms/sqlrooms/issues/889)) ([2843ad4](https://github.com/sqlrooms/sqlrooms/commit/2843ad448d1b1188cb7e8b2cc0c650c1a89ffca4))
+* **cli:** separate chat and artifact navigation ([#891](https://github.com/sqlrooms/sqlrooms/issues/891)) ([fd08a26](https://github.com/sqlrooms/sqlrooms/commit/fd08a26f442ccd4b5daad812df4aacae8e864b8c))
+* **deck:** use keyless OpenFreeMap basemaps by default ([#897](https://github.com/sqlrooms/sqlrooms/issues/897)) ([7e08074](https://github.com/sqlrooms/sqlrooms/commit/7e080742059613ee8427fd6f358dabc9f5384cc0))
+
 # [0.29.0-rc.12](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.11...v0.29.0-rc.12) (2026-08-28)
 
 ### Bug Fixes
