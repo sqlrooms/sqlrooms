@@ -650,7 +650,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           currentState,
         );
       },
-      onRehydrateStorage: () => (state) => {
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error('Failed to restore workspace', error);
+          toast.error('Failed to restore workspace', {
+            description:
+              'Saving is disabled to protect the existing workspace. Fix the loading error and reload to try again.',
+            duration: Infinity,
+          });
+          return;
+        }
         if (!state) return;
         state.artifactAi.syncCurrentArtifactAiSession();
         cliUiPersistStorage.markStateSnapshotSaved(

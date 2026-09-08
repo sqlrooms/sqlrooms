@@ -57,6 +57,9 @@ export function createDuckDbPersistStorage<TPersisted>(
   const namespace = options?.namespace || '__sqlrooms';
   let ensured: Promise<void> | null = null;
   let handlersRegistered = false;
+  // Loading the JSON is not enough: slice validation and merge must succeed
+  // before runtime changes are allowed to replace the saved workspace.
+  let hydrated = false;
   const ensure = () => {
     ensured = ensured ?? ensureUiStateTable(connector, namespace);
     return ensured;
@@ -121,9 +124,18 @@ export function createDuckDbPersistStorage<TPersisted>(
     ...persistence.storage,
     controller: persistence.controller,
     flush: persistence.flush,
-    markStateSnapshotSaved: persistence.markStateSnapshotSaved,
+    markStateSnapshotSaved: (state) => {
+      persistence.markStateSnapshotSaved(state);
+      hydrated = true;
+    },
+
+    getItem: async (...args) => {
+      hydrated = false;
+      return persistence.storage.getItem(...args);
+    },
 
     setItem: async (...args) => {
+      if (!hydrated) return;
       registerFlushHandlers();
       return persistence.storage.setItem(...args);
     },

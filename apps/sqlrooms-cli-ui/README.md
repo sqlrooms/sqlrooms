@@ -217,6 +217,12 @@ They can contain editable text, images, standalone Mosaic/vgplot chart blocks, a
 direct stateful blocks such as dashboards, pivot tables, Data Table Explorers,
 SQL queries, and Markdown documents.
 
+Workspace loading also migrates legacy AI/artifact associations from `createdAt`
+to `linkedAt`, removes the obsolete `linkType`, and moves pinned artifact IDs
+from `artifactAi` to `artifacts`. Saving stays disabled until the saved workspace
+has been successfully validated and restored. A loading failure shows an error
+and preserves the existing database snapshot for recovery.
+
 Standalone chart blocks reuse the same Mosaic chart view and settings panel as
 dashboard charts. Charts with the same `selectionGroupId` in one Document share
 a crossfilter selection; charts without a group are independent.
