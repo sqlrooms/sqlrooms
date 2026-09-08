@@ -30,6 +30,13 @@ npx giget gh:sqlrooms/examples/get-started my-new-app/
 
 <!--@include: ../examples/query/README.md-->
 
+### [Layout](https://github.com/sqlrooms/examples/tree/main/layout)
+
+An app demonstrating collapsible panels, custom tab strips, and dynamically
+created dock and grid dashboards. Start with the
+[Layout developer guide](https://sqlrooms.org/layout.html) for configuration
+examples and links to the layout APIs.
+
 <!-- Multi-room section includes the updated sidebar-powered demo + description. -->
 <!--@include: ../examples/multi-room/README.md-->
 

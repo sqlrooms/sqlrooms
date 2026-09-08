@@ -239,6 +239,10 @@ Canonical package combos:
             link: '/state-management',
           },
           {
+            text: 'Layout',
+            link: 'https://sqlrooms.org/layout.html',
+          },
+          {
             text: 'Persistence',
             link: '/persistence',
           },

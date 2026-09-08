@@ -1,5 +1,10 @@
 Layout slice and renderer for SQLRooms panel-based UIs.
 
+See the [Layout developer guide](https://sqlrooms.org/layout.html) for examples
+of panels, tabs, grids, and docking, and the
+[layout example app](https://github.com/sqlrooms/examples/tree/main/layout)
+for a complete implementation.
+
 This package renders layout trees using `react-resizable-panels` for split layouts, `dnd-kit` for dockable panel rearrangement, and `react-grid-layout` for scrollable grid dashboard layouts.
 
 ## Installation

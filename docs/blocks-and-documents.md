@@ -4,6 +4,10 @@ outline: deep
 
 # Blocks and Block Documents
 
+For arranging document panels alongside other workspace content, see the
+[Layout guide](https://sqlrooms.org/layout.html), with examples of panels, tabs,
+grids, and docking.
+
 Blocks are composable units of workspace content or behavior. Block documents
 are ordered, rich-text containers that mix ordinary content with interactive
 SQLRooms features such as charts, pivots, and dashboards.
