@@ -240,7 +240,7 @@ Canonical package combos:
           },
           {
             text: 'Layout',
-            link: 'https://sqlrooms.org/layout.html',
+            link: '/layout',
           },
           {
             text: 'Persistence',
