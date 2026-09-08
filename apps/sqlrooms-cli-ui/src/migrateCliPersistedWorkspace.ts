@@ -66,6 +66,7 @@ function migrateBlockDocumentsSlice(value: unknown): unknown {
   };
 }
 
+/** Converts legacy chat associations and pins while preserving canonical values. */
 function migrateArtifactAiAssociations(
   workspace: UnknownRecord,
 ): UnknownRecord {

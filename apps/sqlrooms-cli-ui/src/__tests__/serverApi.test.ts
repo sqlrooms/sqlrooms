@@ -11,22 +11,28 @@ afterEach(() => {
 });
 
 describe('DuckDB workspace restoration', () => {
+  type WorkspaceState = {documents: string[]; title?: string};
+
+  /** Creates a controllable database load and records every attempted save. */
   function createWorkspace(
     failMerge: boolean,
-    saved: {documents: string[]} | null,
+    saved: WorkspaceState | null,
+    loadPending?: Promise<void>,
+    synchronize?: (state: WorkspaceState) => WorkspaceState,
   ) {
     let body = saved === null ? null : JSON.stringify(saved);
     const writes: string[] = [];
-    const storage = createDuckDbPersistStorage<{documents: string[]}>({
+    const storage = createDuckDbPersistStorage<WorkspaceState>({
       query: async (sql) => {
         if (sql.startsWith('SELECT')) {
+          await loadPending;
           return {toArray: () => (body === null ? [] : [{payload_json: body}])};
         }
         if (sql.startsWith('INSERT')) writes.push(sql);
       },
     });
-    const store = createStore(
-      persist(() => ({documents: [] as string[]}), {
+    const store = createStore<WorkspaceState>()(
+      persist((): WorkspaceState => ({documents: []}), {
         name: 'test',
         storage,
         skipHydration: true,
@@ -35,7 +41,9 @@ describe('DuckDB workspace restoration', () => {
           return {...current, ...(persisted as typeof current)};
         },
         onRehydrateStorage: () => (state, error) => {
-          if (state && !error) storage.markStateSnapshotSaved(state);
+          if (!state || error) return;
+          if (synchronize) store.setState(synchronize(state));
+          storage.completeHydration(store.getState());
         },
       }),
     );
@@ -80,13 +88,63 @@ describe('DuckDB workspace restoration', () => {
       await store.persist.rehydrate();
       expect(store.persist.hasHydrated()).toBe(true);
       await storage.flush();
-      expect(writes).toEqual([]);
+      const initialWrites = saved === null ? 1 : 0;
+      expect(writes).toHaveLength(initialWrites);
       store.setState({documents: ['edited']});
       await storage.flush();
-      expect(writes).toHaveLength(1);
-      expect(writes[0]).toContain('edited');
+      expect(writes).toHaveLength(initialWrites + 1);
+      expect(writes[initialWrites]).toContain('edited');
     },
   );
+
+  test.each([null, {documents: ['saved']}])(
+    'saves startup changes retained by merge once after loading %j',
+    async (saved) => {
+      jest.useFakeTimers();
+      let finishLoad!: () => void;
+      const loadPending = new Promise<void>((resolve) => {
+        finishLoad = resolve;
+      });
+      const {store, storage, writes} = createWorkspace(
+        false,
+        saved,
+        loadPending,
+      );
+      const hydration = store.persist.rehydrate();
+      store.setState({title: 'Initialized title'});
+      await jest.advanceTimersByTimeAsync(500);
+      await storage.flush();
+      expect(writes).toEqual([]);
+
+      finishLoad();
+      await hydration;
+      expect(store.getState()).toEqual({
+        documents: saved?.documents ?? [],
+        title: 'Initialized title',
+      });
+      expect(storage.controller.getState().dirty).toBe(true);
+      await jest.advanceTimersByTimeAsync(500);
+      expect(writes).toHaveLength(1);
+      expect(writes[0]).toContain(JSON.stringify(store.getState()));
+      expect(storage.controller.getState().dirty).toBe(false);
+      await storage.flush();
+      expect(writes).toHaveLength(1);
+    },
+  );
+
+  test('saves post-load synchronization from the latest store state', async () => {
+    const {store, storage, writes} = createWorkspace(
+      false,
+      {documents: ['saved']},
+      undefined,
+      (state) => ({...state, title: 'Synchronized title'}),
+    );
+    await store.persist.rehydrate();
+    await storage.flush();
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toContain(JSON.stringify(store.getState()));
+    expect(writes[0]).toContain('Synchronized title');
+  });
 });
 
 describe('fetchMcpStatus', () => {

@@ -662,8 +662,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         }
         if (!state) return;
         state.artifactAi.syncCurrentArtifactAiSession();
-        cliUiPersistStorage.markStateSnapshotSaved(
-          persistHelpers.partialize(state),
+        cliUiPersistStorage.completeHydration(
+          persistHelpers.partialize(roomStore.getState()),
         );
       },
     },

@@ -222,6 +222,8 @@ to `linkedAt`, removes the obsolete `linkType`, and moves pinned artifact IDs
 from `artifactAi` to `artifacts`. Saving stays disabled until the saved workspace
 has been successfully validated and restored. A loading failure shows an error
 and preserves the existing database snapshot for recovery.
+After successful restoration, migrations and startup changes retained by the
+merge are saved automatically if they differ from the loaded snapshot.
 
 Standalone chart blocks reuse the same Mosaic chart view and settings panel as
 dashboard charts. Charts with the same `selectionGroupId` in one Document share
