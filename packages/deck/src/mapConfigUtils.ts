@@ -291,6 +291,47 @@ export function parseDeckMapPointTransformSql(transformSql: string):
 }
 
 /**
+ * Reads origin/destination lon/lat and geometry aliases from canonical arc
+ * transform SQL.
+ */
+export function parseDeckMapArcTransformSql(transformSql: string):
+  | {
+      sourceLongitudeColumn: string;
+      sourceLatitudeColumn: string;
+      targetLongitudeColumn: string;
+      targetLatitudeColumn: string;
+      sourceGeometryColumn: string;
+      targetGeometryColumn: string;
+    }
+  | undefined {
+  const matches = [
+    ...transformSql.matchAll(
+      /ST_AsWKB\s*\(\s*ST_Point\s*\(\s*"?([^"\s,]+)"?\s*,\s*"?([^"\s,]+)"?\s*\)\s*\)\s*AS\s+"?([^\s",]+)"?/gi,
+    ),
+  ];
+  const source = matches[0];
+  const target = matches[1];
+  if (
+    !source?.[1] ||
+    !source[2] ||
+    !source[3] ||
+    !target?.[1] ||
+    !target[2] ||
+    !target[3]
+  ) {
+    return undefined;
+  }
+  return {
+    sourceLongitudeColumn: source[1],
+    sourceLatitudeColumn: source[2],
+    sourceGeometryColumn: source[3],
+    targetLongitudeColumn: target[1],
+    targetLatitudeColumn: target[2],
+    targetGeometryColumn: target[3],
+  };
+}
+
+/**
  * Builds the standard origin/destination lon/lat → WKB arc transform SQL.
  */
 export function createDeckMapArcTransformSql(options: {

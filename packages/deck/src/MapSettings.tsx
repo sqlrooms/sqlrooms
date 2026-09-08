@@ -50,7 +50,10 @@ import {
   isDeckMapTableDatasetSource,
   type DeckMapConfig,
 } from './mapConfig';
-import {parseDeckMapPointTransformSql} from './mapConfigUtils';
+import {
+  parseDeckMapArcTransformSql,
+  parseDeckMapPointTransformSql,
+} from './mapConfigUtils';
 import {
   clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
@@ -103,7 +106,9 @@ import {
   DeckMapTableSelector as DataTableSelector,
   filterDeckMapColumns,
   isDeckMapCategoricalColorColumn,
+  pickDeckMapArcCoordinateColumns,
   pickDeckMapArcGeometryColumns,
+  pickDeckMapCoordinateColumns,
   pickDeckMapSourceGeometryColumn,
 } from './MapSettingsControls';
 import {
@@ -1242,6 +1247,16 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   const lastSourceGeometryColumnRef = useRef<string | undefined>(undefined);
   const lastArcSourceGeometryColumnRef = useRef<string | undefined>(undefined);
   const lastArcTargetGeometryColumnRef = useRef<string | undefined>(undefined);
+  const lastPointCoordinatesRef = useRef<{
+    latitudeColumn?: string;
+    longitudeColumn?: string;
+  }>({});
+  const lastArcCoordinatesRef = useRef<{
+    sourceLatitudeColumn?: string;
+    sourceLongitudeColumn?: string;
+    targetLatitudeColumn?: string;
+    targetLongitudeColumn?: string;
+  }>({});
 
   const selectedDataTable = useMemo(
     () =>
@@ -1349,6 +1364,15 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
     : isDeckMapSqlDatasetSource(activeLayerDatasetSource)
       ? parseDeckMapPointTransformSql(activeLayerDatasetSource.sqlQuery)
       : undefined;
+  const parsedArcTransform = isDeckMapTableDatasetSource(
+    activeLayerDatasetSource,
+  )
+    ? activeLayerDatasetSource.transformSql
+      ? parseDeckMapArcTransformSql(activeLayerDatasetSource.transformSql)
+      : undefined
+    : isDeckMapSqlDatasetSource(activeLayerDatasetSource)
+      ? parseDeckMapArcTransformSql(activeLayerDatasetSource.sqlQuery)
+      : undefined;
   const fitToData =
     mapConfig.fitToData?.dataset === activeLayerDatasetId
       ? mapConfig.fitToData
@@ -1440,11 +1464,27 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
     ),
   );
   const hasArcGeometryColumns = arcGeometryColumns.length > 0;
+  const sourceLatitudeColumn =
+    (typeof activeLayerBinding?.sourceLatitudeColumn === 'string'
+      ? activeLayerBinding.sourceLatitudeColumn
+      : undefined) || parsedArcTransform?.sourceLatitudeColumn;
+  const sourceLongitudeColumn =
+    (typeof activeLayerBinding?.sourceLongitudeColumn === 'string'
+      ? activeLayerBinding.sourceLongitudeColumn
+      : undefined) || parsedArcTransform?.sourceLongitudeColumn;
+  const targetLatitudeColumn =
+    (typeof activeLayerBinding?.targetLatitudeColumn === 'string'
+      ? activeLayerBinding.targetLatitudeColumn
+      : undefined) || parsedArcTransform?.targetLatitudeColumn;
+  const targetLongitudeColumn =
+    (typeof activeLayerBinding?.targetLongitudeColumn === 'string'
+      ? activeLayerBinding.targetLongitudeColumn
+      : undefined) || parsedArcTransform?.targetLongitudeColumn;
   const usingArcCoordinateColumns = Boolean(
-    activeLayerBinding?.sourceLatitudeColumn ||
-    activeLayerBinding?.sourceLongitudeColumn ||
-    activeLayerBinding?.targetLatitudeColumn ||
-    activeLayerBinding?.targetLongitudeColumn,
+    sourceLatitudeColumn ||
+    sourceLongitudeColumn ||
+    targetLatitudeColumn ||
+    targetLongitudeColumn,
   );
   const arcTabFromConfig =
     usingArcCoordinateColumns || !hasArcGeometryColumns ? 'lonlat' : 'geom';
@@ -1566,6 +1606,8 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
     lastSourceGeometryColumnRef.current = undefined;
     lastArcSourceGeometryColumnRef.current = undefined;
     lastArcTargetGeometryColumnRef.current = undefined;
+    lastPointCoordinatesRef.current = {};
+    lastArcCoordinatesRef.current = {};
   }, [geometrySessionKey]);
 
   useEffect(() => {
@@ -1573,6 +1615,15 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
       lastSourceGeometryColumnRef.current = pointGeometryColumn;
     }
   }, [pointGeometryColumn]);
+
+  useEffect(() => {
+    if (latitudeColumn) {
+      lastPointCoordinatesRef.current.latitudeColumn = latitudeColumn;
+    }
+    if (longitudeColumn) {
+      lastPointCoordinatesRef.current.longitudeColumn = longitudeColumn;
+    }
+  }, [latitudeColumn, longitudeColumn]);
 
   useEffect(() => {
     if (nativeArcSourceGeometryColumn) {
@@ -1585,6 +1636,28 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
       lastArcTargetGeometryColumnRef.current = nativeArcTargetGeometryColumn;
     }
   }, [nativeArcTargetGeometryColumn]);
+
+  useEffect(() => {
+    if (sourceLatitudeColumn) {
+      lastArcCoordinatesRef.current.sourceLatitudeColumn = sourceLatitudeColumn;
+    }
+    if (sourceLongitudeColumn) {
+      lastArcCoordinatesRef.current.sourceLongitudeColumn =
+        sourceLongitudeColumn;
+    }
+    if (targetLatitudeColumn) {
+      lastArcCoordinatesRef.current.targetLatitudeColumn = targetLatitudeColumn;
+    }
+    if (targetLongitudeColumn) {
+      lastArcCoordinatesRef.current.targetLongitudeColumn =
+        targetLongitudeColumn;
+    }
+  }, [
+    sourceLatitudeColumn,
+    sourceLongitudeColumn,
+    targetLatitudeColumn,
+    targetLongitudeColumn,
+  ]);
 
   // Drop point/heatmap radius leftovers on Column layers (pixels vs meters).
   useEffect(() => {
@@ -2237,6 +2310,24 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                           onValueChange={(value) => {
                             if (value === 'lonlat') {
                               setGeometryTabOverride('lonlat');
+                              const restored = pickDeckMapCoordinateColumns(
+                                sourceColumns,
+                                lastPointCoordinatesRef.current,
+                              );
+                              if (
+                                !restored.latitudeColumn &&
+                                !restored.longitudeColumn
+                              ) {
+                                return;
+                              }
+                              applyConfig(
+                                setDeckMapLayerCoordinateColumns(
+                                  mapConfig,
+                                  activeLayerIndex,
+                                  restored,
+                                  sourceColumns,
+                                ),
+                              );
                               return;
                             }
                             if (value !== 'geom') return;
@@ -2392,6 +2483,26 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                           onValueChange={(value) => {
                             if (value === 'lonlat') {
                               setGeometryTabOverride('lonlat');
+                              const restored = pickDeckMapArcCoordinateColumns(
+                                sourceColumns,
+                                lastArcCoordinatesRef.current,
+                              );
+                              if (
+                                !restored.sourceLatitudeColumn &&
+                                !restored.sourceLongitudeColumn &&
+                                !restored.targetLatitudeColumn &&
+                                !restored.targetLongitudeColumn
+                              ) {
+                                return;
+                              }
+                              applyConfig(
+                                setDeckMapLayerArcCoordinateColumns(
+                                  mapConfig,
+                                  activeLayerIndex,
+                                  restored,
+                                  sourceColumns,
+                                ),
+                              );
                               return;
                             }
                             if (value !== 'geom') return;
@@ -2478,26 +2589,10 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                           </TabsContent>
                           <TabsContent value="lonlat" className="mt-2">
                             <ArcLonLatFields
-                              sourceLatitudeColumn={
-                                activeLayerBinding?.sourceLatitudeColumn as
-                                  | string
-                                  | undefined
-                              }
-                              sourceLongitudeColumn={
-                                activeLayerBinding?.sourceLongitudeColumn as
-                                  | string
-                                  | undefined
-                              }
-                              targetLatitudeColumn={
-                                activeLayerBinding?.targetLatitudeColumn as
-                                  | string
-                                  | undefined
-                              }
-                              targetLongitudeColumn={
-                                activeLayerBinding?.targetLongitudeColumn as
-                                  | string
-                                  | undefined
-                              }
+                              sourceLatitudeColumn={sourceLatitudeColumn}
+                              sourceLongitudeColumn={sourceLongitudeColumn}
+                              targetLatitudeColumn={targetLatitudeColumn}
+                              targetLongitudeColumn={targetLongitudeColumn}
                               sourceColumns={sourceColumns}
                               mapConfig={mapConfig}
                               layerIndex={activeLayerIndex}
@@ -2511,26 +2606,10 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                         </Tabs>
                       ) : showArcGeometryGroup ? (
                         <ArcLonLatFields
-                          sourceLatitudeColumn={
-                            activeLayerBinding?.sourceLatitudeColumn as
-                              | string
-                              | undefined
-                          }
-                          sourceLongitudeColumn={
-                            activeLayerBinding?.sourceLongitudeColumn as
-                              | string
-                              | undefined
-                          }
-                          targetLatitudeColumn={
-                            activeLayerBinding?.targetLatitudeColumn as
-                              | string
-                              | undefined
-                          }
-                          targetLongitudeColumn={
-                            activeLayerBinding?.targetLongitudeColumn as
-                              | string
-                              | undefined
-                          }
+                          sourceLatitudeColumn={sourceLatitudeColumn}
+                          sourceLongitudeColumn={sourceLongitudeColumn}
+                          targetLatitudeColumn={targetLatitudeColumn}
+                          targetLongitudeColumn={targetLongitudeColumn}
                           sourceColumns={sourceColumns}
                           mapConfig={mapConfig}
                           layerIndex={activeLayerIndex}

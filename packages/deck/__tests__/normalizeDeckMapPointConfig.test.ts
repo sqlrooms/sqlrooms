@@ -2,8 +2,10 @@ import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 import {
   applyDeckMapPointBinding,
   applyDeckMapTableSelection,
+  createDeckMapArcTransformSql,
   createDeckMapPointTransformSql,
   normalizeDeckMapPointConfig,
+  parseDeckMapArcTransformSql,
   parseDeckMapPointTransformSql,
   regenerateMapConfigForTable,
 } from '../src/mapConfigUtils';
@@ -53,6 +55,37 @@ describe('normalizeDeckMapPointConfig', () => {
       latitudeColumn: 'lat',
       geometryColumn: 'geom',
     });
+  });
+
+  it('parses origin/destination lon/lat columns back out of canonical arc transform SQL', () => {
+    expect(
+      parseDeckMapArcTransformSql(
+        createDeckMapArcTransformSql({
+          sourceLongitudeColumn: 'origin_lon',
+          sourceLatitudeColumn: 'origin_lat',
+          targetLongitudeColumn: 'dest_lon',
+          targetLatitudeColumn: 'dest_lat',
+          sourceGeometryColumn: 'source_geom',
+          targetGeometryColumn: 'target_geom',
+        }),
+      ),
+    ).toEqual({
+      sourceLongitudeColumn: 'origin_lon',
+      sourceLatitudeColumn: 'origin_lat',
+      sourceGeometryColumn: 'source_geom',
+      targetLongitudeColumn: 'dest_lon',
+      targetLatitudeColumn: 'dest_lat',
+      targetGeometryColumn: 'target_geom',
+    });
+    expect(
+      parseDeckMapArcTransformSql(
+        createDeckMapPointTransformSql({
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+          geometryColumn: '__sqlrooms_geom',
+        }),
+      ),
+    ).toBeUndefined();
   });
 
   it('applies structured point provenance with canonical SQL and bindings', () => {

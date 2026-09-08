@@ -3,6 +3,7 @@ import {isDeckMapTableDatasetSource, type DeckMapConfig} from './mapConfig';
 import {
   applyDeckMapPointBinding,
   createDeckMapArcTransformSql,
+  parseDeckMapArcTransformSql,
   parseDeckMapPointTransformSql,
 } from './mapConfigUtils';
 import type {DeckAutoLayerType} from './types';
@@ -821,20 +822,11 @@ function pickUnusedColumnName(
 function getArcTransformGeometryAliases(
   transformSql: string,
 ): {sourceGeometryColumn: string; targetGeometryColumn: string} | undefined {
-  const aliases = [
-    ...transformSql.matchAll(
-      /ST_AsWKB\s*\(\s*ST_Point\s*\([^)]*\)\s*\)\s*AS\s+"?([^\s",]+)"?/gi,
-    ),
-  ]
-    .map((match) => match[1])
-    .filter((name): name is string => Boolean(name));
-  if (aliases.length < 2) return undefined;
-  const sourceGeometryColumn = aliases[0];
-  const targetGeometryColumn = aliases[1];
-  if (!sourceGeometryColumn || !targetGeometryColumn) return undefined;
+  const parsed = parseDeckMapArcTransformSql(transformSql);
+  if (!parsed) return undefined;
   return {
-    sourceGeometryColumn,
-    targetGeometryColumn,
+    sourceGeometryColumn: parsed.sourceGeometryColumn,
+    targetGeometryColumn: parsed.targetGeometryColumn,
   };
 }
 

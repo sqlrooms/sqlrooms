@@ -153,6 +153,77 @@ export function filterDeckMapColumns(
   });
 }
 
+function pickExistingColumnName(
+  columnName: string | undefined,
+  sourceColumns: ReadonlyArray<{name: string}>,
+): string | undefined {
+  if (!columnName) return undefined;
+  return sourceColumns.some((column) => column.name === columnName)
+    ? columnName
+    : undefined;
+}
+
+/**
+ * Lon/lat columns to restore after leaving geom mode. Only returns names that
+ * still exist on the source table.
+ */
+export function pickDeckMapCoordinateColumns(
+  sourceColumns: ReadonlyArray<{name: string}>,
+  preferred?: {
+    latitudeColumn?: string;
+    longitudeColumn?: string;
+  },
+): {latitudeColumn?: string; longitudeColumn?: string} {
+  return {
+    latitudeColumn: pickExistingColumnName(
+      preferred?.latitudeColumn,
+      sourceColumns,
+    ),
+    longitudeColumn: pickExistingColumnName(
+      preferred?.longitudeColumn,
+      sourceColumns,
+    ),
+  };
+}
+
+/**
+ * Origin/destination lon/lat columns to restore after leaving arc geom mode.
+ * Only returns names that still exist on the source table.
+ */
+export function pickDeckMapArcCoordinateColumns(
+  sourceColumns: ReadonlyArray<{name: string}>,
+  preferred?: {
+    sourceLatitudeColumn?: string;
+    sourceLongitudeColumn?: string;
+    targetLatitudeColumn?: string;
+    targetLongitudeColumn?: string;
+  },
+): {
+  sourceLatitudeColumn?: string;
+  sourceLongitudeColumn?: string;
+  targetLatitudeColumn?: string;
+  targetLongitudeColumn?: string;
+} {
+  return {
+    sourceLatitudeColumn: pickExistingColumnName(
+      preferred?.sourceLatitudeColumn,
+      sourceColumns,
+    ),
+    sourceLongitudeColumn: pickExistingColumnName(
+      preferred?.sourceLongitudeColumn,
+      sourceColumns,
+    ),
+    targetLatitudeColumn: pickExistingColumnName(
+      preferred?.targetLatitudeColumn,
+      sourceColumns,
+    ),
+    targetLongitudeColumn: pickExistingColumnName(
+      preferred?.targetLongitudeColumn,
+      sourceColumns,
+    ),
+  };
+}
+
 /**
  * Source geometry column to restore after leaving lon/lat mode. Prefers the
  * previously bound column; if the table has exactly one geometry column, uses

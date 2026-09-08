@@ -5,7 +5,9 @@ import {join} from 'node:path';
 import {
   classifyDeckMapCoordinateColumn,
   filterDeckMapColumns,
+  pickDeckMapArcCoordinateColumns,
   pickDeckMapArcGeometryColumns,
+  pickDeckMapCoordinateColumns,
   pickDeckMapSourceGeometryColumn,
   resolveDeckMapLonLatPair,
 } from '../src/MapSettingsControls';
@@ -134,6 +136,46 @@ describe('Deck map settings controls', () => {
     });
   });
 
+  test('restores lon/lat columns after geom mode when they still exist', () => {
+    const sourceColumns: TableColumn[] = [
+      {name: 'geom', type: 'GEOMETRY'},
+      {name: 'longitude', type: 'DOUBLE'},
+      {name: 'latitude', type: 'DOUBLE'},
+    ];
+
+    expect(
+      pickDeckMapCoordinateColumns(sourceColumns, {
+        latitudeColumn: 'latitude',
+        longitudeColumn: 'longitude',
+      }),
+    ).toEqual({
+      latitudeColumn: 'latitude',
+      longitudeColumn: 'longitude',
+    });
+    expect(
+      pickDeckMapCoordinateColumns(sourceColumns, {
+        latitudeColumn: 'missing_lat',
+        longitudeColumn: 'longitude',
+      }),
+    ).toEqual({
+      latitudeColumn: undefined,
+      longitudeColumn: 'longitude',
+    });
+    expect(
+      pickDeckMapArcCoordinateColumns(sourceColumns, {
+        sourceLatitudeColumn: 'latitude',
+        sourceLongitudeColumn: 'longitude',
+        targetLatitudeColumn: 'gone_lat',
+        targetLongitudeColumn: 'gone_lon',
+      }),
+    ).toEqual({
+      sourceLatitudeColumn: 'latitude',
+      sourceLongitudeColumn: 'longitude',
+      targetLatitudeColumn: undefined,
+      targetLongitudeColumn: undefined,
+    });
+  });
+
   test('pairs first/second position columns into lon/lat', () => {
     expect(classifyDeckMapCoordinateColumn('lat')).toBe('latitude');
     expect(classifyDeckMapCoordinateColumn('longitude')).toBe('longitude');
@@ -187,6 +229,11 @@ describe('Deck map settings controls', () => {
     expect(panelSource).toContain('pointGeometryColumns');
     expect(panelSource).toContain('pickDeckMapSourceGeometryColumn');
     expect(panelSource).toContain('pickDeckMapArcGeometryColumns');
+    expect(panelSource).toContain('pickDeckMapCoordinateColumns');
+    expect(panelSource).toContain('pickDeckMapArcCoordinateColumns');
+    expect(panelSource).toContain('parseDeckMapArcTransformSql');
+    expect(panelSource).toContain('lastPointCoordinatesRef');
+    expect(panelSource).toContain('lastArcCoordinatesRef');
     expect(panelSource).toContain('nativeArcSourceGeometryColumn');
     expect(panelSource).toContain('isDeckMapGeneratedTransformColumn');
     expect(panelSource).toContain('arcGeometryColumns');
