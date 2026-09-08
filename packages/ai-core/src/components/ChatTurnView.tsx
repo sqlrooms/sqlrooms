@@ -251,6 +251,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
     [model.timingToolCallIds, toolTimings],
   );
   const activityStartedAt = activitySpan?.startedAt;
+  const activityEndedAt = activitySpan?.endedAt;
   const computationTimeMs =
     showComputationTime && activitySpan
       ? activitySpan.endedAt - activitySpan.startedAt
@@ -311,6 +312,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
         errorMessage: errorMessage?.error,
         activitySummaryLabel,
         activityStartedAt,
+        activityEndedAt,
         toolTimings,
         computationTimeMs,
         computationTimeLabel,
@@ -336,6 +338,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       errorMessage?.error,
       activitySummaryLabel,
       activityStartedAt,
+      activityEndedAt,
       toolTimings,
       computationTimeMs,
       computationTimeLabel,

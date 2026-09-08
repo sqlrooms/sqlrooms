@@ -406,6 +406,10 @@ repeated.
 </ActivityBox>
 ```
 
+`ChatActionsProps` carries `completedAt` alongside the copy/fork actions, so an
+actions row can show how long ago the turn finished. The default recipe renders
+it as a relative label that refreshes every 30s.
+
 #### Override a single slot
 
 Pass a partial `components` map. Only the slots you provide change; everything

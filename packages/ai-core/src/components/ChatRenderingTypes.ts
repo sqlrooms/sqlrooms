@@ -118,6 +118,8 @@ export type ChatForkAction = {
 export type ChatActionsProps = {
   copy?: ChatCopyAction;
   fork?: ChatForkAction;
+  /** When the turn's work finished, for a relative "x ago" label. */
+  completedAt?: number;
 };
 
 /** Normalized state exposed for tool activity presentation. */

@@ -445,8 +445,7 @@ export function splitTextAroundHoists(model: ChatTurnModel): {
   return {responseText, summaryText};
 }
 
-/** Compute the enclosing duration of the supplied recorded tool calls. */
-/** Span enclosing the supplied recorded tool calls. */
+/** Start and end of the supplied recorded tool calls. */
 export function computeActivityTimeSpan(
   toolCallIds: Iterable<string>,
   toolTimings: Record<string, {startedAt?: number; completedAt?: number}>,
@@ -467,6 +466,7 @@ export function computeActivityTimeSpan(
   return {startedAt: earliest, endedAt: latest};
 }
 
+/** Enclosing duration of the supplied recorded tool calls. */
 export function computeComputationTimeMs(
   toolCallIds: Iterable<string>,
   toolTimings: Record<string, {startedAt?: number; completedAt?: number}>,

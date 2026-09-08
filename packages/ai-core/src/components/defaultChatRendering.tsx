@@ -6,12 +6,12 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {SplitIcon} from 'lucide-react';
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import type {Components} from 'react-markdown';
 import {TOOL_CALL_CANCELLED} from '../constants';
 import type {AgentToolCall} from '../types';
 import {isReasoningPart, isTextPart} from '../utils';
-import {formatShortDuration} from '@sqlrooms/utils';
+import {formatShortDuration, formatTimeRelative} from '@sqlrooms/utils';
 import {ActivityBox} from './ActivityBox';
 import {computeActivityTimeSpan} from './buildChatTurnModel';
 import {
@@ -260,17 +260,39 @@ const DefaultChatForkAction: React.FC<{run: () => void}> = ({run}) => (
 );
 
 /** SQLRooms default action-row layout. */
+/** Relative timestamp that refreshes while the turn stays on screen. */
+const ChatTurnAge: React.FC<{completedAt: number}> = ({completedAt}) => {
+  const [label, setLabel] = useState(() => formatTimeRelative(completedAt));
+
+  useEffect(() => {
+    setLabel(formatTimeRelative(completedAt));
+    const id = setInterval(
+      () => setLabel(formatTimeRelative(completedAt)),
+      30_000,
+    );
+    return () => clearInterval(id);
+  }, [completedAt]);
+
+  return (
+    <span className="text-muted-foreground ml-1 self-center text-xs">
+      {label}
+    </span>
+  );
+};
+
 export const DefaultChatActions: React.FC<ChatActionsProps> = ({
   copy,
   fork,
+  completedAt,
 }) => {
-  if (!copy && !fork) return null;
+  if (!copy && !fork && completedAt == null) return null;
   const Copy = copy?.Content;
   const Fork = fork?.Content;
   return (
     <div className="flex justify-start gap-1">
       {Copy && <Copy />}
       {Fork && <Fork />}
+      {completedAt != null && <ChatTurnAge completedAt={completedAt} />}
     </div>
   );
 };
@@ -291,6 +313,8 @@ type CreateChatTurnPresentationOptions = {
   activitySummaryLabel?: string;
   /** Earliest tool start in the group, for the header's live clock. */
   activityStartedAt?: number;
+  /** When the turn's work finished, for the actions row's "x ago" label. */
+  activityEndedAt?: number;
   /** Per-tool-call timings, so each timeline group can report its own. */
   toolTimings: Record<string, {startedAt?: number; completedAt?: number}>;
   computationTimeMs?: number;
@@ -321,6 +345,7 @@ export function createChatTurnPresentation({
   errorMessage,
   activitySummaryLabel,
   activityStartedAt,
+  activityEndedAt,
   toolTimings,
   computationTimeMs,
   computationTimeLabel,
@@ -632,6 +657,7 @@ export function createChatTurnPresentation({
   const actionProps: ChatActionsProps = {
     ...(copy ? {copy} : {}),
     ...(fork ? {fork} : {}),
+    ...(activityEndedAt != null ? {completedAt: activityEndedAt} : {}),
   };
   const ActionsContent = bindContent('actions', () => (
     <Actions {...actionProps} />
