@@ -260,7 +260,6 @@ const DefaultChatForkAction: React.FC<{run: () => void}> = ({run}) => (
   </Tooltip>
 );
 
-/** SQLRooms default action-row layout. */
 /** Relative timestamp that refreshes while the turn stays on screen. */
 const ChatTurnAge: React.FC<{completedAt: number}> = ({completedAt}) => {
   const label = useRelativeTime(completedAt);
@@ -271,6 +270,7 @@ const ChatTurnAge: React.FC<{completedAt: number}> = ({completedAt}) => {
   );
 };
 
+/** SQLRooms default action-row layout. */
 export const DefaultChatActions: React.FC<ChatActionsProps> = ({
   copy,
   fork,

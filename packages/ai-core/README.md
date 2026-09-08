@@ -410,6 +410,15 @@ repeated.
 actions row can show how long ago the turn finished. The default recipe renders
 it as a relative label that refreshes every 30s.
 
+`useRelativeTime(timestamp, intervalMs?)` builds that label: it returns a
+formatted "x ago" string for an epoch-ms `timestamp`, re-reading the clock every
+`intervalMs` (default 30s) so the value stays current while the turn is on
+screen. Returns `undefined` when `timestamp` is undefined.
+
+```tsx
+const label = useRelativeTime(completedAt); // "18 minutes ago"
+```
+
 #### Override a single slot
 
 Pass a partial `components` map. Only the slots you provide change; everything
