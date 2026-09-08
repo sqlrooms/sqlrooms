@@ -16,7 +16,6 @@
 - Prefer defining complex component props as separate `type` over defining inline
 - Prefer defining one component per one file, avoid creating files with many components
 
-
 # Vega
 
 - Use typings for Vega-specs
