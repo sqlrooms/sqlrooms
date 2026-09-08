@@ -5,6 +5,7 @@ import {join} from 'node:path';
 import {
   classifyDeckMapCoordinateColumn,
   filterDeckMapColumns,
+  listDeckMapGeometryPickerColumns,
   pickDeckMapArcCoordinateColumns,
   pickDeckMapArcGeometryColumns,
   pickDeckMapCoordinateColumns,
@@ -64,6 +65,47 @@ describe('Deck map settings controls', () => {
       ).map((column) => column.name),
     ).toEqual(['origin_geom', 'dest_geom', 'pickup']);
     expect(filterDeckMapColumns(columns, 'all')).toBe(columns);
+  });
+
+  test('keeps native geometry in the Geom tab after lon/lat transform inspect', () => {
+    const sourceColumns: TableColumn[] = [
+      {name: 'shape', type: 'GEOMETRY'},
+      {name: 'longitude', type: 'DOUBLE'},
+      {name: 'latitude', type: 'DOUBLE'},
+    ];
+    const outputColumns: TableColumn[] = [
+      {name: 'shape', type: 'VARCHAR'},
+      {name: 'longitude', type: 'DOUBLE'},
+      {name: 'latitude', type: 'DOUBLE'},
+      {name: '__sqlrooms_geom', type: 'BLOB'},
+    ];
+    const isGeneratedColumn = (columnName: string) =>
+      columnName === '__sqlrooms_geom';
+
+    expect(
+      listDeckMapGeometryPickerColumns({
+        sourceColumns,
+        outputColumns,
+        extraColumnNames: ['__sqlrooms_geom'],
+        isGeneratedColumn,
+      }).map((column) => column.name),
+    ).toEqual(['shape']);
+    expect(
+      listDeckMapGeometryPickerColumns({
+        sourceColumns,
+        outputColumns,
+        extraColumnNames: ['shape', '__sqlrooms_geom'],
+        isGeneratedColumn,
+      }),
+    ).toEqual([{name: 'shape', type: 'GEOMETRY'}]);
+    expect(
+      listDeckMapGeometryPickerColumns({
+        sourceColumns: [],
+        outputColumns,
+        extraColumnNames: ['shape'],
+        isGeneratedColumn,
+      }).map((column) => column.name),
+    ).toEqual(['shape']);
   });
 
   test('restores a source geometry column after lon/lat mode', () => {
@@ -227,6 +269,7 @@ describe('Deck map settings controls', () => {
     expect(panelSource).toContain('hasPointGeometryColumns');
     expect(panelSource).toContain('parseDeckMapPointTransformSql');
     expect(panelSource).toContain('pointGeometryColumns');
+    expect(panelSource).toContain('listDeckMapGeometryPickerColumns');
     expect(panelSource).toContain('pickDeckMapSourceGeometryColumn');
     expect(panelSource).toContain('pickDeckMapArcGeometryColumns');
     expect(panelSource).toContain('pickDeckMapCoordinateColumns');

@@ -222,6 +222,11 @@ describe('mapLayerConfigUtils', () => {
     const nextConfig = setDeckMapLayerGeometryColumn(config, 0, 'geometry');
 
     expect(nextConfig.datasets.places.geometryColumn).toBe('geometry');
+    expect(nextConfig.datasets.places.source).toMatchObject({
+      tableName: 'places',
+      transformSql: expect.stringContaining('ST_Centroid("geometry")'),
+    });
+    expect(nextConfig.datasets.places.geometryEncodingHint).toBe('wkb');
     expect(config.datasets.places.geometryColumn).toBe('geom');
   });
 
@@ -326,7 +331,11 @@ describe('mapLayerConfigUtils', () => {
     const nextConfig = setDeckMapLayerGeometryColumn(pointConfig, 0, 'geom');
 
     expect(nextConfig.datasets.places.geometryColumn).toBe('geom');
-    expect(nextConfig.datasets.places.source).toEqual({tableName: 'places'});
+    expect(nextConfig.datasets.places.source).toMatchObject({
+      tableName: 'places',
+      transformSql: expect.stringContaining('ST_Centroid("geom")'),
+    });
+    expect(nextConfig.datasets.places.geometryEncodingHint).toBe('wkb');
     expect(nextConfig.fitToData).toMatchObject({
       dataset: 'places',
       geometryColumn: 'geom',
@@ -399,6 +408,53 @@ describe('mapLayerConfigUtils', () => {
       transformSql: expect.stringContaining(
         'ST_Point("longitude", "latitude")',
       ),
+    });
+    expect(
+      String(nextConfig.datasets.places.source.transformSql),
+    ).not.toContain('ST_Centroid');
+  });
+
+  it('strips point transforms without inventing centroids on polygon layers', () => {
+    const polygonConfig = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            id: 'buildings',
+            _sqlroomsBinding: {
+              dataset: 'buildings',
+              geometryColumn: '__sqlrooms_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        buildings: {
+          source: {
+            tableName: 'buildings',
+            transformSql:
+              'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "__sqlrooms_geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
+          },
+          geometryColumn: '__sqlrooms_geom',
+          geometryEncodingHint: 'wkb' as const,
+        },
+      },
+      fitToData: {
+        dataset: 'buildings',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+      },
+    };
+
+    const nextConfig = setDeckMapLayerGeometryColumn(
+      polygonConfig,
+      0,
+      'geometry',
+    );
+
+    expect(nextConfig.datasets.buildings).toEqual({
+      source: {tableName: 'buildings'},
+      geometryColumn: 'geometry',
     });
   });
 

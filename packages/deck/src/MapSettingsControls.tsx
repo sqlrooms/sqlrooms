@@ -153,6 +153,64 @@ export function filterDeckMapColumns(
   });
 }
 
+function mergeDeckMapPickerColumns(
+  ...columnSets: Array<TableColumn[] | undefined>
+): TableColumn[] {
+  const columnsByName = new Map<string, TableColumn>();
+  for (const columns of columnSets) {
+    for (const column of columns ?? []) {
+      columnsByName.set(column.name, column);
+    }
+  }
+  return [...columnsByName.values()];
+}
+
+/**
+ * Geometry columns for the Geom tab. Prefers the source table over inspected
+ * transform output so generated WKB aliases and Arrow type rewrites cannot
+ * hide native geometry after switching back to lon/lat.
+ */
+export function listDeckMapGeometryPickerColumns(options: {
+  sourceColumns: TableColumn[];
+  outputColumns?: TableColumn[];
+  extraColumnNames?: Array<string | undefined>;
+  isGeneratedColumn?: (columnName: string) => boolean;
+}): TableColumn[] {
+  const isGenerated = options.isGeneratedColumn ?? (() => false);
+  const extraColumns: TableColumn[] = [];
+  const seenExtra = new Set<string>();
+  for (const columnName of options.extraColumnNames ?? []) {
+    if (!columnName || isGenerated(columnName) || seenExtra.has(columnName)) {
+      continue;
+    }
+    if (
+      options.sourceColumns.length > 0 &&
+      !options.sourceColumns.some((column) => column.name === columnName)
+    ) {
+      continue;
+    }
+    seenExtra.add(columnName);
+    extraColumns.push({name: columnName, type: 'GEOMETRY'});
+  }
+
+  const catalogGeometry = filterDeckMapColumns(
+    options.sourceColumns,
+    'geometry',
+  ).filter((column) => !isGenerated(column.name));
+  const inspectedGeometry =
+    options.sourceColumns.length > 0
+      ? []
+      : filterDeckMapColumns(options.outputColumns ?? [], 'geometry').filter(
+          (column) => !isGenerated(column.name),
+        );
+
+  return mergeDeckMapPickerColumns(
+    inspectedGeometry,
+    catalogGeometry,
+    extraColumns,
+  );
+}
+
 function pickExistingColumnName(
   columnName: string | undefined,
   sourceColumns: ReadonlyArray<{name: string}>,

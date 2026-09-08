@@ -3,7 +3,9 @@ import {isDeckMapTableDatasetSource, type DeckMapConfig} from './mapConfig';
 import {
   applyDeckMapPointBinding,
   createDeckMapArcTransformSql,
+  createDeckMapCentroidTransformSql,
   parseDeckMapArcTransformSql,
+  parseDeckMapCentroidTransformSql,
   parseDeckMapPointTransformSql,
 } from './mapConfigUtils';
 import type {DeckAutoLayerType} from './types';
@@ -602,14 +604,27 @@ export function setDeckMapLayerGeometryColumn(
   const keepCoordinateFit =
     leavingCoordinateFit && generatedAlias === geometryColumn;
   let nextSource = source;
-  if (
-    leavingCoordinateFit &&
-    generatedAlias &&
-    generatedAlias !== geometryColumn
+  let nextGeometryEncodingHint = dataset.geometryEncodingHint;
+  if (keepCoordinateFit) {
+    nextSource = source;
+  } else if (
+    usesPointCoordinateSetting(layer?.['@@type']) &&
+    isDeckMapTableDatasetSource(source)
   ) {
-    nextSource = isDeckMapTableDatasetSource(source)
-      ? {tableName: source.tableName}
-      : source;
+    nextSource = {
+      tableName: source.tableName,
+      transformSql: createDeckMapCentroidTransformSql({geometryColumn}),
+    };
+    nextGeometryEncodingHint = 'wkb';
+  } else if (
+    isDeckMapTableDatasetSource(source) &&
+    source.transformSql &&
+    (generatedAlias ||
+      parseDeckMapCentroidTransformSql(source.transformSql) ||
+      leavingCoordinateFit)
+  ) {
+    nextSource = {tableName: source.tableName};
+    nextGeometryEncodingHint = undefined;
   }
 
   const fitToData = keepCoordinateFit
@@ -632,15 +647,22 @@ export function setDeckMapLayerGeometryColumn(
           maxZoom: 12,
         });
 
+  const nextDataset = {
+    ...dataset,
+    source: nextSource,
+    geometryColumn,
+  };
+  if (nextGeometryEncodingHint) {
+    nextDataset.geometryEncodingHint = nextGeometryEncodingHint;
+  } else {
+    delete nextDataset.geometryEncodingHint;
+  }
+
   const updatedConfig = {
     ...config,
     datasets: {
       ...config.datasets,
-      [datasetId]: {
-        ...dataset,
-        source: nextSource,
-        geometryColumn,
-      },
+      [datasetId]: nextDataset,
     },
     fitToData,
   };

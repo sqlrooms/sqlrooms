@@ -454,7 +454,11 @@ exported so hosts can normalize AI-authored configs before calling
 `createOrUpdateDeckMapResource(...)`. Passing structured `pointBinding` to the
 resource helper applies `applyDeckMapPointBinding(...)`: it generates canonical
 WKB point SQL through `createDeckMapPointTransformSql(...)` and aligns the target
-dataset, point layers, brush interaction, and fit binding. The host table lookup
+dataset, point layers, brush interaction, and fit binding. Choosing a native
+geometry column on a scatterplot, heatmap, or column layer uses
+`createDeckMapCentroidTransformSql(...)` so Point geometries stay points and
+polygon/line footprints become representative points instead of failing the
+Point-position check. The host table lookup
 also supplies source columns so missing coordinate columns and a generated
 geometry alias that would duplicate an existing column are rejected before
 durable state is written. For a single table-backed dataset, its canonical table
@@ -469,7 +473,11 @@ and whose resolved table does not expose a native geometry column; native
 geometry, polygon, line, and pre-transformed datasets are preserved.
 When regenerating a map with one existing dataset, its dataset ID is retained
 and geometry bindings are refreshed so custom layers continue to address the
-same dataset after a table switch. Non-geospatial tables and multi-dataset maps
+same dataset after a table switch. Authored arc, H3, trips, and path
+transforms are kept when the new table still has the columns they read;
+otherwise the current map is snapshotted and replaced with a generated
+point/polygon map so the new table can render. Switching back to a previous
+table restores that snapshot. Non-geospatial tables and multi-dataset maps
 return the existing config unchanged so callers can keep the current selection
 when a safe target cannot be inferred. Maps without datasets adopt the generated
 dataset and layer spec after a valid table is selected.
