@@ -366,74 +366,53 @@ layouts too.
 
 ### Add and remove chart tiles
 
-For grids, update the current config with `setConfig()`. Work on a copy so you
-preserve existing user positions and avoid mutating Zustand state directly.
-These handlers target the `dashboard` grid above, even when it is nested inside
-another layout:
+For chart dashboards, use the higher-level `MosaicDashboard` API from
+`@sqlrooms/mosaic`. This is the API used by the CLI app: `addPanel()` adds the
+panel config and places it in the dashboard layout; `removePanel()` removes the
+config, layout node, saved grid positions, and panel runtime resources.
+
+This separate example assumes your app store composes `createMosaicSlice()` and
+`createDashboardFeatureSlices()` alongside the room-shell slice, with
+`createDefaultMosaicDashboardPanelRenderers()`, `createDefaultChartTypes()`, and
+`defaultAddPanelActions` configured. See the
+[Mosaic dashboard setup](https://sqlrooms.org/api/mosaic/#mosaic-dashboard-panels)
+and the [CLI store](https://github.com/sqlrooms/sqlrooms/blob/main/apps/sqlrooms-cli-ui/src/store.ts)
+for that integration. The table used here must already be loaded.
 
 ```ts
-import {
-  findNodeById,
-  getGridColsForBreakpoint,
-  getLayoutNodeId,
-  isLayoutGridNode,
-} from '@sqlrooms/layout';
+import {createMosaicDashboardChartPanelConfig} from '@sqlrooms/mosaic';
+import {roomStore} from './store'; // Your app's store with Mosaic dashboard slices.
 
-function addGridChart(gridId: string = 'dashboard') {
-  const {config, setConfig} = roomStore.getState().layout;
-  const next = structuredClone(config);
-  const found = findNodeById(next, gridId);
-  if (!found || !isLayoutGridNode(found.node)) return;
+const {mosaicDashboard} = roomStore.getState();
+const dashboardId = mosaicDashboard.createDashboard('Earthquakes', 'grid');
+mosaicDashboard.setSelectedTable(dashboardId, 'earthquakes');
 
-  const grid = found.node;
-  const chartId = crypto.randomUUID();
-  const nodeId = `chart-${chartId}`;
-  grid.children.push({
-    type: 'panel',
-    id: nodeId,
-    panel: {key: 'chart', meta: {chartId}},
-  });
+// In an add-chart action:
+const panelId = mosaicDashboard.addPanel(
+  dashboardId,
+  createMosaicDashboardChartPanelConfig('Magnitude by region', {
+    chartType: 'box-plot',
+    settings: {x: 'region', y: 'magnitude'},
+  }),
+);
 
-  for (const [breakpoint, items] of Object.entries(grid.layouts ?? {})) {
-    const cols = getGridColsForBreakpoint(grid.cols, breakpoint);
-    const bottom = items.reduce(
-      (max, item) => Math.max(max, item.y + item.h),
-      0,
-    );
-    items.push({i: nodeId, x: 0, y: bottom, w: Math.min(6, cols), h: 2});
-  }
-
-  setConfig(next);
-  return nodeId;
-}
-
-function removeGridChart(gridId: string, nodeId: string) {
-  const {config, setConfig} = roomStore.getState().layout;
-  const next = structuredClone(config);
-  const found = findNodeById(next, gridId);
-  if (!found || !isLayoutGridNode(found.node)) return;
-
-  const grid = found.node;
-  grid.children = grid.children.filter(
-    (child) => getLayoutNodeId(child) !== nodeId,
-  );
-  if (grid.layouts) {
-    for (const [breakpoint, items] of Object.entries(grid.layouts)) {
-      grid.layouts[breakpoint] = items.filter((item) => item.i !== nodeId);
-    }
-  }
-  setConfig(next);
-}
+// Later, in a remove-chart action:
+mosaicDashboard.removePanel(dashboardId, panelId);
 ```
 
-Call `addGridChart()` from an add-chart button; pass its returned node ID to
-`removeGridChart('dashboard', nodeId)` from that tile's remove action. Adding a
-tile appends its position below existing tiles at each saved breakpoint. Removing
-one deletes both its child node and its saved positions, while keeping the shared
-renderer registered. Grids without saved `layouts` use generated positions.
+Render the dashboard with `<MosaicDashboard dashboardId={dashboardId} />` inside
+`RoomShell`. Its built-in chart builder and remove buttons use these same
+operations. `addPanel()` returns the dashboard panel ID, which is the ID to pass
+to `removePanel()`; you do not need to manage layout node IDs or grid coordinates.
+The operations work for both `grid` and `dock` dashboards.
 
-For a complete app that also creates entire dashboard tabs, see
-[`addDashboard` and `addChartToDashboard` in the layout example](https://github.com/sqlrooms/examples/blob/main/layout/src/store.tsx).
+Dashboard layouts are stored in `mosaicDashboard.config`, separately from the
+outer room's `layout.config`. Use the dashboard API for its chart panels. For a
+custom `@sqlrooms/layout` grid containing arbitrary React panels, the lower-level
+API is `layout.setConfig()`: update a copy of its `children` and saved breakpoint
+`layouts` together. The
+[layout example](https://github.com/sqlrooms/examples/blob/main/layout/src/store.tsx)
+shows that custom-grid implementation.
 
 ## Docking workspaces
 
