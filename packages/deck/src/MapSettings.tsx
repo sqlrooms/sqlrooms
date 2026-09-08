@@ -107,7 +107,7 @@ import {
   pickDeckMapSourceGeometryColumn,
 } from './MapSettingsControls';
 import {
-  isDeckMapGeneratedColumn,
+  isDeckMapGeneratedTransformColumn,
   useDeckMapDatasetSchema,
 } from './useDeckMapDatasetSchema';
 import {
@@ -1363,8 +1363,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
       ? activeLayerBinding.geometryColumn
       : activeLayerDataset?.geometryColumn;
   const isGeneratedPointGeometryColumn = (columnName: string) =>
-    isDeckMapGeneratedColumn(columnName) &&
-    !sourceColumns.some((column) => column.name === columnName);
+    isDeckMapGeneratedTransformColumn(columnName, sourceColumns);
   const usingGeneratedPointGeometry = Boolean(
     boundPointGeometryColumn &&
     isGeneratedPointGeometryColumn(boundPointGeometryColumn),
@@ -1413,18 +1412,31 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
     typeof activeLayerBinding?.targetGeometryColumn === 'string'
       ? activeLayerBinding.targetGeometryColumn
       : undefined;
+  const nativeArcSourceGeometryColumn =
+    arcSourceGeometryColumn &&
+    !isDeckMapGeneratedTransformColumn(arcSourceGeometryColumn, sourceColumns)
+      ? arcSourceGeometryColumn
+      : undefined;
+  const nativeArcTargetGeometryColumn =
+    arcTargetGeometryColumn &&
+    !isDeckMapGeneratedTransformColumn(arcTargetGeometryColumn, sourceColumns)
+      ? arcTargetGeometryColumn
+      : undefined;
   const arcGeometryColumns = mergeDeckMapColumns(
     [
-      ...(arcSourceGeometryColumn
-        ? [{name: arcSourceGeometryColumn, type: 'GEOMETRY'}]
+      ...(nativeArcSourceGeometryColumn
+        ? [{name: nativeArcSourceGeometryColumn, type: 'GEOMETRY'}]
         : []),
-      ...(arcTargetGeometryColumn
-        ? [{name: arcTargetGeometryColumn, type: 'GEOMETRY'}]
+      ...(nativeArcTargetGeometryColumn
+        ? [{name: nativeArcTargetGeometryColumn, type: 'GEOMETRY'}]
         : []),
     ],
     filterDeckMapColumns(
       mergeDeckMapColumns(sourceColumns, outputColumns),
       'geometry',
+    ).filter(
+      (column) =>
+        !isDeckMapGeneratedTransformColumn(column.name, sourceColumns),
     ),
   );
   const hasArcGeometryColumns = arcGeometryColumns.length > 0;
@@ -1563,16 +1575,16 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   }, [pointGeometryColumn]);
 
   useEffect(() => {
-    if (arcSourceGeometryColumn) {
-      lastArcSourceGeometryColumnRef.current = arcSourceGeometryColumn;
+    if (nativeArcSourceGeometryColumn) {
+      lastArcSourceGeometryColumnRef.current = nativeArcSourceGeometryColumn;
     }
-  }, [arcSourceGeometryColumn]);
+  }, [nativeArcSourceGeometryColumn]);
 
   useEffect(() => {
-    if (arcTargetGeometryColumn) {
-      lastArcTargetGeometryColumnRef.current = arcTargetGeometryColumn;
+    if (nativeArcTargetGeometryColumn) {
+      lastArcTargetGeometryColumnRef.current = nativeArcTargetGeometryColumn;
     }
-  }, [arcTargetGeometryColumn]);
+  }, [nativeArcTargetGeometryColumn]);
 
   // Drop point/heatmap radius leftovers on Column layers (pixels vs meters).
   useEffect(() => {
@@ -2428,7 +2440,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                                 <Field label="Source geometry">
                                   <ColumnSelector
                                     kind="geometry"
-                                    value={arcSourceGeometryColumn}
+                                    value={nativeArcSourceGeometryColumn}
                                     onChange={(sourceGeometryColumn) => {
                                       setGeometryTabOverride('geom');
                                       applyConfig(
@@ -2446,7 +2458,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                                 <Field label="Target geometry">
                                   <ColumnSelector
                                     kind="geometry"
-                                    value={arcTargetGeometryColumn}
+                                    value={nativeArcTargetGeometryColumn}
                                     onChange={(targetGeometryColumn) => {
                                       setGeometryTabOverride('geom');
                                       applyConfig(

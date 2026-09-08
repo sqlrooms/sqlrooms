@@ -42,6 +42,20 @@ export function isDeckMapGeneratedColumn(columnName: string): boolean {
   return GENERATED_COLUMN_NAMES.has(columnName);
 }
 
+/**
+ * True when `columnName` is a transform alias that does not exist on the
+ * source table. Native columns that reuse names like `source_geom` are kept.
+ */
+export function isDeckMapGeneratedTransformColumn(
+  columnName: string,
+  sourceColumns: ReadonlyArray<{name: string}>,
+): boolean {
+  return (
+    isDeckMapGeneratedColumn(columnName) &&
+    !sourceColumns.some((column) => column.name === columnName)
+  );
+}
+
 function cleanSql(sql: string) {
   return sql.trim().replace(/(?:\s*;+\s*)+$/, '');
 }
@@ -71,13 +85,9 @@ export function resolveDeckMapDatasetSchema(options: {
   outputColumns: TableColumn[];
   classifyGeneratedColumns?: boolean;
 }): DeckMapResolvedDatasetSchema {
-  const sourceColumnNames = new Set(
-    options.sourceColumns.map((column) => column.name),
-  );
   const isGeneratedOutputColumn = (column: TableColumn) =>
     options.classifyGeneratedColumns === true &&
-    isDeckMapGeneratedColumn(column.name) &&
-    !sourceColumnNames.has(column.name);
+    isDeckMapGeneratedTransformColumn(column.name, options.sourceColumns);
   const generatedOutputColumns = options.outputColumns.filter(
     isGeneratedOutputColumn,
   );

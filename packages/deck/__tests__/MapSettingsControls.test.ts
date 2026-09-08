@@ -108,6 +108,21 @@ describe('Deck map settings controls', () => {
       targetGeometryColumn: 'origin_geom',
     });
     expect(
+      pickDeckMapArcGeometryColumns(
+        [
+          {name: 'origin_geom', type: 'GEOMETRY'},
+          {name: 'dest_geom', type: 'GEOMETRY'},
+        ],
+        {
+          sourceGeometryColumn: 'source_geom',
+          targetGeometryColumn: 'target_geom',
+        },
+      ),
+    ).toEqual({
+      sourceGeometryColumn: 'origin_geom',
+      targetGeometryColumn: 'dest_geom',
+    });
+    expect(
       pickDeckMapArcGeometryColumns([
         {name: 'geom', type: 'GEOMETRY'},
         {name: 'origin_geom', type: 'GEOMETRY'},
@@ -172,6 +187,8 @@ describe('Deck map settings controls', () => {
     expect(panelSource).toContain('pointGeometryColumns');
     expect(panelSource).toContain('pickDeckMapSourceGeometryColumn');
     expect(panelSource).toContain('pickDeckMapArcGeometryColumns');
+    expect(panelSource).toContain('nativeArcSourceGeometryColumn');
+    expect(panelSource).toContain('isDeckMapGeneratedTransformColumn');
     expect(panelSource).toContain('arcGeometryColumns');
     expect(panelSource).toContain('Source latitude');
     expect(panelSource).toContain('showGeometryGroup');
