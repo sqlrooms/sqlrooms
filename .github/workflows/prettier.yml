@@ -36,4 +36,4 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Check Prettier formatting
-        run: pnpm format:check
+        run: pnpm exec prettier --check "**/*.{ts,tsx,md}"
