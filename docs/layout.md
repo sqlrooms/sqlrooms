@@ -204,6 +204,7 @@ function ChartTabs() {
       <TabsLayout.TabStrip closeable preventCloseLastTab>
         <TabsLayout.SearchDropdown />
         <TabsLayout.Tabs />
+        <TabsLayout.NewButton />
       </TabsLayout.TabStrip>
       <TabsLayout.TabContentContainer>
         <TabsLayout.TabContent forceMount />
@@ -215,8 +216,105 @@ function ChartTabs() {
 
 `forceMount` keeps inactive visible tabs mounted, preserving component state and
 setup work at the cost of keeping those components in memory. Omit it when that
-is unnecessary. The layout example also demonstrates `TabsLayout.NewButton`
-with `RoomShell.LayoutComposer`'s `onTabCreate` callback.
+is unnecessary. Wire `TabsLayout.NewButton` to the composer's `onTabCreate`
+callback as shown below.
+
+## Add and remove panels at runtime
+
+Runtime changes have two parts: the **panel registry** defines what can render,
+and the **layout tree** defines which instances appear and where. Registering a
+renderer does not insert a node; removing a node does not unregister its renderer
+or delete the feature state behind it.
+
+| Action                           | Effect                                           |
+| -------------------------------- | ------------------------------------------------ |
+| `registerPanel(key, definition)` | Add or replace a renderer in the registry        |
+| `addTab(tabsId, node)`           | Insert a new child and activate it               |
+| `removeTab(tabsId, nodeId)`      | Close a tab, retaining its node so it can reopen |
+| `deleteTab(tabsId, nodeId)`      | Remove a tab's node from the layout tree         |
+| `unregisterPanel(key)`           | Remove a renderer from the registry              |
+
+### Create chart tabs from a shared renderer
+
+Keep one `chart` registry entry and create a unique layout node for each chart.
+This reuses `ChartPanel` and its metadata-driven title from the first example;
+there is no need to register a component for every chart instance.
+
+With `tabsLayout` as the store's initial config and the `chartTabs` component
+registered as above, connect the tab strip's new button to a creation handler:
+
+```tsx
+function addChartTab(tabsId: string = 'charts') {
+  const chartId = crypto.randomUUID();
+  const nodeId = `chart-${chartId}`;
+
+  // If charts have their own store slice, create the backing chart here first.
+  roomStore.getState().layout.addTab(tabsId, {
+    type: 'panel',
+    id: nodeId,
+    panel: {key: 'chart', meta: {chartId}},
+  });
+
+  return nodeId;
+}
+
+function DynamicTabsApp() {
+  return (
+    <RoomShell className="h-screen" roomStore={roomStore}>
+      <RoomShell.LayoutComposer onTabCreate={addChartTab} />
+    </RoomShell>
+  );
+}
+```
+
+The callback receives the ID of the tabs container whose button was clicked.
+That container must already exist. If different tab areas create different
+content, dispatch to the appropriate creation handler using that ID.
+
+Use the returned **node ID**, rather than the shared `'chart'` registry key,
+for close, reopen, and delete actions:
+
+```ts
+const newChartNodeId = addChartTab('charts');
+const tabActions = roomStore.getState().layout;
+
+tabActions.removeTab('charts', newChartNodeId); // Close, keeping the node.
+tabActions.addTab('charts', newChartNodeId); // Reopen and activate that node.
+tabActions.deleteTab('charts', newChartNodeId); // Permanently remove the node.
+```
+
+These calls illustrate separate user actions. `addTab` with an existing child
+ID reopens it without duplicating it. After `deleteTab`, recreating a chart tab
+requires the full node, including its `panel` metadata. Closing a tab can
+unmount its component even with `forceMount`; keep chart configuration in a
+feature store if it must survive closing and reopening.
+
+Deleting a layout node does not delete chart data. Apply feature-specific cleanup
+through the chart or artifact API when the user intends to delete that content,
+and account for other views that might share it. Keep the shared `chart`
+renderer registered while any chart nodes still use it.
+
+### Register a new panel type on demand
+
+Use `registerPanel` when the renderer itself becomes available at runtime, such
+as when loading an optional feature. Then add a node referencing that key:
+
+```tsx
+const panelActions = roomStore.getState().layout;
+panelActions.registerPanel('session-info', {
+  title: 'Session info',
+  component: () => <div className="p-4">Session details</div>,
+});
+panelActions.addTab('charts', 'session-info');
+
+// When unloading this feature, remove its layout references before its renderer.
+panelActions.deleteTab('charts', 'session-info');
+panelActions.unregisterPanel('session-info');
+```
+
+For multiple instances, use distinct node IDs with the same `panel` key and
+remove every reference, including closed tabs, before unregistering that key.
+Unregistering alone leaves the layout nodes in place without their renderer.
 
 ## Grid dashboards
 
@@ -264,7 +362,78 @@ const gridLayout = {
 provides scrolling and writes drag/resize changes back through the composer.
 Omit `layouts` to use automatically generated initial positions. When adding
 children to a grid with explicit positions, update the corresponding breakpoint
-layouts too; the layout example shows this in `addChartToDashboard()`.
+layouts too.
+
+### Add and remove chart tiles
+
+For grids, update the current config with `setConfig()`. Work on a copy so you
+preserve existing user positions and avoid mutating Zustand state directly.
+These handlers target the `dashboard` grid above, even when it is nested inside
+another layout:
+
+```ts
+import {
+  findNodeById,
+  getGridColsForBreakpoint,
+  getLayoutNodeId,
+  isLayoutGridNode,
+} from '@sqlrooms/layout';
+
+function addGridChart(gridId: string = 'dashboard') {
+  const {config, setConfig} = roomStore.getState().layout;
+  const next = structuredClone(config);
+  const found = findNodeById(next, gridId);
+  if (!found || !isLayoutGridNode(found.node)) return;
+
+  const grid = found.node;
+  const chartId = crypto.randomUUID();
+  const nodeId = `chart-${chartId}`;
+  grid.children.push({
+    type: 'panel',
+    id: nodeId,
+    panel: {key: 'chart', meta: {chartId}},
+  });
+
+  for (const [breakpoint, items] of Object.entries(grid.layouts ?? {})) {
+    const cols = getGridColsForBreakpoint(grid.cols, breakpoint);
+    const bottom = items.reduce(
+      (max, item) => Math.max(max, item.y + item.h),
+      0,
+    );
+    items.push({i: nodeId, x: 0, y: bottom, w: Math.min(6, cols), h: 2});
+  }
+
+  setConfig(next);
+  return nodeId;
+}
+
+function removeGridChart(gridId: string, nodeId: string) {
+  const {config, setConfig} = roomStore.getState().layout;
+  const next = structuredClone(config);
+  const found = findNodeById(next, gridId);
+  if (!found || !isLayoutGridNode(found.node)) return;
+
+  const grid = found.node;
+  grid.children = grid.children.filter(
+    (child) => getLayoutNodeId(child) !== nodeId,
+  );
+  if (grid.layouts) {
+    for (const [breakpoint, items] of Object.entries(grid.layouts)) {
+      grid.layouts[breakpoint] = items.filter((item) => item.i !== nodeId);
+    }
+  }
+  setConfig(next);
+}
+```
+
+Call `addGridChart()` from an add-chart button; pass its returned node ID to
+`removeGridChart('dashboard', nodeId)` from that tile's remove action. Adding a
+tile appends its position below existing tiles at each saved breakpoint. Removing
+one deletes both its child node and its saved positions, while keeping the shared
+renderer registered. Grids without saved `layouts` use generated positions.
+
+For a complete app that also creates entire dashboard tabs, see
+[`addDashboard` and `addChartToDashboard` in the layout example](https://github.com/sqlrooms/examples/blob/main/layout/src/store.tsx).
 
 ## Docking workspaces
 
