@@ -6,12 +6,13 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {SplitIcon} from 'lucide-react';
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef} from 'react';
 import type {Components} from 'react-markdown';
 import {TOOL_CALL_CANCELLED} from '../constants';
 import type {AgentToolCall} from '../types';
 import {isReasoningPart, isTextPart} from '../utils';
-import {formatShortDuration, formatTimeRelative} from '@sqlrooms/utils';
+import {formatShortDuration} from '@sqlrooms/utils';
+import {useRelativeTime} from '../hooks/useRelativeTime';
 import {ActivityBox} from './ActivityBox';
 import {computeActivityTimeSpan} from './buildChatTurnModel';
 import {
@@ -262,17 +263,7 @@ const DefaultChatForkAction: React.FC<{run: () => void}> = ({run}) => (
 /** SQLRooms default action-row layout. */
 /** Relative timestamp that refreshes while the turn stays on screen. */
 const ChatTurnAge: React.FC<{completedAt: number}> = ({completedAt}) => {
-  const [label, setLabel] = useState(() => formatTimeRelative(completedAt));
-
-  useEffect(() => {
-    setLabel(formatTimeRelative(completedAt));
-    const id = setInterval(
-      () => setLabel(formatTimeRelative(completedAt)),
-      30_000,
-    );
-    return () => clearInterval(id);
-  }, [completedAt]);
-
+  const label = useRelativeTime(completedAt);
   return (
     <span className="text-muted-foreground ml-1 self-center text-xs">
       {label}

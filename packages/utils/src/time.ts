@@ -86,16 +86,19 @@ export const formatTimeOfDay = (d: Date | number | bigint) => {
 };
 
 /**
- * Formats a date relative to the current time (e.g., "2 hours ago", "in 3 days")
+ * Formats a date relative to another (e.g., "2 hours ago", "in 3 days")
  * @param d - Date to format (accepts any dayjs ConfigType)
+ * @param from - Reference point. Defaults to now. Pass an explicit value to
+ * keep the result a pure function of its inputs, e.g. when a React component
+ * re-renders on a clock tick.
  * @returns Human-readable relative time string
  * @example
  * ```ts
  * formatTimeRelative(new Date(Date.now() - 3600000)); // "1 hour ago"
  * ```
  */
-export const formatTimeRelative = (d: ConfigType) => {
-  return dayjs().to(d);
+export const formatTimeRelative = (d: ConfigType, from?: ConfigType) => {
+  return dayjs(from).to(d);
 };
 
 /**

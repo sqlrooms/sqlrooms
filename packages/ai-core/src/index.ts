@@ -42,6 +42,7 @@ export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
 export {useElapsedTime} from './hooks/useElapsedTime';
+export {useRelativeTime} from './hooks/useRelativeTime';
 export {
   cleanGeneratedSessionTitle,
   generateSessionTitle,
