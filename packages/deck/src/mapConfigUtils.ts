@@ -307,6 +307,79 @@ function deckMapLayerTargetsDataset(options: {
   return options.datasetIds.length === 1 && options.layer.data === undefined;
 }
 
+/**
+ * True when retained layers need dataset columns that
+ * {@link createDeckMapConfigForTable} cannot reconstruct (arc endpoints, H3
+ * indexes, trip timestamps). Regenerating would wipe `transformSql` while
+ * leaving those bindings in place.
+ */
+function deckMapDatasetRequiresPreservedTransform(
+  config: DeckMapDashboardPanelConfig,
+  datasetId: string,
+) {
+  if (
+    !isDeckMapConfigRecord(config.spec) ||
+    !Array.isArray(config.spec.layers)
+  ) {
+    return false;
+  }
+  const datasetIds = Object.keys(config.datasets ?? {});
+  return config.spec.layers.some((layer) => {
+    if (
+      !isDeckMapConfigRecord(layer) ||
+      !isDeckMapConfigRecord(layer._sqlroomsBinding)
+    ) {
+      return false;
+    }
+    if (
+      !deckMapLayerTargetsDataset({
+        layer,
+        datasetId,
+        datasetIds,
+      })
+    ) {
+      return false;
+    }
+    const binding = layer._sqlroomsBinding;
+    return (
+      typeof binding.sourceGeometryColumn === 'string' ||
+      typeof binding.targetGeometryColumn === 'string' ||
+      typeof binding.hexagonColumn === 'string' ||
+      typeof binding.timestampColumn === 'string'
+    );
+  });
+}
+
+function retargetDeckMapDatasetTableName(
+  config: DeckMapConfig,
+  table: DataTable,
+): DeckMapConfig {
+  const datasetIds = Object.keys(config.datasets ?? {});
+  if (datasetIds.length !== 1) return config;
+  const datasetId = datasetIds[0]!;
+  const dataset = config.datasets[datasetId];
+  if (!dataset || !isDeckMapTableDatasetSource(dataset.source)) {
+    return config;
+  }
+
+  const tableName = quoteDeckMapSqlTableReference(table.table);
+  if (dataset.source.tableName === tableName) return config;
+
+  return {
+    ...config,
+    datasets: {
+      ...config.datasets,
+      [datasetId]: {
+        ...dataset,
+        source: {
+          ...dataset.source,
+          tableName,
+        },
+      },
+    },
+  };
+}
+
 function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
   layers: T;
   datasetId: string;
@@ -782,7 +855,10 @@ export function createDeckMapDashboardPanelConfigForTable(options: {
  * preserving an existing single dataset ID so retained layer bindings remain
  * valid. Empty maps adopt the generated dataset and layer spec. Returns the
  * existing config unchanged when the table has no supported geospatial columns
- * or when multiple datasets make the target ambiguous.
+ * or when multiple datasets make the target ambiguous. Arc, H3, and trips
+ * layers keep their authored `transformSql` and only retarget `tableName`,
+ * because a generated point/polygon dataset would drop columns those layers
+ * still bind to.
  */
 export function regenerateMapConfigForTable(
   panel: {config: Record<string, unknown>},
@@ -822,6 +898,9 @@ export function regenerateMapConfigForTable(
 
   if (existingDatasetIds.length === 1 && nextDataset) {
     const datasetId = existingDatasetIds[0]!;
+    if (deckMapDatasetRequiresPreservedTransform(existingConfig, datasetId)) {
+      return retargetDeckMapDatasetTableName(existingConfig, table);
+    }
     return updateDeckMapGeometryColumnBindings(
       {
         ...existingConfig,
@@ -865,28 +944,5 @@ export function applyDeckMapTableSelection(
     return regenerated as DeckMapConfig;
   }
 
-  const datasetIds = Object.keys(config.datasets ?? {});
-  if (datasetIds.length !== 1) return config;
-  const datasetId = datasetIds[0]!;
-  const dataset = config.datasets[datasetId];
-  if (!dataset || !isDeckMapTableDatasetSource(dataset.source)) {
-    return config;
-  }
-
-  const tableName = quoteDeckMapSqlTableReference(table.table);
-  if (dataset.source.tableName === tableName) return config;
-
-  return {
-    ...config,
-    datasets: {
-      ...config.datasets,
-      [datasetId]: {
-        ...dataset,
-        source: {
-          ...dataset.source,
-          tableName,
-        },
-      },
-    },
-  };
+  return retargetDeckMapDatasetTableName(config, table);
 }

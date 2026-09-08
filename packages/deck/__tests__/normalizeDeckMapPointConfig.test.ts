@@ -1,6 +1,7 @@
 import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 import {
   applyDeckMapPointBinding,
+  applyDeckMapTableSelection,
   createDeckMapPointTransformSql,
   normalizeDeckMapPointConfig,
   regenerateMapConfigForTable,
@@ -528,6 +529,138 @@ describe('regenerateMapConfigForTable', () => {
     expect(next.spec.layers[0]._sqlroomsBinding).toMatchObject({
       dataset: 'places',
       geometryColumn: 'geometry',
+    });
+  });
+
+  it('keeps arc transformSql when switching to a lon/lat table', () => {
+    const transformSql = [
+      'SELECT *, ST_AsWKB(ST_Point(source_lon, source_lat)) AS source_geom,',
+      'ST_AsWKB(ST_Point(target_lon, target_lat)) AS target_geom',
+      `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    ].join(' ');
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowArcLayer',
+            _sqlroomsBinding: {
+              dataset: 'arcs',
+              sourceGeometryColumn: 'source_geom',
+              targetGeometryColumn: 'target_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        arcs: {
+          source: {tableName: 'arcs', transformSql},
+          geometryEncodingHint: 'wkb' as const,
+        },
+      },
+      fitToData: {
+        dataset: 'arcs',
+        geometryColumns: ['source_geom', 'target_geom'],
+      },
+    };
+    const places: DataTable = {
+      table: makeQualifiedTableName({schema: 'main', table: 'places'}),
+      tableName: 'places',
+      schema: 'main',
+      isView: false,
+      columns: [
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
+    };
+
+    const next = regenerateMapConfigForTable({config}, places);
+
+    expect(next.datasets.arcs?.source).toMatchObject({
+      tableName: '"main"."places"',
+      transformSql,
+    });
+    expect(next.spec.layers[0]._sqlroomsBinding).toMatchObject({
+      sourceGeometryColumn: 'source_geom',
+      targetGeometryColumn: 'target_geom',
+    });
+  });
+});
+
+describe('applyDeckMapTableSelection', () => {
+  const arcTransformSql = [
+    'SELECT *, ST_AsWKB(ST_Point(source_lon, source_lat)) AS source_geom,',
+    'ST_AsWKB(ST_Point(target_lon, target_lat)) AS target_geom',
+    `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+  ].join(' ');
+
+  const arcsTable: DataTable = {
+    table: makeQualifiedTableName({schema: 'main', table: 'arcs'}),
+    tableName: 'arcs',
+    schema: 'main',
+    isView: false,
+    columns: [
+      {name: 'source_lon', type: 'DOUBLE'},
+      {name: 'source_lat', type: 'DOUBLE'},
+      {name: 'target_lon', type: 'DOUBLE'},
+      {name: 'target_lat', type: 'DOUBLE'},
+    ],
+  };
+
+  const placesGeoTable: DataTable = {
+    table: makeQualifiedTableName({schema: 'main', table: 'places'}),
+    tableName: 'places',
+    schema: 'main',
+    isView: false,
+    columns: [
+      {name: 'longitude', type: 'DOUBLE'},
+      {name: 'latitude', type: 'DOUBLE'},
+    ],
+  };
+
+  function createArcMapConfig() {
+    return {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowArcLayer',
+            _sqlroomsBinding: {
+              dataset: 'arcs',
+              sourceGeometryColumn: 'source_geom',
+              targetGeometryColumn: 'target_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        arcs: {
+          source: {tableName: 'arcs', transformSql: arcTransformSql},
+          geometryEncodingHint: 'wkb' as const,
+        },
+      },
+      fitToData: {
+        dataset: 'arcs',
+        geometryColumns: ['source_geom', 'target_geom'],
+      },
+    };
+  }
+
+  it('restores a working arc dataset after switching away and back', () => {
+    const config = createArcMapConfig();
+
+    const afterAway = applyDeckMapTableSelection(config, placesGeoTable);
+    const afterBack = applyDeckMapTableSelection(afterAway, arcsTable);
+
+    expect(afterAway.datasets.arcs?.source).toMatchObject({
+      tableName: '"main"."places"',
+      transformSql: arcTransformSql,
+    });
+    expect(afterBack.datasets.arcs?.source).toMatchObject({
+      tableName: '"main"."arcs"',
+      transformSql: arcTransformSql,
+    });
+    expect(afterBack.spec.layers[0]._sqlroomsBinding).toMatchObject({
+      sourceGeometryColumn: 'source_geom',
+      targetGeometryColumn: 'target_geom',
     });
   });
 });
