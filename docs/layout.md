@@ -379,32 +379,63 @@ This separate example assumes your app store composes `createMosaicSlice()` and
 and the [CLI store](https://github.com/sqlrooms/sqlrooms/blob/main/apps/sqlrooms-cli-ui/src/store.ts)
 for that integration. The table used here must already be loaded.
 
-```ts
+Pass an existing dashboard ID to these controls. Create the dashboard with
+`createDashboard(title, 'grid')` or `ensureDashboard(id, title, 'grid')` during
+workspace setup, and select the loaded table with `setSelectedTable()`.
+
+```tsx
 import {createMosaicDashboardChartPanelConfig} from '@sqlrooms/mosaic';
-import {roomStore} from './store'; // Your app's store with Mosaic dashboard slices.
+import {Button} from '@sqlrooms/ui';
+import {useRoomStore} from './store';
 
-const {mosaicDashboard} = roomStore.getState();
-const dashboardId = mosaicDashboard.createDashboard('Earthquakes', 'grid');
-mosaicDashboard.setSelectedTable(dashboardId, 'earthquakes');
+function AddChartButton({dashboardId}: {dashboardId: string}) {
+  const addPanel = useRoomStore((state) => state.mosaicDashboard.addPanel);
 
-// In an add-chart action:
-const panelId = mosaicDashboard.addPanel(
+  return (
+    <Button
+      onClick={() =>
+        addPanel(
+          dashboardId,
+          createMosaicDashboardChartPanelConfig('Magnitude by region', {
+            chartType: 'box-plot',
+            settings: {x: 'region', y: 'magnitude'},
+          }),
+        )
+      }
+    >
+      Add chart
+    </Button>
+  );
+}
+
+function RemoveChartButton({
   dashboardId,
-  createMosaicDashboardChartPanelConfig('Magnitude by region', {
-    chartType: 'box-plot',
-    settings: {x: 'region', y: 'magnitude'},
-  }),
-);
+  panelId,
+}: {
+  dashboardId: string;
+  panelId: string;
+}) {
+  const removePanel = useRoomStore(
+    (state) => state.mosaicDashboard.removePanel,
+  );
 
-// Later, in a remove-chart action:
-mosaicDashboard.removePanel(dashboardId, panelId);
+  return (
+    <Button onClick={() => removePanel(dashboardId, panelId)}>
+      Remove chart
+    </Button>
+  );
+}
 ```
 
-Render the dashboard with `<MosaicDashboard dashboardId={dashboardId} />` inside
-`RoomShell`. Its built-in chart builder and remove buttons use these same
-operations. `addPanel()` returns the dashboard panel ID, which is the ID to pass
-to `removePanel()`; you do not need to manage layout node IDs or grid coordinates.
-The operations work for both `grid` and `dock` dashboards.
+Render these controls inside `RoomShell`, alongside
+`<MosaicDashboard dashboardId={dashboardId} />` or in a custom panel header.
+Select the stable action functions directly from the store. Each click creates
+or removes a panel; rendering the component does not change dashboard state.
+
+The dashboard's built-in chart builder and remove buttons use these same
+operations. Pass the dashboard panel's `id` to `RemoveChartButton`; `addPanel()`
+also returns that ID. You do not need to manage layout node IDs or grid
+coordinates. The operations work for both `grid` and `dock` dashboards.
 
 Dashboard layouts are stored in `mosaicDashboard.config`, separately from the
 outer room's `layout.config`. Use the dashboard API for its chart panels. For a
