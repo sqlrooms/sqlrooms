@@ -16,6 +16,8 @@ import {createDeckTableDatasetSql} from './datasets/tableDatasetSql';
 const EMPTY_COLUMNS: TableColumn[] = [];
 const GENERATED_COLUMN_NAMES = new Set([
   '__sqlrooms_geom',
+  '__sqlrooms_source_geom',
+  '__sqlrooms_target_geom',
   'source_geom',
   'target_geom',
   'timestamps',

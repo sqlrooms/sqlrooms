@@ -45,7 +45,12 @@ import {
 } from '@sqlrooms/ui';
 import {AlertTriangleIcon} from 'lucide-react';
 import {DeckMapBasemapSelect} from './DeckMapBasemapSelect';
-import {isDeckMapTableDatasetSource, type DeckMapConfig} from './mapConfig';
+import {
+  isDeckMapSqlDatasetSource,
+  isDeckMapTableDatasetSource,
+  type DeckMapConfig,
+} from './mapConfig';
+import {parseDeckMapPointTransformSql} from './mapConfigUtils';
 import {
   clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
@@ -62,8 +67,10 @@ import {
   getDeckMapLayerRecords,
   setDeckMapLayerFlatColor,
   setDeckMapLayerGeometryColumn,
+  setDeckMapLayerCoordinateColumns,
   setDeckMapLayerHexagonColumn,
-  setDeckMapLayerArcColumns,
+  setDeckMapLayerArcGeometryColumns,
+  setDeckMapLayerArcCoordinateColumns,
   setDeckMapLayerTimestampColumn,
   setDeckMapLayerType,
   setDeckMapLayerColumnRadius,
@@ -71,6 +78,7 @@ import {
   type DeckMapLayerColorAccessor,
   type DeckMapLayerRecord,
   usesGeometryColumnSetting,
+  usesPointCoordinateSetting,
   usesH3ColumnSetting,
   usesArcColumnSetting,
   usesRadiusSetting,
@@ -95,15 +103,53 @@ import {
   DeckMapTableSelector as DataTableSelector,
   filterDeckMapColumns,
   isDeckMapCategoricalColorColumn,
+  pickDeckMapArcGeometryColumns,
+  pickDeckMapSourceGeometryColumn,
 } from './MapSettingsControls';
-import {regenerateMapConfigForTable} from './mapConfigUtils';
-import {useDeckMapDatasetSchema} from './useDeckMapDatasetSchema';
+import {
+  isDeckMapGeneratedColumn,
+  useDeckMapDatasetSchema,
+} from './useDeckMapDatasetSchema';
 import {
   detectHeatmapScheme,
   heatmapSchemeToColorRange,
 } from './json/heatmapDefaults';
 
 const EMPTY_COLUMNS: DataTable['columns'] = [];
+
+function mergeDeckMapColumns(
+  ...columnSets: Array<DataTable['columns'] | undefined>
+): DataTable['columns'] {
+  const columnsByName = new Map<string, DataTable['columns'][number]>();
+  for (const columns of columnSets) {
+    for (const column of columns ?? []) {
+      columnsByName.set(column.name, column);
+    }
+  }
+  return [...columnsByName.values()];
+}
+
+function getBoundGeometryColumnNames(
+  datasetGeometryColumn: string | undefined,
+  layer: DeckMapLayerRecord | undefined,
+): Set<string> {
+  const binding = layer?._sqlroomsBinding;
+  const names = [
+    datasetGeometryColumn,
+    isRecord(binding) ? binding.geometryColumn : undefined,
+    isRecord(binding) ? binding.sourceGeometryColumn : undefined,
+    isRecord(binding) ? binding.targetGeometryColumn : undefined,
+  ];
+  return new Set(
+    names.filter(
+      (name): name is string => typeof name === 'string' && name.length > 0,
+    ),
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
 
 function getColorScaleColumnKind(
   type: ColorScaleConfig['type'],
@@ -1026,6 +1072,148 @@ const AppearanceExtrusionPanel: FC<{
   );
 };
 
+const PointLonLatFields: FC<{
+  latitudeColumn?: string;
+  longitudeColumn?: string;
+  sourceColumns: DataTable['columns'];
+  mapConfig: DeckMapConfig;
+  layerIndex: number;
+  applyConfig: (nextConfig: DeckMapConfig) => void;
+  onSelectLonLat?: () => void;
+  readOnly?: boolean;
+}> = ({
+  latitudeColumn,
+  longitudeColumn,
+  sourceColumns,
+  mapConfig,
+  layerIndex,
+  applyConfig,
+  onSelectLonLat,
+  readOnly,
+}) => (
+  <ColumnsProvider columns={sourceColumns}>
+    <div className="flex flex-col gap-2">
+      <Field label="Latitude" required>
+        <ColumnSelector
+          value={latitudeColumn}
+          onChange={(nextLatitudeColumn) => {
+            onSelectLonLat?.();
+            applyConfig(
+              setDeckMapLayerCoordinateColumns(
+                mapConfig,
+                layerIndex,
+                {latitudeColumn: nextLatitudeColumn},
+                sourceColumns,
+              ),
+            );
+          }}
+          placeholder="Select latitude..."
+          disabled={readOnly}
+        />
+      </Field>
+      <Field label="Longitude" required>
+        <ColumnSelector
+          value={longitudeColumn}
+          onChange={(nextLongitudeColumn) => {
+            onSelectLonLat?.();
+            applyConfig(
+              setDeckMapLayerCoordinateColumns(
+                mapConfig,
+                layerIndex,
+                {longitudeColumn: nextLongitudeColumn},
+                sourceColumns,
+              ),
+            );
+          }}
+          placeholder="Select longitude..."
+          disabled={readOnly}
+        />
+      </Field>
+    </div>
+  </ColumnsProvider>
+);
+
+const ArcLonLatFields: FC<{
+  sourceLatitudeColumn?: string;
+  sourceLongitudeColumn?: string;
+  targetLatitudeColumn?: string;
+  targetLongitudeColumn?: string;
+  sourceColumns: DataTable['columns'];
+  mapConfig: DeckMapConfig;
+  layerIndex: number;
+  applyConfig: (nextConfig: DeckMapConfig) => void;
+  onSelectLonLat?: () => void;
+  readOnly?: boolean;
+}> = ({
+  sourceLatitudeColumn,
+  sourceLongitudeColumn,
+  targetLatitudeColumn,
+  targetLongitudeColumn,
+  sourceColumns,
+  mapConfig,
+  layerIndex,
+  applyConfig,
+  onSelectLonLat,
+  readOnly,
+}) => {
+  const setCoordinate = (
+    columns: Parameters<typeof setDeckMapLayerArcCoordinateColumns>[2],
+  ) => {
+    onSelectLonLat?.();
+    applyConfig(
+      setDeckMapLayerArcCoordinateColumns(
+        mapConfig,
+        layerIndex,
+        columns,
+        sourceColumns,
+      ),
+    );
+  };
+
+  return (
+    <ColumnsProvider columns={sourceColumns}>
+      <div className="flex flex-col gap-2">
+        <Field label="Source latitude" required>
+          <ColumnSelector
+            value={sourceLatitudeColumn}
+            onChange={(column) => setCoordinate({sourceLatitudeColumn: column})}
+            placeholder="Select source latitude..."
+            disabled={readOnly}
+          />
+        </Field>
+        <Field label="Source longitude" required>
+          <ColumnSelector
+            value={sourceLongitudeColumn}
+            onChange={(column) =>
+              setCoordinate({sourceLongitudeColumn: column})
+            }
+            placeholder="Select source longitude..."
+            disabled={readOnly}
+          />
+        </Field>
+        <Field label="Target latitude" required>
+          <ColumnSelector
+            value={targetLatitudeColumn}
+            onChange={(column) => setCoordinate({targetLatitudeColumn: column})}
+            placeholder="Select target latitude..."
+            disabled={readOnly}
+          />
+        </Field>
+        <Field label="Target longitude" required>
+          <ColumnSelector
+            value={targetLongitudeColumn}
+            onChange={(column) =>
+              setCoordinate({targetLongitudeColumn: column})
+            }
+            placeholder="Select target longitude..."
+            disabled={readOnly}
+          />
+        </Field>
+      </div>
+    </ColumnsProvider>
+  );
+};
+
 export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   title,
   selectedTable,
@@ -1047,6 +1235,13 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   const lastColorScaleFieldsRef = useRef<
     Partial<Record<DeckMapLayerColorAccessor, string>>
   >({});
+  const [positionTabOverride, setPositionTabOverride] = useState<{
+    key: string;
+    tab: 'geom' | 'lonlat';
+  } | null>(null);
+  const lastSourceGeometryColumnRef = useRef<string | undefined>(undefined);
+  const lastArcSourceGeometryColumnRef = useRef<string | undefined>(undefined);
+  const lastArcTargetGeometryColumnRef = useRef<string | undefined>(undefined);
 
   const selectedDataTable = useMemo(
     () =>
@@ -1077,6 +1272,11 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   const activeLayerDataset = activeLayerDatasetId
     ? mapConfig.datasets?.[activeLayerDatasetId]
     : undefined;
+  const geometrySessionKey = `${activeLayerIndex}:${activeLayerDatasetId ?? ''}:${typeof activeLayer?.['@@type'] === 'string' ? activeLayer['@@type'] : ''}`;
+  const scopedPositionTabOverride =
+    positionTabOverride?.key === geometrySessionKey
+      ? positionTabOverride.tab
+      : null;
 
   // Source table (coords/transform) vs compiled output columns (bindings).
   const activeLayerDatasetSource = activeLayerDataset?.source;
@@ -1121,19 +1321,156 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
     sourceColumns,
   });
   const outputColumns = datasetSchema.outputColumns;
-  const dataOutputColumns = datasetSchema.dataOutputColumns;
+  const boundGeometryColumnNames = getBoundGeometryColumnNames(
+    activeLayerDataset?.geometryColumn,
+    activeLayer,
+  );
+  const dataOutputColumns = datasetSchema.dataOutputColumns.filter(
+    (column) => !boundGeometryColumnNames.has(column.name),
+  );
+  const positionColumns = mergeDeckMapColumns(sourceColumns, outputColumns);
   const datasetSchemaErrorMessage = datasetSchema.error?.message;
 
-  const showGeometryColumnSetting = usesGeometryColumnSetting(
+  const showGeometryColumnSetting =
+    usesGeometryColumnSetting(activeLayer?.['@@type']) ||
+    usesPointCoordinateSetting(activeLayer?.['@@type']);
+  const showPointCoordinateSetting = usesPointCoordinateSetting(
     activeLayer?.['@@type'],
   );
+  const activeLayerBinding = isRecord(activeLayer?._sqlroomsBinding)
+    ? activeLayer._sqlroomsBinding
+    : undefined;
+  const parsedPointTransform = isDeckMapTableDatasetSource(
+    activeLayerDatasetSource,
+  )
+    ? activeLayerDatasetSource.transformSql
+      ? parseDeckMapPointTransformSql(activeLayerDatasetSource.transformSql)
+      : undefined
+    : isDeckMapSqlDatasetSource(activeLayerDatasetSource)
+      ? parseDeckMapPointTransformSql(activeLayerDatasetSource.sqlQuery)
+      : undefined;
+  const fitToData =
+    mapConfig.fitToData?.dataset === activeLayerDatasetId
+      ? mapConfig.fitToData
+      : undefined;
+  const interactionCoordinates =
+    mapConfig.interaction?.type === 'point-radius-brush' &&
+    mapConfig.interaction.dataset === activeLayerDatasetId
+      ? mapConfig.interaction
+      : undefined;
+  const boundPointGeometryColumn =
+    typeof activeLayerBinding?.geometryColumn === 'string'
+      ? activeLayerBinding.geometryColumn
+      : activeLayerDataset?.geometryColumn;
+  const isGeneratedPointGeometryColumn = (columnName: string) =>
+    isDeckMapGeneratedColumn(columnName) &&
+    !sourceColumns.some((column) => column.name === columnName);
+  const usingGeneratedPointGeometry = Boolean(
+    boundPointGeometryColumn &&
+    isGeneratedPointGeometryColumn(boundPointGeometryColumn),
+  );
+  const latitudeColumn =
+    fitToData?.latitudeColumn ||
+    parsedPointTransform?.latitudeColumn ||
+    (usingGeneratedPointGeometry
+      ? interactionCoordinates?.latitudeColumn
+      : undefined);
+  const longitudeColumn =
+    fitToData?.longitudeColumn ||
+    parsedPointTransform?.longitudeColumn ||
+    (usingGeneratedPointGeometry
+      ? interactionCoordinates?.longitudeColumn
+      : undefined);
+  const usingCoordinateColumns = Boolean(latitudeColumn || longitudeColumn);
+  const pointGeometryColumns = mergeDeckMapColumns(
+    boundPointGeometryColumn &&
+      !isGeneratedPointGeometryColumn(boundPointGeometryColumn)
+      ? [{name: boundPointGeometryColumn, type: 'GEOMETRY'}]
+      : [],
+    filterDeckMapColumns(
+      mergeDeckMapColumns(sourceColumns, outputColumns),
+      'geometry',
+    ).filter((column) => !isGeneratedPointGeometryColumn(column.name)),
+  );
+  const hasPointGeometryColumns = pointGeometryColumns.length > 0;
+  const pointGeometryColumn = pointGeometryColumns.some(
+    (column) => column.name === boundPointGeometryColumn,
+  )
+    ? boundPointGeometryColumn
+    : undefined;
+  const positionTabFromConfig =
+    usingCoordinateColumns || !hasPointGeometryColumns ? 'lonlat' : 'geom';
+  const positionTab = hasPointGeometryColumns
+    ? (scopedPositionTabOverride ?? positionTabFromConfig)
+    : 'lonlat';
   const showH3ColumnSetting = usesH3ColumnSetting(activeLayer?.['@@type']);
   const showArcColumnSetting = usesArcColumnSetting(activeLayer?.['@@type']);
+  const arcSourceGeometryColumn =
+    typeof activeLayerBinding?.sourceGeometryColumn === 'string'
+      ? activeLayerBinding.sourceGeometryColumn
+      : undefined;
+  const arcTargetGeometryColumn =
+    typeof activeLayerBinding?.targetGeometryColumn === 'string'
+      ? activeLayerBinding.targetGeometryColumn
+      : undefined;
+  const arcGeometryColumns = mergeDeckMapColumns(
+    [
+      ...(arcSourceGeometryColumn
+        ? [{name: arcSourceGeometryColumn, type: 'GEOMETRY'}]
+        : []),
+      ...(arcTargetGeometryColumn
+        ? [{name: arcTargetGeometryColumn, type: 'GEOMETRY'}]
+        : []),
+    ],
+    filterDeckMapColumns(
+      mergeDeckMapColumns(sourceColumns, outputColumns),
+      'geometry',
+    ),
+  );
+  const hasArcGeometryColumns = arcGeometryColumns.length > 0;
+  const usingArcCoordinateColumns = Boolean(
+    activeLayerBinding?.sourceLatitudeColumn ||
+    activeLayerBinding?.sourceLongitudeColumn ||
+    activeLayerBinding?.targetLatitudeColumn ||
+    activeLayerBinding?.targetLongitudeColumn,
+  );
+  const arcTabFromConfig =
+    usingArcCoordinateColumns || !hasArcGeometryColumns ? 'lonlat' : 'geom';
+  const arcTab = hasArcGeometryColumns
+    ? (scopedPositionTabOverride ?? arcTabFromConfig)
+    : 'lonlat';
   const showRadiusSetting = usesRadiusSetting(activeLayer?.['@@type']);
   const showColumnRadiusSetting = usesColumnRadiusSetting(
     activeLayer?.['@@type'],
   );
   const showTripsSettings = usesTripsSettings(activeLayer?.['@@type']);
+  const showPointGeometryGroup =
+    showPointCoordinateSetting &&
+    (hasPointGeometryColumns ||
+      usingCoordinateColumns ||
+      sourceColumns.length > 0);
+  const showArcGeometryGroup =
+    showArcColumnSetting &&
+    (hasArcGeometryColumns ||
+      usingArcCoordinateColumns ||
+      sourceColumns.length > 0);
+  const pathPolygonGeometryColumns =
+    pointGeometryColumns.length > 0 ? pointGeometryColumns : positionColumns;
+  const showPathPolygonGeometryGroup = Boolean(
+    showGeometryColumnSetting &&
+    !showPointCoordinateSetting &&
+    !showArcColumnSetting &&
+    (pathPolygonGeometryColumns.length > 0 ||
+      Boolean(boundPointGeometryColumn)),
+  );
+  const showTripsTimestampGroup = showTripsSettings && outputColumns.length > 0;
+  const showH3GeometryGroup = showH3ColumnSetting && outputColumns.length > 0;
+  const showGeometryGroup =
+    showPointGeometryGroup ||
+    showArcGeometryGroup ||
+    showPathPolygonGeometryGroup ||
+    showTripsTimestampGroup ||
+    showH3GeometryGroup;
   const showExtrusionSettings = usesExtrusionSettings(activeLayer?.['@@type']);
   const showStrokeSetting = usesStrokeSetting(activeLayer?.['@@type']);
   const strokeEnabled =
@@ -1208,6 +1545,34 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
     },
     [onConfigChange, readOnly],
   );
+
+  const setGeometryTabOverride = (tab: 'geom' | 'lonlat') => {
+    setPositionTabOverride({key: geometrySessionKey, tab});
+  };
+
+  useEffect(() => {
+    lastSourceGeometryColumnRef.current = undefined;
+    lastArcSourceGeometryColumnRef.current = undefined;
+    lastArcTargetGeometryColumnRef.current = undefined;
+  }, [geometrySessionKey]);
+
+  useEffect(() => {
+    if (pointGeometryColumn) {
+      lastSourceGeometryColumnRef.current = pointGeometryColumn;
+    }
+  }, [pointGeometryColumn]);
+
+  useEffect(() => {
+    if (arcSourceGeometryColumn) {
+      lastArcSourceGeometryColumnRef.current = arcSourceGeometryColumn;
+    }
+  }, [arcSourceGeometryColumn]);
+
+  useEffect(() => {
+    if (arcTargetGeometryColumn) {
+      lastArcTargetGeometryColumnRef.current = arcTargetGeometryColumn;
+    }
+  }, [arcTargetGeometryColumn]);
 
   // Drop point/heatmap radius leftovers on Column layers (pixels vs meters).
   useEffect(() => {
@@ -1851,183 +2216,321 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                   </Field>
                 )}
 
-                {outputColumns.length > 0 && showGeometryColumnSetting && (
-                  <ColumnsProvider columns={outputColumns}>
-                    <Field label="Geometry column" required>
-                      <ColumnSelector
-                        value={activeLayerDataset?.geometryColumn}
-                        onChange={(geometryColumn) =>
-                          applyConfig(
-                            setDeckMapLayerGeometryColumn(
-                              mapConfig,
-                              activeLayerIndex,
-                              geometryColumn,
-                            ),
-                          )
-                        }
-                        placeholder="Select geometry column..."
-                        disabled={readOnly}
-                      />
-                    </Field>
-                  </ColumnsProvider>
-                )}
+                {showGeometryGroup ? (
+                  <Field label="Geometry">
+                    <div className="flex flex-col gap-2 rounded-md border p-2">
+                      {showPointGeometryGroup && hasPointGeometryColumns ? (
+                        <Tabs
+                          value={positionTab}
+                          onValueChange={(value) => {
+                            if (value === 'lonlat') {
+                              setGeometryTabOverride('lonlat');
+                              return;
+                            }
+                            if (value !== 'geom') return;
+                            setGeometryTabOverride('geom');
+                            const geometryColumn =
+                              pickDeckMapSourceGeometryColumn(
+                                pointGeometryColumns,
+                                lastSourceGeometryColumnRef.current,
+                              );
+                            if (!geometryColumn) return;
+                            applyConfig(
+                              setDeckMapLayerGeometryColumn(
+                                mapConfig,
+                                activeLayerIndex,
+                                geometryColumn,
+                              ),
+                            );
+                          }}
+                          className="w-full"
+                        >
+                          <TabsList className="grid h-8 w-full grid-cols-2">
+                            <TabsTrigger value="geom" className="text-xs">
+                              Geom
+                            </TabsTrigger>
+                            <TabsTrigger value="lonlat" className="text-xs">
+                              Lon/Lat
+                            </TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="geom" className="mt-2">
+                            <ColumnsProvider columns={pointGeometryColumns}>
+                              <ColumnSelector
+                                kind="geometry"
+                                value={pointGeometryColumn}
+                                onChange={(geometryColumn) => {
+                                  setGeometryTabOverride('geom');
+                                  applyConfig(
+                                    setDeckMapLayerGeometryColumn(
+                                      mapConfig,
+                                      activeLayerIndex,
+                                      geometryColumn,
+                                    ),
+                                  );
+                                }}
+                                placeholder="Select geometry column..."
+                                disabled={readOnly}
+                              />
+                            </ColumnsProvider>
+                          </TabsContent>
+                          <TabsContent value="lonlat" className="mt-2">
+                            <PointLonLatFields
+                              latitudeColumn={latitudeColumn}
+                              longitudeColumn={longitudeColumn}
+                              sourceColumns={sourceColumns}
+                              mapConfig={mapConfig}
+                              layerIndex={activeLayerIndex}
+                              applyConfig={applyConfig}
+                              onSelectLonLat={() =>
+                                setGeometryTabOverride('lonlat')
+                              }
+                              readOnly={readOnly}
+                            />
+                          </TabsContent>
+                        </Tabs>
+                      ) : showPointGeometryGroup ? (
+                        <PointLonLatFields
+                          latitudeColumn={latitudeColumn}
+                          longitudeColumn={longitudeColumn}
+                          sourceColumns={sourceColumns}
+                          mapConfig={mapConfig}
+                          layerIndex={activeLayerIndex}
+                          applyConfig={applyConfig}
+                          readOnly={readOnly}
+                        />
+                      ) : null}
 
-                {outputColumns.length > 0 && showTripsSettings && (
-                  <ColumnsProvider columns={outputColumns}>
-                    <Field label="Timestamp column" required>
-                      <ColumnSelector
-                        value={
-                          (
-                            activeLayer?._sqlroomsBinding as Record<
-                              string,
-                              unknown
-                            >
-                          )?.timestampColumn as string | undefined
-                        }
-                        onChange={(timestampColumn) =>
-                          applyConfig(
-                            setDeckMapLayerTimestampColumn(
-                              mapConfig,
-                              activeLayerIndex,
-                              timestampColumn,
-                            ),
-                          )
-                        }
-                        placeholder="Select timestamp column..."
-                        disabled={readOnly}
-                      />
-                    </Field>
-                  </ColumnsProvider>
-                )}
+                      {showPathPolygonGeometryGroup ? (
+                        <ColumnsProvider columns={pathPolygonGeometryColumns}>
+                          <ColumnSelector
+                            kind={
+                              pointGeometryColumns.length > 0
+                                ? 'geometry'
+                                : 'all'
+                            }
+                            value={boundPointGeometryColumn}
+                            onChange={(geometryColumn) =>
+                              applyConfig(
+                                setDeckMapLayerGeometryColumn(
+                                  mapConfig,
+                                  activeLayerIndex,
+                                  geometryColumn,
+                                ),
+                              )
+                            }
+                            placeholder="Select geometry column..."
+                            disabled={readOnly}
+                          />
+                        </ColumnsProvider>
+                      ) : null}
 
-                {outputColumns.length > 0 && showH3ColumnSetting && (
-                  <ColumnsProvider columns={outputColumns}>
-                    <Field label="H3 column" required>
-                      <ColumnSelector
-                        value={
-                          (
-                            activeLayer?._sqlroomsBinding as Record<
-                              string,
-                              unknown
-                            >
-                          )?.hexagonColumn as string | undefined
-                        }
-                        onChange={(hexagonColumn) =>
-                          applyConfig(
-                            setDeckMapLayerHexagonColumn(
-                              mapConfig,
-                              activeLayerIndex,
-                              hexagonColumn,
-                            ),
-                          )
-                        }
-                        placeholder="Select H3 index column..."
-                        disabled={readOnly}
-                      />
-                    </Field>
-                  </ColumnsProvider>
-                )}
+                      {showTripsTimestampGroup ? (
+                        <ColumnsProvider columns={outputColumns}>
+                          <Field label="Timestamp">
+                            <ColumnSelector
+                              value={
+                                activeLayerBinding?.timestampColumn as
+                                  | string
+                                  | undefined
+                              }
+                              onChange={(timestampColumn) =>
+                                applyConfig(
+                                  setDeckMapLayerTimestampColumn(
+                                    mapConfig,
+                                    activeLayerIndex,
+                                    timestampColumn,
+                                  ),
+                                )
+                              }
+                              placeholder="Select timestamp column..."
+                              disabled={readOnly}
+                            />
+                          </Field>
+                        </ColumnsProvider>
+                      ) : null}
 
-                {outputColumns.length > 0 && showArcColumnSetting && (
-                  <ColumnsProvider columns={outputColumns}>
-                    <Field label="Source geometry" required>
-                      <ColumnSelector
-                        value={
-                          (
-                            activeLayer?._sqlroomsBinding as Record<
-                              string,
-                              unknown
-                            >
-                          )?.sourceGeometryColumn as string | undefined
-                        }
-                        onChange={(sourceGeometryColumn) =>
-                          applyConfig(
-                            setDeckMapLayerArcColumns(
-                              mapConfig,
-                              activeLayerIndex,
+                      {showH3GeometryGroup ? (
+                        <ColumnsProvider columns={outputColumns}>
+                          <Field label="H3 index">
+                            <ColumnSelector
+                              value={
+                                activeLayerBinding?.hexagonColumn as
+                                  | string
+                                  | undefined
+                              }
+                              onChange={(hexagonColumn) =>
+                                applyConfig(
+                                  setDeckMapLayerHexagonColumn(
+                                    mapConfig,
+                                    activeLayerIndex,
+                                    hexagonColumn,
+                                  ),
+                                )
+                              }
+                              placeholder="Select H3 index column..."
+                              disabled={readOnly}
+                            />
+                          </Field>
+                        </ColumnsProvider>
+                      ) : null}
+
+                      {showArcGeometryGroup && hasArcGeometryColumns ? (
+                        <Tabs
+                          value={arcTab}
+                          onValueChange={(value) => {
+                            if (value === 'lonlat') {
+                              setGeometryTabOverride('lonlat');
+                              return;
+                            }
+                            if (value !== 'geom') return;
+                            setGeometryTabOverride('geom');
+                            const restored = pickDeckMapArcGeometryColumns(
+                              arcGeometryColumns,
                               {
-                                sourceGeometryColumn,
+                                sourceGeometryColumn:
+                                  lastArcSourceGeometryColumnRef.current,
+                                targetGeometryColumn:
+                                  lastArcTargetGeometryColumnRef.current,
                               },
-                            ),
-                          )
-                        }
-                        placeholder="Select source geometry..."
-                        disabled={readOnly}
-                      />
-                    </Field>
-                    <Field label="Target geometry" required>
-                      <ColumnSelector
-                        value={
-                          (
-                            activeLayer?._sqlroomsBinding as Record<
-                              string,
-                              unknown
-                            >
-                          )?.targetGeometryColumn as string | undefined
-                        }
-                        onChange={(targetGeometryColumn) =>
-                          applyConfig(
-                            setDeckMapLayerArcColumns(
-                              mapConfig,
-                              activeLayerIndex,
-                              {
-                                targetGeometryColumn,
-                              },
-                            ),
-                          )
-                        }
-                        placeholder="Select target geometry..."
-                        disabled={readOnly}
-                      />
-                    </Field>
-                  </ColumnsProvider>
-                )}
+                            );
+                            if (
+                              !restored.sourceGeometryColumn &&
+                              !restored.targetGeometryColumn
+                            ) {
+                              return;
+                            }
+                            applyConfig(
+                              setDeckMapLayerArcGeometryColumns(
+                                mapConfig,
+                                activeLayerIndex,
+                                {
+                                  sourceGeometryColumn:
+                                    restored.sourceGeometryColumn ?? null,
+                                  targetGeometryColumn:
+                                    restored.targetGeometryColumn ?? null,
+                                },
+                              ),
+                            );
+                          }}
+                          className="w-full"
+                        >
+                          <TabsList className="grid h-8 w-full grid-cols-2">
+                            <TabsTrigger value="geom" className="text-xs">
+                              Geom
+                            </TabsTrigger>
+                            <TabsTrigger value="lonlat" className="text-xs">
+                              Lon/Lat
+                            </TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="geom" className="mt-2">
+                            <ColumnsProvider columns={arcGeometryColumns}>
+                              <div className="flex flex-col gap-2">
+                                <Field label="Source geometry">
+                                  <ColumnSelector
+                                    kind="geometry"
+                                    value={arcSourceGeometryColumn}
+                                    onChange={(sourceGeometryColumn) => {
+                                      setGeometryTabOverride('geom');
+                                      applyConfig(
+                                        setDeckMapLayerArcGeometryColumns(
+                                          mapConfig,
+                                          activeLayerIndex,
+                                          {sourceGeometryColumn},
+                                        ),
+                                      );
+                                    }}
+                                    placeholder="Select source geometry..."
+                                    disabled={readOnly}
+                                  />
+                                </Field>
+                                <Field label="Target geometry">
+                                  <ColumnSelector
+                                    kind="geometry"
+                                    value={arcTargetGeometryColumn}
+                                    onChange={(targetGeometryColumn) => {
+                                      setGeometryTabOverride('geom');
+                                      applyConfig(
+                                        setDeckMapLayerArcGeometryColumns(
+                                          mapConfig,
+                                          activeLayerIndex,
+                                          {targetGeometryColumn},
+                                        ),
+                                      );
+                                    }}
+                                    placeholder="Select target geometry..."
+                                    disabled={readOnly}
+                                  />
+                                </Field>
+                              </div>
+                            </ColumnsProvider>
+                          </TabsContent>
+                          <TabsContent value="lonlat" className="mt-2">
+                            <ArcLonLatFields
+                              sourceLatitudeColumn={
+                                activeLayerBinding?.sourceLatitudeColumn as
+                                  | string
+                                  | undefined
+                              }
+                              sourceLongitudeColumn={
+                                activeLayerBinding?.sourceLongitudeColumn as
+                                  | string
+                                  | undefined
+                              }
+                              targetLatitudeColumn={
+                                activeLayerBinding?.targetLatitudeColumn as
+                                  | string
+                                  | undefined
+                              }
+                              targetLongitudeColumn={
+                                activeLayerBinding?.targetLongitudeColumn as
+                                  | string
+                                  | undefined
+                              }
+                              sourceColumns={sourceColumns}
+                              mapConfig={mapConfig}
+                              layerIndex={activeLayerIndex}
+                              applyConfig={applyConfig}
+                              onSelectLonLat={() =>
+                                setGeometryTabOverride('lonlat')
+                              }
+                              readOnly={readOnly}
+                            />
+                          </TabsContent>
+                        </Tabs>
+                      ) : showArcGeometryGroup ? (
+                        <ArcLonLatFields
+                          sourceLatitudeColumn={
+                            activeLayerBinding?.sourceLatitudeColumn as
+                              | string
+                              | undefined
+                          }
+                          sourceLongitudeColumn={
+                            activeLayerBinding?.sourceLongitudeColumn as
+                              | string
+                              | undefined
+                          }
+                          targetLatitudeColumn={
+                            activeLayerBinding?.targetLatitudeColumn as
+                              | string
+                              | undefined
+                          }
+                          targetLongitudeColumn={
+                            activeLayerBinding?.targetLongitudeColumn as
+                              | string
+                              | undefined
+                          }
+                          sourceColumns={sourceColumns}
+                          mapConfig={mapConfig}
+                          layerIndex={activeLayerIndex}
+                          applyConfig={applyConfig}
+                          readOnly={readOnly}
+                        />
+                      ) : null}
+                    </div>
+                  </Field>
+                ) : null}
               </div>
             )}
-
-            {sourceDataTable &&
-              !showGeometryColumnSetting &&
-              !showH3ColumnSetting &&
-              !showArcColumnSetting && (
-                <ColumnsProvider columns={sourceColumns}>
-                  <Field label="Latitude column" required>
-                    <ColumnSelector.Numeric
-                      value={mapConfig.fitToData?.latitudeColumn}
-                      onChange={(latitudeColumn) => {
-                        const longitudeColumn =
-                          mapConfig.fitToData?.longitudeColumn;
-                        applyConfig(
-                          regenerateMapConfigForTable(
-                            {config: mapConfig},
-                            sourceDataTable,
-                            longitudeColumn,
-                            latitudeColumn,
-                          ) as DeckMapConfig,
-                        );
-                      }}
-                      disabled={readOnly}
-                    />
-                  </Field>
-                  <Field label="Longitude column" required>
-                    <ColumnSelector.Numeric
-                      value={mapConfig.fitToData?.longitudeColumn}
-                      onChange={(longitudeColumn) => {
-                        const latitudeColumn =
-                          mapConfig.fitToData?.latitudeColumn;
-                        applyConfig(
-                          regenerateMapConfigForTable(
-                            {config: mapConfig},
-                            sourceDataTable,
-                            longitudeColumn,
-                            latitudeColumn,
-                          ) as DeckMapConfig,
-                        );
-                      }}
-                      disabled={readOnly}
-                    />
-                  </Field>
-                </ColumnsProvider>
-              )}
           </div>
         </ScrollArea>
       )}

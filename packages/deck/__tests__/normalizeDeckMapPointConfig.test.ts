@@ -4,6 +4,7 @@ import {
   applyDeckMapTableSelection,
   createDeckMapPointTransformSql,
   normalizeDeckMapPointConfig,
+  parseDeckMapPointTransformSql,
   regenerateMapConfigForTable,
 } from '../src/mapConfigUtils';
 import {createEmptyDeckMapConfig} from '../src/mapConfig';
@@ -27,6 +28,31 @@ describe('normalizeDeckMapPointConfig', () => {
         geometryColumn: '__sqlrooms_geom',
       }),
     ).toContain(DECK_TABLE_DATASET_SOURCE_RELATION);
+  });
+
+  it('parses lon/lat columns back out of canonical point transform SQL', () => {
+    expect(
+      parseDeckMapPointTransformSql(
+        createDeckMapPointTransformSql({
+          longitudeColumn: 'Longitude',
+          latitudeColumn: 'Latitude',
+          geometryColumn: '__sqlrooms_geom',
+        }),
+      ),
+    ).toEqual({
+      longitudeColumn: 'Longitude',
+      latitudeColumn: 'Latitude',
+      geometryColumn: '__sqlrooms_geom',
+    });
+    expect(
+      parseDeckMapPointTransformSql(
+        'SELECT ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+      ),
+    ).toEqual({
+      longitudeColumn: 'lon',
+      latitudeColumn: 'lat',
+      geometryColumn: 'geom',
+    });
   });
 
   it('applies structured point provenance with canonical SQL and bindings', () => {

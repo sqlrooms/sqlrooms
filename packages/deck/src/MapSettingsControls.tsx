@@ -44,14 +44,80 @@ export type DeckMapColumnKind =
   | 'quantitative'
   | 'categorical'
   /** Numeric/temporal + string columns usable for color scales. */
-  | 'colorable';
+  | 'colorable'
+  /** Geometry / WKB / well-known geometry column names. */
+  | 'geometry'
+  /** Geometry or numeric columns that can define a point position. */
+  | 'position';
+
+const GEOMETRY_COLUMN_NAME_PATTERN = /(?:^|_)((?:wkb_)?geom(?:etry)?)$/i;
+const LATITUDE_COLUMN_NAME_PATTERN = /^(lat|latitude|y|northing)$/i;
+const LONGITUDE_COLUMN_NAME_PATTERN = /^(lon|lng|long|longitude|x|easting)$/i;
 
 /** True for columns that can drive a color scale (excludes geometry blobs/structs). */
 export function isDeckMapColorableColumn(column: TableColumn): boolean {
   if (!column.type) return false;
-  if (isColumnQuantitative(column.type)) return true;
   const category = getColumnTypeCategory(column.type);
+  if (
+    category === 'geometry' ||
+    category === 'binary' ||
+    category === 'struct'
+  ) {
+    return false;
+  }
+  if (isColumnQuantitative(column.type)) return true;
   return category === 'string' || category === 'boolean';
+}
+
+/** True for columns that can be bound as map geometry. */
+export function isDeckMapGeometryPickerColumn(column: TableColumn): boolean {
+  if (GEOMETRY_COLUMN_NAME_PATTERN.test(column.name)) return true;
+  const type = column.type?.toLowerCase() ?? '';
+  if (!type) return false;
+  const category = getColumnTypeCategory(column.type);
+  return (
+    category === 'geometry' ||
+    category === 'binary' ||
+    type.includes('geoarrow') ||
+    type.includes('wkb') ||
+    type.includes('wkt')
+  );
+}
+
+/** Classifies a coordinate column name as latitude, longitude, or unknown. */
+export function classifyDeckMapCoordinateColumn(
+  columnName: string,
+): 'latitude' | 'longitude' | 'unknown' {
+  const name = columnName.trim();
+  if (LATITUDE_COLUMN_NAME_PATTERN.test(name)) return 'latitude';
+  if (LONGITUDE_COLUMN_NAME_PATTERN.test(name)) return 'longitude';
+  return 'unknown';
+}
+
+/**
+ * Assigns a first/second position pair to longitude/latitude. Named lon/lat
+ * columns win; otherwise the first column is latitude and the second is
+ * longitude.
+ */
+export function resolveDeckMapLonLatPair(
+  firstColumn: string,
+  secondColumn: string,
+): {latitudeColumn: string; longitudeColumn: string} {
+  const first = classifyDeckMapCoordinateColumn(firstColumn);
+  const second = classifyDeckMapCoordinateColumn(secondColumn);
+  if (first === 'longitude' && second !== 'longitude') {
+    return {longitudeColumn: firstColumn, latitudeColumn: secondColumn};
+  }
+  if (first === 'latitude' && second !== 'latitude') {
+    return {latitudeColumn: firstColumn, longitudeColumn: secondColumn};
+  }
+  if (second === 'longitude' && first !== 'longitude') {
+    return {longitudeColumn: secondColumn, latitudeColumn: firstColumn};
+  }
+  if (second === 'latitude' && first !== 'latitude') {
+    return {latitudeColumn: secondColumn, longitudeColumn: firstColumn};
+  }
+  return {latitudeColumn: firstColumn, longitudeColumn: secondColumn};
 }
 
 /** String/boolean (and binary) fields that need a categorical color scale. */
@@ -72,12 +138,91 @@ export function filterDeckMapColumns(
 ) {
   if (kind === 'all') return columns;
   return columns.filter((column) => {
+    if (kind === 'geometry') return isDeckMapGeometryPickerColumn(column);
+    if (kind === 'position') {
+      return (
+        isDeckMapGeometryPickerColumn(column) ||
+        Boolean(column.type && isColumnNumeric(column.type))
+      );
+    }
     if (!column.type) return false;
     if (kind === 'numeric') return isColumnNumeric(column.type);
     if (kind === 'quantitative') return isColumnQuantitative(column.type);
     if (kind === 'colorable') return isDeckMapColorableColumn(column);
     return isDeckMapCategoricalColorColumn(column);
   });
+}
+
+/**
+ * Source geometry column to restore after leaving lon/lat mode. Prefers the
+ * previously bound column; if the table has exactly one geometry column, uses
+ * that.
+ */
+export function pickDeckMapSourceGeometryColumn(
+  sourceColumns: TableColumn[],
+  preferredColumn?: string,
+): string | undefined {
+  const geometryColumns = filterDeckMapColumns(sourceColumns, 'geometry');
+  if (
+    preferredColumn &&
+    geometryColumns.some((column) => column.name === preferredColumn)
+  ) {
+    return preferredColumn;
+  }
+  if (geometryColumns.length === 1) {
+    return geometryColumns[0]?.name;
+  }
+  return undefined;
+}
+
+/**
+ * Source/target geometry columns to restore after leaving arc lon/lat mode.
+ * Prefers previously bound columns; if the table has exactly two geometry
+ * columns, uses those as source then target.
+ */
+export function pickDeckMapArcGeometryColumns(
+  sourceColumns: TableColumn[],
+  preferred?: {
+    sourceGeometryColumn?: string;
+    targetGeometryColumn?: string;
+  },
+): {sourceGeometryColumn?: string; targetGeometryColumn?: string} {
+  const names = filterDeckMapColumns(sourceColumns, 'geometry').map(
+    (column) => column.name,
+  );
+  const source =
+    preferred?.sourceGeometryColumn &&
+    names.includes(preferred.sourceGeometryColumn)
+      ? preferred.sourceGeometryColumn
+      : undefined;
+  const target =
+    preferred?.targetGeometryColumn &&
+    names.includes(preferred.targetGeometryColumn) &&
+    preferred.targetGeometryColumn !== source
+      ? preferred.targetGeometryColumn
+      : undefined;
+  if (source && target) {
+    return {sourceGeometryColumn: source, targetGeometryColumn: target};
+  }
+  if (names.length === 2) {
+    if (source) {
+      return {
+        sourceGeometryColumn: source,
+        targetGeometryColumn: names.find((name) => name !== source),
+      };
+    }
+    if (target) {
+      return {
+        sourceGeometryColumn: names.find((name) => name !== target),
+        targetGeometryColumn: target,
+      };
+    }
+    return {
+      sourceGeometryColumn: names[0],
+      targetGeometryColumn: names[1],
+    };
+  }
+  return {sourceGeometryColumn: source, targetGeometryColumn: target};
 }
 
 const DeckMapColumnsContext = createContext<TableColumn[]>([]);
@@ -90,6 +235,12 @@ export const DeckMapColumnsProvider: FC<
   </DeckMapColumnsContext.Provider>
 );
 
+export type DeckMapColumnSelectorExtraOption = {
+  value: string;
+  label: string;
+  keywords?: string[];
+};
+
 export type DeckMapColumnSelectorProps = {
   columns?: TableColumn[];
   kind?: DeckMapColumnKind;
@@ -97,6 +248,7 @@ export type DeckMapColumnSelectorProps = {
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  extraOptions?: readonly DeckMapColumnSelectorExtraOption[];
 };
 
 const DeckMapColumnSelectorRoot: FC<DeckMapColumnSelectorProps> = ({
@@ -106,11 +258,18 @@ const DeckMapColumnSelectorRoot: FC<DeckMapColumnSelectorProps> = ({
   onChange,
   placeholder = 'Select column…',
   disabled,
+  extraOptions,
 }) => {
   const contextColumns = useContext(DeckMapColumnsContext);
-  const options = filterDeckMapColumns(columns ?? contextColumns, kind);
-  const selectedColumn = options.find((column) => column.name === value);
-  const isMissing = Boolean(value && !selectedColumn);
+  const allColumns = columns ?? contextColumns;
+  const filtered = filterDeckMapColumns(allColumns, kind);
+  const selectedColumn = allColumns.find((column) => column.name === value);
+  const selectedExtra = extraOptions?.find((option) => option.value === value);
+  const options =
+    selectedColumn && !filtered.some((column) => column.name === value)
+      ? [selectedColumn, ...filtered]
+      : filtered;
+  const isMissing = Boolean(value && !selectedColumn && !selectedExtra);
   return (
     <Combobox value={value ?? ''} onChange={onChange} disabled={disabled}>
       <Combobox.Trigger
@@ -119,7 +278,9 @@ const DeckMapColumnSelectorRoot: FC<DeckMapColumnSelectorProps> = ({
           isMissing && 'border-destructive/60 bg-destructive/5',
         )}
       >
-        {selectedColumn ? (
+        {selectedExtra ? (
+          <span className="truncate">{selectedExtra.label}</span>
+        ) : selectedColumn ? (
           <span className="flex min-w-0 items-baseline gap-1">
             <span className="truncate">{selectedColumn.name}</span>
             <span className="text-muted-foreground truncate text-[8px]">
@@ -137,6 +298,15 @@ const DeckMapColumnSelectorRoot: FC<DeckMapColumnSelectorProps> = ({
         searchPlaceholder="Search columns..."
         emptyMessage="No matching column."
       >
+        {extraOptions?.map((option) => (
+          <Combobox.Item
+            key={option.value}
+            value={option.value}
+            keywords={option.keywords ?? [option.label]}
+          >
+            <span className="truncate">{option.label}</span>
+          </Combobox.Item>
+        ))}
         {options.map((column) => (
           <Combobox.Item key={column.name} value={column.name}>
             <span className="truncate">{column.name}</span>
@@ -162,6 +332,12 @@ export const DeckMapColumnSelector = Object.assign(DeckMapColumnSelectorRoot, {
   ),
   Colorable: (props: Omit<DeckMapColumnSelectorProps, 'kind'>) => (
     <DeckMapColumnSelectorRoot {...props} kind="colorable" />
+  ),
+  Geometry: (props: Omit<DeckMapColumnSelectorProps, 'kind'>) => (
+    <DeckMapColumnSelectorRoot {...props} kind="geometry" />
+  ),
+  Position: (props: Omit<DeckMapColumnSelectorProps, 'kind'>) => (
+    <DeckMapColumnSelectorRoot {...props} kind="position" />
   ),
 });
 

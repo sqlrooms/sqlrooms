@@ -15,11 +15,15 @@ import {
   setDeckMapLayerColorScale,
   setDeckMapLayerFlatColor,
   setDeckMapLayerGeometryColumn,
+  setDeckMapLayerCoordinateColumns,
+  setDeckMapLayerArcGeometryColumns,
+  setDeckMapLayerArcCoordinateColumns,
   setDeckMapLayerType,
   DECK_MAP_DEFAULT_LAYER_COLOR,
   updateDeckMapLayer,
   usesExtrusionSettings,
   usesGeometryColumnSetting,
+  usesPointCoordinateSetting,
   usesRadiusSetting,
   usesStrokeSetting,
   usesStrokeExtrusionWarning,
@@ -221,11 +225,172 @@ describe('mapLayerConfigUtils', () => {
     expect(config.datasets.places.geometryColumn).toBe('geom');
   });
 
+  it('stores a single lat/lon pick without dropping a source geometry column', () => {
+    const nextConfig = setDeckMapLayerCoordinateColumns(
+      config,
+      0,
+      {latitudeColumn: 'latitude'},
+      [
+        {name: 'geom', type: 'GEOMETRY'},
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
+    );
+
+    expect(nextConfig.fitToData).toMatchObject({
+      dataset: 'places',
+      geometryColumn: 'geom',
+      latitudeColumn: 'latitude',
+    });
+    expect(nextConfig.fitToData).not.toHaveProperty('longitudeColumn');
+    expect(nextConfig.datasets.places.geometryColumn).toBe('geom');
+    expect(nextConfig.datasets.places.source).toEqual({tableName: 'places'});
+  });
+
+  it('applies a point transform once both lat and lon are selected', () => {
+    const afterLatitude = setDeckMapLayerCoordinateColumns(
+      config,
+      0,
+      {latitudeColumn: 'latitude'},
+      [
+        {name: 'geom', type: 'GEOMETRY'},
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
+    );
+    const nextConfig = setDeckMapLayerCoordinateColumns(
+      afterLatitude,
+      0,
+      {longitudeColumn: 'longitude'},
+      [
+        {name: 'geom', type: 'GEOMETRY'},
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
+    );
+
+    expect(nextConfig.fitToData).toMatchObject({
+      dataset: 'places',
+      latitudeColumn: 'latitude',
+      longitudeColumn: 'longitude',
+    });
+    expect(nextConfig.datasets.places.geometryColumn).toBe('__sqlrooms_geom');
+    expect(nextConfig.datasets.places.source).toMatchObject({
+      tableName: 'places',
+      transformSql: expect.stringContaining(
+        'ST_Point("longitude", "latitude")',
+      ),
+    });
+    expect(
+      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
+    ).toMatchObject({
+      dataset: 'places',
+      geometryColumn: '__sqlrooms_geom',
+    });
+  });
+
+  it('switches a lon/lat point map back to a source geometry column', () => {
+    const pointConfig = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'points',
+            _sqlroomsBinding: {
+              dataset: 'places',
+              geometryColumn: '__sqlrooms_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {
+            tableName: 'places',
+            transformSql:
+              'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "__sqlrooms_geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
+          },
+          geometryColumn: '__sqlrooms_geom',
+          geometryEncodingHint: 'wkb' as const,
+        },
+      },
+      fitToData: {
+        dataset: 'places',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+        padding: 40,
+        maxZoom: 12,
+      },
+    };
+
+    const nextConfig = setDeckMapLayerGeometryColumn(pointConfig, 0, 'geom');
+
+    expect(nextConfig.datasets.places.geometryColumn).toBe('geom');
+    expect(nextConfig.datasets.places.source).toEqual({tableName: 'places'});
+    expect(nextConfig.fitToData).toMatchObject({
+      dataset: 'places',
+      geometryColumn: 'geom',
+    });
+    expect(nextConfig.fitToData).not.toHaveProperty('longitudeColumn');
+    expect(nextConfig.fitToData).not.toHaveProperty('latitudeColumn');
+    expect(
+      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
+    ).toMatchObject({
+      dataset: 'places',
+      geometryColumn: 'geom',
+    });
+  });
+
+  it('keeps lon/lat fit when the generated point geometry column is reselected', () => {
+    const transformSql =
+      'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "__sqlrooms_geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL';
+    const pointConfig = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {
+              dataset: 'places',
+              geometryColumn: '__sqlrooms_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {tableName: 'places', transformSql},
+          geometryColumn: '__sqlrooms_geom',
+        },
+      },
+      fitToData: {
+        dataset: 'places',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+      },
+    };
+
+    const nextConfig = setDeckMapLayerGeometryColumn(
+      pointConfig,
+      0,
+      '__sqlrooms_geom',
+    );
+
+    expect(nextConfig.datasets.places.source).toEqual({
+      tableName: 'places',
+      transformSql,
+    });
+    expect(nextConfig.fitToData).toEqual(pointConfig.fitToData);
+  });
+
   it('detects layer types that should use geometry column settings', () => {
     expect(usesGeometryColumnSetting('GeoArrowPolygonLayer')).toBe(true);
     expect(usesGeometryColumnSetting('GeoArrowSolidPolygonLayer')).toBe(true);
     expect(usesGeometryColumnSetting('GeoJsonLayer')).toBe(true);
     expect(usesGeometryColumnSetting('GeoArrowScatterplotLayer')).toBe(false);
+    expect(usesPointCoordinateSetting('GeoArrowScatterplotLayer')).toBe(true);
+    expect(usesPointCoordinateSetting('GeoArrowHeatmapLayer')).toBe(true);
+    expect(usesPointCoordinateSetting('GeoArrowColumnLayer')).toBe(true);
+    expect(usesPointCoordinateSetting('GeoArrowPolygonLayer')).toBe(false);
   });
 
   it('detects layer types that should use point radius settings', () => {
@@ -651,5 +816,161 @@ describe('deck map flat layer color', () => {
 
   test('deckMapRgbaToHex converts RGB channels', () => {
     expect(deckMapRgbaToHex([255, 128, 0, 200])).toBe('#ff8000');
+  });
+});
+
+describe('arc geometry vs lon/lat bindings', () => {
+  const arcConfig = {
+    spec: {
+      layers: [
+        {
+          '@@type': 'GeoArrowArcLayer',
+          id: 'arcs',
+          _sqlroomsBinding: {
+            dataset: 'trips',
+            sourceGeometryColumn: 'origin_geom',
+            targetGeometryColumn: 'dest_geom',
+          },
+        },
+      ],
+    },
+    datasets: {
+      trips: {
+        source: {tableName: 'trips'},
+        geometryColumn: 'origin_geom',
+      },
+    },
+    fitToData: {
+      dataset: 'trips',
+      geometryColumns: ['origin_geom', 'dest_geom'],
+      padding: 40,
+      maxZoom: 12,
+    },
+  };
+  const sourceColumns = [
+    {name: 'origin_geom', type: 'GEOMETRY'},
+    {name: 'dest_geom', type: 'GEOMETRY'},
+    {name: 'origin_lon', type: 'DOUBLE'},
+    {name: 'origin_lat', type: 'DOUBLE'},
+    {name: 'dest_lon', type: 'DOUBLE'},
+    {name: 'dest_lat', type: 'DOUBLE'},
+  ];
+
+  it('stores a partial arc lon/lat pick without dropping source geoms', () => {
+    const nextConfig = setDeckMapLayerArcCoordinateColumns(
+      arcConfig,
+      0,
+      {sourceLatitudeColumn: 'origin_lat'},
+      sourceColumns,
+    );
+
+    expect(
+      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
+    ).toMatchObject({
+      sourceGeometryColumn: 'origin_geom',
+      targetGeometryColumn: 'dest_geom',
+      sourceLatitudeColumn: 'origin_lat',
+    });
+    expect(nextConfig.datasets.trips.source).toEqual({tableName: 'trips'});
+  });
+
+  it('applies an arc transform once all four lon/lat columns are selected', () => {
+    const nextConfig = [
+      {sourceLatitudeColumn: 'origin_lat'},
+      {sourceLongitudeColumn: 'origin_lon'},
+      {targetLatitudeColumn: 'dest_lat'},
+      {targetLongitudeColumn: 'dest_lon'},
+    ].reduce(
+      (config, columns) =>
+        setDeckMapLayerArcCoordinateColumns(config, 0, columns, sourceColumns),
+      arcConfig,
+    );
+
+    expect(nextConfig.datasets.trips.source).toMatchObject({
+      tableName: 'trips',
+      transformSql: expect.stringContaining(
+        'ST_Point("origin_lon", "origin_lat")',
+      ),
+    });
+    expect(String(nextConfig.datasets.trips.source.transformSql)).toContain(
+      'ST_Point("dest_lon", "dest_lat")',
+    );
+    expect(
+      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
+    ).toMatchObject({
+      sourceGeometryColumn: 'source_geom',
+      targetGeometryColumn: 'target_geom',
+      sourceLatitudeColumn: 'origin_lat',
+      sourceLongitudeColumn: 'origin_lon',
+      targetLatitudeColumn: 'dest_lat',
+      targetLongitudeColumn: 'dest_lon',
+    });
+    expect(nextConfig.fitToData).toMatchObject({
+      dataset: 'trips',
+      geometryColumns: ['source_geom', 'target_geom'],
+    });
+    expect(nextConfig.datasets.trips.geometryEncodingHint).toBe('wkb');
+  });
+
+  it('uses fallback aliases when source_geom and target_geom already exist', () => {
+    const nextConfig = setDeckMapLayerArcCoordinateColumns(
+      arcConfig,
+      0,
+      {
+        sourceLatitudeColumn: 'origin_lat',
+        sourceLongitudeColumn: 'origin_lon',
+        targetLatitudeColumn: 'dest_lat',
+        targetLongitudeColumn: 'dest_lon',
+      },
+      [
+        ...sourceColumns,
+        {name: 'source_geom', type: 'GEOMETRY'},
+        {name: 'target_geom', type: 'GEOMETRY'},
+      ],
+    );
+
+    expect(
+      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
+    ).toMatchObject({
+      sourceGeometryColumn: '__sqlrooms_source_geom',
+      targetGeometryColumn: '__sqlrooms_target_geom',
+    });
+  });
+
+  it('switches an arc lon/lat map back to source geometry columns', () => {
+    const lonLatConfig = setDeckMapLayerArcCoordinateColumns(
+      arcConfig,
+      0,
+      {
+        sourceLatitudeColumn: 'origin_lat',
+        sourceLongitudeColumn: 'origin_lon',
+        targetLatitudeColumn: 'dest_lat',
+        targetLongitudeColumn: 'dest_lon',
+      },
+      sourceColumns,
+    );
+    const nextConfig = setDeckMapLayerArcGeometryColumns(lonLatConfig, 0, {
+      sourceGeometryColumn: 'origin_geom',
+      targetGeometryColumn: 'dest_geom',
+    });
+
+    expect(nextConfig.datasets.trips.source).toEqual({tableName: 'trips'});
+    expect(nextConfig.fitToData).toMatchObject({
+      dataset: 'trips',
+      geometryColumns: ['origin_geom', 'dest_geom'],
+    });
+    expect(
+      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
+    ).toMatchObject({
+      dataset: 'trips',
+      sourceGeometryColumn: 'origin_geom',
+      targetGeometryColumn: 'dest_geom',
+    });
+    expect(
+      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
+    ).not.toHaveProperty('sourceLatitudeColumn');
+    expect(
+      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
+    ).not.toHaveProperty('targetLongitudeColumn');
   });
 });

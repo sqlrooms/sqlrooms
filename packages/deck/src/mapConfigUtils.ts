@@ -269,6 +269,58 @@ export function createDeckMapPointTransformSql(options: {
   ].join(' ');
 }
 
+/**
+ * Reads longitude/latitude/geometry aliases from canonical point transform SQL.
+ */
+export function parseDeckMapPointTransformSql(transformSql: string):
+  | {
+      longitudeColumn: string;
+      latitudeColumn: string;
+      geometryColumn: string;
+    }
+  | undefined {
+  const match = transformSql.match(
+    /ST_AsWKB\s*\(\s*ST_Point\s*\(\s*"?([^"\s,]+)"?\s*,\s*"?([^"\s,]+)"?\s*\)\s*\)\s*AS\s+"?([^\s",]+)"?/i,
+  );
+  if (!match?.[1] || !match[2] || !match[3]) return undefined;
+  return {
+    longitudeColumn: match[1],
+    latitudeColumn: match[2],
+    geometryColumn: match[3],
+  };
+}
+
+/**
+ * Builds the standard origin/destination lon/lat → WKB arc transform SQL.
+ */
+export function createDeckMapArcTransformSql(options: {
+  sourceLongitudeColumn: string;
+  sourceLatitudeColumn: string;
+  targetLongitudeColumn: string;
+  targetLatitudeColumn: string;
+  sourceGeometryColumn: string;
+  targetGeometryColumn: string;
+}) {
+  const quotedSourceLongitude = quoteDeckMapSqlIdentifier(
+    options.sourceLongitudeColumn,
+  );
+  const quotedSourceLatitude = quoteDeckMapSqlIdentifier(
+    options.sourceLatitudeColumn,
+  );
+  const quotedTargetLongitude = quoteDeckMapSqlIdentifier(
+    options.targetLongitudeColumn,
+  );
+  const quotedTargetLatitude = quoteDeckMapSqlIdentifier(
+    options.targetLatitudeColumn,
+  );
+
+  return [
+    `SELECT *, ST_AsWKB(ST_Point(${quotedSourceLongitude}, ${quotedSourceLatitude})) AS ${quoteDeckMapSqlIdentifier(options.sourceGeometryColumn)}, ST_AsWKB(ST_Point(${quotedTargetLongitude}, ${quotedTargetLatitude})) AS ${quoteDeckMapSqlIdentifier(options.targetGeometryColumn)}`,
+    `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    `WHERE ${quotedSourceLongitude} IS NOT NULL AND ${quotedSourceLatitude} IS NOT NULL AND ${quotedTargetLongitude} IS NOT NULL AND ${quotedTargetLatitude} IS NOT NULL`,
+  ].join(' ');
+}
+
 const DECK_MAP_POINT_LAYER_TYPES = new Set([
   'GeoArrowScatterplotLayer',
   'GeoArrowHeatmapLayer',
