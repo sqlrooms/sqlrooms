@@ -13,10 +13,12 @@ type DuckDbLikeConnector = {
 const UI_STATE_KEY = 'default';
 const PERSIST_DEBOUNCE_MS = 300;
 
+/** DuckDB persistence with an explicit successful-restoration boundary. */
 export type DuckDbPersistStorage<TPersisted> = PersistStorage<TPersisted> & {
   controller: PersistenceController<string>;
   flush: () => Promise<void>;
-  markStateSnapshotSaved: (state: TPersisted) => void;
+  /** Enables writes and schedules any changes retained by a successful restore. */
+  completeHydration: (state: TPersisted) => void;
 };
 
 function sanitizeIdent(ident: string): string {
@@ -50,6 +52,10 @@ function escapeLiteral(json: string) {
   return json.replace(/'/g, "''");
 }
 
+/**
+ * Creates debounced workspace storage that blocks writes until the caller
+ * completes validation, merging, and post-load synchronization successfully.
+ */
 export function createDuckDbPersistStorage<TPersisted>(
   connector: DuckDbLikeConnector,
   options?: {namespace?: string},
@@ -57,6 +63,9 @@ export function createDuckDbPersistStorage<TPersisted>(
   const namespace = options?.namespace || '__sqlrooms';
   let ensured: Promise<void> | null = null;
   let handlersRegistered = false;
+  // Loading the JSON is not enough: slice validation and merge must succeed
+  // before runtime changes are allowed to replace the saved workspace.
+  let hydrated = false;
   const ensure = () => {
     ensured = ensured ?? ensureUiStateTable(connector, namespace);
     return ensured;
@@ -121,9 +130,21 @@ export function createDuckDbPersistStorage<TPersisted>(
     ...persistence.storage,
     controller: persistence.controller,
     flush: persistence.flush,
-    markStateSnapshotSaved: persistence.markStateSnapshotSaved,
+    completeHydration: (state) => {
+      // Keep the loaded snapshot as the saved baseline. Startup changes and
+      // migrations must reach DuckDB before they can be considered saved.
+      persistence.controller.setSnapshot(JSON.stringify(state), 'hydrate');
+      hydrated = true;
+      registerFlushHandlers();
+    },
+
+    getItem: async (...args) => {
+      hydrated = false;
+      return persistence.storage.getItem(...args);
+    },
 
     setItem: async (...args) => {
+      if (!hydrated) return;
       registerFlushHandlers();
       return persistence.storage.setItem(...args);
     },
