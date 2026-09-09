@@ -2,10 +2,10 @@ import {z} from 'zod';
 import {ChartDataPolicyOverrideConfig} from '../data-policy-schema';
 
 export const BoxPlotChartSettings = z.object({
-  x: z.string().optional().describe('Categorical column for grouping'),
+  x: z.string().nullish().describe('Categorical column for grouping'),
   y: z
     .string()
-    .optional()
+    .nullish()
     .describe('Numeric column for distribution statistics'),
 });
 
