@@ -64,6 +64,17 @@ export type DeckMapFitToDataConfig = {
 
 export type DeckMapConfigMode = 'basic' | 'custom';
 
+/**
+ * Spec, datasets, and fit captured for one table so Dataset switches can
+ * restore authored transforms after switching away and back.
+ */
+export type DeckMapTableHistorySnapshot = {
+  spec: DeckMapConfig['spec'];
+  datasets: DeckMapConfig['datasets'];
+  fitToData?: DeckMapFitToDataConfig;
+  interaction?: DeckMapInteractionConfig;
+};
+
 /** Durable, host-neutral Deck map configuration. */
 export type DeckMapConfig = {
   spec: DeckJsonMapProps['spec'];
@@ -77,6 +88,11 @@ export type DeckMapConfig = {
   fitToData?: DeckMapFitToDataConfig;
   dataPolicy?: DeckMapDataPolicyOverride;
   settingsOpen?: boolean;
+  /**
+   * Per-table snapshots of spec/datasets/fit. Used to restore arc, H3, trips,
+   * and path transforms after switching Dataset to an incompatible table.
+   */
+  tableHistory?: Record<string, DeckMapTableHistorySnapshot>;
 };
 
 /** Adds a creation-time basemap default while preserving explicit custom styles. */

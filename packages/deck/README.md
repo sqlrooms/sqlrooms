@@ -469,7 +469,11 @@ and whose resolved table does not expose a native geometry column; native
 geometry, polygon, line, and pre-transformed datasets are preserved.
 When regenerating a map with one existing dataset, its dataset ID is retained
 and geometry bindings are refreshed so custom layers continue to address the
-same dataset after a table switch. Non-geospatial tables and multi-dataset maps
+same dataset after a table switch. Authored arc, H3, trips, and path
+transforms are kept when the new table still has the columns they read;
+otherwise the current map is snapshotted and replaced with a generated
+point/polygon map so the new table can render. Switching back to a previous
+table restores that snapshot. Non-geospatial tables and multi-dataset maps
 return the existing config unchanged so callers can keep the current selection
 when a safe target cannot be inferred. Maps without datasets adopt the generated
 dataset and layer spec after a valid table is selected.
