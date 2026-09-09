@@ -11,6 +11,7 @@ export interface CopyButtonProps {
   variant?: ButtonProps['variant'];
   size?: ButtonProps['size'];
   className?: string;
+  /** Class for the copy/check icon. An explicit size wins over Button's 16px default. */
   iconClassName?: string;
   tooltipLabel?: string;
   ariaLabel?: string;

@@ -250,7 +250,8 @@ bidirectional scrollbar behavior.
 
 Copies `text` to the clipboard and swaps to a check mark for `durationMs`.
 Button size follows the `size`/`className` props; `iconClassName` sizes the
-icon independently, for hosts whose button is smaller than the 16px default:
+icon independently. `Button` only applies its 16px default to icons that carry
+no explicit `h-*`/`size-*`, so this wins:
 
 ```tsx
 <CopyButton
