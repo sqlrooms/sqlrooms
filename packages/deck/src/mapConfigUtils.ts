@@ -308,25 +308,16 @@ function deckMapLayerTargetsDataset(options: {
 }
 
 /**
- * True when retained layers need dataset columns that
+ * True when retained layers bind columns that
  * {@link createDeckMapConfigForTable} cannot reconstruct (arc endpoints, H3
- * indexes, trip timestamps, or an ST_MakeLine path transform). Regenerating
- * the dataset while keeping those layers would drop columns the layers still
- * bind to, so Dataset switches only retarget the table name.
+ * indexes, or trip timestamps). Regenerating the dataset while keeping those
+ * layers would drop columns the layers still bind to, so Dataset switches only
+ * retarget the table name.
  */
 function deckMapDatasetRequiresPreservedTransform(
   config: DeckMapDashboardPanelConfig,
   datasetId: string,
 ) {
-  const dataset = config.datasets?.[datasetId];
-  const transformSql =
-    dataset && isDeckMapTableDatasetSource(dataset.source)
-      ? dataset.source.transformSql
-      : undefined;
-  if (transformSql && /ST_MakeLine/i.test(transformSql)) {
-    return true;
-  }
-
   if (
     !isDeckMapConfigRecord(config.spec) ||
     !Array.isArray(config.spec.layers)
@@ -867,7 +858,7 @@ export function createDeckMapDashboardPanelConfigForTable(options: {
  * existing config unchanged when the table has no supported geospatial columns
  * or when multiple datasets make the target ambiguous.
  *
- * Authored arc, H3, trips, and path transforms are kept; only the table name
+ * Authored arc, H3, and trips transforms are kept; only the table name
  * is retargeted. Point and polygon maps still regenerate their dataset source.
  */
 export function regenerateMapConfigForTable(
