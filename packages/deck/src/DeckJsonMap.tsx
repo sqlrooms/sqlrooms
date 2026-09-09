@@ -35,10 +35,7 @@ import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
-import {
-  buildDeckMapFitJumpToOptions,
-  completeDeckMapInitialViewState,
-} from './mapFit';
+import {buildDeckMapJumpToOptions} from './mapFit';
 import type {
   DeckJsonMapHandle,
   DeckJsonMapProps,
@@ -589,33 +586,44 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
 
     const mapRef = useRef<{jumpTo: (opts: object) => void} | null>(null);
     const pendingJumpRef = useRef<object | null>(null);
-    const appliedAuthoredCameraRef = useRef(false);
-    const mapInitialViewState = useMemo(
-      () =>
-        completeDeckMapInitialViewState(
-          initialViewState ??
-            (availableSpec as {initialViewState?: unknown} | null)
-              ?.initialViewState,
-        ),
-      [availableSpec, initialViewState],
-    );
+    const mapInitialViewState = useMemo(() => {
+      if (
+        !initialViewState ||
+        typeof initialViewState !== 'object' ||
+        Array.isArray(initialViewState)
+      ) {
+        return undefined;
+      }
+      return {
+        longitude: 0,
+        latitude: 20,
+        zoom: 1.5,
+        ...(initialViewState as Record<string, unknown>),
+      };
+    }, [initialViewState]);
 
     useImperativeHandle(
       ref,
       () => ({
         jumpTo(opts) {
-          const applyAuthoredCamera = !appliedAuthoredCameraRef.current;
-          appliedAuthoredCameraRef.current = true;
-          const jumpOpts = buildDeckMapFitJumpToOptions(
-            opts,
-            mapInitialViewState,
-            applyAuthoredCamera,
-          );
+          const jumpOpts = buildDeckMapJumpToOptions({
+            ...opts,
+            pitch:
+              opts.pitch ??
+              (typeof mapInitialViewState?.pitch === 'number'
+                ? mapInitialViewState.pitch
+                : undefined),
+            bearing:
+              opts.bearing ??
+              (typeof mapInitialViewState?.bearing === 'number'
+                ? mapInitialViewState.bearing
+                : undefined),
+          });
           if (mapRef.current) {
             mapRef.current.jumpTo(jumpOpts);
-            return;
+          } else {
+            pendingJumpRef.current = jumpOpts;
           }
-          pendingJumpRef.current = jumpOpts;
         },
       }),
       [mapInitialViewState],

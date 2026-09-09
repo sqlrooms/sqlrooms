@@ -374,26 +374,8 @@ function fitDeckMapView(options: {
 }
 
 /**
- * Completes an authored `initialViewState` so MapLibre gets center/zoom as
- * well as pitch/bearing. Incomplete `{pitch, bearing}` otherwise starts at zoom 0.
- */
-export function completeDeckMapInitialViewState(
-  viewState: unknown,
-): Record<string, unknown> | undefined {
-  if (!viewState || typeof viewState !== 'object' || Array.isArray(viewState)) {
-    return undefined;
-  }
-  return {
-    longitude: 0,
-    latitude: 20,
-    zoom: 1.5,
-    ...viewState,
-  };
-}
-
-/**
- * MapLibre `jumpTo` options. Omits pitch/bearing unless set so a live fit
- * preserves the current camera.
+ * MapLibre `jumpTo` options. Omits pitch/bearing unless set so fit preserves
+ * a pitched `initialViewState` (needed for extruded columns).
  */
 export function buildDeckMapJumpToOptions(opts: {
   longitude: number;
@@ -419,35 +401,6 @@ export function buildDeckMapJumpToOptions(opts: {
   if (opts.bearing != null) jumpOpts.bearing = opts.bearing;
   if (opts.pitch != null) jumpOpts.pitch = opts.pitch;
   return jumpOpts;
-}
-
-/**
- * Fit jump. The first jump copies authored pitch/bearing so auto-fit does not
- * race MapLibre's default pitch 0. Later jumps omit them so a live Fit keeps
- * the user's camera.
- */
-export function buildDeckMapFitJumpToOptions(
-  opts: {
-    longitude: number;
-    latitude: number;
-    zoom: number;
-    bearing?: number;
-    pitch?: number;
-  },
-  authoredCamera: {pitch?: unknown; bearing?: unknown} | undefined,
-  applyAuthoredCamera: boolean,
-) {
-  const pitch =
-    opts.pitch ??
-    (applyAuthoredCamera && typeof authoredCamera?.pitch === 'number'
-      ? authoredCamera.pitch
-      : undefined);
-  const bearing =
-    opts.bearing ??
-    (applyAuthoredCamera && typeof authoredCamera?.bearing === 'number'
-      ? authoredCamera.bearing
-      : undefined);
-  return buildDeckMapJumpToOptions({...opts, pitch, bearing});
 }
 
 type DeckMapFitState = {
