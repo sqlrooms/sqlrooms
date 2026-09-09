@@ -1,5 +1,13 @@
 import type {ColorScaleConfig, ColorScaleScheme} from '@sqlrooms/color-scales';
-import type {DeckMapConfig} from './mapConfig';
+import {isDeckMapTableDatasetSource, type DeckMapConfig} from './mapConfig';
+import {
+  applyDeckMapPointBinding,
+  createDeckMapArcTransformSql,
+  createDeckMapCentroidTransformSql,
+  parseDeckMapArcTransformSql,
+  parseDeckMapCentroidTransformSql,
+  parseDeckMapPointTransformSql,
+} from './mapConfigUtils';
 import type {DeckAutoLayerType} from './types';
 import {DEFAULT_HEATMAP_COLOR_RANGE} from './json/heatmapDefaults';
 import {isColorScaleFunction} from './json/layerConfig';
@@ -73,6 +81,15 @@ const GEOMETRY_COLUMN_LAYER_TYPES = new Set([
   'solid polygon',
 ]);
 
+const POINT_COORDINATE_LAYER_TYPES = new Set([
+  'geoarrowscatterplotlayer',
+  'geoarrowheatmaplayer',
+  'geoarrowcolumnlayer',
+  'scatterplotlayer',
+  'heatmaplayer',
+  'columnlayer',
+]);
+
 const H3_LAYER_TYPES = new Set(['geoarrowh3hexagonlayer', 'h3hexagonlayer']);
 
 const ARC_LAYER_TYPES = new Set(['geoarrowarclayer', 'arclayer']);
@@ -135,6 +152,14 @@ export function usesGeometryColumnSetting(layerType: unknown) {
   return (
     typeof layerType === 'string' &&
     GEOMETRY_COLUMN_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+/** Point/heatmap/column layers can use lon/lat *or* a geometry column. */
+export function usesPointCoordinateSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    POINT_COORDINATE_LAYER_TYPES.has(layerType.toLowerCase())
   );
 }
 
@@ -564,33 +589,180 @@ export function setDeckMapLayerGeometryColumn(
     return config;
   }
 
+  const dataset = config.datasets[datasetId];
+  const source = dataset.source;
+  const currentFitToData = config.fitToData;
+  const leavingCoordinateFit = Boolean(
+    currentFitToData?.dataset === datasetId &&
+    currentFitToData.longitudeColumn &&
+    currentFitToData.latitudeColumn,
+  );
+  const generatedAlias =
+    isDeckMapTableDatasetSource(source) && source.transformSql
+      ? getPointTransformGeometryAlias(source.transformSql)
+      : undefined;
+  const keepCoordinateFit =
+    leavingCoordinateFit && generatedAlias === geometryColumn;
+  let nextSource = source;
+  let nextGeometryEncodingHint = dataset.geometryEncodingHint;
+  if (keepCoordinateFit) {
+    nextSource = source;
+  } else if (
+    usesPointCoordinateSetting(layer?.['@@type']) &&
+    isDeckMapTableDatasetSource(source)
+  ) {
+    nextSource = {
+      tableName: source.tableName,
+      transformSql: createDeckMapCentroidTransformSql({geometryColumn}),
+    };
+    nextGeometryEncodingHint = 'wkb';
+  } else if (
+    isDeckMapTableDatasetSource(source) &&
+    source.transformSql &&
+    (generatedAlias ||
+      parseDeckMapCentroidTransformSql(source.transformSql) ||
+      leavingCoordinateFit)
+  ) {
+    nextSource = {tableName: source.tableName};
+    nextGeometryEncodingHint = undefined;
+  }
+
+  const fitToData = keepCoordinateFit
+    ? currentFitToData
+    : currentFitToData && currentFitToData.dataset === datasetId
+      ? {
+          dataset: datasetId,
+          geometryColumn,
+          ...(typeof currentFitToData.padding === 'number'
+            ? {padding: currentFitToData.padding}
+            : {}),
+          ...(typeof currentFitToData.maxZoom === 'number'
+            ? {maxZoom: currentFitToData.maxZoom}
+            : {}),
+        }
+      : (currentFitToData ?? {
+          dataset: datasetId,
+          geometryColumn,
+          padding: 40,
+          maxZoom: 12,
+        });
+
+  const nextDataset = {
+    ...dataset,
+    source: nextSource,
+    geometryColumn,
+  };
+  if (nextGeometryEncodingHint) {
+    nextDataset.geometryEncodingHint = nextGeometryEncodingHint;
+  } else {
+    delete nextDataset.geometryEncodingHint;
+  }
+
   const updatedConfig = {
     ...config,
     datasets: {
       ...config.datasets,
-      [datasetId]: {
-        ...config.datasets[datasetId],
-        geometryColumn,
-      },
+      [datasetId]: nextDataset,
     },
-    fitToData:
-      config.fitToData &&
-      config.fitToData.dataset === datasetId &&
-      'geometryColumn' in config.fitToData
-        ? {
-            ...config.fitToData,
-            geometryColumn,
-          }
-        : config.fitToData,
+    fitToData,
   };
 
-  return updateDeckMapLayer(updatedConfig, layerIndex, (l) => ({
-    ...l,
-    _sqlroomsBinding: {
-      ...(l._sqlroomsBinding as Record<string, unknown>),
+  return updateDeckMapLayer(updatedConfig, layerIndex, (l) => {
+    const nextBinding: Record<string, unknown> = {
+      ...(isRecord(l._sqlroomsBinding) ? l._sqlroomsBinding : {}),
       geometryColumn,
+    };
+    delete nextBinding.longitudeColumn;
+    delete nextBinding.latitudeColumn;
+    return {
+      ...l,
+      _sqlroomsBinding: nextBinding,
+    };
+  });
+}
+
+/** Alias created by a lon/lat → WKB point transform, if this SQL is one. */
+function getPointTransformGeometryAlias(
+  transformSql: string,
+): string | undefined {
+  return parseDeckMapPointTransformSql(transformSql)?.geometryColumn;
+}
+
+/**
+ * Binds a point layer to longitude/latitude columns. A single-axis pick is
+ * stored on `fitToData` so the settings UI can update immediately; once both
+ * axes are set the canonical WKB point transform is applied.
+ */
+export function setDeckMapLayerCoordinateColumns(
+  config: DeckMapConfig,
+  layerIndex: number,
+  columns: {
+    latitudeColumn?: string | null;
+    longitudeColumn?: string | null;
+  },
+  sourceColumns: ReadonlyArray<{name: string; type?: string}> = [],
+): DeckMapConfig {
+  const layer = getDeckMapLayerRecords(config)[layerIndex];
+  const datasetId = getDeckMapLayerDatasetId(layer);
+  if (!datasetId || !config.datasets?.[datasetId]) {
+    return config;
+  }
+
+  const dataset = config.datasets[datasetId];
+  const currentFit =
+    config.fitToData?.dataset === datasetId ? config.fitToData : undefined;
+  const latitudeColumn =
+    columns.latitudeColumn === null
+      ? undefined
+      : columns.latitudeColumn?.trim() || currentFit?.latitudeColumn;
+  const longitudeColumn =
+    columns.longitudeColumn === null
+      ? undefined
+      : columns.longitudeColumn?.trim() || currentFit?.longitudeColumn;
+  const keepSourceGeometry = !latitudeColumn || !longitudeColumn;
+  const nextFitToData = {
+    dataset: datasetId,
+    ...(typeof currentFit?.padding === 'number'
+      ? {padding: currentFit.padding}
+      : {padding: 40}),
+    ...(typeof currentFit?.maxZoom === 'number'
+      ? {maxZoom: currentFit.maxZoom}
+      : {maxZoom: 12}),
+    ...(keepSourceGeometry
+      ? {
+          geometryColumn: currentFit?.geometryColumn ?? dataset.geometryColumn,
+        }
+      : {}),
+    ...(latitudeColumn ? {latitudeColumn} : {}),
+    ...(longitudeColumn ? {longitudeColumn} : {}),
+  };
+  const withFit = {...config, fitToData: nextFitToData};
+  if (!latitudeColumn || !longitudeColumn) {
+    return withFit;
+  }
+
+  if (!dataset || !isDeckMapTableDatasetSource(dataset.source)) {
+    return withFit;
+  }
+
+  const bound = applyDeckMapPointBinding({
+    config: withFit,
+    pointBinding: {
+      dataset: datasetId,
+      longitudeColumn,
+      latitudeColumn,
     },
-  }));
+    sourceColumns,
+  });
+  return {
+    ...bound,
+    fitToData: {
+      ...bound.fitToData,
+      dataset: datasetId,
+      longitudeColumn,
+      latitudeColumn,
+    },
+  };
 }
 
 export function setDeckMapLayerHexagonColumn(
@@ -627,6 +799,319 @@ export function setDeckMapLayerArcColumns(
       ...columns,
     },
   }));
+}
+
+const DEFAULT_ARC_SOURCE_GEOMETRY_COLUMN = 'source_geom';
+const DEFAULT_ARC_TARGET_GEOMETRY_COLUMN = 'target_geom';
+const FALLBACK_ARC_SOURCE_GEOMETRY_COLUMN = '__sqlrooms_source_geom';
+const FALLBACK_ARC_TARGET_GEOMETRY_COLUMN = '__sqlrooms_target_geom';
+function readBindingColumn(
+  binding: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = binding[key];
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function nextBindingColumn(
+  nextValue: string | null | undefined,
+  currentValue: string | undefined,
+): string | undefined {
+  if (nextValue === null) return undefined;
+  const trimmed = nextValue?.trim();
+  return trimmed || currentValue;
+}
+
+function pickUnusedColumnName(
+  sourceColumns: ReadonlyArray<{name: string}>,
+  preferred: string,
+  fallback: string,
+): string {
+  const names = new Set(
+    sourceColumns.map((column) => column.name.toLowerCase()),
+  );
+  if (!names.has(preferred.toLowerCase())) return preferred;
+  if (!names.has(fallback.toLowerCase())) return fallback;
+  let suffix = 2;
+  let candidate = `${fallback}_${suffix}`;
+  while (names.has(candidate.toLowerCase())) {
+    suffix += 1;
+    candidate = `${fallback}_${suffix}`;
+  }
+  return candidate;
+}
+
+function getArcTransformGeometryAliases(
+  transformSql: string,
+): {sourceGeometryColumn: string; targetGeometryColumn: string} | undefined {
+  const parsed = parseDeckMapArcTransformSql(transformSql);
+  if (!parsed) return undefined;
+  return {
+    sourceGeometryColumn: parsed.sourceGeometryColumn,
+    targetGeometryColumn: parsed.targetGeometryColumn,
+  };
+}
+
+function nextArcFitToData(
+  config: DeckMapConfig,
+  datasetId: string,
+  sourceGeometryColumn?: string,
+  targetGeometryColumn?: string,
+): DeckMapConfig['fitToData'] {
+  const current = config.fitToData;
+  const padding =
+    current?.dataset === datasetId && typeof current.padding === 'number'
+      ? current.padding
+      : 40;
+  const maxZoom =
+    current?.dataset === datasetId && typeof current.maxZoom === 'number'
+      ? current.maxZoom
+      : 12;
+  if (sourceGeometryColumn && targetGeometryColumn) {
+    return {
+      dataset: datasetId,
+      geometryColumns: [sourceGeometryColumn, targetGeometryColumn],
+      padding,
+      maxZoom,
+    };
+  }
+  if (sourceGeometryColumn || targetGeometryColumn) {
+    return {
+      dataset: datasetId,
+      geometryColumn: sourceGeometryColumn ?? targetGeometryColumn,
+      padding,
+      maxZoom,
+    };
+  }
+  if (current?.dataset === datasetId) {
+    return {dataset: datasetId, padding, maxZoom};
+  }
+  return current;
+}
+
+function withArcLayerBinding(
+  config: DeckMapConfig,
+  layerIndex: number,
+  datasetId: string,
+  dataset: NonNullable<DeckMapConfig['datasets']>[string],
+  nextSource: (typeof dataset)['source'],
+  nextBinding: Record<string, unknown>,
+  sourceGeometryColumn?: string,
+  targetGeometryColumn?: string,
+): DeckMapConfig {
+  return updateDeckMapLayer(
+    {
+      ...config,
+      datasets: {
+        ...config.datasets,
+        [datasetId]: {
+          ...dataset,
+          source: nextSource,
+          ...(sourceGeometryColumn
+            ? {geometryColumn: sourceGeometryColumn}
+            : {}),
+        },
+      },
+      fitToData: nextArcFitToData(
+        config,
+        datasetId,
+        sourceGeometryColumn,
+        targetGeometryColumn,
+      ),
+    },
+    layerIndex,
+    (layer) => ({
+      ...layer,
+      _sqlroomsBinding: nextBinding,
+    }),
+  );
+}
+
+/**
+ * Binds an arc layer to source/target geometry columns and drops a generated
+ * lon/lat transform when leaving coordinate mode.
+ */
+export function setDeckMapLayerArcGeometryColumns(
+  config: DeckMapConfig,
+  layerIndex: number,
+  columns: {
+    sourceGeometryColumn?: string | null;
+    targetGeometryColumn?: string | null;
+  },
+): DeckMapConfig {
+  const layer = getDeckMapLayerRecords(config)[layerIndex];
+  const datasetId = getDeckMapLayerDatasetId(layer);
+  if (!datasetId || !config.datasets?.[datasetId]) {
+    return config;
+  }
+
+  const dataset = config.datasets[datasetId];
+  const binding = isRecord(layer?._sqlroomsBinding)
+    ? layer._sqlroomsBinding
+    : {};
+  const sourceGeometryColumn = nextBindingColumn(
+    columns.sourceGeometryColumn,
+    readBindingColumn(binding, 'sourceGeometryColumn'),
+  );
+  const targetGeometryColumn = nextBindingColumn(
+    columns.targetGeometryColumn,
+    readBindingColumn(binding, 'targetGeometryColumn'),
+  );
+  const source = dataset.source;
+  const generatedAliases =
+    isDeckMapTableDatasetSource(source) && source.transformSql
+      ? getArcTransformGeometryAliases(source.transformSql)
+      : undefined;
+  const leavingGenerated = Boolean(
+    generatedAliases &&
+    (sourceGeometryColumn !== generatedAliases.sourceGeometryColumn ||
+      targetGeometryColumn !== generatedAliases.targetGeometryColumn),
+  );
+  const nextSource =
+    leavingGenerated && isDeckMapTableDatasetSource(source)
+      ? {tableName: source.tableName}
+      : source;
+  const nextBinding: Record<string, unknown> = {...binding};
+  if (sourceGeometryColumn) {
+    nextBinding.sourceGeometryColumn = sourceGeometryColumn;
+  } else {
+    delete nextBinding.sourceGeometryColumn;
+  }
+  if (targetGeometryColumn) {
+    nextBinding.targetGeometryColumn = targetGeometryColumn;
+  } else {
+    delete nextBinding.targetGeometryColumn;
+  }
+  delete nextBinding.sourceLatitudeColumn;
+  delete nextBinding.sourceLongitudeColumn;
+  delete nextBinding.targetLatitudeColumn;
+  delete nextBinding.targetLongitudeColumn;
+
+  return withArcLayerBinding(
+    config,
+    layerIndex,
+    datasetId,
+    dataset,
+    nextSource,
+    nextBinding,
+    sourceGeometryColumn,
+    targetGeometryColumn,
+  );
+}
+
+/**
+ * Binds an arc layer to origin/destination lon/lat columns. Incomplete picks
+ * stay on the layer binding; once all four axes are set the canonical WKB arc
+ * transform is applied.
+ */
+export function setDeckMapLayerArcCoordinateColumns(
+  config: DeckMapConfig,
+  layerIndex: number,
+  columns: {
+    sourceLatitudeColumn?: string | null;
+    sourceLongitudeColumn?: string | null;
+    targetLatitudeColumn?: string | null;
+    targetLongitudeColumn?: string | null;
+  },
+  sourceColumns: ReadonlyArray<{name: string; type?: string}> = [],
+): DeckMapConfig {
+  const layer = getDeckMapLayerRecords(config)[layerIndex];
+  const datasetId = getDeckMapLayerDatasetId(layer);
+  if (!datasetId || !config.datasets?.[datasetId]) {
+    return config;
+  }
+
+  const dataset = config.datasets[datasetId];
+  const binding = isRecord(layer?._sqlroomsBinding)
+    ? layer._sqlroomsBinding
+    : {};
+  const sourceLatitudeColumn = nextBindingColumn(
+    columns.sourceLatitudeColumn,
+    readBindingColumn(binding, 'sourceLatitudeColumn'),
+  );
+  const sourceLongitudeColumn = nextBindingColumn(
+    columns.sourceLongitudeColumn,
+    readBindingColumn(binding, 'sourceLongitudeColumn'),
+  );
+  const targetLatitudeColumn = nextBindingColumn(
+    columns.targetLatitudeColumn,
+    readBindingColumn(binding, 'targetLatitudeColumn'),
+  );
+  const targetLongitudeColumn = nextBindingColumn(
+    columns.targetLongitudeColumn,
+    readBindingColumn(binding, 'targetLongitudeColumn'),
+  );
+  const nextBinding: Record<string, unknown> = {...binding};
+  if (sourceLatitudeColumn) {
+    nextBinding.sourceLatitudeColumn = sourceLatitudeColumn;
+  } else {
+    delete nextBinding.sourceLatitudeColumn;
+  }
+  if (sourceLongitudeColumn) {
+    nextBinding.sourceLongitudeColumn = sourceLongitudeColumn;
+  } else {
+    delete nextBinding.sourceLongitudeColumn;
+  }
+  if (targetLatitudeColumn) {
+    nextBinding.targetLatitudeColumn = targetLatitudeColumn;
+  } else {
+    delete nextBinding.targetLatitudeColumn;
+  }
+  if (targetLongitudeColumn) {
+    nextBinding.targetLongitudeColumn = targetLongitudeColumn;
+  } else {
+    delete nextBinding.targetLongitudeColumn;
+  }
+
+  if (
+    !sourceLatitudeColumn ||
+    !sourceLongitudeColumn ||
+    !targetLatitudeColumn ||
+    !targetLongitudeColumn ||
+    !isDeckMapTableDatasetSource(dataset.source)
+  ) {
+    return updateDeckMapLayer(config, layerIndex, (nextLayer) => ({
+      ...nextLayer,
+      _sqlroomsBinding: nextBinding,
+    }));
+  }
+
+  const sourceGeometryColumn = pickUnusedColumnName(
+    sourceColumns,
+    DEFAULT_ARC_SOURCE_GEOMETRY_COLUMN,
+    FALLBACK_ARC_SOURCE_GEOMETRY_COLUMN,
+  );
+  const targetGeometryColumn = pickUnusedColumnName(
+    sourceColumns,
+    DEFAULT_ARC_TARGET_GEOMETRY_COLUMN,
+    FALLBACK_ARC_TARGET_GEOMETRY_COLUMN,
+  );
+  nextBinding.sourceGeometryColumn = sourceGeometryColumn;
+  nextBinding.targetGeometryColumn = targetGeometryColumn;
+
+  return withArcLayerBinding(
+    config,
+    layerIndex,
+    datasetId,
+    {
+      ...dataset,
+      geometryEncodingHint: 'wkb',
+    },
+    {
+      tableName: dataset.source.tableName,
+      transformSql: createDeckMapArcTransformSql({
+        sourceLongitudeColumn,
+        sourceLatitudeColumn,
+        targetLongitudeColumn,
+        targetLatitudeColumn,
+        sourceGeometryColumn,
+        targetGeometryColumn,
+      }),
+    },
+    nextBinding,
+    sourceGeometryColumn,
+    targetGeometryColumn,
+  );
 }
 
 export function setDeckMapLayerTimestampColumn(
