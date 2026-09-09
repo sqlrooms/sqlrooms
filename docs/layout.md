@@ -35,7 +35,7 @@ Documents are content rendered inside panels; there is no `doc` layout node.
 ## Register panels and render a split
 
 This example assumes an app with SQLRooms styling already configured, as in
-[Getting Started](https://sqlrooms.org/getting-started.html).
+[Getting Started](/getting-started).
 `createRoomShellSlice()` includes the layout slice, and
 `RoomShell.LayoutComposer` connects rendering and layout changes to the store.
 
@@ -365,7 +365,7 @@ children to a grid with explicit positions, update the corresponding breakpoint
 layouts too.
 
 For chart dashboards with built-in add/remove operations, see
-[adding and removing Mosaic dashboard panels](https://sqlrooms.org/api/mosaic/#add-and-remove-chart-panels).
+[adding and removing Mosaic dashboard panels](/api/mosaic/#add-and-remove-chart-panels).
 For a custom grid, the
 [layout example](https://github.com/sqlrooms/examples/blob/main/layout/src/store.tsx)
 shows how to update children and saved positions through `layout.setConfig()`.
@@ -414,9 +414,9 @@ React surface. For a document workspace, use `ArtifactTabs` and
 `createArtifactPanelDefinition()` to connect layout panels to artifact IDs,
 then render `BlockDocumentArtifact` inside the document panel.
 
-See [Blocks and Block Documents](https://sqlrooms.org/blocks-and-documents.html#set-up-a-block-document-artifact)
+See [Blocks and Block Documents](/blocks-and-documents#set-up-a-block-document-artifact)
 for a complete store and panel example, including document state and embedded
-stateful blocks. See [Artifacts](https://sqlrooms.org/artifacts.html) for
+stateful blocks. See [Artifacts](/artifacts) for
 top-level workspace tabs and artifact lifecycle.
 
 ## Save and restore layouts
@@ -426,6 +426,6 @@ them across reloads, include `layout: LayoutConfig` from `@sqlrooms/layout` in
 your persistence `sliceConfigSchemas`. Persist the config tree and serializable
 metadata, and register React components again when creating the store.
 
-See [Persistence](https://sqlrooms.org/persistence.html) for storage setup.
+See [Persistence](/persistence) for storage setup.
 For lower-level integration without `RoomShell`, use `createLayoutSlice()` and
-`LayoutRenderer` from the [Layout API reference](https://sqlrooms.org/api/layout/).
+`LayoutRenderer` from the [Layout API reference](/api/layout/).

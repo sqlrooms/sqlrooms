@@ -206,5 +206,5 @@ function App() {
 ```
 
 For examples of panels, tabs, grids, and docking, see the
-[Layout guide](https://sqlrooms.org/layout.html). For the full API, see the
+[Layout guide](/layout). For the full API, see the
 [Layout API Reference](/api/layout/).
