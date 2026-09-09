@@ -374,21 +374,52 @@ function fitDeckMapView(options: {
 }
 
 /**
- * MapLibre `jumpTo` options. Omits pitch/bearing unless set so fit preserves
- * a pitched `initialViewState` (needed for extruded columns).
+ * Completes an authored `initialViewState` so MapLibre gets center/zoom as
+ * well as pitch/bearing. Incomplete `{pitch, bearing}` otherwise starts at zoom 0.
  */
-export function buildDeckMapJumpToOptions(opts: {
-  longitude: number;
-  latitude: number;
-  zoom: number;
-  bearing?: number;
-  pitch?: number;
-}): {
+export function completeDeckMapInitialViewState(
+  viewState: unknown,
+): Record<string, unknown> | undefined {
+  if (!viewState || typeof viewState !== 'object' || Array.isArray(viewState)) {
+    return undefined;
+  }
+  return {
+    longitude: 0,
+    latitude: 20,
+    zoom: 1.5,
+    ...viewState,
+  };
+}
+
+/**
+ * MapLibre `jumpTo` options. Omits pitch/bearing unless set on `opts` or on
+ * `authoredCamera`, so fit-to-data can apply a pitched `initialViewState`.
+ */
+export function buildDeckMapJumpToOptions(
+  opts: {
+    longitude: number;
+    latitude: number;
+    zoom: number;
+    bearing?: number;
+    pitch?: number;
+  },
+  authoredCamera?: {pitch?: unknown; bearing?: unknown},
+): {
   center: [number, number];
   zoom: number;
   bearing?: number;
   pitch?: number;
 } {
+  const pitch =
+    opts.pitch ??
+    (typeof authoredCamera?.pitch === 'number'
+      ? authoredCamera.pitch
+      : undefined);
+  const bearing =
+    opts.bearing ??
+    (typeof authoredCamera?.bearing === 'number'
+      ? authoredCamera.bearing
+      : undefined);
   const jumpOpts: {
     center: [number, number];
     zoom: number;
@@ -398,8 +429,8 @@ export function buildDeckMapJumpToOptions(opts: {
     center: [opts.longitude, opts.latitude],
     zoom: opts.zoom,
   };
-  if (opts.bearing != null) jumpOpts.bearing = opts.bearing;
-  if (opts.pitch != null) jumpOpts.pitch = opts.pitch;
+  if (bearing != null) jumpOpts.bearing = bearing;
+  if (pitch != null) jumpOpts.pitch = pitch;
   return jumpOpts;
 }
 

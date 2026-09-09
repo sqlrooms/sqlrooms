@@ -35,7 +35,10 @@ import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
-import {buildDeckMapJumpToOptions} from './mapFit';
+import {
+  buildDeckMapJumpToOptions,
+  completeDeckMapInitialViewState,
+} from './mapFit';
 import type {
   DeckJsonMapHandle,
   DeckJsonMapProps,
@@ -586,39 +589,16 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
 
     const mapRef = useRef<{jumpTo: (opts: object) => void} | null>(null);
     const pendingJumpRef = useRef<object | null>(null);
-    const mapInitialViewState = useMemo(() => {
-      if (
-        !initialViewState ||
-        typeof initialViewState !== 'object' ||
-        Array.isArray(initialViewState)
-      ) {
-        return undefined;
-      }
-      return {
-        longitude: 0,
-        latitude: 20,
-        zoom: 1.5,
-        ...(initialViewState as Record<string, unknown>),
-      };
-    }, [initialViewState]);
+    const mapInitialViewState = useMemo(
+      () => completeDeckMapInitialViewState(initialViewState),
+      [initialViewState],
+    );
 
     useImperativeHandle(
       ref,
       () => ({
         jumpTo(opts) {
-          const jumpOpts = buildDeckMapJumpToOptions({
-            ...opts,
-            pitch:
-              opts.pitch ??
-              (typeof mapInitialViewState?.pitch === 'number'
-                ? mapInitialViewState.pitch
-                : undefined),
-            bearing:
-              opts.bearing ??
-              (typeof mapInitialViewState?.bearing === 'number'
-                ? mapInitialViewState.bearing
-                : undefined),
-          });
+          const jumpOpts = buildDeckMapJumpToOptions(opts, mapInitialViewState);
           if (mapRef.current) {
             mapRef.current.jumpTo(jumpOpts);
           } else {
