@@ -164,6 +164,41 @@ describe('blockDocumentToMarkdown', () => {
     expect(blockDocumentToMarkdown(content)).toBe('![Line 1 Line 2](chart)');
   });
 
+  it('escapes a backslash before a closing bracket in captions', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChart',
+        attrs: {id: 'c1', tableName: 'sales', caption: 'Revenue \\] quarter'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe(
+      '![Revenue \\\\\\] quarter](chart)',
+    );
+  });
+
+  it('replaces a bare carriage return in captions with a space', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChart',
+        attrs: {id: 'c1', tableName: 'sales', caption: 'Line 1\rLine 2'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![Line 1 Line 2](chart)');
+  });
+
+  it('escapes parentheses in image sources', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentImage',
+        attrs: {id: 'i1', assetId: 'a)b', caption: 'A chart'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![A chart](a\\)b)');
+  });
+
   it('renders a chart block without a caption using a fallback label', () => {
     const content = doc([
       {type: 'blockDocumentChart', attrs: {id: 'c1', tableName: 'sales'}},
@@ -236,6 +271,32 @@ describe('blockDocumentToMarkdown', () => {
 
   it('returns only the title when the body is empty', () => {
     expect(blockDocumentToMarkdown(doc([]), {title: 'Empty'})).toBe('# Empty');
+  });
+
+  it('normalizes line breaks in the title', () => {
+    const content = doc([
+      {
+        type: 'paragraph',
+        content: [{type: 'text', text: 'Body text'}],
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content, {title: 'Report\nInjected'})).toBe(
+      '# Report Injected\n\nBody text',
+    );
+  });
+
+  it('escapes markdown characters in the title', () => {
+    const content = doc([
+      {
+        type: 'paragraph',
+        content: [{type: 'text', text: 'Body text'}],
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content, {title: 'Report [x](y)'})).toBe(
+      '# Report \\[x\\](y)\n\nBody text',
+    );
   });
 
   it('returns an empty string for an empty document without a title', () => {

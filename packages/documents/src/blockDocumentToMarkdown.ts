@@ -12,12 +12,24 @@ import type {BlockDocumentContent} from './BlockDocumentSliceConfig';
 import {optionalString} from './BlockDocumentEditor/node-views/nodeViewUtils';
 
 /**
- * Escapes characters that would break Markdown image syntax when a caption is
- * used as the alt text: `[`/`]` close the alt span, and newlines split the
- * image onto multiple lines.
+ * Escapes text for use inside a Markdown image alt or an ATX heading:
+ * backslashes first (so later escapes are not consumed), then `[`/`]` which
+ * would close an image alt span, and line endings which would split the text
+ * across blocks.
  */
-function escapeAltText(text: string): string {
-  return text.replace(/[[\]]/g, '\\$&').replace(/\r?\n/g, ' ');
+function escapeMarkdownText(text: string): string {
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/[[\]]/g, '\\$&')
+    .replace(/\r\n?|\n/g, ' ');
+}
+
+/**
+ * Escapes characters that would break a Markdown image destination: backslashes
+ * and `(`/`)` which would close the destination early.
+ */
+function escapeImageSrc(src: string): string {
+  return src.replace(/\\/g, '\\\\').replace(/[()]/g, '\\$&');
 }
 
 /**
@@ -65,9 +77,9 @@ function createVisualBlockMarkdownNode(options: {
     atom: true,
     renderMarkdown: (node) => {
       const caption = optionalString(node.attrs?.caption)?.trim();
-      const alt = escapeAltText(caption || options.alt(node));
+      const alt = escapeMarkdownText(caption || options.alt(node));
       const dataUrl = options.resolveDataUrl?.(node);
-      const src = dataUrl ?? options.src(node);
+      const src = escapeImageSrc(dataUrl ?? options.src(node));
       return `![${alt}](${src})`;
     },
   });
@@ -166,6 +178,6 @@ export function blockDocumentToMarkdown(
   if (!title) {
     return body;
   }
-  const titleMarkdown = `# ${title}`;
+  const titleMarkdown = `# ${escapeMarkdownText(title)}`;
   return body ? `${titleMarkdown}\n\n${body}` : titleMarkdown;
 }
