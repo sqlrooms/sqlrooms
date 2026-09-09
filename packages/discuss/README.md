@@ -1,3 +1,5 @@
+> **Experimental:** This package's API and behavior may change between releases.
+
 Threaded discussion slice and UI components for SQLRooms.
 
 Use this package to add comments/replies linked to data points or UI anchors.

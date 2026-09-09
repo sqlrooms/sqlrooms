@@ -31,10 +31,6 @@
         "description": "Shared DuckDB connector contracts and core query and import utilities."
       },
       {
-        "name": "duckdb-node",
-        "description": "Node.js DuckDB connector for server-side SQLRooms runtimes."
-      },
-      {
         "name": "ui",
         "description": "Tailwind-powered component library and theme manager used across SQLRooms packages."
       },
@@ -109,10 +105,6 @@
         "description": "MotherDuck connector using the WebAssembly client."
       },
       {
-        "name": "python",
-        "description": "Python runtime, Pyodide adapter, commands, and block primitives for SQLRooms block documents."
-      },
-      {
         "name": "recharts",
         "description": "Responsive charts built with Recharts."
       },
@@ -162,6 +154,10 @@
         "description": "Threaded discussion system with anchor links to data points."
       },
       {
+        "name": "duckdb-node",
+        "description": "Node.js DuckDB connector primarily intended for automated testing and server-side SQLRooms runtimes; requires DuckDB's nanoarrow community extension."
+      },
+      {
         "name": "notebook",
         "description": "Artifact-scoped notebook UI and state slice for SQL, text, Markdown, Vega, and input cells."
       },
@@ -172,6 +168,10 @@
       {
         "name": "pivot",
         "description": "Slice-driven pivot table UI backed by DuckDB SQL and Vega-Lite charts."
+      },
+      {
+        "name": "python",
+        "description": "Python runtime, Pyodide adapter, commands, and block primitives for SQLRooms block documents."
       },
       {
         "name": "s3-browser",

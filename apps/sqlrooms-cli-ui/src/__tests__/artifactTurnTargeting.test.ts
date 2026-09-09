@@ -12,9 +12,9 @@ import {
 } from '@sqlrooms/artifacts';
 import {createArtifactContextAiTools} from '@sqlrooms/artifacts/ai';
 import {
-  createMarkdownCommands,
-  createDocumentsSlice,
-  type DocumentsSliceState,
+  createMarkdownDocumentCommands,
+  createMarkdownDocumentsSlice,
+  type MarkdownDocumentsSliceState,
 } from '@sqlrooms/documents';
 import {
   createBaseRoomSlice,
@@ -27,18 +27,18 @@ import {createStore} from 'zustand';
 type TestState = BaseRoomStoreState &
   AiSliceState &
   ArtifactsSliceState &
-  DocumentsSliceState &
+  MarkdownDocumentsSliceState &
   CommandSliceState<any>;
 
 function createTestStore() {
   const artifactTypes = defineArtifactTypes({
-    markdown: {label: 'Markdown', defaultTitle: 'Markdown'},
+    'markdown-document': {label: 'Markdown', defaultTitle: 'Markdown'},
   });
   return createStore<TestState>()((set, get, store) => ({
     ...createBaseRoomSlice()(set, get, store),
     ...createCommandSlice<TestState>()(set, get, store),
     ...createArtifactsSlice({artifactTypes})(set, get, store),
-    ...createDocumentsSlice<TestState>()(set, get, store),
+    ...createMarkdownDocumentsSlice<TestState>()(set, get, store),
     ...createAiSlice({
       tools: {} as any,
       getInstructions: () => 'test',
@@ -90,20 +90,20 @@ describe('per-turn artifact command targeting', () => {
       .getState()
       .commands.registerCommands(
         'documents',
-        createMarkdownCommands<TestState>(),
+        createMarkdownDocumentCommands<TestState>(),
       );
     const artifactA = store.getState().artifacts.createArtifact({
-      type: 'markdown',
+      type: 'markdown-document',
       title: 'Markdown A',
     });
-    store.getState().documents.ensureDocument(artifactA);
-    store.getState().documents.setMarkdown(artifactA, 'Content A');
+    store.getState().markdownDocuments.ensureDocument(artifactA);
+    store.getState().markdownDocuments.setMarkdown(artifactA, 'Content A');
     const artifactB = store.getState().artifacts.createArtifact({
-      type: 'markdown',
+      type: 'markdown-document',
       title: 'Markdown B',
     });
-    store.getState().documents.ensureDocument(artifactB);
-    store.getState().documents.setMarkdown(artifactB, 'Content B');
+    store.getState().markdownDocuments.ensureDocument(artifactB);
+    store.getState().markdownDocuments.setMarkdown(artifactB, 'Content B');
 
     store.getState().artifacts.setCurrentArtifact(artifactA);
     jest
@@ -128,7 +128,7 @@ describe('per-turn artifact command targeting', () => {
     store.getState().artifacts.setCurrentArtifact(artifactB);
     store.getState().ai.createSession('Session B');
     const firstResult = (await commandTools.execute_command?.execute?.(
-      {commandId: 'markdown.get', confirmed: false},
+      {commandId: 'markdown-document.get', confirmed: false},
       toolExecutionContext,
     )) as any;
 
@@ -143,7 +143,7 @@ describe('per-turn artifact command targeting', () => {
       toolExecutionContext,
     );
     const retargetedResult = (await commandTools.execute_command?.execute?.(
-      {commandId: 'markdown.get', confirmed: false},
+      {commandId: 'markdown-document.get', confirmed: false},
       toolExecutionContext,
     )) as any;
     expect(retargetedResult.result.data).toMatchObject({

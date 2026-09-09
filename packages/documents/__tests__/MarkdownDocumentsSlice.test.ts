@@ -4,12 +4,12 @@ import {
   type BaseRoomStoreState,
 } from '@sqlrooms/room-store';
 import {
-  createDocumentsSlice,
-  DocumentsSliceConfig,
-  type DocumentsSliceState,
+  createMarkdownDocumentsSlice,
+  MarkdownDocumentsSliceConfig,
+  type MarkdownDocumentsSliceState,
 } from '../src';
 
-type TestRoomState = BaseRoomStoreState & DocumentsSliceState;
+type TestRoomState = BaseRoomStoreState & MarkdownDocumentsSliceState;
 
 function createTestStore() {
   let timestamp = 100;
@@ -17,41 +17,43 @@ function createTestStore() {
 
   return createStore<TestRoomState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
-    ...createDocumentsSlice<TestRoomState>({now})(...args),
+    ...createMarkdownDocumentsSlice<TestRoomState>({now})(...args),
   }));
 }
 
-describe('DocumentsSlice', () => {
+describe('MarkdownDocumentsSlice', () => {
   it('creates, updates, and removes artifact-scoped documents', () => {
     const store = createTestStore();
 
-    store.getState().documents.ensureDocument('doc-1', '# Hello');
-    expect(store.getState().documents.getDocument('doc-1')).toEqual({
+    store.getState().markdownDocuments.ensureDocument('doc-1', '# Hello');
+    expect(store.getState().markdownDocuments.getDocument('doc-1')).toEqual({
       id: 'doc-1',
       markdown: '# Hello',
       assets: {},
       updatedAt: 100,
     });
 
-    store.getState().documents.setMarkdown('doc-1', '# Updated');
-    expect(store.getState().documents.getDocument('doc-1')).toEqual({
+    store.getState().markdownDocuments.setMarkdown('doc-1', '# Updated');
+    expect(store.getState().markdownDocuments.getDocument('doc-1')).toEqual({
       id: 'doc-1',
       markdown: '# Updated',
       assets: {},
       updatedAt: 101,
     });
 
-    store.getState().documents.removeDocument('doc-1');
-    expect(store.getState().documents.getDocument('doc-1')).toBeUndefined();
+    store.getState().markdownDocuments.removeDocument('doc-1');
+    expect(
+      store.getState().markdownDocuments.getDocument('doc-1'),
+    ).toBeUndefined();
   });
 
   it('preserves existing markdown when ensuring an existing document', () => {
     const store = createTestStore();
 
-    store.getState().documents.ensureDocument('doc-1', '# Original');
-    store.getState().documents.ensureDocument('doc-1', '# Replacement');
+    store.getState().markdownDocuments.ensureDocument('doc-1', '# Original');
+    store.getState().markdownDocuments.ensureDocument('doc-1', '# Replacement');
 
-    expect(store.getState().documents.getDocument('doc-1')).toEqual({
+    expect(store.getState().markdownDocuments.getDocument('doc-1')).toEqual({
       id: 'doc-1',
       markdown: '# Original',
       assets: {},
@@ -62,9 +64,9 @@ describe('DocumentsSlice', () => {
   it('creates missing documents on setMarkdown', () => {
     const store = createTestStore();
 
-    store.getState().documents.setMarkdown('doc-1', '# Created');
+    store.getState().markdownDocuments.setMarkdown('doc-1', '# Created');
 
-    expect(store.getState().documents.getDocument('doc-1')).toEqual({
+    expect(store.getState().markdownDocuments.getDocument('doc-1')).toEqual({
       id: 'doc-1',
       markdown: '# Created',
       assets: {},
@@ -75,8 +77,8 @@ describe('DocumentsSlice', () => {
   it('upserts, updates, reads, and removes document assets', () => {
     const store = createTestStore();
 
-    store.getState().documents.ensureDocument('doc-1', '# Chart');
-    store.getState().documents.upsertAsset('doc-1', {
+    store.getState().markdownDocuments.ensureDocument('doc-1', '# Chart');
+    store.getState().markdownDocuments.upsertAsset('doc-1', {
       id: 'chart-1',
       mediaType: 'image/svg+xml',
       encoding: 'utf8',
@@ -84,7 +86,9 @@ describe('DocumentsSlice', () => {
       alt: 'Chart',
     });
 
-    expect(store.getState().documents.getAsset('doc-1', 'chart-1')).toEqual({
+    expect(
+      store.getState().markdownDocuments.getAsset('doc-1', 'chart-1'),
+    ).toEqual({
       id: 'chart-1',
       mediaType: 'image/svg+xml',
       encoding: 'utf8',
@@ -93,11 +97,11 @@ describe('DocumentsSlice', () => {
       createdAt: 101,
       updatedAt: 101,
     });
-    expect(store.getState().documents.getDocument('doc-1')?.updatedAt).toBe(
-      101,
-    );
+    expect(
+      store.getState().markdownDocuments.getDocument('doc-1')?.updatedAt,
+    ).toBe(101);
 
-    store.getState().documents.upsertAsset('doc-1', {
+    store.getState().markdownDocuments.upsertAsset('doc-1', {
       id: 'chart-1',
       mediaType: 'image/svg+xml',
       encoding: 'utf8',
@@ -105,7 +109,9 @@ describe('DocumentsSlice', () => {
       alt: 'Updated chart',
     });
 
-    expect(store.getState().documents.getAsset('doc-1', 'chart-1')).toEqual({
+    expect(
+      store.getState().markdownDocuments.getAsset('doc-1', 'chart-1'),
+    ).toEqual({
       id: 'chart-1',
       mediaType: 'image/svg+xml',
       encoding: 'utf8',
@@ -115,17 +121,17 @@ describe('DocumentsSlice', () => {
       updatedAt: 102,
     });
 
-    store.getState().documents.removeAsset('doc-1', 'chart-1');
+    store.getState().markdownDocuments.removeAsset('doc-1', 'chart-1');
     expect(
-      store.getState().documents.getAsset('doc-1', 'chart-1'),
+      store.getState().markdownDocuments.getAsset('doc-1', 'chart-1'),
     ).toBeUndefined();
-    expect(store.getState().documents.getDocument('doc-1')?.updatedAt).toBe(
-      103,
-    );
+    expect(
+      store.getState().markdownDocuments.getDocument('doc-1')?.updatedAt,
+    ).toBe(103);
   });
 
   it('defaults assets for legacy document records', () => {
-    const result = DocumentsSliceConfig.parse({
+    const result = MarkdownDocumentsSliceConfig.parse({
       artifacts: {
         'doc-1': {id: 'doc-1', markdown: '# Legacy', updatedAt: 1},
       },
@@ -135,7 +141,7 @@ describe('DocumentsSlice', () => {
   });
 
   it('rejects PNG assets that are not base64 encoded', () => {
-    const result = DocumentsSliceConfig.safeParse({
+    const result = MarkdownDocumentsSliceConfig.safeParse({
       artifacts: {
         'doc-1': {
           id: 'doc-1',
@@ -157,7 +163,7 @@ describe('DocumentsSlice', () => {
   });
 
   it('rejects document artifact records keyed by a different ID', () => {
-    const result = DocumentsSliceConfig.safeParse({
+    const result = MarkdownDocumentsSliceConfig.safeParse({
       artifacts: {
         'doc-key': {id: 'doc-value', markdown: '# Mismatch', updatedAt: 1},
       },

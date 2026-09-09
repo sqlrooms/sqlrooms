@@ -23,7 +23,7 @@ function createCommandContext(getState: () => unknown) {
 
 function createArtifactStore(events: string[] = []) {
   const artifactTypes = defineArtifactTypes({
-    document: {
+    'block-document': {
       label: 'Document',
       defaultTitle: 'Document',
       onRename: ({artifactId, previousTitle, artifact}) => {
@@ -55,14 +55,14 @@ describe('createDashboardCommands', () => {
         artifactTypes: Object.fromEntries(
           CLI_ARTIFACT_TYPES.map((artifactType) => [
             artifactType,
-            {canCreate: artifactType === 'document'},
+            {canCreate: artifactType === 'block-document'},
           ]),
         ) as Record<CliArtifactType, {canCreate: boolean}>,
       }).map(({id}) => id),
     ).toEqual([
       'artifact.select',
       'artifact.rename',
-      'document.create-artifact',
+      'block-document.create-artifact',
     ]);
   });
 
@@ -70,7 +70,7 @@ describe('createDashboardCommands', () => {
     const events: string[] = [];
     const store = createArtifactStore(events);
     store.getState().artifacts.ensureArtifact('document-1', {
-      type: 'document',
+      type: 'block-document',
       title: 'Document',
     });
     const command = getCommand('artifact.rename');
@@ -86,7 +86,7 @@ describe('createDashboardCommands', () => {
       commandId: 'artifact.rename',
       data: {
         artifactId: 'document-1',
-        artifactType: 'document',
+        artifactType: 'block-document',
         previousTitle: 'Document',
         title: 'Renamed Document',
       },
@@ -97,7 +97,7 @@ describe('createDashboardCommands', () => {
     const events: string[] = [];
     const store = createArtifactStore(events);
     store.getState().artifacts.ensureArtifact('document-1', {
-      type: 'document',
+      type: 'block-document',
       title: 'Document',
     });
     const command = getCommand('artifact.rename');
@@ -114,7 +114,7 @@ describe('createDashboardCommands', () => {
       code: 'artifact-title-unchanged',
       data: {
         artifactId: 'document-1',
-        artifactType: 'document',
+        artifactType: 'block-document',
         previousTitle: 'Document',
         title: 'Document',
       },
