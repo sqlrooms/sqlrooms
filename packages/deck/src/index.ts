@@ -119,7 +119,6 @@ export type {
   DeckMapDatasetSource,
   DeckMapFitToDataConfig,
   DeckMapInteractionConfig,
-  DeckMapTableHistorySnapshot,
 } from './mapConfig';
 export {DeckJsonMap} from './DeckJsonMap';
 export {DECK_MAP_BASEMAP_STYLES, getDefaultDeckMapStyle} from './mapStyles';
