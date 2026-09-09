@@ -703,6 +703,37 @@ describe('applyDeckMapTableSelection', () => {
     });
   });
 
+  it('keeps an H3 transform that uses getHexagon without hexagonColumn', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            getHexagon: '@@=h3_cell',
+            _sqlroomsBinding: {dataset: 'hexes'},
+          },
+        ],
+      },
+      datasets: {
+        hexes: {
+          source: {tableName: 'hexes', transformSql: h3TransformSql},
+        },
+      },
+    };
+
+    const afterAway = applyDeckMapTableSelection(config, placesGeoTable);
+    const afterBack = applyDeckMapTableSelection(afterAway, hexesTable);
+
+    expect(afterBack.datasets.hexes?.source).toMatchObject({
+      tableName: '"main"."hexes"',
+      transformSql: h3TransformSql,
+    });
+    expect(afterBack.spec.layers[0]).toMatchObject({
+      '@@type': 'GeoArrowH3HexagonLayer',
+      getHexagon: '@@=h3_cell',
+    });
+  });
+
   it('keeps a trips transform after switching away and back', () => {
     const config = {
       spec: {
@@ -737,6 +768,40 @@ describe('applyDeckMapTableSelection', () => {
     expect(afterBack.spec.layers[0]._sqlroomsBinding).toMatchObject({
       timestampColumn: 'timestamps',
     });
+  });
+
+  it('regenerates a point layer that still has leftover trip bindings', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {
+              dataset: 'places',
+              geometryColumn: '__sqlrooms_geom',
+              timestampColumn: 'timestamps',
+            },
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {tableName: 'old_places', transformSql: tripsTransformSql},
+          geometryColumn: '__sqlrooms_geom',
+          geometryEncodingHint: 'wkb' as const,
+        },
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, placesGeoTable);
+
+    expect(next.spec.layers[0]['@@type']).toBe('GeoArrowScatterplotLayer');
+    expect(String(next.datasets.places?.source.transformSql)).toContain(
+      'ST_Point("longitude", "latitude")',
+    );
+    expect(String(next.datasets.places?.source.transformSql)).not.toContain(
+      'ST_MakeLine',
+    );
   });
 
   it('does not pin a sqlQuery-backed arc map to the old query', () => {

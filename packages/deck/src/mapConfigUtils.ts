@@ -322,11 +322,10 @@ function deckMapLayerTargetsDataset(options: {
 }
 
 /**
- * True when retained layers bind columns that
- * {@link createDeckMapConfigForTable} cannot reconstruct (arc endpoints, H3
- * indexes, or trip timestamps). Regenerating the dataset while keeping those
- * layers would drop columns the layers still bind to, so Dataset switches only
- * retarget the table name.
+ * True when retained layers still need columns that
+ * {@link createDeckMapConfigForTable} cannot reconstruct. Binding keys are
+ * gated by layer type because type switches keep leftover fields. H3 also
+ * accepts `getHexagon: "@@=column"`.
  */
 function deckMapDatasetRequiresPreservedTransform(
   config: DeckMapDashboardPanelConfig,
@@ -338,12 +337,7 @@ function deckMapDatasetRequiresPreservedTransform(
   }
   const datasetIds = Object.keys(config.datasets ?? {});
   return spec.layers.some((layer) => {
-    if (
-      !isDeckMapConfigRecord(layer) ||
-      !isDeckMapConfigRecord(layer._sqlroomsBinding)
-    ) {
-      return false;
-    }
+    if (!isDeckMapConfigRecord(layer)) return false;
     if (
       !deckMapLayerTargetsDataset({
         layer,
@@ -353,14 +347,36 @@ function deckMapDatasetRequiresPreservedTransform(
     ) {
       return false;
     }
-    const binding = layer._sqlroomsBinding;
-    return (
-      typeof binding.sourceGeometryColumn === 'string' ||
-      typeof binding.targetGeometryColumn === 'string' ||
-      typeof binding.hexagonColumn === 'string' ||
-      typeof binding.timestampColumn === 'string'
-    );
+    return deckMapLayerRequiresPreservedTransform(layer);
   });
+}
+
+function deckMapLayerRequiresPreservedTransform(
+  layer: Record<string, unknown>,
+) {
+  const layerType = layer['@@type'];
+  const binding = isDeckMapConfigRecord(layer._sqlroomsBinding)
+    ? layer._sqlroomsBinding
+    : undefined;
+
+  if (layerType === 'GeoArrowArcLayer') {
+    return (
+      typeof binding?.sourceGeometryColumn === 'string' ||
+      typeof binding?.targetGeometryColumn === 'string'
+    );
+  }
+  if (layerType === 'GeoArrowH3HexagonLayer') {
+    if (typeof binding?.hexagonColumn === 'string') return true;
+    return isDeckMapH3HexagonAccessor(layer.getHexagon);
+  }
+  if (layerType === 'GeoArrowTripsLayer') {
+    return typeof binding?.timestampColumn === 'string';
+  }
+  return false;
+}
+
+function isDeckMapH3HexagonAccessor(value: unknown) {
+  return typeof value === 'string' && /^@@=[A-Za-z_][\w]*$/.test(value.trim());
 }
 
 function retargetDeckMapDatasetTableName(
