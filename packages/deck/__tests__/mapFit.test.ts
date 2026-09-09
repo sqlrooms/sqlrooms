@@ -5,8 +5,6 @@ import {
   createDeckMapBoundsQuery,
   getDeckMapDatasetSource,
   resolveDeckMapFitToData,
-  resolveDeckMapInitialViewState,
-  resolveDeckMapJumpToOptions,
 } from '../src/mapFit';
 
 describe('Deck map fit core', () => {
@@ -348,36 +346,6 @@ describe('buildDeckMapJumpToOptions', () => {
   });
 });
 
-describe('resolveDeckMapJumpToOptions', () => {
-  test('copies pitch and bearing from initialViewState when fit omits them', () => {
-    expect(
-      resolveDeckMapJumpToOptions(
-        {longitude: 8.5, latitude: 47.4, zoom: 11},
-        {pitch: 50, bearing: 20},
-      ),
-    ).toEqual({
-      center: [8.5, 47.4],
-      zoom: 11,
-      pitch: 50,
-      bearing: 20,
-    });
-  });
-
-  test('does not override an explicit jump pitch', () => {
-    expect(
-      resolveDeckMapJumpToOptions(
-        {longitude: 8.5, latitude: 47.4, zoom: 11, pitch: 0, bearing: 0},
-        {pitch: 50, bearing: 20},
-      ),
-    ).toEqual({
-      center: [8.5, 47.4],
-      zoom: 11,
-      pitch: 0,
-      bearing: 0,
-    });
-  });
-});
-
 describe('completeDeckMapInitialViewState', () => {
   test('fills lon/lat/zoom when AI only authors pitch and bearing', () => {
     expect(completeDeckMapInitialViewState({pitch: 50, bearing: 20})).toEqual({
@@ -391,31 +359,5 @@ describe('completeDeckMapInitialViewState', () => {
 
   test('returns undefined when view state is omitted', () => {
     expect(completeDeckMapInitialViewState(undefined)).toBeUndefined();
-  });
-});
-
-describe('resolveDeckMapInitialViewState', () => {
-  test('lets spec pitch win over mapProps while keeping mapProps center', () => {
-    expect(
-      resolveDeckMapInitialViewState(
-        {longitude: -122, latitude: 37, zoom: 10, pitch: 20},
-        {pitch: 50, bearing: 20},
-      ),
-    ).toEqual({
-      longitude: -122,
-      latitude: 37,
-      zoom: 10,
-      pitch: 50,
-      bearing: 20,
-    });
-  });
-
-  test('completes mapProps-only camera when spec omits initialViewState', () => {
-    expect(resolveDeckMapInitialViewState({pitch: 45}, undefined)).toEqual({
-      longitude: 0,
-      latitude: 20,
-      zoom: 1.5,
-      pitch: 45,
-    });
   });
 });
