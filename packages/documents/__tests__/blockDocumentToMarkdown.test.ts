@@ -140,6 +140,30 @@ describe('blockDocumentToMarkdown', () => {
     );
   });
 
+  it('escapes markdown-special characters in captions', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChart',
+        attrs: {id: 'c1', tableName: 'sales', caption: 'Revenue [by] quarter'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe(
+      '![Revenue \\[by\\] quarter](chart)',
+    );
+  });
+
+  it('replaces newlines in captions with spaces', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChart',
+        attrs: {id: 'c1', tableName: 'sales', caption: 'Line 1\nLine 2'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![Line 1 Line 2](chart)');
+  });
+
   it('renders a chart block without a caption using a fallback label', () => {
     const content = doc([
       {type: 'blockDocumentChart', attrs: {id: 'c1', tableName: 'sales'}},

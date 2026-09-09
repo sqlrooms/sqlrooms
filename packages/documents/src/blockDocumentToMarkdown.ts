@@ -9,9 +9,15 @@ import TaskList from '@tiptap/extension-task-list';
 import {MarkdownManager} from '@tiptap/markdown';
 import StarterKit from '@tiptap/starter-kit';
 import type {BlockDocumentContent} from './BlockDocumentSliceConfig';
+import {optionalString} from './BlockDocumentEditor/node-views/nodeViewUtils';
 
-function optionalString(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined;
+/**
+ * Escapes characters that would break Markdown image syntax when a caption is
+ * used as the alt text: `[`/`]` close the alt span, and newlines split the
+ * image onto multiple lines.
+ */
+function escapeAltText(text: string): string {
+  return text.replace(/[[\]]/g, '\\$&').replace(/\r?\n/g, ' ');
 }
 
 /**
@@ -59,7 +65,7 @@ function createVisualBlockMarkdownNode(options: {
     atom: true,
     renderMarkdown: (node) => {
       const caption = optionalString(node.attrs?.caption)?.trim();
-      const alt = caption || options.alt(node);
+      const alt = escapeAltText(caption || options.alt(node));
       const dataUrl = options.resolveDataUrl?.(node);
       const src = dataUrl ?? options.src(node);
       return `![${alt}](${src})`;
