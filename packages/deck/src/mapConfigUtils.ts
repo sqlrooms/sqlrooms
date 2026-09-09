@@ -10,12 +10,10 @@ import {
   isDeckMapTableDatasetSource,
   type DeckMapDashboardPanelConfig,
   type DeckMapConfig,
-  type DeckMapTableHistorySnapshot,
 } from './mapConfig';
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
 import type {GeometryEncodingHint} from './prepare/types';
 import {getDefaultDeckMapStyle} from './mapStyles';
-import {isDeckMapGeneratedColumn} from './useDeckMapDatasetSchema';
 
 const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
 const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
@@ -407,7 +405,7 @@ function deckMapLayerTargetsDataset(options: {
  * {@link createDeckMapConfigForTable} cannot reconstruct (arc endpoints, H3
  * indexes, trip timestamps, or a non-canonical transform such as ST_MakeLine).
  * Regenerating the dataset while keeping those layers would drop columns the
- * layers still bind to.
+ * layers still bind to, so Dataset switches only retarget the table name.
  */
 function deckMapDatasetHasCustomTransform(
   config: DeckMapDashboardPanelConfig,
@@ -461,242 +459,6 @@ function isCanonicalDeckMapPointTransformSql(transformSql: string) {
     !parseDeckMapArcTransformSql(transformSql) &&
     !/ST_MakeLine/i.test(transformSql),
   );
-}
-
-function extractDeckMapTransformInputColumns(transformSql: string): string[] {
-  const arc = parseDeckMapArcTransformSql(transformSql);
-  if (arc) {
-    return uniqueDeckMapColumnNames([
-      arc.sourceLongitudeColumn,
-      arc.sourceLatitudeColumn,
-      arc.targetLongitudeColumn,
-      arc.targetLatitudeColumn,
-    ]);
-  }
-  if (!/ST_MakeLine/i.test(transformSql)) {
-    const point = parseDeckMapPointTransformSql(transformSql);
-    if (point) {
-      return uniqueDeckMapColumnNames([
-        point.longitudeColumn,
-        point.latitudeColumn,
-      ]);
-    }
-  }
-
-  const aliases = new Set(
-    [...transformSql.matchAll(/\bAS\s+"([^"]+)"|\bAS\s+([A-Za-z_][\w$]*)/gi)]
-      .map((match) => match[1] ?? match[2])
-      .filter((name): name is string => Boolean(name)),
-  );
-  const columns: string[] = [];
-  for (const match of transformSql.matchAll(
-    /ST_Point\s*\(\s*"?([^"\s,]+)"?\s*,\s*"?([^"\s,]+)"?/gi,
-  )) {
-    if (match[1]) columns.push(match[1]);
-    if (match[2]) columns.push(match[2]);
-  }
-  for (const match of transformSql.matchAll(/"([^"]+)"/g)) {
-    const name = match[1];
-    if (
-      !name ||
-      name === DECK_TABLE_DATASET_SOURCE_RELATION ||
-      aliases.has(name)
-    ) {
-      continue;
-    }
-    columns.push(name);
-  }
-  return uniqueDeckMapColumnNames(columns);
-}
-
-function uniqueDeckMapColumnNames(names: string[]) {
-  const seen = new Set<string>();
-  const unique: string[] = [];
-  for (const name of names) {
-    const trimmed = name.trim();
-    if (!trimmed || seen.has(trimmed)) continue;
-    seen.add(trimmed);
-    unique.push(trimmed);
-  }
-  return unique;
-}
-
-const DECK_MAP_BINDING_COORDINATE_KEYS = [
-  'longitudeColumn',
-  'latitudeColumn',
-  'sourceLatitudeColumn',
-  'sourceLongitudeColumn',
-  'targetLatitudeColumn',
-  'targetLongitudeColumn',
-] as const;
-
-const DECK_MAP_BINDING_GEOMETRY_KEYS = [
-  'geometryColumn',
-  'sourceGeometryColumn',
-  'targetGeometryColumn',
-  'hexagonColumn',
-  'timestampColumn',
-] as const;
-
-function getDeckMapRequiredSourceColumns(
-  config: DeckMapDashboardPanelConfig,
-  datasetId: string,
-): string[] {
-  const required: string[] = [];
-  const dataset = config.datasets?.[datasetId];
-  const transformSql =
-    dataset && isDeckMapTableDatasetSource(dataset.source)
-      ? dataset.source.transformSql?.trim()
-      : undefined;
-  if (transformSql) {
-    required.push(...extractDeckMapTransformInputColumns(transformSql));
-  }
-
-  if (isDeckMapConfigRecord(config.spec) && Array.isArray(config.spec.layers)) {
-    const datasetIds = Object.keys(config.datasets ?? {});
-    for (const layer of config.spec.layers) {
-      if (
-        !isDeckMapConfigRecord(layer) ||
-        !isDeckMapConfigRecord(layer._sqlroomsBinding) ||
-        !deckMapLayerTargetsDataset({layer, datasetId, datasetIds})
-      ) {
-        continue;
-      }
-      const binding = layer._sqlroomsBinding;
-      for (const key of DECK_MAP_BINDING_COORDINATE_KEYS) {
-        const name = binding[key];
-        if (typeof name === 'string') required.push(name);
-      }
-      for (const key of DECK_MAP_BINDING_GEOMETRY_KEYS) {
-        const name = binding[key];
-        if (typeof name !== 'string') continue;
-        if (transformSql && isDeckMapGeneratedColumn(name)) continue;
-        required.push(name);
-      }
-    }
-  }
-
-  const fitToData = config.fitToData;
-  if (fitToData?.dataset === datasetId) {
-    if (fitToData.longitudeColumn) required.push(fitToData.longitudeColumn);
-    if (fitToData.latitudeColumn) required.push(fitToData.latitudeColumn);
-  }
-
-  return uniqueDeckMapColumnNames(required);
-}
-
-function deckMapSourceCompatibleWithTable(
-  config: DeckMapDashboardPanelConfig,
-  datasetId: string,
-  table: DataTable,
-) {
-  const required = getDeckMapRequiredSourceColumns(config, datasetId);
-  const transformSql =
-    config.datasets?.[datasetId] &&
-    isDeckMapTableDatasetSource(config.datasets[datasetId]?.source)
-      ? config.datasets[datasetId]?.source.transformSql?.trim()
-      : undefined;
-  if (transformSql && required.length === 0) return false;
-  if (required.length === 0) return true;
-  const columnNames = new Set(table.columns.map((column) => column.name));
-  return required.every((name) => columnNames.has(name));
-}
-
-function snapshotDeckMapTableState(
-  config: DeckMapDashboardPanelConfig,
-): DeckMapTableHistorySnapshot {
-  return {
-    spec: config.spec,
-    datasets: config.datasets,
-    ...(config.fitToData ? {fitToData: config.fitToData} : {}),
-    ...(config.interaction ? {interaction: config.interaction} : {}),
-  };
-}
-
-function deckMapTableHistoryKeysFromTableName(tableName: string): string[] {
-  const keys = new Set<string>([tableName]);
-  const quoted = quoteParsedRawSqlTableReference(tableName);
-  if (quoted) keys.add(quoted);
-  return [...keys];
-}
-
-function deckMapTableHistoryKeysFromTable(table: DataTable): string[] {
-  const keys = new Set(deckMapTableHistoryKeysFromTableName(table.tableName));
-  keys.add(quoteDeckMapSqlTableReference(table.table));
-  return [...keys];
-}
-
-function rememberDeckMapTableHistory(
-  history: Record<string, DeckMapTableHistorySnapshot> | undefined,
-  keys: string[],
-  snapshot: DeckMapTableHistorySnapshot,
-): Record<string, DeckMapTableHistorySnapshot> {
-  const next = {...history};
-  for (const key of keys) {
-    next[key] = snapshot;
-  }
-  return next;
-}
-
-function findDeckMapTableHistorySnapshot(
-  history: Record<string, DeckMapTableHistorySnapshot> | undefined,
-  keys: string[],
-): DeckMapTableHistorySnapshot | undefined {
-  if (!history) return undefined;
-  for (const key of keys) {
-    const snapshot = history[key];
-    if (snapshot) return snapshot;
-  }
-  return undefined;
-}
-
-function remapDeckMapConfigDatasetId(
-  config: DeckMapConfig,
-  fromId: string | undefined,
-  toId: string,
-): DeckMapConfig {
-  if (!fromId || fromId === toId) return config;
-  const dataset = config.datasets?.[fromId];
-  if (!dataset) return config;
-
-  const spec = isDeckMapConfigRecord(config.spec)
-    ? {
-        ...config.spec,
-        ...(Array.isArray(config.spec.layers)
-          ? {
-              layers: config.spec.layers.map((layer) => {
-                if (!isDeckMapConfigRecord(layer)) return layer;
-                const binding = isDeckMapConfigRecord(layer._sqlroomsBinding)
-                  ? layer._sqlroomsBinding
-                  : undefined;
-                const nextBinding =
-                  binding?.dataset === fromId
-                    ? {...binding, dataset: toId}
-                    : binding;
-                return {
-                  ...layer,
-                  ...(layer.id === fromId ? {id: toId} : {}),
-                  ...(nextBinding ? {_sqlroomsBinding: nextBinding} : {}),
-                };
-              }),
-            }
-          : {}),
-      }
-    : config.spec;
-
-  return {
-    ...config,
-    spec,
-    datasets: {[toId]: dataset},
-    fitToData:
-      config.fitToData?.dataset === fromId
-        ? {...config.fitToData, dataset: toId}
-        : config.fitToData,
-    interaction:
-      config.interaction?.dataset === fromId
-        ? {...config.interaction, dataset: toId}
-        : config.interaction,
-  };
 }
 
 function retargetDeckMapDatasetTableName(
@@ -1206,10 +968,8 @@ export function createDeckMapDashboardPanelConfigForTable(options: {
  * existing config unchanged when the table has no supported geospatial columns
  * or when multiple datasets make the target ambiguous.
  *
- * Authored arc, H3, trips, and path transforms are kept when the new table
- * still has the columns they read. Otherwise the current map is snapshotted in
- * `tableHistory` and either restored for that table or replaced with a
- * generated point/polygon map so the new dataset can render.
+ * Authored arc, H3, trips, and path transforms are kept; only the table name
+ * is retargeted. Point and polygon maps still regenerate their dataset source.
  */
 export function regenerateMapConfigForTable(
   panel: {config: Record<string, unknown>},
@@ -1247,62 +1007,7 @@ export function regenerateMapConfigForTable(
   }
 
   const datasetId = existingDatasetIds[0]!;
-  const existingDataset = existingConfig.datasets?.[datasetId];
-  const existingSource =
-    existingDataset && isDeckMapTableDatasetSource(existingDataset.source)
-      ? existingDataset.source
-      : undefined;
-  const nextTableName = quoteDeckMapSqlTableReference(table.table);
-  if (existingSource?.tableName === nextTableName) {
-    return existingConfig;
-  }
-
-  const hasCustomTransform = deckMapDatasetHasCustomTransform(
-    existingConfig,
-    datasetId,
-  );
-  const compatible = deckMapSourceCompatibleWithTable(
-    existingConfig,
-    datasetId,
-    table,
-  );
-  const outgoingKeys = deckMapTableHistoryKeysFromTable(table);
-  const incomingKeys = existingSource
-    ? deckMapTableHistoryKeysFromTableName(existingSource.tableName)
-    : [];
-  const restoredSnapshot = findDeckMapTableHistorySnapshot(
-    existingConfig.tableHistory,
-    outgoingKeys,
-  );
-  const shouldRememberCurrent =
-    hasCustomTransform ||
-    Boolean(restoredSnapshot) ||
-    Boolean(existingConfig.tableHistory);
-
-  let history = existingConfig.tableHistory;
-  if (shouldRememberCurrent && incomingKeys.length > 0) {
-    history = rememberDeckMapTableHistory(
-      history,
-      incomingKeys,
-      snapshotDeckMapTableState(existingConfig),
-    );
-  }
-
-  if (restoredSnapshot) {
-    return retargetDeckMapDatasetTableName(
-      {
-        ...existingConfig,
-        spec: restoredSnapshot.spec,
-        datasets: restoredSnapshot.datasets,
-        fitToData: restoredSnapshot.fitToData,
-        interaction: restoredSnapshot.interaction,
-        tableHistory: history,
-      },
-      table,
-    );
-  }
-
-  if (hasCustomTransform && compatible) {
+  if (deckMapDatasetHasCustomTransform(existingConfig, datasetId)) {
     return retargetDeckMapDatasetTableName(existingConfig, table);
   }
 
@@ -1318,28 +1023,7 @@ export function regenerateMapConfigForTable(
     latitudeColumn: coordinateColumns?.latitudeColumn,
   });
   const nextDataset = Object.values(nextConfig.datasets)[0];
-  const generatedDatasetId = Object.keys(nextConfig.datasets)[0];
   if (!nextDataset) return panel.config;
-
-  if (hasCustomTransform) {
-    const remapped = remapDeckMapConfigDatasetId(
-      {
-        ...nextConfig,
-        mapStyle: existingConfig.mapStyle ?? nextConfig.mapStyle,
-        mapProps: existingConfig.mapProps,
-      },
-      generatedDatasetId ?? table.tableName,
-      datasetId,
-    );
-    return {
-      ...remapped,
-      tableHistory: history,
-      showLegends: existingConfig.showLegends,
-      configMode: existingConfig.configMode,
-      dataPolicy: existingConfig.dataPolicy,
-      settingsOpen: existingConfig.settingsOpen,
-    };
-  }
 
   return updateDeckMapGeometryColumnBindings(
     {

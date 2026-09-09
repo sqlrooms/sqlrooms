@@ -68,17 +68,6 @@ export const DeckMapResourceConfigParameter = z.looseObject({
     })
     .optional(),
   settingsOpen: z.boolean().optional(),
-  tableHistory: z
-    .record(
-      z.string(),
-      z.looseObject({
-        spec: z.union([z.string(), z.record(z.string(), z.unknown())]),
-        datasets: z.record(z.string(), DeckMapDatasetConfig),
-        fitToData: DeckMapFitToDataConfig.optional(),
-        interaction: DeckMapInteractionConfig.optional(),
-      }),
-    )
-    .optional(),
 }) satisfies z.ZodType<DeckMapConfig>;
 
 /** Validates inputs for an AI or command invocation that writes a map resource. */

@@ -591,7 +591,7 @@ describe('regenerateMapConfigForTable', () => {
     });
   });
 
-  it('regenerates a point map when an arc transform cannot bind to the new table', () => {
+  it('keeps arc transformSql when switching to a lon/lat table', () => {
     const transformSql = [
       'SELECT *, ST_AsWKB(ST_Point(source_lon, source_lat)) AS source_geom,',
       'ST_AsWKB(ST_Point(target_lon, target_lat)) AS target_geom',
@@ -634,19 +634,15 @@ describe('regenerateMapConfigForTable', () => {
 
     const next = regenerateMapConfigForTable({config}, places);
 
-    expect(next.spec.layers[0]['@@type']).toBe('GeoArrowScatterplotLayer');
+    expect(next.spec.layers[0]['@@type']).toBe('GeoArrowArcLayer');
     expect(next.datasets.arcs?.source).toMatchObject({
       tableName: '"main"."places"',
+      transformSql,
     });
-    expect(String(next.datasets.arcs?.source.transformSql)).toContain(
-      'ST_Point("longitude", "latitude")',
-    );
-    expect(String(next.datasets.arcs?.source.transformSql)).not.toContain(
-      'source_lon',
-    );
-    expect(next.tableHistory?.arcs?.spec.layers[0]['@@type']).toBe(
-      'GeoArrowArcLayer',
-    );
+    expect(next.spec.layers[0]._sqlroomsBinding).toMatchObject({
+      sourceGeometryColumn: 'source_geom',
+      targetGeometryColumn: 'target_geom',
+    });
   });
 
   it('keeps an arc transform when the new table still has origin/destination columns', () => {
@@ -756,16 +752,17 @@ describe('applyDeckMapTableSelection', () => {
     };
   }
 
-  it('restores a working arc dataset after switching away and back', () => {
+  it('keeps the arc transform after switching away and back', () => {
     const config = createArcMapConfig();
 
     const afterAway = applyDeckMapTableSelection(config, placesGeoTable);
     const afterBack = applyDeckMapTableSelection(afterAway, arcsTable);
 
-    expect(afterAway.spec.layers[0]['@@type']).toBe('GeoArrowScatterplotLayer');
-    expect(String(afterAway.datasets.arcs?.source.transformSql)).toContain(
-      'ST_Point("longitude", "latitude")',
-    );
+    expect(afterAway.spec.layers[0]['@@type']).toBe('GeoArrowArcLayer');
+    expect(afterAway.datasets.arcs?.source).toMatchObject({
+      tableName: '"main"."places"',
+      transformSql: arcTransformSql,
+    });
     expect(afterBack.datasets.arcs?.source).toMatchObject({
       tableName: '"main"."arcs"',
       transformSql: arcTransformSql,
@@ -777,7 +774,7 @@ describe('applyDeckMapTableSelection', () => {
     expect(afterBack.spec.layers[0]['@@type']).toBe('GeoArrowArcLayer');
   });
 
-  it('restores a path ST_MakeLine transform after switching away and back', () => {
+  it('keeps a path ST_MakeLine transform after switching away and back', () => {
     const pathTransformSql = [
       'SELECT path_id, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY t))) AS geom',
       `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
@@ -817,7 +814,11 @@ describe('applyDeckMapTableSelection', () => {
     const afterAway = applyDeckMapTableSelection(config, placesGeoTable);
     const afterBack = applyDeckMapTableSelection(afterAway, routesTable);
 
-    expect(afterAway.spec.layers[0]['@@type']).toBe('GeoArrowScatterplotLayer');
+    expect(afterAway.spec.layers[0]['@@type']).toBe('GeoArrowPathLayer');
+    expect(afterAway.datasets.routes?.source).toMatchObject({
+      tableName: '"main"."places"',
+      transformSql: pathTransformSql,
+    });
     expect(afterBack.spec.layers[0]['@@type']).toBe('GeoArrowPathLayer');
     expect(afterBack.datasets.routes?.source).toMatchObject({
       tableName: '"main"."routes"',
