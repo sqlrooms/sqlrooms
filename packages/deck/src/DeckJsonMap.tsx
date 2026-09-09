@@ -35,7 +35,10 @@ import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
-import {buildDeckMapJumpToOptions} from './mapFit';
+import {
+  completeDeckMapInitialViewState,
+  resolveDeckMapJumpToOptions,
+} from './mapFit';
 import type {
   DeckJsonMapHandle,
   DeckJsonMapProps,
@@ -498,7 +501,10 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       fallbackDeckProps ??
       {}) as Record<string, unknown>;
     const extraDeckProps = (deckProps ?? {}) as Record<string, unknown>;
-    const extraMapProps = (mapProps ?? {}) as Record<string, unknown>;
+    const extraMapProps = useMemo(
+      () => (mapProps ?? {}) as Record<string, unknown>,
+      [mapProps],
+    );
     const hasRenderingError = Boolean(finalDeckPropsResult.error);
 
     // Separate stable layer analysis from per-frame animation to avoid
@@ -586,12 +592,19 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
 
     const mapRef = useRef<{jumpTo: (opts: object) => void} | null>(null);
     const pendingJumpRef = useRef<object | null>(null);
+    const mapInitialViewState = useMemo(
+      () => completeDeckMapInitialViewState(initialViewState),
+      [initialViewState],
+    );
 
     useImperativeHandle(
       ref,
       () => ({
         jumpTo(opts) {
-          const jumpOpts = buildDeckMapJumpToOptions(opts);
+          const jumpOpts = resolveDeckMapJumpToOptions(
+            opts,
+            mapInitialViewState,
+          );
           if (mapRef.current) {
             mapRef.current.jumpTo(jumpOpts);
           } else {
@@ -599,7 +612,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
           }
         },
       }),
-      [],
+      [mapInitialViewState],
     );
 
     const handleMapLoad = useCallback(
@@ -664,8 +677,8 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
         <Map
           ref={mapRef as any}
           {...(mergedMapProps as object)}
-          {...(initialViewState
-            ? {initialViewState: initialViewState as object}
+          {...(mapInitialViewState
+            ? {initialViewState: mapInitialViewState as object}
             : {})}
           onLoad={handleMapLoad}
           onData={(event) => {

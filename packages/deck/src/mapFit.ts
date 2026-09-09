@@ -373,17 +373,60 @@ function fitDeckMapView(options: {
   };
 }
 
-/**
- * MapLibre `jumpTo` options. Omits pitch/bearing unless set so fit preserves
- * a pitched `initialViewState` (needed for extruded columns).
- */
-export function buildDeckMapJumpToOptions(opts: {
+type DeckMapJumpView = {
   longitude: number;
   latitude: number;
   zoom: number;
   bearing?: number;
   pitch?: number;
-}): {
+};
+
+function asViewStateRecord(
+  value: unknown,
+): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+  return value as Record<string, unknown>;
+}
+
+function numericViewStateField(
+  viewState: Record<string, unknown> | undefined,
+  key: 'pitch' | 'bearing',
+): number | undefined {
+  const value = viewState?.[key];
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : undefined;
+}
+
+/** Defaults matching empty map configs when AI only authors pitch/bearing. */
+export const DEFAULT_DECK_MAP_INITIAL_VIEW = {
+  longitude: 0,
+  latitude: 20,
+  zoom: 1.5,
+} as const;
+
+/**
+ * Completes an authored `initialViewState` so MapLibre gets center/zoom as
+ * well as pitch/bearing. Incomplete `{pitch, bearing}` otherwise starts at
+ * zoom 0 and can look like a top-down globe until fit runs.
+ */
+export function completeDeckMapInitialViewState(
+  viewState: unknown,
+): Record<string, unknown> | undefined {
+  const vs = asViewStateRecord(viewState);
+  if (!vs) return undefined;
+  return {
+    ...DEFAULT_DECK_MAP_INITIAL_VIEW,
+    ...vs,
+  };
+}
+
+/**
+ * MapLibre `jumpTo` options. Omits pitch/bearing unless set.
+ */
+export function buildDeckMapJumpToOptions(opts: DeckMapJumpView): {
   center: [number, number];
   zoom: number;
   bearing?: number;
@@ -401,6 +444,23 @@ export function buildDeckMapJumpToOptions(opts: {
   if (opts.bearing != null) jumpOpts.bearing = opts.bearing;
   if (opts.pitch != null) jumpOpts.pitch = opts.pitch;
   return jumpOpts;
+}
+
+/**
+ * Fit only computes lon/lat/zoom. Copy authored pitch/bearing onto the jump so
+ * the camera is not left at the MapLibre default (pitch 0) when fit races
+ * the map's `initialViewState`.
+ */
+export function resolveDeckMapJumpToOptions(
+  opts: DeckMapJumpView,
+  initialViewState?: unknown,
+): ReturnType<typeof buildDeckMapJumpToOptions> {
+  const vs = asViewStateRecord(initialViewState);
+  return buildDeckMapJumpToOptions({
+    ...opts,
+    pitch: opts.pitch ?? numericViewStateField(vs, 'pitch'),
+    bearing: opts.bearing ?? numericViewStateField(vs, 'bearing'),
+  });
 }
 
 type DeckMapFitState = {
