@@ -239,6 +239,10 @@ Canonical package combos:
             link: '/state-management',
           },
           {
+            text: 'Layout',
+            link: '/layout',
+          },
+          {
             text: 'Persistence',
             link: '/persistence',
           },

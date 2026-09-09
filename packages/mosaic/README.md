@@ -366,7 +366,6 @@ import {
   createDashboardFeatureSlices,
   createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardDataTableExplorerPanelConfig,
-  createMosaicDashboardChartPanelConfig,
   MosaicDashboard,
 } from '@sqlrooms/mosaic';
 
@@ -388,19 +387,6 @@ function addDataTableExplorer(store: RoomStore) {
     }),
   );
 }
-
-function addBoxPlotChart(store: RoomStore) {
-  store.getState().mosaicDashboard.addPanel(
-    'main',
-    createMosaicDashboardChartPanelConfig('Magnitude by Region', {
-      chartType: 'box-plot',
-      settings: {
-        x: 'region',
-        y: 'magnitude',
-      },
-    }),
-  );
-}
 ```
 
 Dashboards have a creation-time `layoutType` of either `dock` or `grid`.
@@ -419,6 +405,84 @@ the shared `createBlockSettingsSlice()` from `@sqlrooms/documents`, which is the
 slice used by reusable dashboard panel settings. If an app also uses block
 documents with settings, install the shared settings slice only once by using
 one feature helper plus the other feature's lower-level slice.
+
+#### Add and remove chart panels
+
+Use `mosaicDashboard.addPanel()` and `removePanel()` to manage chart tiles at
+runtime. These are the operations used by the CLI dashboard's chart builder and
+remove buttons. `addPanel()` adds the panel config and places it in the dashboard
+layout. `removePanel()` removes the config, layout node, saved grid positions,
+and panel runtime resources.
+
+The following controls assume your app store composes `createMosaicSlice()` and
+`createDashboardFeatureSlices()` alongside the room-shell slice, with
+`createDefaultMosaicDashboardPanelRenderers()`, `createDefaultChartTypes()`, and
+`defaultAddPanelActions` configured. See the
+[CLI store](https://github.com/sqlrooms/sqlrooms/blob/main/apps/sqlrooms-cli-ui/src/store.ts)
+for a complete integration.
+
+Pass an existing dashboard ID to the controls. During workspace setup, create a
+dashboard with `createDashboard(title, 'grid')` or
+`ensureDashboard(id, title, 'grid')`, and select a loaded table with
+`setSelectedTable()`. This example uses a table with `region` and `magnitude`
+columns.
+
+```tsx
+import {createMosaicDashboardChartPanelConfig} from '@sqlrooms/mosaic';
+import {Button} from '@sqlrooms/ui';
+import {useRoomStore} from './store';
+
+function AddChartButton({dashboardId}: {dashboardId: string}) {
+  const addPanel = useRoomStore((state) => state.mosaicDashboard.addPanel);
+
+  return (
+    <Button
+      onClick={() =>
+        addPanel(
+          dashboardId,
+          createMosaicDashboardChartPanelConfig('Magnitude by region', {
+            chartType: 'box-plot',
+            settings: {x: 'region', y: 'magnitude'},
+          }),
+        )
+      }
+    >
+      Add chart
+    </Button>
+  );
+}
+
+function RemoveChartButton({
+  dashboardId,
+  panelId,
+}: {
+  dashboardId: string;
+  panelId: string;
+}) {
+  const removePanel = useRoomStore(
+    (state) => state.mosaicDashboard.removePanel,
+  );
+
+  return (
+    <Button onClick={() => removePanel(dashboardId, panelId)}>
+      Remove chart
+    </Button>
+  );
+}
+```
+
+Render these controls inside `RoomShell`, alongside
+`<MosaicDashboard dashboardId={dashboardId} />` or in a custom panel header.
+Select the stable action functions directly from the store. Each click creates
+or removes a panel; rendering the component does not change dashboard state.
+
+Pass the dashboard panel's `id` to `RemoveChartButton`; `addPanel()` also returns
+that ID. These operations manage layout node IDs and grid coordinates for both
+`grid` and `dock` dashboards.
+
+Dashboard layouts are stored in `mosaicDashboard.config`, separately from the
+outer room's `layout.config`. For composing the surrounding workspace, see the
+[Layout developer guide](https://sqlrooms.org/layout.html).
 
 ### Reset Filters
 
