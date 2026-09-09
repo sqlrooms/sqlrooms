@@ -290,6 +290,20 @@ function isDeckMapConfigRecord(
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
+function parseDeckMapSpecRecord(
+  spec: unknown,
+): Record<string, unknown> | undefined {
+  let parsed: unknown = spec;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return undefined;
+    }
+  }
+  return isDeckMapConfigRecord(parsed) ? parsed : undefined;
+}
+
 function deckMapLayerTargetsDataset(options: {
   layer: Record<string, unknown>;
   datasetId: string;
@@ -318,14 +332,12 @@ function deckMapDatasetRequiresPreservedTransform(
   config: DeckMapDashboardPanelConfig,
   datasetId: string,
 ) {
-  if (
-    !isDeckMapConfigRecord(config.spec) ||
-    !Array.isArray(config.spec.layers)
-  ) {
+  const spec = parseDeckMapSpecRecord(config.spec);
+  if (!spec || !Array.isArray(spec.layers)) {
     return false;
   }
   const datasetIds = Object.keys(config.datasets ?? {});
-  return config.spec.layers.some((layer) => {
+  return spec.layers.some((layer) => {
     if (
       !isDeckMapConfigRecord(layer) ||
       !isDeckMapConfigRecord(layer._sqlroomsBinding)
@@ -899,7 +911,11 @@ export function regenerateMapConfigForTable(
 
   if (existingDatasetIds.length === 1 && nextDataset) {
     const datasetId = existingDatasetIds[0]!;
-    if (deckMapDatasetRequiresPreservedTransform(existingConfig, datasetId)) {
+    const existingDataset = existingConfig.datasets?.[datasetId];
+    if (
+      isDeckMapTableDatasetSource(existingDataset?.source) &&
+      deckMapDatasetRequiresPreservedTransform(existingConfig, datasetId)
+    ) {
       return retargetDeckMapDatasetTableName(existingConfig, table);
     }
     return updateDeckMapGeometryColumnBindings(
