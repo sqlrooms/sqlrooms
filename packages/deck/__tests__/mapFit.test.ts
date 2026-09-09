@@ -48,7 +48,7 @@ describe('Deck map fit core', () => {
     });
   });
 
-  test('honors explicit fitToData.geometryColumn over arc inference', () => {
+  test('upgrades a single arc endpoint geometryColumn to both endpoints', () => {
     expect(
       resolveDeckMapFitToData({
         spec: {
@@ -74,6 +74,132 @@ describe('Deck map fit core', () => {
     ).toEqual({
       dataset: 'arcs',
       geometryColumn: 'source_geom',
+      geometryColumns: ['source_geom', 'target_geom'],
+    });
+  });
+
+  test('upgrades source-only lon/lat fitToData to both arc endpoints', () => {
+    expect(
+      resolveDeckMapFitToData({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowArcLayer',
+              _sqlroomsBinding: {
+                dataset: 'arcs',
+                sourceGeometryColumn: 'source_geom',
+                targetGeometryColumn: 'target_geom',
+              },
+            },
+          ],
+        },
+        datasets: {
+          arcs: {source: {tableName: 'arcs'}},
+        },
+        fitToData: {
+          dataset: 'arcs',
+          longitudeColumn: 'source_lon',
+          latitudeColumn: 'source_lat',
+        },
+      }),
+    ).toEqual({
+      dataset: 'arcs',
+      longitudeColumn: 'source_lon',
+      latitudeColumn: 'source_lat',
+      geometryColumns: ['source_geom', 'target_geom'],
+    });
+  });
+
+  test('does not infer hidden arc endpoints over explicit lon/lat', () => {
+    expect(
+      resolveDeckMapFitToData({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowArcLayer',
+              visible: false,
+              _sqlroomsBinding: {
+                dataset: 'arcs',
+                sourceGeometryColumn: 'source_geom',
+                targetGeometryColumn: 'target_geom',
+              },
+            },
+          ],
+        },
+        datasets: {
+          arcs: {source: {tableName: 'arcs'}},
+        },
+        fitToData: {
+          dataset: 'arcs',
+          longitudeColumn: 'source_lon',
+          latitudeColumn: 'source_lat',
+        },
+      }),
+    ).toEqual({
+      dataset: 'arcs',
+      longitudeColumn: 'source_lon',
+      latitudeColumn: 'source_lat',
+    });
+  });
+
+  test('skips an unrelated visible arc and still fits a later matching arc', () => {
+    expect(
+      resolveDeckMapFitToData({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowArcLayer',
+              _sqlroomsBinding: {
+                dataset: 'arcs',
+                sourceGeometryColumn: 'overlay_source',
+                targetGeometryColumn: 'overlay_target',
+              },
+            },
+            {
+              '@@type': 'GeoArrowArcLayer',
+              _sqlroomsBinding: {
+                dataset: 'arcs',
+                sourceGeometryColumn: 'source_geom',
+                targetGeometryColumn: 'target_geom',
+              },
+            },
+          ],
+        },
+        datasets: {
+          arcs: {source: {tableName: 'arcs'}},
+        },
+        fitToData: {dataset: 'arcs', geometryColumn: 'source_geom'},
+      }),
+    ).toEqual({
+      dataset: 'arcs',
+      geometryColumn: 'source_geom',
+      geometryColumns: ['source_geom', 'target_geom'],
+    });
+  });
+
+  test('honors an explicit geometryColumn that is not an arc endpoint', () => {
+    expect(
+      resolveDeckMapFitToData({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowArcLayer',
+              _sqlroomsBinding: {
+                dataset: 'arcs',
+                sourceGeometryColumn: 'source_geom',
+                targetGeometryColumn: 'target_geom',
+              },
+            },
+          ],
+        },
+        datasets: {
+          arcs: {source: {tableName: 'arcs'}},
+        },
+        fitToData: {dataset: 'arcs', geometryColumn: 'overlay_geom'},
+      }),
+    ).toEqual({
+      dataset: 'arcs',
+      geometryColumn: 'overlay_geom',
     });
   });
 
@@ -257,7 +383,7 @@ describe('Deck map fit core', () => {
     expect(query).toContain('"latitude"');
   });
 
-  test('builds bounds SQL that unnests arc source and target geometries in one pass', () => {
+  test('builds bounds SQL that combines arc source and target extents in one pass', () => {
     const query = createDeckMapBoundsQuery({
       source: {
         tableName: 'arcs',
@@ -270,10 +396,12 @@ describe('Deck map fit core', () => {
       },
     });
 
-    expect(query).toContain('UNNEST([');
-    expect(query).toContain('"source_geom"');
-    expect(query).toContain('"target_geom"');
-    expect(query).toContain('ST_GeomFromWKB');
+    expect(query).toContain('list_min([');
+    expect(query).toContain('list_max([');
+    expect(query).toContain('ST_XMin(ST_GeomFromWKB("source_geom"))');
+    expect(query).toContain('ST_XMin(ST_GeomFromWKB("target_geom"))');
+    expect(query).toContain('ST_XMax(ST_GeomFromWKB("target_geom"))');
+    expect(query).not.toContain('UNNEST');
     expect(query).not.toContain('UNION ALL');
     // Source subquery should appear once (not once per geometry column).
     expect(query.match(/__sqlrooms_dashboard_map_geom"/g)).toHaveLength(1);
