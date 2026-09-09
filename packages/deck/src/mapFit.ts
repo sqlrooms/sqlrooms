@@ -424,6 +424,24 @@ export function completeDeckMapInitialViewState(
 }
 
 /**
+ * Merge camera candidates (later entries win), then fill lon/lat/zoom defaults.
+ * Typical order: host `mapProps.initialViewState`, then spec `initialViewState`.
+ */
+export function resolveDeckMapInitialViewState(
+  ...candidates: unknown[]
+): Record<string, unknown> | undefined {
+  const merged: Record<string, unknown> = {};
+  let any = false;
+  for (const candidate of candidates) {
+    const vs = asViewStateRecord(candidate);
+    if (!vs) continue;
+    Object.assign(merged, vs);
+    any = true;
+  }
+  return any ? completeDeckMapInitialViewState(merged) : undefined;
+}
+
+/**
  * MapLibre `jumpTo` options. Omits pitch/bearing unless set.
  */
 export function buildDeckMapJumpToOptions(opts: DeckMapJumpView): {
@@ -447,9 +465,9 @@ export function buildDeckMapJumpToOptions(opts: DeckMapJumpView): {
 }
 
 /**
- * Fit only computes lon/lat/zoom. Copy authored pitch/bearing onto the jump so
- * the camera is not left at the MapLibre default (pitch 0) when fit races
- * the map's `initialViewState`.
+ * Copy authored pitch/bearing onto a jump that runs before the map exists.
+ * Live fits should use {@link buildDeckMapJumpToOptions} without these fields
+ * so MapLibre keeps the current camera.
  */
 export function resolveDeckMapJumpToOptions(
   opts: DeckMapJumpView,

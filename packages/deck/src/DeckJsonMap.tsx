@@ -36,7 +36,8 @@ import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
 import {
-  completeDeckMapInitialViewState,
+  buildDeckMapJumpToOptions,
+  resolveDeckMapInitialViewState,
   resolveDeckMapJumpToOptions,
 } from './mapFit';
 import type {
@@ -593,27 +594,51 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
     const mapRef = useRef<{jumpTo: (opts: object) => void} | null>(null);
     const pendingJumpRef = useRef<object | null>(null);
     const mapInitialViewState = useMemo(
-      () => completeDeckMapInitialViewState(initialViewState),
-      [initialViewState],
+      () =>
+        resolveDeckMapInitialViewState(
+          extraMapProps.initialViewState,
+          initialViewState,
+        ),
+      [extraMapProps.initialViewState, initialViewState],
     );
+    const authoredPitch =
+      typeof mapInitialViewState?.pitch === 'number'
+        ? mapInitialViewState.pitch
+        : undefined;
+    const authoredBearing =
+      typeof mapInitialViewState?.bearing === 'number'
+        ? mapInitialViewState.bearing
+        : undefined;
 
     useImperativeHandle(
       ref,
       () => ({
         jumpTo(opts) {
-          const jumpOpts = resolveDeckMapJumpToOptions(
+          // Live fits omit pitch/bearing so MapLibre keeps the user's camera.
+          // Pending (pre-load) jumps copy authored orientation so auto-fit
+          // does not land at the default top-down view.
+          if (mapRef.current) {
+            mapRef.current.jumpTo(buildDeckMapJumpToOptions(opts));
+            return;
+          }
+          pendingJumpRef.current = resolveDeckMapJumpToOptions(
             opts,
             mapInitialViewState,
           );
-          if (mapRef.current) {
-            mapRef.current.jumpTo(jumpOpts);
-          } else {
-            pendingJumpRef.current = jumpOpts;
-          }
         },
       }),
       [mapInitialViewState],
     );
+
+    useEffect(() => {
+      const map = mapRef.current;
+      if (!map) return;
+      if (authoredPitch == null && authoredBearing == null) return;
+      const jump: {pitch?: number; bearing?: number} = {};
+      if (authoredPitch != null) jump.pitch = authoredPitch;
+      if (authoredBearing != null) jump.bearing = authoredBearing;
+      map.jumpTo(jump);
+    }, [authoredPitch, authoredBearing]);
 
     const handleMapLoad = useCallback(
       (event?: unknown) => {

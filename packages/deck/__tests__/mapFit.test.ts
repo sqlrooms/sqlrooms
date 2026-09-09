@@ -5,6 +5,7 @@ import {
   createDeckMapBoundsQuery,
   getDeckMapDatasetSource,
   resolveDeckMapFitToData,
+  resolveDeckMapInitialViewState,
   resolveDeckMapJumpToOptions,
 } from '../src/mapFit';
 
@@ -390,5 +391,31 @@ describe('completeDeckMapInitialViewState', () => {
 
   test('returns undefined when view state is omitted', () => {
     expect(completeDeckMapInitialViewState(undefined)).toBeUndefined();
+  });
+});
+
+describe('resolveDeckMapInitialViewState', () => {
+  test('lets spec pitch win over mapProps while keeping mapProps center', () => {
+    expect(
+      resolveDeckMapInitialViewState(
+        {longitude: -122, latitude: 37, zoom: 10, pitch: 20},
+        {pitch: 50, bearing: 20},
+      ),
+    ).toEqual({
+      longitude: -122,
+      latitude: 37,
+      zoom: 10,
+      pitch: 50,
+      bearing: 20,
+    });
+  });
+
+  test('completes mapProps-only camera when spec omits initialViewState', () => {
+    expect(resolveDeckMapInitialViewState({pitch: 45}, undefined)).toEqual({
+      longitude: 0,
+      latitude: 20,
+      zoom: 1.5,
+      pitch: 45,
+    });
   });
 });
