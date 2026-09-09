@@ -1,15 +1,15 @@
-import { cn } from '@sqlrooms/ui';
-import type { UIMessage, UIMessagePart } from 'ai';
-import React, { type FC } from 'react';
-import type { AgentToolCall } from '../types';
-import { AiThinkingDots } from './AiThinkingDots';
-import type { ToolRenderBehavior } from './FlatAgentRenderer';
+import {cn} from '@sqlrooms/ui';
+import type {UIMessage, UIMessagePart} from 'ai';
+import React, {type FC} from 'react';
+import type {AgentToolCall} from '../types';
+import {AiThinkingDots} from './AiThinkingDots';
+import type {ToolRenderBehavior} from './FlatAgentRenderer';
 import type {
   ChatActiveStatusInfo,
   ChatActiveStatusProps,
 } from './ChatRenderingTypes';
 
-export { hasPendingToolApproval } from '../timeouts';
+export {hasPendingToolApproval} from '../timeouts';
 
 type AnyUIMessagePart = UIMessagePart<any, any>;
 
@@ -49,15 +49,15 @@ export function getChatActiveStatus(
 
   return isContinuing
     ? {
-      key: 'model:continuing',
-      label: 'Continuing analysis…',
-      kind: 'model',
-    }
+        key: 'model:continuing',
+        label: 'Continuing analysis…',
+        kind: 'model',
+      }
     : {
-      key: 'model:waiting',
-      label: 'Waiting for model…',
-      kind: 'model',
-    };
+        key: 'model:waiting',
+        label: 'Waiting for model…',
+        kind: 'model',
+      };
 }
 
 /** Displays the current chat activity and elapsed time for that step. */
@@ -75,7 +75,7 @@ export const ChatActiveStatus: FC<ChatActiveStatusProps> = ({
 const ChatActiveStatusLine: FC<{
   status: ChatActiveStatusInfo;
   className?: string;
-}> = ({ status, className }) => (
+}> = ({status, className}) => (
   <div
     className={cn('text-muted-foreground flex items-center', className)}
     role="status"
@@ -117,7 +117,7 @@ function partToActiveToolCall(
   part: AnyUIMessagePart | undefined,
 ): AgentToolCall | undefined {
   if (!part || !isToolPart(part)) return undefined;
-  const state = (part as { state?: string }).state;
+  const state = (part as {state?: string}).state;
   if (
     state !== 'input-streaming' &&
     state !== 'input-available' &&
@@ -150,13 +150,13 @@ function isToolPart(part: AnyUIMessagePart): boolean {
 
 function hasVisibleProgress(part: AnyUIMessagePart): boolean {
   if (part.type === 'text') {
-    return Boolean((part as { text?: string }).text?.trim());
+    return Boolean((part as {text?: string}).text?.trim());
   }
   if (part.type === 'reasoning') {
-    return Boolean((part as { text?: string }).text?.trim());
+    return Boolean((part as {text?: string}).text?.trim());
   }
   if (isToolPart(part)) {
-    const state = (part as { state?: string }).state;
+    const state = (part as {state?: string}).state;
     return (
       state === 'output-available' ||
       state === 'output-error' ||

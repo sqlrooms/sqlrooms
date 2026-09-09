@@ -1,5 +1,10 @@
 import {cn} from '@sqlrooms/ui';
-import {ChevronDown, ChevronRight, ChevronsUp, SparklesIcon} from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronsUp,
+  SparklesIcon,
+} from 'lucide-react';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {useElapsedTime} from '../hooks/useElapsedTime';
 

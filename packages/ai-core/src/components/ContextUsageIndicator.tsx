@@ -1,11 +1,11 @@
-import { type BaseRoomStoreState, useRoomStoreApi } from '@sqlrooms/room-store';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@sqlrooms/ui';
-import type { FileUIPart, UIMessage } from 'ai';
-import { useCallback, useMemo, useRef } from 'react';
-import { type AiSliceState, useStoreWithAi } from '../AiSlice';
-import { textAttachmentToModelText } from '../chatAttachments';
-import type { AssistantMessageMetadata } from '../types';
-import { buildConversationText } from '../utils';
+import {type BaseRoomStoreState, useRoomStoreApi} from '@sqlrooms/room-store';
+import {Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
+import type {FileUIPart, UIMessage} from 'ai';
+import {useCallback, useMemo, useRef} from 'react';
+import {type AiSliceState, useStoreWithAi} from '../AiSlice';
+import {textAttachmentToModelText} from '../chatAttachments';
+import type {AssistantMessageMetadata} from '../types';
+import {buildConversationText} from '../utils';
 
 const DEFAULT_CONTEXT_WINDOW = 200_000;
 // Cross-provider fallback when image dimensions and tokenizer usage are absent.
@@ -93,7 +93,7 @@ function computeTokenUsage(
   // inputTokens from reported usage already includes system instructions.
   const contextTokens = lastContextTokens;
 
-  return { contextTokens, cumulativeTokens };
+  return {contextTokens, cumulativeTokens};
 }
 
 /** Estimates one persisted message when provider-reported usage is absent. */
@@ -101,9 +101,9 @@ export function estimateMessageTokens(msg: UIMessage): number {
   let tokens = 4; // per-message overhead
   for (const part of msg.parts) {
     if (part.type === 'text') {
-      tokens += estimateTokenCount((part as { text: string }).text);
+      tokens += estimateTokenCount((part as {text: string}).text);
     } else if (part.type === 'reasoning') {
-      tokens += estimateTokenCount((part as { text?: string }).text ?? '');
+      tokens += estimateTokenCount((part as {text?: string}).text ?? '');
     } else if (part.type === 'file') {
       const attachmentText = textAttachmentToModelText(part as FileUIPart);
       if (attachmentText !== undefined) {
@@ -131,7 +131,7 @@ type ContextUsageIndicatorProps = {
 export function createConversationContinuationSeed(
   summary: string,
   messages: UIMessage[],
-): { prompt: string; attachments: FileUIPart[] } {
+): {prompt: string; attachments: FileUIPart[]} {
   const attachments = messages.flatMap((message) =>
     message.parts.filter(
       (part): part is FileUIPart =>
@@ -150,7 +150,7 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
   modelName,
 }) => {
   const uiMessages = useStoreWithAi((s) => {
-    const { currentSessionId, sessions } = s.ai.config;
+    const {currentSessionId, sessions} = s.ai.config;
     return sessions.find((session) => session.id === currentSessionId)
       ?.uiMessages as UIMessage[] | undefined;
   });
@@ -163,8 +163,8 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
 
   const summarizeAbortControllerRef = useRef<AbortController | null>(null);
 
-  const { contextTokens, cumulativeTokens } = useMemo(() => {
-    if (!uiMessages) return { contextTokens: 0, cumulativeTokens: 0 };
+  const {contextTokens, cumulativeTokens} = useMemo(() => {
+    if (!uiMessages) return {contextTokens: 0, cumulativeTokens: 0};
     const instructions = getFullInstructions();
     return computeTokenUsage(uiMessages, instructions);
   }, [uiMessages, getFullInstructions]);
@@ -238,7 +238,7 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
   const wedgePath =
     percentage >= 100
       ? // A full sweep degenerates to a zero-length arc, so draw two halves.
-      `M ${center} ${center} m 0 ${-radius} a ${radius} ${radius} 0 1 1 0 ${2 * radius} a ${radius} ${radius} 0 1 1 0 ${-2 * radius} z`
+        `M ${center} ${center} m 0 ${-radius} a ${radius} ${radius} 0 1 1 0 ${2 * radius} a ${radius} ${radius} 0 1 1 0 ${-2 * radius} z`
       : `M ${center} ${center} L ${center} ${center - radius} A ${radius} ${radius} 0 ${sweep > Math.PI ? 1 : 0} 1 ${wedgeEndX} ${wedgeEndY} Z`;
 
   const tooltipText = `${percentage.toFixed(1)}% · ${formatTokenCount(contextTokens)} / ${formatTokenCount(contextWindow)} context used${cumulativeTokens > contextTokens ? `\n${formatTokenCount(cumulativeTokens)} total tokens consumed` : ''}`;
@@ -252,13 +252,14 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
       <TooltipTrigger asChild>
         <button
           type="button"
-          className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors ${isClickable
+          className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
+            isClickable
               ? 'cursor-pointer hover:bg-red-500/20'
               : 'text-muted-foreground hover:text-foreground'
-            } ${isSummarizing ? 'animate-pulse' : ''}`}
+          } ${isSummarizing ? 'animate-pulse' : ''}`}
           style={
             percentage > USAGE_WARNING_THRESHOLD
-              ? { color: strokeColor }
+              ? {color: strokeColor}
               : undefined
           }
           aria-label={fullTooltip}
