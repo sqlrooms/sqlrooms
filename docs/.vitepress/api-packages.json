@@ -31,10 +31,6 @@
         "description": "Shared DuckDB connector contracts and core query and import utilities."
       },
       {
-        "name": "duckdb-node",
-        "description": "Node.js DuckDB connector for server-side SQLRooms runtimes."
-      },
-      {
         "name": "ui",
         "description": "Tailwind-powered component library and theme manager used across SQLRooms packages."
       },
@@ -156,6 +152,10 @@
       {
         "name": "discuss",
         "description": "Threaded discussion system with anchor links to data points."
+      },
+      {
+        "name": "duckdb-node",
+        "description": "Node.js DuckDB connector primarily intended for automated testing and server-side SQLRooms runtimes; requires DuckDB's nanoarrow community extension."
       },
       {
         "name": "notebook",

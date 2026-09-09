@@ -66,9 +66,45 @@ function migrateBlockDocumentsSlice(value: unknown): unknown {
   };
 }
 
+/** Converts legacy chat associations and pins while preserving canonical values. */
+function migrateArtifactAiAssociations(
+  workspace: UnknownRecord,
+): UnknownRecord {
+  const artifactAi = asRecord(workspace.artifactAi);
+  if (!artifactAi) return workspace;
+
+  const {pinnedArtifactIds, ...currentArtifactAi} = artifactAi;
+  if (Array.isArray(artifactAi.sessionArtifactLinks)) {
+    currentArtifactAi.sessionArtifactLinks =
+      artifactAi.sessionArtifactLinks.map((value) => {
+        const link = asRecord(value);
+        if (!link) return value;
+        const {createdAt, linkType: _linkType, ...association} = link;
+        return {
+          ...association,
+          linkedAt:
+            'linkedAt' in association ? association.linkedAt : createdAt,
+        };
+      });
+  }
+
+  const artifacts = asRecord(workspace.artifacts);
+  return {
+    ...workspace,
+    artifactAi: currentArtifactAi,
+    ...(pinnedArtifactIds !== undefined && {
+      artifacts: {
+        ...artifacts,
+        pinnedArtifactIds: artifacts?.pinnedArtifactIds ?? pinnedArtifactIds,
+      },
+    }),
+  };
+}
+
 function preprocessCliPersistedWorkspace(value: unknown): unknown {
-  const workspace = asRecord(value);
-  if (!workspace) return value;
+  const record = asRecord(value);
+  if (!record) return value;
+  const workspace = migrateArtifactAiAssociations(record);
 
   const legacy = asRecord(workspace.documents);
   const canonical = asRecord(workspace.markdownDocuments);
@@ -158,9 +194,9 @@ const CliPersistedWorkspaceRecord = z
   });
 
 /**
- * Migrates legacy CLI artifact discriminators with access to their backing
- * slices, then validates that each artifact has at most one document backing
- * state.
+ * Migrates legacy CLI artifact discriminators, AI associations, and pinned
+ * artifacts, then validates that each artifact has at most one document
+ * backing state.
  */
 export const CliPersistedWorkspaceSchema = z.preprocess(
   preprocessCliPersistedWorkspace,
