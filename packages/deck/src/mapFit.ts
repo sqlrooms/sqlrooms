@@ -421,6 +421,35 @@ export function buildDeckMapJumpToOptions(opts: {
   return jumpOpts;
 }
 
+/**
+ * Fit jump. The first jump copies authored pitch/bearing so auto-fit does not
+ * race MapLibre's default pitch 0. Later jumps omit them so a live Fit keeps
+ * the user's camera.
+ */
+export function buildDeckMapFitJumpToOptions(
+  opts: {
+    longitude: number;
+    latitude: number;
+    zoom: number;
+    bearing?: number;
+    pitch?: number;
+  },
+  authoredCamera: {pitch?: unknown; bearing?: unknown} | undefined,
+  applyAuthoredCamera: boolean,
+) {
+  const pitch =
+    opts.pitch ??
+    (applyAuthoredCamera && typeof authoredCamera?.pitch === 'number'
+      ? authoredCamera.pitch
+      : undefined);
+  const bearing =
+    opts.bearing ??
+    (applyAuthoredCamera && typeof authoredCamera?.bearing === 'number'
+      ? authoredCamera.bearing
+      : undefined);
+  return buildDeckMapJumpToOptions({...opts, pitch, bearing});
+}
+
 type DeckMapFitState = {
   key: string;
   didAutoFit: boolean;

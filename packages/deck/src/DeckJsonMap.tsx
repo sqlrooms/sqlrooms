@@ -36,7 +36,7 @@ import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
 import {
-  buildDeckMapJumpToOptions,
+  buildDeckMapFitJumpToOptions,
   completeDeckMapInitialViewState,
 } from './mapFit';
 import type {
@@ -589,33 +589,33 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
 
     const mapRef = useRef<{jumpTo: (opts: object) => void} | null>(null);
     const pendingJumpRef = useRef<object | null>(null);
+    const appliedAuthoredCameraRef = useRef(false);
     const mapInitialViewState = useMemo(
-      () => completeDeckMapInitialViewState(initialViewState),
-      [initialViewState],
+      () =>
+        completeDeckMapInitialViewState(
+          initialViewState ??
+            (availableSpec as {initialViewState?: unknown} | null)
+              ?.initialViewState,
+        ),
+      [availableSpec, initialViewState],
     );
 
     useImperativeHandle(
       ref,
       () => ({
         jumpTo(opts) {
+          const applyAuthoredCamera = !appliedAuthoredCameraRef.current;
+          appliedAuthoredCameraRef.current = true;
+          const jumpOpts = buildDeckMapFitJumpToOptions(
+            opts,
+            mapInitialViewState,
+            applyAuthoredCamera,
+          );
           if (mapRef.current) {
-            // Omit pitch/bearing so a live Fit keeps the user's camera.
-            mapRef.current.jumpTo(buildDeckMapJumpToOptions(opts));
+            mapRef.current.jumpTo(jumpOpts);
             return;
           }
-          const pitch =
-            typeof mapInitialViewState?.pitch === 'number'
-              ? mapInitialViewState.pitch
-              : undefined;
-          const bearing =
-            typeof mapInitialViewState?.bearing === 'number'
-              ? mapInitialViewState.bearing
-              : undefined;
-          pendingJumpRef.current = buildDeckMapJumpToOptions({
-            ...opts,
-            pitch: opts.pitch ?? pitch,
-            bearing: opts.bearing ?? bearing,
-          });
+          pendingJumpRef.current = jumpOpts;
         },
       }),
       [mapInitialViewState],

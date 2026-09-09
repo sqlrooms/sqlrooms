@@ -1,5 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
 import {
+  buildDeckMapFitJumpToOptions,
   buildDeckMapJumpToOptions,
   completeDeckMapInitialViewState,
   createDeckMapBoundsQuery,
@@ -342,6 +343,27 @@ describe('buildDeckMapJumpToOptions', () => {
       zoom: 13,
       pitch: 55,
       bearing: 20,
+    });
+  });
+});
+
+describe('buildDeckMapFitJumpToOptions', () => {
+  const fit = {longitude: 144.96, latitude: -37.81, zoom: 13};
+  const authored = {pitch: 50, bearing: 20};
+
+  test('copies authored pitch and bearing on the first fit jump', () => {
+    expect(buildDeckMapFitJumpToOptions(fit, authored, true)).toEqual({
+      center: [144.96, -37.81],
+      zoom: 13,
+      pitch: 50,
+      bearing: 20,
+    });
+  });
+
+  test('omits authored pitch and bearing on later fits', () => {
+    expect(buildDeckMapFitJumpToOptions(fit, authored, false)).toEqual({
+      center: [144.96, -37.81],
+      zoom: 13,
     });
   });
 });
