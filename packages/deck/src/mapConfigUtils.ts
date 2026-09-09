@@ -269,99 +269,6 @@ export function createDeckMapPointTransformSql(options: {
   ].join(' ');
 }
 
-/**
- * Reads longitude/latitude/geometry aliases from canonical point transform SQL.
- */
-export function parseDeckMapPointTransformSql(transformSql: string):
-  | {
-      longitudeColumn: string;
-      latitudeColumn: string;
-      geometryColumn: string;
-    }
-  | undefined {
-  const match = transformSql.match(
-    /ST_AsWKB\s*\(\s*ST_Point\s*\(\s*"?([^"\s,]+)"?\s*,\s*"?([^"\s,]+)"?\s*\)\s*\)\s*AS\s+"?([^\s",]+)"?/i,
-  );
-  if (!match?.[1] || !match[2] || !match[3]) return undefined;
-  return {
-    longitudeColumn: match[1],
-    latitudeColumn: match[2],
-    geometryColumn: match[3],
-  };
-}
-
-/**
- * Reads origin/destination lon/lat and geometry aliases from canonical arc
- * transform SQL.
- */
-export function parseDeckMapArcTransformSql(transformSql: string):
-  | {
-      sourceLongitudeColumn: string;
-      sourceLatitudeColumn: string;
-      targetLongitudeColumn: string;
-      targetLatitudeColumn: string;
-      sourceGeometryColumn: string;
-      targetGeometryColumn: string;
-    }
-  | undefined {
-  const matches = [
-    ...transformSql.matchAll(
-      /ST_AsWKB\s*\(\s*ST_Point\s*\(\s*"?([^"\s,]+)"?\s*,\s*"?([^"\s,]+)"?\s*\)\s*\)\s*AS\s+"?([^\s",]+)"?/gi,
-    ),
-  ];
-  const source = matches[0];
-  const target = matches[1];
-  if (
-    !source?.[1] ||
-    !source[2] ||
-    !source[3] ||
-    !target?.[1] ||
-    !target[2] ||
-    !target[3]
-  ) {
-    return undefined;
-  }
-  return {
-    sourceLongitudeColumn: source[1],
-    sourceLatitudeColumn: source[2],
-    sourceGeometryColumn: source[3],
-    targetLongitudeColumn: target[1],
-    targetLatitudeColumn: target[2],
-    targetGeometryColumn: target[3],
-  };
-}
-
-/**
- * Builds the standard origin/destination lon/lat → WKB arc transform SQL.
- */
-export function createDeckMapArcTransformSql(options: {
-  sourceLongitudeColumn: string;
-  sourceLatitudeColumn: string;
-  targetLongitudeColumn: string;
-  targetLatitudeColumn: string;
-  sourceGeometryColumn: string;
-  targetGeometryColumn: string;
-}) {
-  const quotedSourceLongitude = quoteDeckMapSqlIdentifier(
-    options.sourceLongitudeColumn,
-  );
-  const quotedSourceLatitude = quoteDeckMapSqlIdentifier(
-    options.sourceLatitudeColumn,
-  );
-  const quotedTargetLongitude = quoteDeckMapSqlIdentifier(
-    options.targetLongitudeColumn,
-  );
-  const quotedTargetLatitude = quoteDeckMapSqlIdentifier(
-    options.targetLatitudeColumn,
-  );
-
-  return [
-    `SELECT *, ST_AsWKB(ST_Point(${quotedSourceLongitude}, ${quotedSourceLatitude})) AS ${quoteDeckMapSqlIdentifier(options.sourceGeometryColumn)}, ST_AsWKB(ST_Point(${quotedTargetLongitude}, ${quotedTargetLatitude})) AS ${quoteDeckMapSqlIdentifier(options.targetGeometryColumn)}`,
-    `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
-    `WHERE ${quotedSourceLongitude} IS NOT NULL AND ${quotedSourceLatitude} IS NOT NULL AND ${quotedTargetLongitude} IS NOT NULL AND ${quotedTargetLatitude} IS NOT NULL`,
-  ].join(' ');
-}
-
 const DECK_MAP_POINT_LAYER_TYPES = new Set([
   'GeoArrowScatterplotLayer',
   'GeoArrowHeatmapLayer',
@@ -403,20 +310,20 @@ function deckMapLayerTargetsDataset(options: {
 /**
  * True when retained layers need dataset columns that
  * {@link createDeckMapConfigForTable} cannot reconstruct (arc endpoints, H3
- * indexes, trip timestamps, or a non-canonical transform such as ST_MakeLine).
- * Regenerating the dataset while keeping those layers would drop columns the
- * layers still bind to, so Dataset switches only retarget the table name.
+ * indexes, trip timestamps, or an ST_MakeLine path transform). Regenerating
+ * the dataset while keeping those layers would drop columns the layers still
+ * bind to, so Dataset switches only retarget the table name.
  */
-function deckMapDatasetHasCustomTransform(
+function deckMapDatasetRequiresPreservedTransform(
   config: DeckMapDashboardPanelConfig,
   datasetId: string,
 ) {
   const dataset = config.datasets?.[datasetId];
   const transformSql =
     dataset && isDeckMapTableDatasetSource(dataset.source)
-      ? dataset.source.transformSql?.trim()
+      ? dataset.source.transformSql
       : undefined;
-  if (transformSql && !isCanonicalDeckMapPointTransformSql(transformSql)) {
+  if (transformSql && /ST_MakeLine/i.test(transformSql)) {
     return true;
   }
 
@@ -451,14 +358,6 @@ function deckMapDatasetHasCustomTransform(
       typeof binding.timestampColumn === 'string'
     );
   });
-}
-
-function isCanonicalDeckMapPointTransformSql(transformSql: string) {
-  return Boolean(
-    parseDeckMapPointTransformSql(transformSql) &&
-    !parseDeckMapArcTransformSql(transformSql) &&
-    !/ST_MakeLine/i.test(transformSql),
-  );
 }
 
 function retargetDeckMapDatasetTableName(
@@ -977,43 +876,18 @@ export function regenerateMapConfigForTable(
   longitudeColumn?: string,
   latitudeColumn?: string,
 ) {
-  const existingConfig = panel.config as DeckMapDashboardPanelConfig;
-  const existingDatasetIds = Object.keys(existingConfig.datasets ?? {});
-  if (existingDatasetIds.length > 1) return panel.config;
-
   const coordinateColumns = resolveDeckMapCoordinateColumnNames({
     columns: table.columns,
     longitudeColumn,
     latitudeColumn,
   });
-  const hasGeospatialColumns = Boolean(
-    coordinateColumns || findGeometryColumn(table),
-  );
-
-  if (existingDatasetIds.length === 0) {
-    if (!hasGeospatialColumns) return panel.config;
-    const nextConfig = createDeckMapConfigForTable({
-      tableName: table.tableName,
-      columns: table.columns,
-      tableReference: table.table,
-      longitudeColumn: coordinateColumns?.longitudeColumn,
-      latitudeColumn: coordinateColumns?.latitudeColumn,
-    });
-    return {
-      ...nextConfig,
-      mapStyle: existingConfig.mapStyle,
-      mapProps: existingConfig.mapProps,
-    };
-  }
-
-  const datasetId = existingDatasetIds[0]!;
-  if (deckMapDatasetHasCustomTransform(existingConfig, datasetId)) {
-    return retargetDeckMapDatasetTableName(existingConfig, table);
-  }
-
-  if (!hasGeospatialColumns) {
+  if (!coordinateColumns && !findGeometryColumn(table)) {
     return panel.config;
   }
+
+  const existingConfig = panel.config as DeckMapDashboardPanelConfig;
+  const existingDatasetIds = Object.keys(existingConfig.datasets ?? {});
+  if (existingDatasetIds.length > 1) return panel.config;
 
   const nextConfig = createDeckMapConfigForTable({
     tableName: table.tableName,
@@ -1023,19 +897,41 @@ export function regenerateMapConfigForTable(
     latitudeColumn: coordinateColumns?.latitudeColumn,
   });
   const nextDataset = Object.values(nextConfig.datasets)[0];
-  if (!nextDataset) return panel.config;
 
-  return updateDeckMapGeometryColumnBindings(
-    {
-      ...existingConfig,
-      datasets: {[datasetId]: nextDataset},
-      fitToData: nextConfig.fitToData
-        ? {...nextConfig.fitToData, dataset: datasetId}
-        : existingConfig.fitToData,
-    },
-    datasetId,
-    nextDataset.geometryColumn,
-  );
+  if (existingDatasetIds.length === 0) {
+    return {
+      ...nextConfig,
+      mapStyle: existingConfig.mapStyle,
+      mapProps: existingConfig.mapProps,
+    };
+  }
+
+  if (existingDatasetIds.length === 1 && nextDataset) {
+    const datasetId = existingDatasetIds[0]!;
+    if (deckMapDatasetRequiresPreservedTransform(existingConfig, datasetId)) {
+      return retargetDeckMapDatasetTableName(existingConfig, table);
+    }
+    return updateDeckMapGeometryColumnBindings(
+      {
+        ...existingConfig,
+        datasets: {[datasetId]: nextDataset},
+        fitToData: nextConfig.fitToData
+          ? {...nextConfig.fitToData, dataset: datasetId}
+          : existingConfig.fitToData,
+      },
+      datasetId,
+      nextDataset.geometryColumn,
+    );
+  }
+
+  // Preserve existing layer spec (layer types, styling, bindings) — only
+  // update the dataset source and fitToData so the data re-fetches with the
+  // new coordinate columns.
+  return {
+    ...existingConfig,
+    datasets: nextConfig.datasets,
+    fitToData: nextConfig.fitToData ?? existingConfig.fitToData,
+  };
 }
 
 /**

@@ -470,13 +470,11 @@ geometry, polygon, line, and pre-transformed datasets are preserved.
 When regenerating a map with one existing dataset, its dataset ID is retained
 and geometry bindings are refreshed so custom layers continue to address the
 same dataset after a table switch. Authored arc, H3, trips, and path
-transforms are kept and only the table name is retargeted, including when the
-new table cannot bind those columns. Switching back to the original table
-works because the SQL was never dropped. Point and polygon maps still
-regenerate as before. Non-geospatial tables and multi-dataset maps return the
-existing config unchanged so callers can keep the current selection when a
-safe target cannot be inferred. Maps without datasets adopt the generated
-dataset and layer spec after a valid table is selected.
+transforms are kept and only the table name is retargeted. Non-geospatial
+tables and multi-dataset maps return the existing config unchanged so callers
+can keep the current selection when a safe target cannot be inferred. Maps
+without datasets adopt the generated dataset and layer spec after a valid
+table is selected.
 
 ## Core Concepts
 
