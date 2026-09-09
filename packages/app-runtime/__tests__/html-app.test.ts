@@ -354,14 +354,10 @@ describe('html-app helpers', () => {
       {revisionId: 'rev-inventory', name: 'Inventory chart', createdAt: 20},
     );
 
-    const restored = restoreHtmlAppRevisionState(
-      inventory.app,
-      'rev-legacy',
-      {
-        revisionId: 'rev-restore',
-        createdAt: 30,
-      },
-    );
+    const restored = restoreHtmlAppRevisionState(inventory.app, 'rev-legacy', {
+      revisionId: 'rev-restore',
+      createdAt: 30,
+    });
 
     expect(restored?.app.intent).toBeUndefined();
     expect(restored?.revision.intent).toBeUndefined();

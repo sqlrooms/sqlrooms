@@ -18,7 +18,7 @@ export function ComposerFooterStrip({
     <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
       <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
         <div className="min-w-0 flex-1 overflow-hidden">
-          <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex [scrollbar-width:none] flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {children}
           </div>
         </div>
