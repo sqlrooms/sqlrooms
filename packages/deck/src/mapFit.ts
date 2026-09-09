@@ -97,7 +97,7 @@ export function resolveDeckMapFitToData(
       const target = String(binding.targetGeometryColumn);
       const explicit = fitToData.geometryColumn?.trim();
       if (explicit && explicit !== source && explicit !== target) {
-        break;
+        continue;
       }
       return {...fitToData, geometryColumns: [source, target]};
     }

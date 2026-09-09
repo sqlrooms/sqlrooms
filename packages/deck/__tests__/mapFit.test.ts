@@ -142,6 +142,41 @@ describe('Deck map fit core', () => {
     });
   });
 
+  test('skips an unrelated visible arc and still fits a later matching arc', () => {
+    expect(
+      resolveDeckMapFitToData({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowArcLayer',
+              _sqlroomsBinding: {
+                dataset: 'arcs',
+                sourceGeometryColumn: 'overlay_source',
+                targetGeometryColumn: 'overlay_target',
+              },
+            },
+            {
+              '@@type': 'GeoArrowArcLayer',
+              _sqlroomsBinding: {
+                dataset: 'arcs',
+                sourceGeometryColumn: 'source_geom',
+                targetGeometryColumn: 'target_geom',
+              },
+            },
+          ],
+        },
+        datasets: {
+          arcs: {source: {tableName: 'arcs'}},
+        },
+        fitToData: {dataset: 'arcs', geometryColumn: 'source_geom'},
+      }),
+    ).toEqual({
+      dataset: 'arcs',
+      geometryColumn: 'source_geom',
+      geometryColumns: ['source_geom', 'target_geom'],
+    });
+  });
+
   test('honors an explicit geometryColumn that is not an arc endpoint', () => {
     expect(
       resolveDeckMapFitToData({
