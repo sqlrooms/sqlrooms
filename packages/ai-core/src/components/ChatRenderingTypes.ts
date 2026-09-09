@@ -12,7 +12,8 @@ import type {HoistableToolCall} from './collectHoistableRenderers';
 
 /** Any React component type accepted by a chat rendering slot. */
 export type ChatComponentType<TProps = object> =
-  ComponentType<TProps> | ExoticComponent<TProps>;
+  | ComponentType<TProps>
+  | ExoticComponent<TProps>;
 
 /** How nested agent activity is composed into turn-level activity. */
 export type ChatNestedActivityMode = 'own-boxes' | 'embed';
