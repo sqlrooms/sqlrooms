@@ -304,8 +304,11 @@ type CreateChatTurnPresentationOptions = {
   activitySummaryLabel?: string;
   /** Earliest tool start in the group, for the header's live clock. */
   activityStartedAt?: number;
-  /** When the turn's work finished, for the actions row's "x ago" label. */
-  activityEndedAt?: number;
+  /**
+   * Epoch ms the turn finished, for the actions row's "x ago" label.
+   * Undefined while the turn is still running.
+   */
+  turnCompletedAt?: number;
   /** Per-tool-call timings, so each timeline group can report its own. */
   toolTimings: Record<string, {startedAt?: number; completedAt?: number}>;
   computationTimeMs?: number;
@@ -336,7 +339,7 @@ export function createChatTurnPresentation({
   errorMessage,
   activitySummaryLabel,
   activityStartedAt,
-  activityEndedAt,
+  turnCompletedAt,
   toolTimings,
   computationTimeMs,
   computationTimeLabel,
@@ -648,7 +651,7 @@ export function createChatTurnPresentation({
   const actionProps: ChatActionsProps = {
     ...(copy ? {copy} : {}),
     ...(fork ? {fork} : {}),
-    ...(activityEndedAt != null ? {completedAt: activityEndedAt} : {}),
+    ...(turnCompletedAt != null ? {completedAt: turnCompletedAt} : {}),
   };
   const ActionsContent = bindContent('actions', () => (
     <Actions {...actionProps} />

@@ -498,18 +498,20 @@ const FlatSegmentList: React.FC<{
                 : latest,
             undefined,
           );
-          const groupDuration =
-            groupStartedAt != null && groupCompletedAt != null
-              ? formatShortDuration(groupCompletedAt - groupStartedAt)
+          const groupComputationTimeMs =
+            !anyPending && groupStartedAt != null && groupCompletedAt != null
+              ? groupCompletedAt - groupStartedAt
               : undefined;
-          // While the group runs the header reports the live step; once it
-          // settles it reports how long the whole thing took.
+          const groupComputationTimeLabel =
+            groupComputationTimeMs != null
+              ? `Computation Time: ${formatShortDuration(
+                  groupComputationTimeMs,
+                )}`
+              : undefined;
           const summaryLabel = anyPending
             ? 'Thinking'
             : allToolsDone && isAgentComplete
-              ? groupDuration
-                ? `Thought for ${groupDuration}`
-                : 'Thought'
+              ? 'Thought'
               : undefined;
 
           const logLines = seg.tools.map((tc) => {
@@ -591,6 +593,8 @@ const FlatSegmentList: React.FC<{
               toolCount={toolCount}
               summaryLabel={summaryLabel}
               startedAt={groupStartedAt}
+              computationTimeMs={groupComputationTimeMs}
+              computationTimeLabel={groupComputationTimeLabel}
             >
               {logLines}
             </Activity>
@@ -600,6 +604,7 @@ const FlatSegmentList: React.FC<{
               summaryLabel={summaryLabel}
               startedAt={groupStartedAt}
               stepCount={toolCount}
+              computationTimeLabel={groupComputationTimeLabel}
             >
               {logLines}
             </ActivityBox>

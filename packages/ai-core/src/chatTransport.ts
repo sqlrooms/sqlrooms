@@ -26,6 +26,7 @@ import {
   CHAT_REQUEST_ERROR_PART_TYPE,
   createChatRequestErrorPart,
   setChatRequestErrorMessage,
+  setChatTurnCompletedAt,
 } from './chatTurns';
 import type {
   AiSliceStateForTransport,
@@ -819,6 +820,16 @@ function hasChatRequestErrorPart(message: UIMessage | undefined): boolean {
   );
 }
 
+/**
+ * Marks the last turn in `messages` as finished now. Called from every path
+ * that ends a run, so the timestamp reflects turn completion rather than the
+ * end of the last tool call — which a text-only turn never has.
+ */
+function stampLastTurnCompletion(messages: UIMessage[]): void {
+  const lastUserMessage = messages.filter((msg) => msg.role === 'user').at(-1);
+  if (lastUserMessage) setChatTurnCompletedAt(lastUserMessage, Date.now());
+}
+
 function createChatRequestErrorMessage(error: string): UIMessage {
   return {
     id: createId(),
@@ -882,6 +893,7 @@ export function createChatHandlers({
               error: abortMessage,
             });
           }
+          stampLastTurnCompletion(completedMessages);
           state.ai.setSessionUiMessages(sessionId, completedMessages);
 
           state.ai.setIsRunning(sessionId, false);
@@ -915,6 +927,8 @@ export function createChatHandlers({
           completedMessages,
           state.ai.getToolTimings(),
         );
+        const analysisEnded = shouldEndAnalysis(completedMessages);
+        if (analysisEnded) stampLastTurnCompletion(completedMessages);
         state.ai.setSessionUiMessages(sessionId, completedMessages);
 
         store.setState((stateToUpdate: AiSliceStateForTransport) =>
@@ -928,7 +942,7 @@ export function createChatHandlers({
           }),
         );
 
-        if (shouldEndAnalysis(completedMessages)) {
+        if (analysisEnded) {
           state.ai.setIsRunning(sessionId, false);
           state.ai.setAbortController(sessionId, undefined);
           onChatFinish?.({sessionId, messages: completedMessages});
@@ -994,6 +1008,7 @@ export function createChatHandlers({
               if (lastUserMessage) {
                 setChatRequestErrorMessage(lastUserMessage, {error: errMsg});
               }
+              stampLastTurnCompletion(completedMessages);
 
               if (!hasChatRequestErrorPart(completedMessages.at(-1))) {
                 completedMessages.push(createChatRequestErrorMessage(errMsg));

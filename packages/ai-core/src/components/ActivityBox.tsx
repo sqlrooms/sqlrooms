@@ -61,8 +61,8 @@ const ActivityHeader: React.FC<{
   onToggle,
 }) => {
   const elapsed = useElapsedTime(isRunning, startedAt);
-  // Running: the live clock plus which step is underway. Settled: how many
-  // steps it took — the duration is already part of `label`.
+  // Running: the live clock plus which step is underway. Settled: the
+  // aggregated duration when the caller supplies one, else the step count.
   const meta = isRunning
     ? [elapsed, stepCount ? `step ${stepCount}` : undefined]
         .filter(Boolean)

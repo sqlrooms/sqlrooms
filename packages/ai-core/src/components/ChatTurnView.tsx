@@ -251,7 +251,6 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
     [model.timingToolCallIds, toolTimings],
   );
   const activityStartedAt = activitySpan?.startedAt;
-  const activityEndedAt = activitySpan?.endedAt;
   const computationTimeMs =
     showComputationTime && activitySpan
       ? activitySpan.endedAt - activitySpan.startedAt
@@ -261,6 +260,12 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
     computationTimeMs != null
       ? `Computation Time: ${formatShortDuration(computationTimeMs)}`
       : undefined;
+
+  // Only a finished turn has an age. Turns recorded before the completion
+  // stamp existed fall back to the end of their last tool call.
+  const turnCompletedAt = isCompleted
+    ? (chatTurn?.completedAt ?? activitySpan?.endedAt)
+    : undefined;
 
   const onFork = useMemo(
     () =>
@@ -312,7 +317,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
         errorMessage: errorMessage?.error,
         activitySummaryLabel,
         activityStartedAt,
-        activityEndedAt,
+        turnCompletedAt,
         toolTimings,
         computationTimeMs,
         computationTimeLabel,
@@ -338,7 +343,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       errorMessage?.error,
       activitySummaryLabel,
       activityStartedAt,
-      activityEndedAt,
+      turnCompletedAt,
       toolTimings,
       computationTimeMs,
       computationTimeLabel,

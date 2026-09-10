@@ -1,8 +1,10 @@
 import type {UIMessage} from 'ai';
 import {
   getAnalysisResultsFromUiMessages,
+  getChatTurnCompletedAt,
   getChatTurnsFromUiMessages,
   setChatRequestErrorMessage,
+  setChatTurnCompletedAt,
 } from '../src/chatTurns';
 
 describe('chat turn derivation', () => {
@@ -82,6 +84,35 @@ describe('chat turn derivation', () => {
         errorMessage: {error: 'Request failed'},
       },
     ]);
+  });
+
+  it('carries the recorded completion time onto the turn', () => {
+    const userMessage: UIMessage = {
+      id: 'user-1',
+      role: 'user',
+      parts: [{type: 'text', text: 'prompt'}],
+    };
+    setChatTurnCompletedAt(userMessage, 1_700_000_000_000);
+
+    expect(getChatTurnCompletedAt(userMessage)).toBe(1_700_000_000_000);
+    expect(
+      getChatTurnsFromUiMessages([
+        userMessage,
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          parts: [{type: 'text', text: 'answer'}],
+        },
+      ]),
+    ).toMatchObject([{id: 'user-1', completedAt: 1_700_000_000_000}]);
+  });
+
+  it('leaves the completion time absent for turns that never recorded one', () => {
+    expect(
+      getChatTurnsFromUiMessages([
+        {id: 'user-1', role: 'user', parts: [{type: 'text', text: 'prompt'}]},
+      ])[0]?.completedAt,
+    ).toBeUndefined();
   });
 
   it('uses migrated legacy completion metadata for prompt-only completed turns', () => {

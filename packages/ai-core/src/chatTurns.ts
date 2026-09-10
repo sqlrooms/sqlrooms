@@ -16,6 +16,8 @@ export type ChatMessageMetadata = {
   sqlrooms?: {
     errorMessage?: ChatRequestErrorMessage;
     isCompleted?: boolean;
+    /** Epoch ms at which the turn stopped running. */
+    completedAt?: number;
   };
 };
 
@@ -26,6 +28,11 @@ export type ChatTurn = {
   assistantMessages: UIMessage[];
   isCompleted: boolean;
   errorMessage?: ChatRequestErrorMessage;
+  /**
+   * Epoch ms at which the turn stopped running. Absent for turns that are
+   * still running and for turns recorded before this was persisted.
+   */
+  completedAt?: number;
 };
 
 export function getMessageText(message: UIMessage | undefined): string {
@@ -51,6 +58,34 @@ export function getChatRequestCompletionState(
   return typeof metadata?.sqlrooms?.isCompleted === 'boolean'
     ? metadata.sqlrooms.isCompleted
     : undefined;
+}
+
+/** Epoch ms at which the turn owning `message` finished, if recorded. */
+export function getChatTurnCompletedAt(
+  message: UIMessage | undefined,
+): number | undefined {
+  const metadata = message?.metadata as ChatMessageMetadata | undefined;
+  const completedAt = metadata?.sqlrooms?.completedAt;
+  return typeof completedAt === 'number' ? completedAt : undefined;
+}
+
+/**
+ * Records when the turn owning `message` stopped running. Written once the
+ * run terminates, so text-only turns get a timestamp too and running turns
+ * get none.
+ */
+export function setChatTurnCompletedAt(
+  message: UIMessage,
+  completedAt: number,
+) {
+  const metadata = (message.metadata ?? {}) as ChatMessageMetadata;
+  message.metadata = {
+    ...metadata,
+    sqlrooms: {
+      ...(metadata.sqlrooms ?? {}),
+      completedAt,
+    },
+  };
 }
 
 export function setChatRequestErrorMessage(
@@ -148,6 +183,7 @@ export function getChatTurnsFromUiMessages(
       .some((candidate) => candidate.role === 'user');
     const errorMessage = getChatRequestErrorMessage(message);
     const completedOverride = getChatRequestCompletionState(message);
+    const completedAt = getChatTurnCompletedAt(message);
     const derivedCompleted =
       assistantMessages.length > 0 &&
       areAssistantMessagesComplete(assistantMessages) &&
@@ -159,6 +195,7 @@ export function getChatTurnsFromUiMessages(
       assistantMessages,
       isCompleted: !!errorMessage || (completedOverride ?? derivedCompleted),
       errorMessage,
+      ...(completedAt != null ? {completedAt} : {}),
     });
   }
 

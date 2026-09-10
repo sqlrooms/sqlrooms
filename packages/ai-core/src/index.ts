@@ -167,6 +167,7 @@ export type {
 export {
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,
+  getChatTurnCompletedAt,
   getChatTurnsFromUiMessages,
 } from './chatTurns';
 export type {

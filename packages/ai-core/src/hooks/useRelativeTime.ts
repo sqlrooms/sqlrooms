@@ -20,5 +20,10 @@ export function useRelativeTime(
     return () => clearInterval(id);
   }, [timestamp, intervalMs]);
 
-  return timestamp == null ? undefined : formatTimeRelative(timestamp, now);
+  if (timestamp == null) return undefined;
+  // The clock is only re-read every `intervalMs`, so a timestamp created since
+  // the last tick would otherwise be described against a reference that
+  // predates it — a future-relative label. Never measure against a reference
+  // older than the timestamp itself.
+  return formatTimeRelative(timestamp, Math.max(now, timestamp));
 }
