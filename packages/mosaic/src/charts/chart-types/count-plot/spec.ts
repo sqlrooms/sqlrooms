@@ -204,7 +204,7 @@ export function createCountPlotSpec(options: CreateCountPlotSpecOptions): Spec {
     yPaddingInner: DEFAULT_Y_PADDING_INNER,
     yPaddingOuter: DEFAULT_Y_PADDING_OUTER,
     margins: {
-      left: deriveLeftMargin(fieldColumn, settings.leftMargin),
+      left: deriveLeftMargin(fieldColumn, settings.leftMargin ?? undefined),
       right: 50,
       ...HEIGHT_MARGINS,
     },

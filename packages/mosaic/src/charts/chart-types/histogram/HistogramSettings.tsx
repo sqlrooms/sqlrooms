@@ -19,7 +19,7 @@ export const HistogramSettingsComponent: FC = () => {
         <div className="flex items-end gap-2">
           <ColumnSelector.Quantitative
             className="flex-1"
-            value={config.settings.field}
+            value={config.settings.field ?? undefined}
             onChange={(field) => onChangeConfig('field', field)}
           />
           <ColorSelector

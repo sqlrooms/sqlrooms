@@ -11,21 +11,21 @@ export const ScatterPlotSettingsComponent: FC = () => {
     <div className="space-y-4">
       <Field label="X Field" required>
         <ColumnSelector.Numeric
-          value={config.settings.x}
+          value={config.settings.x ?? undefined}
           onChange={(x) => onChangeConfig('x', x)}
         />
       </Field>
 
       <Field label="Y Field" required>
         <ColumnSelector.Numeric
-          value={config.settings.y}
+          value={config.settings.y ?? undefined}
           onChange={(y) => onChangeConfig('y', y)}
         />
       </Field>
 
       <Field label="Size Field">
         <ColumnSelector.Numeric
-          value={config.settings.size}
+          value={config.settings.size ?? undefined}
           onChange={(size) => onChangeConfig('size', size)}
           placeholder="(optional)"
         />

@@ -10,14 +10,14 @@ export const BoxPlotSettingsComponent: FC = () => {
     <div className="space-y-4">
       <Field label="X Field (categorical)" required>
         <ColumnSelector.Categorical
-          value={config.settings.x}
+          value={config.settings.x ?? undefined}
           onChange={(x) => onChangeConfig('x', x)}
         />
       </Field>
 
       <Field label="Y Field (numeric)" required>
         <ColumnSelector.Numeric
-          value={config.settings.y}
+          value={config.settings.y ?? undefined}
           onChange={(y) => onChangeConfig('y', y)}
         />
       </Field>

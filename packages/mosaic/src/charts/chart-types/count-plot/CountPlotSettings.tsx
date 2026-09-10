@@ -65,7 +65,7 @@ export const CountPlotSettingsComponent: FC = () => {
     <div className="space-y-4">
       <Field label="Field" required>
         <ColumnSelector.Categorical
-          value={config.settings.field}
+          value={config.settings.field ?? undefined}
           onChange={(field) => onChangeConfig('field', field)}
         />
       </Field>
@@ -81,7 +81,7 @@ export const CountPlotSettingsComponent: FC = () => {
           <div className="flex items-end gap-2">
             <ColumnSelector.Numeric
               className="flex-1"
-              value={config.settings.valueField}
+              value={config.settings.valueField ?? undefined}
               onChange={(valueField) =>
                 onChangeConfig('valueField', valueField)
               }

@@ -37,8 +37,21 @@ export type ValidatedLineChartSettings = {
  */
 export function validateLineChartSettings({
   dataTable,
-  settings: {x, yFields = [], xInterval, metric = 'aggregate'},
+  settings: {
+    x,
+    yFields: yFieldsInput,
+    xInterval: xIntervalInput,
+    metric: metricInput,
+  },
 }: ValidateSpecOptions<LineChartSettings>): ValidatedLineChartSettings {
+  // Nullish settings fields (the LLM may send `null`): normalize to the
+  // no-value form so the rest of the function works with clean values. A
+  // destructuring default only covers `undefined`, so `metric: null` would slip
+  // through as `null` — skipping the required-Y check and producing a blank
+  // chart reported as success — hence the explicit `?? 'aggregate'`.
+  const metric = metricInput ?? 'aggregate';
+  const yFields = yFieldsInput ?? [];
+  const xInterval = xIntervalInput ?? undefined;
   // Basic validation for required fields
   if (!x || (metric === 'aggregate' && yFields.length === 0)) {
     throw new RequiredFieldsError([

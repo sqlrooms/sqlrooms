@@ -27,7 +27,7 @@ export const LineChartXFieldSelector: FC = () => {
       }}
     >
       <ColumnSelector.Quantitative
-        value={config.settings.x}
+        value={config.settings.x ?? undefined}
         onChange={(x) => {
           const selectedColumn = columns.find((column) => column.name === x);
           if (selectedColumn && isTemporalType(selectedColumn.type)) {
@@ -44,7 +44,7 @@ export const LineChartXFieldSelector: FC = () => {
       />
       {isXFieldTemporal && (
         <TemporalGranularitySelector
-          value={config.settings.xInterval}
+          value={config.settings.xInterval ?? undefined}
           onChange={(xInterval) => onChangeConfig('xInterval', xInterval)}
           xFieldType={xColumn.type}
         />
