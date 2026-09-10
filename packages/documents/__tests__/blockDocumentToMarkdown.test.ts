@@ -232,6 +232,17 @@ describe('blockDocumentToMarkdown', () => {
     expect(blockDocumentToMarkdown(content)).toBe('![A chart](%3Casset%3E)');
   });
 
+  it('escapes entity introducers in image sources', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentImage',
+        attrs: {id: 'i1', assetId: 'asset&copy;1', caption: 'A chart'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![A chart](asset\\&copy;1)');
+  });
+
   it('encodes line endings in stateful block sources', () => {
     const content = doc([
       {
@@ -259,6 +270,19 @@ describe('blockDocumentToMarkdown', () => {
 
     expect(blockDocumentToMarkdown(content)).toBe(
       '![Revenue \\*by\\* quarter](chart)',
+    );
+  });
+
+  it('escapes entity introducers in captions', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChart',
+        attrs: {id: 'c1', tableName: 'sales', caption: 'Revenue &copy; 2026'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe(
+      '![Revenue \\&copy; 2026](chart)',
     );
   });
 
@@ -386,6 +410,19 @@ describe('blockDocumentToMarkdown', () => {
     expect(
       blockDocumentToMarkdown(content, {title: '*Draft* `Report` <em>x</em>'}),
     ).toBe('# \\*Draft\\* \\`Report\\` \\<em\\>x\\</em\\>\n\nBody text');
+  });
+
+  it('escapes entity introducers in the title', () => {
+    const content = doc([
+      {
+        type: 'paragraph',
+        content: [{type: 'text', text: 'Body text'}],
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content, {title: 'Report &copy;'})).toBe(
+      '# Report \\&copy;\n\nBody text',
+    );
   });
 
   it('returns an empty string for an empty document without a title', () => {
