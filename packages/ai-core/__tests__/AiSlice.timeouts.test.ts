@@ -2,7 +2,10 @@ import {jest} from '@jest/globals';
 import type {UIMessage} from 'ai';
 import {createStore} from 'zustand';
 import {type AiSliceState, createAiSlice} from '../src/AiSlice';
-import {getChatRequestErrorMessage} from '../src/chatTurns';
+import {
+  getChatRequestErrorMessage,
+  getChatTurnCompletedAt,
+} from '../src/chatTurns';
 import {ChatTimeoutError} from '../src/timeouts';
 
 describe('AiSlice run timeout', () => {
@@ -70,6 +73,9 @@ describe('AiSlice run timeout', () => {
     expect(getChatRequestErrorMessage(saved[0])).toEqual({
       error: 'Chat run timed out after 1s',
     });
+    // The turn ended here, so it carries an age even though no transport
+    // callback ran.
+    expect(getChatTurnCompletedAt(saved[0])).toEqual(expect.any(Number));
     expect(saved[1]?.parts[0]).toMatchObject({
       state: 'output-error',
       errorText: 'Chat run timed out after 1s',
@@ -180,6 +186,7 @@ describe('AiSlice run timeout', () => {
     expect(getChatRequestErrorMessage(saved[0])).toEqual({
       error: 'No model or tool progress received for 2s',
     });
+    expect(getChatTurnCompletedAt(saved[0])).toEqual(expect.any(Number));
     expect(saved[1]?.parts[0]).toMatchObject({
       state: 'output-error',
       errorText: 'No model or tool progress received for 2s',

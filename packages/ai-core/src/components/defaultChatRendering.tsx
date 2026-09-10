@@ -515,10 +515,14 @@ export function createChatTurnPresentation({
             segment.parts.map(({part}) => part.toolCallId),
             toolTimings,
           );
-          const groupComputationTimeLabel =
+          const groupComputationTimeMs =
             !anyPending && groupSpan
+              ? groupSpan.endedAt - groupSpan.startedAt
+              : undefined;
+          const groupComputationTimeLabel =
+            groupComputationTimeMs != null
               ? `Computation Time: ${formatShortDuration(
-                  groupSpan.endedAt - groupSpan.startedAt,
+                  groupComputationTimeMs,
                 )}`
               : undefined;
 
@@ -531,6 +535,7 @@ export function createChatTurnPresentation({
                   toolCount={toolCount}
                   summaryLabel={summaryLabel}
                   startedAt={groupSpan?.startedAt}
+                  computationTimeMs={groupComputationTimeMs}
                   computationTimeLabel={groupComputationTimeLabel}
                 >
                   {segment.parts.map(({part, index}) => {
