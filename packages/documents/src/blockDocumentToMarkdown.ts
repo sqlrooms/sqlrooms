@@ -13,23 +13,31 @@ import {optionalString} from './BlockDocumentEditor/node-views/nodeViewUtils';
 
 /**
  * Escapes text for use inside a Markdown image alt or an ATX heading:
- * backslashes first (so later escapes are not consumed), then `[`/`]` which
- * would close an image alt span, and line endings which would split the text
- * across blocks.
+ * backslashes first (so later escapes are not consumed), then the inline
+ * Markdown control characters (`*`, `_`, backtick, `~`, `[`, `]`, `<`, `>`)
+ * which would otherwise change the text's meaning, and line endings which
+ * would split the text across blocks.
  */
 function escapeMarkdownText(text: string): string {
   return text
     .replace(/\\/g, '\\\\')
-    .replace(/[[\]]/g, '\\$&')
+    .replace(/[*_`~[\]<>]/g, '\\$&')
     .replace(/\r\n?|\n/g, ' ');
 }
 
 /**
  * Escapes characters that would break a Markdown image destination: backslashes
- * and `(`/`)` which would close the destination early.
+ * and `(`/`)` which would close the destination early, and whitespace or control
+ * characters which are not allowed in an unbracketed destination (percent-encoded).
  */
 function escapeImageSrc(src: string): string {
-  return src.replace(/\\/g, '\\\\').replace(/[()]/g, '\\$&');
+  return (
+    src
+      .replace(/\\/g, '\\\\')
+      .replace(/[()]/g, '\\$&')
+      // eslint-disable-next-line no-control-regex -- control chars break a Markdown destination
+      .replace(/[\s\u0000-\u001f\u007f]/g, (ch) => encodeURIComponent(ch))
+  );
 }
 
 /**

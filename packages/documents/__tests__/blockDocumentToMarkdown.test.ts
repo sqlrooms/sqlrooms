@@ -173,7 +173,7 @@ describe('blockDocumentToMarkdown', () => {
     ]);
 
     expect(blockDocumentToMarkdown(content)).toBe(
-      '![Revenue \\\\\\] quarter](chart)',
+      String.raw`![Revenue \\\] quarter](chart)`,
     );
   });
 
@@ -197,6 +197,58 @@ describe('blockDocumentToMarkdown', () => {
     ]);
 
     expect(blockDocumentToMarkdown(content)).toBe('![A chart](a\\)b)');
+  });
+
+  it('encodes whitespace in image sources', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentImage',
+        attrs: {id: 'i1', assetId: 'asset one', caption: 'A chart'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![A chart](asset%20one)');
+  });
+
+  it('encodes line endings in image sources', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentImage',
+        attrs: {id: 'i1', assetId: 'a\nb', caption: 'A chart'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![A chart](a%0Ab)');
+  });
+
+  it('encodes line endings in stateful block sources', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentStatefulBlock',
+        attrs: {
+          id: 'm1',
+          blockType: 'map\nblock',
+          caption: 'Store locations',
+        },
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe(
+      '![Store locations](map%0Ablock)',
+    );
+  });
+
+  it('escapes emphasis characters in captions', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChart',
+        attrs: {id: 'c1', tableName: 'sales', caption: 'Revenue *by* quarter'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe(
+      '![Revenue \\*by\\* quarter](chart)',
+    );
   });
 
   it('renders a chart block without a caption using a fallback label', () => {
@@ -297,6 +349,19 @@ describe('blockDocumentToMarkdown', () => {
     expect(blockDocumentToMarkdown(content, {title: 'Report [x](y)'})).toBe(
       '# Report \\[x\\](y)\n\nBody text',
     );
+  });
+
+  it('escapes emphasis, code, and html in the title', () => {
+    const content = doc([
+      {
+        type: 'paragraph',
+        content: [{type: 'text', text: 'Body text'}],
+      },
+    ]);
+
+    expect(
+      blockDocumentToMarkdown(content, {title: '*Draft* `Report` <em>x</em>'}),
+    ).toBe('# \\*Draft\\* \\`Report\\` \\<em\\>x\\</em\\>\n\nBody text');
   });
 
   it('returns an empty string for an empty document without a title', () => {
