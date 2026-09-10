@@ -221,6 +221,17 @@ describe('blockDocumentToMarkdown', () => {
     expect(blockDocumentToMarkdown(content)).toBe('![A chart](a%0Ab)');
   });
 
+  it('encodes angle brackets in image sources', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentImage',
+        attrs: {id: 'i1', assetId: '<asset>', caption: 'A chart'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![A chart](%3Casset%3E)');
+  });
+
   it('encodes line endings in stateful block sources', () => {
     const content = doc([
       {
@@ -348,6 +359,19 @@ describe('blockDocumentToMarkdown', () => {
 
     expect(blockDocumentToMarkdown(content, {title: 'Report [x](y)'})).toBe(
       '# Report \\[x\\](y)\n\nBody text',
+    );
+  });
+
+  it('escapes trailing hashes in the title', () => {
+    const content = doc([
+      {
+        type: 'paragraph',
+        content: [{type: 'text', text: 'Body text'}],
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content, {title: 'Version #'})).toBe(
+      '# Version \\#\n\nBody text',
     );
   });
 
