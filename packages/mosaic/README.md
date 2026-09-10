@@ -314,6 +314,17 @@ in its guidance, while tolerating omitted optional fields for model-provider
 compatibility. When `metric` is omitted, a provided `valueField` implies
 `"aggregate"`; otherwise the backwards-compatible default is `"count"`.
 
+**Optional chart settings accept `null`, not just omission.** Some model
+providers emit `null` for a field they mean to leave unset, so the optional
+inputs on the exported chart-settings schemas are `.nullish()` — they accept
+`null` in addition to `undefined`. This spans, for example, scatter `x`/`y`/`size`,
+heatmap and box-plot axes, histogram `field`/`color`, count-plot `field`/
+`valueField`/`leftMargin`, and line-chart `metric`/`yFields`/`xInterval`. A
+`null` is treated the same as an omitted value: it resolves to the field's
+documented default or auto behavior (e.g. line-chart `metric: null` →
+`"aggregate"`; count-plot `valueField: null` → row count; `leftMargin: null` →
+metadata-derived margin) rather than being rendered as a literal `null`.
+
 Count plots cap the visible categories instead of folding the hidden tail into
 `Others` so the generated vgplot spec continues to cross-filter against the
 source table without pre-aggregating the rendered values.
