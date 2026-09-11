@@ -442,10 +442,11 @@ primary. Artifact-specific context tools live in `@sqlrooms/artifacts/ai`.
 
 When the model emits tool-call arguments that fail a tool's input schema, the AI
 SDK aborts the run with an opaque `InvalidToolInputError`. The local chat
-transport heals this by default: it re-asks the model to correct the call
-(forcing a fresh call to the same tool, without running the tool's side effects)
-instead of failing the run. Each repair costs one extra LLM request, so apps can
-opt out via `createAiSlice`:
+transport attempts to heal this by default: it re-asks the model to correct the
+call (forcing a fresh call to the same tool, without running the tool's side
+effects). Repair is best-effort — if it fails, hits its per-tool limit, or
+produces no corrected call, the original `InvalidToolInputError` still surfaces.
+Each repair costs one extra LLM request, so apps can opt out via `createAiSlice`:
 
 ```ts
 createAiSlice({

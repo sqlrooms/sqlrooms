@@ -179,8 +179,18 @@ export function createModelToolCallRepair(
       });
 
       // Account for the repair request's tokens even if it produced no usable
-      // call, so session usage does not undercount repaired turns.
-      if (result.totalUsage) onRepairUsage?.(result.totalUsage);
+      // call, so session usage does not undercount repaired turns. Isolated from
+      // the repair boundary: a throwing caller callback must NOT discard an
+      // otherwise-valid repaired call or swallow the original error.
+      if (result.totalUsage && onRepairUsage) {
+        try {
+          onRepairUsage(result.totalUsage);
+        } catch {
+          console.warn(
+            `[repairToolCall] onRepairUsage callback threw for "${toolCall.toolName}"`,
+          );
+        }
+      }
 
       const fixed = result.toolCalls.find(
         (call) => call.toolName === toolCall.toolName,

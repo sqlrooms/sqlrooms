@@ -113,6 +113,27 @@ describe('createModelToolCallRepair', () => {
     });
   });
 
+  it('still returns the corrected call when onRepairUsage throws', async () => {
+    const onRepairUsage = jest.fn(() => {
+      throw new Error('accounting blew up');
+    });
+    const repair = createModelToolCallRepair('fake-model' as never, {
+      onRepairUsage: onRepairUsage as never,
+    });
+
+    // A throwing usage callback must not discard the valid repair nor let the
+    // original validation error resurface.
+    const result = await repair(makeArgs());
+
+    expect(onRepairUsage).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      type: 'tool-call',
+      toolCallId: 'call-1',
+      toolName: TOOL_NAME,
+      input: JSON.stringify({settings: {x: 'Depth', y: 'Magnitude'}}),
+    });
+  });
+
   it('does not attempt to repair an unknown tool name', async () => {
     const repair = createModelToolCallRepair('fake-model' as never);
 

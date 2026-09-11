@@ -667,11 +667,13 @@ tools they execute server-side.
 
 When the model emits tool-call arguments that fail the tool's input schema, the
 AI SDK aborts the run with an opaque `InvalidToolInputError`. The local chat
-transport heals this by default: it re-asks the model to correct the call
-(forcing a fresh call to the same tool, without running the tool's side
-effects) instead of failing the run. Each repair costs one extra LLM request, so
-apps that want to trade that resilience away can opt out — either through
-`createAiSlice` or directly on the transport factory:
+transport attempts to heal this by default: it re-asks the model to correct the
+call (forcing a fresh call to the same tool, without running the tool's side
+effects). Repair is best-effort — if it fails, hits its per-tool limit, or
+produces no corrected call, the original `InvalidToolInputError` still surfaces.
+Each repair costs one extra LLM request, so apps that want to trade that
+resilience away can opt out — either through `createAiSlice` or directly on the
+transport factory:
 
 ```ts
 createAiSlice({
