@@ -580,6 +580,8 @@ describe('createDeckMapDashboardTool', () => {
     expect(instructions).toContain('omit getWeight');
     expect(instructions).toContain('COLOR SCALE FIELD VARIANCE');
     expect(instructions).toContain('min < max');
+    expect(instructions).toContain('3D CAMERA');
+    expect(instructions).toContain('pitch 45–60');
   });
 
   it('provides default dashboard slice options with the deck map panel action', () => {

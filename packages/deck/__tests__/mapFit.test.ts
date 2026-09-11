@@ -1,6 +1,7 @@
 import {describe, expect, test} from '@jest/globals';
 import {
   buildDeckMapJumpToOptions,
+  completeDeckMapInitialViewState,
   createDeckMapBoundsQuery,
   getDeckMapDatasetSource,
   resolveDeckMapFitToData,
@@ -342,5 +343,71 @@ describe('buildDeckMapJumpToOptions', () => {
       pitch: 55,
       bearing: 20,
     });
+  });
+
+  test('copies authored pitch and bearing onto a fit jump', () => {
+    expect(
+      buildDeckMapJumpToOptions(
+        {longitude: 144.96, latitude: -37.81, zoom: 13},
+        {pitch: 50, bearing: 20},
+      ),
+    ).toEqual({
+      center: [144.96, -37.81],
+      zoom: 13,
+      pitch: 50,
+      bearing: 20,
+    });
+  });
+
+  test('prefers explicit jump pitch and bearing over authored camera', () => {
+    expect(
+      buildDeckMapJumpToOptions(
+        {
+          longitude: 144.96,
+          latitude: -37.81,
+          zoom: 13,
+          pitch: 10,
+          bearing: 0,
+        },
+        {pitch: 50, bearing: 20},
+      ),
+    ).toEqual({
+      center: [144.96, -37.81],
+      zoom: 13,
+      pitch: 10,
+      bearing: 0,
+    });
+  });
+});
+
+describe('completeDeckMapInitialViewState', () => {
+  test('fills lon/lat/zoom when AI only authors pitch and bearing', () => {
+    expect(completeDeckMapInitialViewState({pitch: 50, bearing: 20})).toEqual({
+      longitude: 0,
+      latitude: 20,
+      zoom: 1.5,
+      pitch: 50,
+      bearing: 20,
+    });
+  });
+
+  test('preserves an explicit center and zoom', () => {
+    expect(
+      completeDeckMapInitialViewState({
+        longitude: 144.96,
+        latitude: -37.81,
+        zoom: 13,
+        pitch: 50,
+      }),
+    ).toEqual({
+      longitude: 144.96,
+      latitude: -37.81,
+      zoom: 13,
+      pitch: 50,
+    });
+  });
+
+  test('returns undefined when view state is omitted', () => {
+    expect(completeDeckMapInitialViewState(undefined)).toBeUndefined();
   });
 });

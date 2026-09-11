@@ -35,7 +35,10 @@ import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
-import {buildDeckMapJumpToOptions} from './mapFit';
+import {
+  buildDeckMapJumpToOptions,
+  completeDeckMapInitialViewState,
+} from './mapFit';
 import type {
   DeckJsonMapHandle,
   DeckJsonMapProps,
@@ -586,12 +589,16 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
 
     const mapRef = useRef<{jumpTo: (opts: object) => void} | null>(null);
     const pendingJumpRef = useRef<object | null>(null);
+    const mapInitialViewState = useMemo(
+      () => completeDeckMapInitialViewState(initialViewState),
+      [initialViewState],
+    );
 
     useImperativeHandle(
       ref,
       () => ({
         jumpTo(opts) {
-          const jumpOpts = buildDeckMapJumpToOptions(opts);
+          const jumpOpts = buildDeckMapJumpToOptions(opts, mapInitialViewState);
           if (mapRef.current) {
             mapRef.current.jumpTo(jumpOpts);
           } else {
@@ -599,7 +606,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
           }
         },
       }),
-      [],
+      [mapInitialViewState],
     );
 
     const handleMapLoad = useCallback(
@@ -664,8 +671,8 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
         <Map
           ref={mapRef as any}
           {...(mergedMapProps as object)}
-          {...(initialViewState
-            ? {initialViewState: initialViewState as object}
+          {...(mapInitialViewState
+            ? {initialViewState: mapInitialViewState as object}
             : {})}
           onLoad={handleMapLoad}
           onData={(event) => {
