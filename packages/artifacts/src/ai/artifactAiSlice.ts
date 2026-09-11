@@ -64,6 +64,19 @@ export type ArtifactAiSliceState = {
       modelProvider?: string,
       model?: string,
     ) => string | undefined;
+    /**
+     * Open a blank new-chat screen without creating a session: selects
+     * `artifactId` (or clears the artifact selection when omitted) and
+     * deselects the current session.
+     *
+     * The auto-sync would normally pull the artifact's latest chat back in;
+     * while this screen is pending it leaves the empty selection alone, so a
+     * chat the user never wrote in is never added to the chat list. The
+     * session is created on the first send — use
+     * {@link ArtifactAiSliceState.artifactAi.createArtifactScopedSession}
+     * there so it lands on the artifact.
+     */
+    startNewChat: (artifactId?: string) => void;
     selectLatestSessionForArtifact: (artifactId?: string) => void;
     cleanupSessionArtifacts: () => void;
     syncCurrentArtifactAiSession: () => void;
@@ -98,6 +111,7 @@ type ArtifactAiCompatibleAiState = {
       model?: string,
     ) => void;
     switchSession: (sessionId: string) => void;
+    resetCurrentSession: () => void;
     getCurrentSession: () => ChatSessionSchema | undefined;
   };
 };
@@ -152,6 +166,8 @@ export function createArtifactAiSlice<
   let unsubscribe: (() => void) | undefined;
   let previousArtifactId: string | undefined;
   let previousSessionId: string | undefined;
+  /** Target of a pending `startNewChat`, while its blank screen is up. */
+  let pendingNewChat: {artifactId?: string} | undefined;
 
   return createSlice<ArtifactAiSliceState, TRoomState>((set, get, store) => {
     const getArtifactAiSyncSnapshot = (
@@ -275,6 +291,21 @@ export function createArtifactAiSlice<
         // Detect what changed
         const artifactChanged = previousArtifactId !== currentArtifactId;
         const sessionChanged = previousSessionId !== currentSessionId;
+
+        // A pending `startNewChat` is a deliberately empty selection. Leave
+        // it alone rather than pulling the artifact's latest chat back in;
+        // once the user moves on (a session is selected or created, or
+        // another artifact is opened) the screen is gone and normal
+        // reconciliation resumes.
+        if (pendingNewChat) {
+          if (
+            currentArtifactId === pendingNewChat.artifactId &&
+            currentSessionId === undefined
+          ) {
+            return;
+          }
+          pendingNewChat = undefined;
+        }
 
         // Note: the previous-artifact/previous-session baseline is NOT updated
         // here. This function mutates currentArtifactId/currentSessionId itself
@@ -536,7 +567,29 @@ export function createArtifactAiSlice<
           unsubscribe?.();
           unsubscribe = undefined;
         },
+        startNewChat: (artifactId) => {
+          if (artifactId && !get().artifacts.config.artifactsById[artifactId]) {
+            return;
+          }
+          pendingNewChat = {artifactId};
+          // Both writes together are the new state; syncing on the
+          // intermediate one would see an artifact whose session has not been
+          // cleared yet and reconcile the selection away.
+          get().artifactAi.setSyncSuspended(true);
+          try {
+            set((state) =>
+              produce(state, (draft: TRoomState) => {
+                draft.artifacts.config.currentArtifactId = artifactId;
+              }),
+            );
+            get().ai.resetCurrentSession();
+          } finally {
+            get().artifactAi.setSyncSuspended(false);
+          }
+        },
         createArtifactScopedSession: (name, modelProvider, model) => {
+          // The blank screen is over: this is the session it was waiting for.
+          pendingNewChat = undefined;
           const currentArtifactId = get().artifacts.config.currentArtifactId;
           if (
             !currentArtifactId ||

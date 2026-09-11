@@ -378,6 +378,59 @@ So:
 Without a `Chat.Rendering` ancestor, `ChatTurnView` uses the built-in SQLRooms
 defaults for every slot.
 
+#### Activity timing
+
+`ChatActivityProps` carries the timing an activity header needs:
+
+- `startedAt` — epoch ms of the earliest tool start in the group. While
+  `isRunning` is true, chrome can render a clock that ticks from it (the
+  default recipe shows `· 12s · step 3`). Derive it with
+  `computeActivityTimeSpan(toolCallIds, toolTimings)?.startedAt`.
+- `toolCount` — tools in the group, shown as the current step while running.
+- `computationTimeMs` / `computationTimeLabel` — aggregated duration for a
+  settled group, as a raw number and a presentation-ready label. Nested agent
+  activities receive both as well, so a custom `Activity` never has to parse
+  the duration back out of `summaryLabel`.
+
+`ActivityBox` takes the same values as `startedAt`, `stepCount` and
+`computationTimeLabel`; the duration replaces the derived step count once the
+activity has settled, so a summary that already names the tool count is not
+repeated.
+
+```tsx
+<ActivityBox
+  isRunning={isRunning}
+  summaryLabel={isRunning ? 'Thinking' : 'Worked with 3 tools'}
+  startedAt={startedAt}
+  stepCount={isRunning ? toolCount : undefined}
+  computationTimeLabel={isRunning ? undefined : computationTimeLabel}
+>
+  {children}
+</ActivityBox>
+```
+
+`ChatActionsProps` carries `completedAt` alongside the copy/fork actions, so an
+actions row can show how long ago the turn finished. The default recipe renders
+it as a relative label that refreshes every 30s.
+
+`completedAt` is the moment the run terminated, recorded on the turn when the
+stream ends, is cancelled, or errors — not the end of the last tool call, so a
+text-only turn is timestamped too. It is absent while the turn is still
+running, and for turns recorded before it was persisted, where `ChatTurnView`
+falls back to the end of the turn's tool span.
+
+`useRelativeTime(timestamp, intervalMs?)` builds that label: it returns a
+formatted "x ago" string for an epoch-ms `timestamp`, re-reading the clock every
+`intervalMs` (default 30s) so the value stays current while the turn is on
+screen. A timestamp newer than the last clock read is measured against itself
+rather than the stale reference, so a fresh value never renders as a
+future-relative label. Returns `undefined` when `timestamp` is
+undefined.
+
+```tsx
+const label = useRelativeTime(completedAt); // "18 minutes ago"
+```
+
 #### Override a single slot
 
 Pass a partial `components` map. Only the slots you provide change; everything
@@ -480,6 +533,11 @@ function AppActiveStatus({status}: ChatActiveStatusProps) {
 Set `ActiveStatus` to a component that returns `null` when the host owns the
 indicator's placement entirely. For that case, call `getChatActiveStatus` with
 the current messages and `ToolRenderBehavior` to reuse the same status model.
+
+`status.kind` separates a run that is working (`model`, `tool`) from one that
+has stopped and is waiting on the user (`approval`). The default indicator
+animates the former and labels the latter "Paused…", since animated dots on a
+halted run read as progress that is not happening.
 
 `TextOutput` receives `isAnswer=true` only for text that is the final message
 part. Planning text followed by tool activity remains regular response text.

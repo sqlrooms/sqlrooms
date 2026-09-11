@@ -22,7 +22,7 @@ import {
 } from '../utils';
 import {
   buildChatTurnModel,
-  computeComputationTimeMs,
+  computeActivityTimeSpan,
   getToolName,
   splitTextAroundHoists,
 } from './buildChatTurnModel';
@@ -237,23 +237,35 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
 
   useRegisterChatSearchBlocks(searchBlockPrefix, searchBlocks);
 
-  const activitySummaryLabel =
-    !model.isActivityRunning && isCompleted && model.leafToolCount > 0
+  const activitySummaryLabel = model.isActivityRunning
+    ? 'Thinking'
+    : isCompleted && model.leafToolCount > 0
       ? `Worked with ${model.leafToolCount} tool${
           model.leafToolCount === 1 ? '' : 's'
         }`
       : undefined;
 
   const showComputationTime = !model.isActivityRunning && isCompleted;
-  const computationTimeMs = useMemo(() => {
-    if (!showComputationTime) return undefined;
-    return computeComputationTimeMs(model.timingToolCallIds, toolTimings);
-  }, [showComputationTime, model.timingToolCallIds, toolTimings]);
+  const activitySpan = useMemo(
+    () => computeActivityTimeSpan(model.timingToolCallIds, toolTimings),
+    [model.timingToolCallIds, toolTimings],
+  );
+  const activityStartedAt = activitySpan?.startedAt;
+  const computationTimeMs =
+    showComputationTime && activitySpan
+      ? activitySpan.endedAt - activitySpan.startedAt
+      : undefined;
 
   const computationTimeLabel =
     computationTimeMs != null
       ? `Computation Time: ${formatShortDuration(computationTimeMs)}`
       : undefined;
+
+  // Only a finished turn has an age. Turns recorded before the completion
+  // stamp existed fall back to the end of their last tool call.
+  const turnCompletedAt = isCompleted
+    ? (chatTurn?.completedAt ?? activitySpan?.endedAt)
+    : undefined;
 
   const onFork = useMemo(
     () =>
@@ -304,6 +316,9 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
         copyText,
         errorMessage: errorMessage?.error,
         activitySummaryLabel,
+        activityStartedAt,
+        turnCompletedAt,
+        toolTimings,
         computationTimeMs,
         computationTimeLabel,
         responseText,
@@ -327,6 +342,9 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       copyText,
       errorMessage?.error,
       activitySummaryLabel,
+      activityStartedAt,
+      turnCompletedAt,
+      toolTimings,
       computationTimeMs,
       computationTimeLabel,
       responseText,

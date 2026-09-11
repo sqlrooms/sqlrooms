@@ -52,6 +52,11 @@ export type ChatActivityProps = {
   computationTimeMs?: number;
   /** Presentation-ready timing label, e.g. "Computation Time: 12.4 s". */
   computationTimeLabel?: string;
+  /**
+   * When the activity started, so chrome can render a live elapsed time while
+   * `isRunning` is true.
+   */
+  startedAt?: number;
   className?: string;
 };
 
@@ -113,6 +118,8 @@ export type ChatForkAction = {
 export type ChatActionsProps = {
   copy?: ChatCopyAction;
   fork?: ChatForkAction;
+  /** When the turn's work finished, for a relative "x ago" label. */
+  completedAt?: number;
 };
 
 /** Normalized state exposed for tool activity presentation. */

@@ -141,7 +141,7 @@ export const ChatMessagesContainer: React.FC<{
         ref={containerRef}
         className="scrollbar-thin flex min-h-0 w-full min-w-0 grow flex-col gap-5 overflow-x-hidden overflow-y-auto"
       >
-        <div className="px-3">
+        <div className="px-5">
           {chatTurns.map((chatTurn) => (
             <React.Fragment key={chatTurn.id}>
               <ChatTurnView

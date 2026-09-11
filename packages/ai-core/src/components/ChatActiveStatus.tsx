@@ -1,9 +1,9 @@
 import {cn} from '@sqlrooms/ui';
+import {PauseIcon} from 'lucide-react';
 import type {UIMessage, UIMessagePart} from 'ai';
-import {Loader2} from 'lucide-react';
 import React, {type FC} from 'react';
 import type {AgentToolCall} from '../types';
-import {useElapsedTime} from '../hooks/useElapsedTime';
+import {AiThinkingDots} from './AiThinkingDots';
 import type {ToolRenderBehavior} from './FlatAgentRenderer';
 import type {
   ChatActiveStatusInfo,
@@ -76,32 +76,27 @@ export const ChatActiveStatus: FC<ChatActiveStatusProps> = ({
 const ChatActiveStatusLine: FC<{
   status: ChatActiveStatusInfo;
   className?: string;
-}> = ({status, className}) => {
-  const [startedAt] = React.useState(() => Date.now());
-  const elapsed = useElapsedTime(true, startedAt);
-
-  return (
-    <div
-      className={cn(
-        'text-muted-foreground flex items-center gap-2 text-sm',
-        className,
-      )}
-      role="status"
-      aria-live="polite"
-    >
-      <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-      <span>{status.label}</span>
-      {elapsed && (
-        <span
-          className="text-muted-foreground/60 text-xs tabular-nums"
-          aria-hidden="true"
-        >
-          {elapsed}
-        </span>
-      )}
-    </div>
-  );
-};
+}> = ({status, className}) => (
+  <div
+    className={cn('text-muted-foreground flex items-center', className)}
+    role="status"
+    aria-live="polite"
+  >
+    {status.kind === 'approval' ? (
+      // An approval stops the run until the user acts, so it is named rather
+      // than animated: the dots would read as work still in progress.
+      <>
+        <PauseIcon className="size-3.5 shrink-0" />
+        <span className="ml-1.5 text-xs">Paused…</span>
+      </>
+    ) : (
+      <>
+        <AiThinkingDots />
+        <span className="sr-only">{status.label}</span>
+      </>
+    )}
+  </div>
+);
 
 function getCurrentTurnMessages(
   messages: UIMessage[] | undefined,

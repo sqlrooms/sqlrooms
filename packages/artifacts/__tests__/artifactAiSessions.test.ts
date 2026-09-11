@@ -44,6 +44,7 @@ type TestRoomState = BaseRoomStoreState &
         model?: string,
       ) => void;
       switchSession: (sessionId: string) => void;
+      resetCurrentSession: () => void;
       getCurrentSession: () => ChatSessionSchema | undefined;
     };
   };
@@ -111,6 +112,13 @@ function createTestStore({autoSync = false}: {autoSync?: boolean} = {}) {
             if (session) {
               session.lastOpenedAt = 100;
             }
+          }),
+        );
+      },
+      resetCurrentSession: () => {
+        set((state) =>
+          produce(state, (draft: TestRoomState) => {
+            draft.ai.config.currentSessionId = undefined;
           }),
         );
       },
@@ -773,6 +781,76 @@ describe('createArtifactAiSlice', () => {
     );
 
     expect(store.getState().ai.config.currentSessionId).toBe('session-1');
+    await store.getState().artifactAi.destroy();
+  });
+
+  it('keeps a new chat for an artifact empty until a session is created', async () => {
+    const store = createTestStore({autoSync: true});
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.artifacts.config.currentArtifactId = 'artifact-a';
+        draft.ai.config.sessions = [createSession('session-a', 1)];
+        draft.ai.config.currentSessionId = 'session-a';
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {sessionId: 'session-a', artifactId: 'artifact-a', linkedAt: 1000},
+        ];
+      }),
+    );
+    await store.getState().artifactAi.initialize();
+
+    store.getState().artifactAi.startNewChat('artifact-a');
+
+    // The artifact stays open on a blank screen: no session is selected, and
+    // none was created, so the chat list is unchanged.
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-a',
+    );
+    expect(store.getState().ai.config.currentSessionId).toBeUndefined();
+    expect(store.getState().ai.config.sessions).toHaveLength(1);
+
+    // An unrelated update must not let the sync pull the artifact's existing
+    // chat back in.
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        const session = draft.ai.config.sessions[0];
+        if (session) session.prompt = 'unrelated';
+      }),
+    );
+    expect(store.getState().ai.config.currentSessionId).toBeUndefined();
+
+    // Sending the first prompt creates the session and links it.
+    const newSessionId = store
+      .getState()
+      .artifactAi.createArtifactScopedSession();
+    expect(newSessionId).toBe('session-2');
+    expect(store.getState().ai.config.currentSessionId).toBe('session-2');
+    expect(
+      store
+        .getState()
+        .artifactAi.hasSessionArtifactLink('session-2', 'artifact-a'),
+    ).toBe(true);
+    await store.getState().artifactAi.destroy();
+  });
+
+  it('resumes normal sync once a pending new chat is abandoned', async () => {
+    const store = createTestStore({autoSync: true});
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [createSession('session-b', 1)];
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {sessionId: 'session-b', artifactId: 'artifact-b', linkedAt: 1000},
+        ];
+      }),
+    );
+    await store.getState().artifactAi.initialize();
+
+    store.getState().artifactAi.startNewChat('artifact-a');
+    expect(store.getState().ai.config.currentSessionId).toBeUndefined();
+
+    // Opening another artifact ends the blank screen and selects that
+    // artifact's latest chat as usual.
+    store.getState().artifacts.setCurrentArtifact('artifact-b');
+    expect(store.getState().ai.config.currentSessionId).toBe('session-b');
     await store.getState().artifactAi.destroy();
   });
 

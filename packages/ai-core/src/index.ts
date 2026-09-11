@@ -42,6 +42,7 @@ export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
 export {useElapsedTime} from './hooks/useElapsedTime';
+export {useRelativeTime} from './hooks/useRelativeTime';
 export {
   cleanGeneratedSessionTitle,
   generateSessionTitle,
@@ -166,6 +167,7 @@ export type {
 export {
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,
+  getChatTurnCompletedAt,
   getChatTurnsFromUiMessages,
 } from './chatTurns';
 export type {
@@ -296,6 +298,7 @@ export type {HoistableToolCall} from './components/collectHoistableRenderers';
 export {
   buildChatTurnModel,
   splitTextAroundHoists,
+  computeActivityTimeSpan,
   computeComputationTimeMs,
   getToolName,
   isAgentToolPart,

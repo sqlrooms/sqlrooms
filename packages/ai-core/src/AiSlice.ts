@@ -71,6 +71,7 @@ import {
 import {
   getAnalysisResultsFromUiMessages,
   setChatRequestErrorMessage,
+  setChatTurnCompletedAt,
   uiMessagesHaveChatRequestError,
 } from './chatTurns';
 import {
@@ -1550,6 +1551,10 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             setChatRequestErrorMessage(lastUserMessage, {
               error: timeoutMessage,
             });
+            // A timeout ends the turn just as a normal finish does, and this
+            // path can run without any transport callback, so the completion
+            // stamp has to be written here too.
+            setChatTurnCompletedAt(lastUserMessage, Date.now());
           }
 
           const currentState = get();

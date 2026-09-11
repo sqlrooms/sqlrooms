@@ -246,6 +246,22 @@ should use a thin, theme-aware scrollbar:
 Use `ScrollArea` instead when a surface needs custom horizontal or
 bidirectional scrollbar behavior.
 
+## CopyButton
+
+Copies `text` to the clipboard and swaps to a check mark for `durationMs`.
+Button size follows the `size`/`className` props; `iconClassName` sizes the
+icon independently. `Button` only applies its 16px default to icons that carry
+no explicit `h-*`/`size-*`, so this wins:
+
+```tsx
+<CopyButton
+  text={prompt}
+  className="h-6 w-6"
+  iconClassName="h-3 w-3"
+  tooltipLabel="Copy prompt"
+/>
+```
+
 ## TabStrip
 
 `TabStrip` supports a `fontSize` prop for sizing tab labels, inline rename
