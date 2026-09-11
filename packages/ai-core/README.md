@@ -663,6 +663,40 @@ client tools named by `remoteClientToolNames` whose remote definition omits
 `execute`. Remote endpoints remain responsible for enforcing timeouts around
 tools they execute server-side.
 
+### Tool-call repair
+
+When the model emits tool-call arguments that fail the tool's input schema, the
+AI SDK aborts the run with an opaque `InvalidToolInputError`. The local chat
+transport heals this by default: it re-asks the model to correct the call
+(forcing a fresh call to the same tool, without running the tool's side
+effects) instead of failing the run. Each repair costs one extra LLM request, so
+apps that want to trade that resilience away can opt out per transport:
+
+```ts
+createLocalChatTransportFactory({
+  // ...
+  repairInvalidToolCalls: false, // default: true
+});
+```
+
+The primitive is also exported for hosts that build their own `ToolLoopAgent`
+sub-agents:
+
+```ts
+import {createModelToolCallRepair} from '@sqlrooms/ai-core';
+
+new ToolLoopAgent({
+  model,
+  tools,
+  experimental_repairToolCall: createModelToolCallRepair(model),
+});
+```
+
+`createModelToolCallRepair(model, {maxRepairsPerTool})` never recurses into
+itself, never triggers tool side effects, leaves the outer step limit untouched,
+and stops after `maxRepairsPerTool` (default `2`) failures for the same tool so a
+persistently-invalid call cannot fan out into unbounded repair requests.
+
 Assistant messages can be forked into a new active chat through
 `ai.forkSessionFromMessage()`. The action snapshots the source session's
 `uiMessages` through the selected message or chat turn, inherits the source
