@@ -2,6 +2,7 @@ import {
   generateText,
   NoSuchToolError,
   type LanguageModel,
+  type LanguageModelUsage,
   type ToolCallRepairFunction,
   type ToolSet,
 } from 'ai';
@@ -17,9 +18,28 @@ export const DEFAULT_MAX_REPAIRS_PER_TOOL = 2;
 export type ModelToolCallRepairOptions = {
   /**
    * Cap on repair attempts per tool name within the returned handler's lifetime
-   * (one agent run). Defaults to {@link DEFAULT_MAX_REPAIRS_PER_TOOL}.
+   * (one agent run — see {@link createModelToolCallRepair}). Defaults to
+   * {@link DEFAULT_MAX_REPAIRS_PER_TOOL}.
    */
   maxRepairsPerTool?: number;
+  /**
+   * Abort signal for the repair sub-request. Pass the same signal the outer run
+   * uses so stopping the chat (or a run/idle timeout) also cancels a pending
+   * repair request instead of leaving it running and billable.
+   */
+  abortSignal?: AbortSignal;
+  /**
+   * Provider options for the repair sub-request. Pass the same options the outer
+   * run uses so the repair inherits caching/reasoning/tool-call configuration
+   * rather than falling back to provider defaults.
+   */
+  providerOptions?: Parameters<typeof generateText>[0]['providerOptions'];
+  /**
+   * Called with the token usage of each repair sub-request that runs, so callers
+   * can fold repair cost into the session's reported usage (the outer agent only
+   * accounts for its own steps).
+   */
+  onRepairUsage?: (usage: LanguageModelUsage) => void;
 };
 
 /**
@@ -38,11 +58,19 @@ export type ModelToolCallRepairOptions = {
  * Boundaries that keep repair safe when enabled by default:
  * - The repair sub-request is a plain `generateText` with NO repair handler of
  *   its own, so repair never recurses into repair.
- * - The failing tool is passed WITHOUT its `execute`, so regenerating the call
- *   only produces arguments and never triggers the tool's side effects.
+ * - The failing tool is passed as a schema-only definition (no `execute` and no
+ *   input-lifecycle/approval callbacks), so regenerating the call only produces
+ *   arguments and never triggers the tool's side effects.
  * - Repairs are capped per tool ({@link ModelToolCallRepairOptions.maxRepairsPerTool}),
  *   so a persistently-failing tool cannot spend unbounded extra LLM requests.
  * - The outer agent's own step limit is untouched; repair does not add steps.
+ * - The repair sub-request honors {@link ModelToolCallRepairOptions.abortSignal},
+ *   so cancelling the run cancels a pending repair.
+ *
+ * The returned handler is single-run: its per-tool counter lives in the closure,
+ * so construct a fresh handler for each agent run (both first-party call sites —
+ * the local chat transport and Desktop's per-invocation sub-agents — do exactly
+ * that).
  *
  * Unknown-tool errors, a missing tool, exceeding the per-tool cap, no
  * regenerated call, or any failure of the repair request return `null`, letting
@@ -58,6 +86,7 @@ export function createModelToolCallRepair(
 ): ToolCallRepairFunction<ToolSet> {
   const maxRepairsPerTool =
     options?.maxRepairsPerTool ?? DEFAULT_MAX_REPAIRS_PER_TOOL;
+  const {abortSignal, providerOptions, onRepairUsage} = options ?? {};
   // Per-tool attempt counter for the lifetime of this handler (one agent run).
   const repairsByTool = new Map<string, number>();
 
@@ -79,10 +108,11 @@ export function createModelToolCallRepair(
     }
     repairsByTool.set(toolCall.toolName, priorRepairs + 1);
 
-    // Diagnostic: an invalid tool call reached the repair path. The raw model
-    // arguments and validation error go to the console (not the parent model).
+    // Diagnostic only. Do NOT log the validation error text or the regenerated
+    // arguments: they can carry user data, and the original error still surfaces
+    // to the caller when repair returns null.
     console.warn(
-      `[repairToolCall] repairing invalid call to "${toolCall.toolName}": ${error.message}`,
+      `[repairToolCall] repairing invalid arguments for "${toolCall.toolName}"`,
     );
 
     // `toolCall.input` is a JSON string; the assistant tool-call message part
@@ -98,13 +128,25 @@ export function createModelToolCallRepair(
       failedInput = {};
     }
 
+    // Schema-only copy of the failing tool: no `execute` AND no input-lifecycle
+    // or approval callbacks, so producing the repaired call cannot run any tool
+    // side effects (`onInputAvailable`, approval prompts, etc.).
+    const schemaOnlyTool = {
+      ...tool,
+      execute: undefined,
+      onInputStart: undefined,
+      onInputDelta: undefined,
+      onInputAvailable: undefined,
+      needsApproval: undefined,
+    };
+
     try {
       const result = await generateText({
         model,
         system,
-        // Only the failing tool, and stripped of `execute` so regenerating the
-        // call cannot run the tool's side effects.
-        tools: {[toolCall.toolName]: {...tool, execute: undefined}},
+        abortSignal,
+        ...(providerOptions ? {providerOptions} : {}),
+        tools: {[toolCall.toolName]: schemaOnlyTool},
         toolChoice: {type: 'tool', toolName: toolCall.toolName},
         messages: [
           ...messages,
@@ -136,6 +178,10 @@ export function createModelToolCallRepair(
         ],
       });
 
+      // Account for the repair request's tokens even if it produced no usable
+      // call, so session usage does not undercount repaired turns.
+      if (result.totalUsage) onRepairUsage?.(result.totalUsage);
+
       const fixed = result.toolCalls.find(
         (call) => call.toolName === toolCall.toolName,
       );
@@ -146,18 +192,13 @@ export function createModelToolCallRepair(
         return null;
       }
 
-      console.warn(
-        `[repairToolCall] repaired "${toolCall.toolName}" -> ${JSON.stringify(fixed.input)}`,
-      );
+      console.warn(`[repairToolCall] repaired "${toolCall.toolName}"`);
       return {...toolCall, input: JSON.stringify(fixed.input)};
-    } catch (repairError) {
-      // Repair is best-effort: on failure, let the original error surface.
+    } catch {
+      // Repair is best-effort: on failure, let the original error surface. The
+      // repair error itself is intentionally not logged (it may carry payloads).
       console.warn(
-        `[repairToolCall] repair of "${toolCall.toolName}" failed: ${
-          repairError instanceof Error
-            ? repairError.message
-            : String(repairError)
-        }`,
+        `[repairToolCall] repair request for "${toolCall.toolName}" failed`,
       );
       return null;
     }

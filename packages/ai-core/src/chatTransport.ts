@@ -305,8 +305,7 @@ export function withRunContextTools(
             const timeoutController =
               timeoutMs == null ? undefined : new AbortController();
             const incomingAbortSignal = options?.abortSignal as
-              | AbortSignal
-              | undefined;
+              AbortSignal | undefined;
             const abortSignal = mergeAbortSignals([
               incomingAbortSignal,
               timeoutController?.signal,
@@ -608,17 +607,36 @@ export function createLocalChatTransportFactory({
       const diagnosticsByStep: string[] = [];
       let completedDiagnosticStep = 0;
 
+      // Tokens spent by tool-call repair sub-requests. The outer agent only
+      // reports its own steps, so these are folded into the final usage below.
+      const repairUsage: MessageTokenUsage = {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+      };
+
       const agent = new ToolLoopAgent({
         model,
         instructions: systemInstructions,
         tools,
         stopWhen: stepCountIs(maxSteps),
         // Heal invalid tool calls instead of aborting the run. Uses the same
-        // `model` resolved above so the repair request matches this run's
-        // configuration. Repair never recurses (its sub-request has no repair
-        // handler) and does not consume the agent's step budget.
+        // `model`, `abortSignal`, and `providerOptions` resolved above so the
+        // repair request matches this run's configuration and is cancelled with
+        // it. Repair never recurses (its sub-request has no repair handler) and
+        // does not consume the agent's step budget.
         ...(repairInvalidToolCalls
-          ? {experimental_repairToolCall: createModelToolCallRepair(model)}
+          ? {
+              experimental_repairToolCall: createModelToolCallRepair(model, {
+                abortSignal,
+                providerOptions,
+                onRepairUsage: (usage) => {
+                  repairUsage.inputTokens += usage.inputTokens ?? 0;
+                  repairUsage.outputTokens += usage.outputTokens ?? 0;
+                  repairUsage.totalTokens += usage.totalTokens ?? 0;
+                },
+              }),
+            }
           : {}),
         prepareStep: async ({stepNumber, messages}) => {
           const providerMessages = usesOpenAiCompatibleModel
@@ -725,6 +743,11 @@ export function createLocalChatTransportFactory({
               finishUsage.outputTokens > 0
                 ? finishUsage
                 : accumulatedUsage;
+            // Fold in tokens spent by tool-call repair sub-requests, which the
+            // agent's own usage does not include.
+            finalUsage.inputTokens += repairUsage.inputTokens;
+            finalUsage.outputTokens += repairUsage.outputTokens;
+            finalUsage.totalTokens += repairUsage.totalTokens;
             finalUsage.lastStepInputTokens = lastStepInputTokens;
             rememberSessionTokenUsage(sessionId, finalUsage);
             return {
