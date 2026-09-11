@@ -305,7 +305,8 @@ export function withRunContextTools(
             const timeoutController =
               timeoutMs == null ? undefined : new AbortController();
             const incomingAbortSignal = options?.abortSignal as
-              AbortSignal | undefined;
+              | AbortSignal
+              | undefined;
             const abortSignal = mergeAbortSignals([
               incomingAbortSignal,
               timeoutController?.signal,
