@@ -1,4 +1,5 @@
 import {cn} from '@sqlrooms/ui';
+import {PauseIcon} from 'lucide-react';
 import type {UIMessage, UIMessagePart} from 'ai';
 import React, {type FC} from 'react';
 import type {AgentToolCall} from '../types';
@@ -81,8 +82,19 @@ const ChatActiveStatusLine: FC<{
     role="status"
     aria-live="polite"
   >
-    <AiThinkingDots />
-    <span className="sr-only">{status.label}</span>
+    {status.kind === 'approval' ? (
+      // An approval stops the run until the user acts, so it is named rather
+      // than animated: the dots would read as work still in progress.
+      <>
+        <PauseIcon className="size-3.5 shrink-0" />
+        <span className="ml-1.5 text-xs">Paused…</span>
+      </>
+    ) : (
+      <>
+        <AiThinkingDots />
+        <span className="sr-only">{status.label}</span>
+      </>
+    )}
   </div>
 );
 

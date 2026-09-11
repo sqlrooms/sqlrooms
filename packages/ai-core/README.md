@@ -424,7 +424,8 @@ formatted "x ago" string for an epoch-ms `timestamp`, re-reading the clock every
 `intervalMs` (default 30s) so the value stays current while the turn is on
 screen. A timestamp newer than the last clock read is measured against itself
 rather than the stale reference, so a fresh value never renders as a
-future-relative label. Returns `undefined` when `timestamp` is undefined.
+future-relative label. Returns `undefined` when `timestamp` is
+undefined.
 
 ```tsx
 const label = useRelativeTime(completedAt); // "18 minutes ago"
@@ -532,6 +533,11 @@ function AppActiveStatus({status}: ChatActiveStatusProps) {
 Set `ActiveStatus` to a component that returns `null` when the host owns the
 indicator's placement entirely. For that case, call `getChatActiveStatus` with
 the current messages and `ToolRenderBehavior` to reuse the same status model.
+
+`status.kind` separates a run that is working (`model`, `tool`) from one that
+has stopped and is waiting on the user (`approval`). The default indicator
+animates the former and labels the latter "Paused…", since animated dots on a
+halted run read as progress that is not happening.
 
 `TextOutput` receives `isAnswer=true` only for text that is the final message
 part. Planning text followed by tool activity remains regular response text.

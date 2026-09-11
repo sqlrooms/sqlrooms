@@ -263,6 +263,7 @@ const DefaultChatForkAction: React.FC<{run: () => void}> = ({run}) => (
 /** Relative timestamp that refreshes while the turn stays on screen. */
 const ChatTurnAge: React.FC<{completedAt: number}> = ({completedAt}) => {
   const label = useRelativeTime(completedAt);
+  if (!label) return null;
   return (
     <span className="text-muted-foreground ml-1 self-center text-xs">
       {label}
