@@ -438,6 +438,32 @@ tools update the effective primary context with `setPrimaryRunContextItem`.
 Old contexts without `primaryItemId` remain valid; the first item is treated as
 primary. Artifact-specific context tools live in `@sqlrooms/artifacts/ai`.
 
+## Tool-call repair
+
+When the model emits tool-call arguments that fail a tool's input schema, the AI
+SDK aborts the run with an opaque `InvalidToolInputError`. The local chat
+transport attempts to heal this by default: it re-asks the model to correct the
+call (forcing a fresh call to the same tool, without running the tool's side
+effects). Repair is best-effort — if it fails, hits its per-tool limit, or
+produces no corrected call, the original `InvalidToolInputError` still surfaces.
+Each repair costs one extra LLM request, so apps can opt out via `createAiSlice`:
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  repairInvalidToolCalls: false, // default: true
+})(set, get, store);
+```
+
+The underlying helper `createModelToolCallRepair` is re-exported for hosts that
+build their own `ToolLoopAgent` sub-agents (pass the same `model`, and optionally
+`abortSignal`, `providerOptions`, and an `onRepairUsage` callback so repair
+inherits the run's configuration, is cancelled with it, and its tokens are
+accounted). It never recurses, never triggers tool side effects, caps repairs
+per tool (`maxRepairsPerTool`, default `2`), and never logs user data. See the
+[`@sqlrooms/ai-core` README](../ai-core/README.md#tool-call-repair) for details.
+
 ## Use remote endpoint mode
 
 If you want server-side model calls, set `chatEndPoint` and optional `chatHeaders`:
