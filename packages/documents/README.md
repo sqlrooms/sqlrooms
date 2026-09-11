@@ -199,6 +199,39 @@ const blockDocumentAdapter = createBlockDocumentCommandAiAdapter({
 
 The adapter accepts only `block-document` artifacts.
 
+### Markdown Export
+
+`blockDocumentToMarkdown(content, {title})` serializes a block document's
+Tiptap JSON content to Markdown. Standard nodes (headings, paragraphs, lists,
+tasks, tables, code, marks) are rendered by `@tiptap/markdown`; the block
+document's custom nodes render as image-style Markdown so their captions
+survive a paste into any Markdown renderer:
+
+- `blockDocumentTitle` → `# <text>`
+- `blockDocumentImage` / `blockDocumentChartImage` → `![<caption>](<assetId>)`
+- `blockDocumentChart` → `![<caption>](chart)`
+- `blockDocumentStatefulBlock` → `![<caption>](<blockType>)`
+
+Pass the artifact title via `options.title` to prepend it as an `# <title>`
+heading, since stored block document content does not include the title node.
+
+To embed real pixels in the copied Markdown, pass `options.resolveDataUrl`. It
+is an optional synchronous callback invoked per visual block; when it returns a
+data URL (e.g. `data:image/png;base64,...`) that URL becomes the image source
+instead of the placeholder:
+
+```ts
+blockDocumentToMarkdown(content, {
+  title: 'My Report',
+  resolveDataUrl: (node) => dataUrls[node.attrs?.id],
+});
+```
+
+Callers that need async work (DOM capture, store lookups) should precompute the
+data URLs up front and look them up by the node's `id` attribute here, as in
+the example above. `documentAssetToDataUrl(asset)` reconstructs a data URL from
+a stored `DocumentAsset`.
+
 ### Block-Scoped Ask AI
 
 `startBlockScopedChat(...)` opens or reuses an artifact-scoped AI session for a
