@@ -155,12 +155,7 @@ export const AgentToolActivityLogLine: React.FC<{
         )}
         {isError && <CircleXIcon className="h-3 w-3" />}
       </span>
-      <span
-        className={cn(
-          'min-w-0 leading-4 break-words hyphens-auto whitespace-normal',
-          reasoning && 'italic',
-        )}
-      >
+      <span className="min-w-0 leading-4 break-words hyphens-auto whitespace-normal">
         {labelNode}
       </span>
       {toolCall.startedAt != null ? (
@@ -222,7 +217,10 @@ export const AgentToolSummaryLine: React.FC<{
   }
 
   return (
-    <div className="min-w-0 py-1 text-xs leading-4 break-words whitespace-normal italic">
+    <div
+      data-slot="agent-tool-summary"
+      className="min-w-0 py-1 text-xs leading-4 break-words whitespace-normal"
+    >
       {searchBlockId ? (
         <HighlightedChatSearchText blockId={searchBlockId} text={reasoning} />
       ) : (
@@ -763,12 +761,7 @@ const OrchestratorLogLineInner: React.FC<{
         )}
         {isError && <CircleXIcon className="h-3 w-3" />}
       </span>
-      <span
-        className={cn(
-          'min-w-0 leading-4 break-words hyphens-auto whitespace-normal',
-          reasoning && 'italic',
-        )}
-      >
+      <span className="min-w-0 leading-4 break-words hyphens-auto whitespace-normal">
         {labelNode}
       </span>
       {elapsed ? (
