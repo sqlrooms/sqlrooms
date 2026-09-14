@@ -70,7 +70,7 @@ ${getDeckMapSharedAiContractRules()}
 - IMPORTANT: If you are creating a structured table-backed map layer for a table that is NOT the currently selected dashboard table, you MUST switch the dashboard's selected table to that dataset BEFORE or WHEN calling create_dashboard_map (pass the correct tableName). Structured table-backed map panels resolve data from the dashboard's active table — if you don't switch it, the layer will query the wrong table and fail.
 - IMPORTANT: When referencing tables in tableName or sqlQuery, use ONLY the bare table name (e.g. "my_table") or schema-qualified name (e.g. "main.my_table"). NEVER include the database/catalog prefix (e.g. do NOT use "sqlrooms-cli.main.my_table") — the catalog does not exist in the query execution context.
 - IMPORTANT: For point data with longitude/latitude columns that should follow dashboard table switching, use source.tableName plus source.transformSql to create a geometry column, for example: "SELECT *, ST_AsWKB(ST_Point(\\"Longitude\\", \\"Latitude\\")) AS \\"__sqlrooms_geom\\" FROM ${DECK_TABLE_DATASET_SOURCE_RELATION} WHERE \\"Longitude\\" IS NOT NULL AND \\"Latitude\\" IS NOT NULL". Set geometryColumn to the same name used in the AS clause (e.g. "__sqlrooms_geom") and geometryEncodingHint to "wkb".
-- IMPORTANT: When providing fitToData, it MUST be a flat object (NOT nested by dataset ID). Include either longitudeColumn+latitudeColumn (for point data with separate coordinate columns) OR geometryColumn (for data with a WKB geometry column like GeoJSON). For H3 hexagon layers, just specify the dataset: "fitToData": {"dataset": "datasetId"} — the H3 column is auto-detected from the layer binding. For GeoJSON/spatial files with a "geom" column, use: "fitToData": {"dataset": "datasetId", "geometryColumn": "geom"}. For point data use: "fitToData": {"dataset": "datasetId", "longitudeColumn": "lon", "latitudeColumn": "lat"}. NEVER nest fitToData as {"datasetId": {...}} — always use a flat object with "dataset" as a string field.
+- IMPORTANT: When providing fitToData, it MUST be a flat object (NOT nested by dataset ID). Include either longitudeColumn+latitudeColumn (for point data with separate coordinate columns) OR geometryColumn (for data with a WKB geometry column like GeoJSON). For H3 hexagon layers, just specify the dataset: "fitToData": {"dataset": "datasetId"} — the H3 column is auto-detected from the layer binding. For GeoJSON/spatial files with a "geom" column, use: "fitToData": {"dataset": "datasetId", "geometryColumn": "geom"}. For point data use: "fitToData": {"dataset": "datasetId", "longitudeColumn": "lon", "latitudeColumn": "lat"}. NEVER nest fitToData as {"datasetId": {...}} — always use a flat object with "dataset" as a string field. Omit fitToData.maxZoom unless the user asks to limit zoom-in.
 - IMPORTANT: For GeoJSON or spatial files that already have a native geometry column (e.g. "geometry", "geom"), use the table directly with source.tableName (no sqlQuery needed), set the dataset's geometryColumn to "geom", set geometryEncodingHint to "wkb", and use fitToData with geometryColumn: {"dataset": "datasetId", "geometryColumn": "geom"}.
 - IMPORTANT: When a GeoJSON file (.geojson) is loaded as a table, DuckDB uses ST_Read to produce a table with a WKB "geom" column and all feature properties as columns. Use source.tableName, set geometryColumn to "geom" and geometryEncodingHint to "wkb". Use "fitToData": {"dataset": "datasetId", "geometryColumn": "geom"} to zoom to the data extent.
 - For data-driven color, use {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"...", "domain":"auto"} on getFillColor / getLineColor / getColor / getSourceColor / getTargetColor. Key is "@@function" (not "@@type"); column goes in "field" (not "column"). Exact scheme names: ${COLOR_SCHEME_PROMPT_LISTS}. "field" must exist in the FINAL query output after any GROUP BY.
@@ -255,7 +255,12 @@ export const DeckMapDashboardConfigParameter = z.looseObject({
         .optional()
         .describe('H3 hex index column for computing bounds.'),
       padding: z.number().optional(),
-      maxZoom: z.number().optional(),
+      maxZoom: z
+        .number()
+        .optional()
+        .describe(
+          'Optional zoom cap after fitting bounds. Omit unless the user asks to limit zoom-in. Do not set 12 by default — that is city-scale and leaves neighborhood data looking far too zoomed out.',
+        ),
     })
     .optional()
     .describe(

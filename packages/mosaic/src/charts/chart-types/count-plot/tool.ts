@@ -28,7 +28,7 @@ const CountPlotToolSettings = z.object({
   valueField: z
     .string()
     .min(1)
-    .optional()
+    .nullish()
     .describe(
       'Numeric measure column required when metric is aggregate. Its presence implies aggregate when metric is omitted.',
     ),
@@ -50,7 +50,7 @@ const CountPlotToolSettings = z.object({
     .int()
     .min(0)
     .max(320)
-    .optional()
+    .nullish()
     .describe('Manual left margin in pixels; omit to auto-size from metadata'),
 });
 
@@ -89,6 +89,11 @@ Do NOT use for: numeric distributions (use histogram), relationships between col
         const dataTable = ensureTable(databaseAdapter, tableName);
         const normalizedSettings = CountPlotChartSettings.parse({
           ...settings,
+          // The LLM may send `null` for these optional fields (now accepted by
+          // the schema); collapse to the no-value form so downstream sees clean
+          // values instead of a persisted `null` margin / measure column.
+          valueField: settings.valueField ?? undefined,
+          leftMargin: settings.leftMargin ?? undefined,
           metric:
             settings.metric ?? (settings.valueField ? 'aggregate' : 'count'),
         });

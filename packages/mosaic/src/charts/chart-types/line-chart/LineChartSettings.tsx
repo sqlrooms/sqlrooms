@@ -31,7 +31,7 @@ export const LineChartSettingsComponent: FC = () => {
             onChange({
               ...chartConfig,
               ...(value === 'count'
-                ? {lastAggregateYFields: config.settings.yFields}
+                ? {lastAggregateYFields: config.settings.yFields ?? undefined}
                 : {}),
               settings: {
                 ...config.settings,

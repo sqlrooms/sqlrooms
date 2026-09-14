@@ -268,6 +268,11 @@ export {
   getSubAgentErrorMessage,
   SUB_AGENT_ERROR_MESSAGE,
 } from './agents/AgentUtils';
+export {
+  createModelToolCallRepair,
+  DEFAULT_MAX_REPAIRS_PER_TOOL,
+} from './agents/createModelToolCallRepair';
+export type {ModelToolCallRepairOptions} from './agents/createModelToolCallRepair';
 export type {
   AgentStreamOutput,
   AgentToolCall,

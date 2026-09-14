@@ -2,8 +2,8 @@ import {z} from 'zod';
 import {ChartDataPolicyOverrideConfig} from '../data-policy-schema';
 
 export const HeatmapChartSettings = z.object({
-  x: z.string().optional().describe('Column for X axis'),
-  y: z.string().optional().describe('Column for Y axis'),
+  x: z.string().nullish().describe('Column for X axis'),
+  y: z.string().nullish().describe('Column for Y axis'),
 });
 
 export type HeatmapChartSettings = z.infer<typeof HeatmapChartSettings>;

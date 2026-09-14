@@ -663,6 +663,53 @@ client tools named by `remoteClientToolNames` whose remote definition omits
 `execute`. Remote endpoints remain responsible for enforcing timeouts around
 tools they execute server-side.
 
+### Tool-call repair
+
+When the model emits tool-call arguments that fail the tool's input schema, the
+AI SDK aborts the run with an opaque `InvalidToolInputError`. The local chat
+transport attempts to heal this by default: it re-asks the model to correct the
+call (forcing a fresh call to the same tool, without running the tool's side
+effects). Repair is best-effort — if it fails, hits its per-tool limit, or
+produces no corrected call, the original `InvalidToolInputError` still surfaces.
+Each repair costs one extra LLM request, so apps that want to trade that
+resilience away can opt out — either through `createAiSlice` or directly on the
+transport factory:
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  repairInvalidToolCalls: false, // default: true
+});
+```
+
+The primitive is also exported for hosts that build their own `ToolLoopAgent`
+sub-agents:
+
+```ts
+import {createModelToolCallRepair} from '@sqlrooms/ai-core';
+
+new ToolLoopAgent({
+  model,
+  tools,
+  experimental_repairToolCall: createModelToolCallRepair(model, {
+    abortSignal, // cancel a pending repair when the run is stopped
+    providerOptions, // inherit the run's caching/reasoning configuration
+    onRepairUsage: (usage) => accumulate(usage), // account repair tokens
+  }),
+});
+```
+
+`createModelToolCallRepair(model, options)` never recurses into itself, never
+triggers tool side effects (the failing tool is re-sent as a schema-only
+definition, stripped of `execute` and input-lifecycle/approval callbacks),
+leaves the outer step limit untouched, and stops after `maxRepairsPerTool`
+(default `2`) failures for the same tool so a persistently-invalid call cannot
+fan out into unbounded repair requests. The returned handler is single-run — its
+per-tool counter lives in the closure, so construct a fresh handler for each
+agent run. It never logs validation-error text or regenerated arguments, so user
+data does not leak into the console.
+
 Assistant messages can be forked into a new active chat through
 `ai.forkSessionFromMessage()`. The action snapshots the source session's
 `uiMessages` through the selected message or chat turn, inherits the source
