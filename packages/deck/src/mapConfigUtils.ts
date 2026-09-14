@@ -290,6 +290,20 @@ function isDeckMapConfigRecord(
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
+function parseDeckMapSpecRecord(
+  spec: unknown,
+): Record<string, unknown> | undefined {
+  let parsed: unknown = spec;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return undefined;
+    }
+  }
+  return isDeckMapConfigRecord(parsed) ? parsed : undefined;
+}
+
 function deckMapLayerTargetsDataset(options: {
   layer: Record<string, unknown>;
   datasetId: string;
@@ -305,6 +319,94 @@ function deckMapLayerTargetsDataset(options: {
   }
 
   return options.datasetIds.length === 1 && options.layer.data === undefined;
+}
+
+/**
+ * True when retained layers still need columns that
+ * {@link createDeckMapConfigForTable} cannot reconstruct. Binding keys are
+ * gated by layer type because type switches keep leftover fields. H3 also
+ * accepts `getHexagon: "@@=column"`.
+ */
+function deckMapDatasetRequiresPreservedTransform(
+  config: DeckMapDashboardPanelConfig,
+  datasetId: string,
+) {
+  const spec = parseDeckMapSpecRecord(config.spec);
+  if (!spec || !Array.isArray(spec.layers)) {
+    return false;
+  }
+  const datasetIds = Object.keys(config.datasets ?? {});
+  return spec.layers.some((layer) => {
+    if (!isDeckMapConfigRecord(layer)) return false;
+    if (
+      !deckMapLayerTargetsDataset({
+        layer,
+        datasetId,
+        datasetIds,
+      })
+    ) {
+      return false;
+    }
+    return deckMapLayerRequiresPreservedTransform(layer);
+  });
+}
+
+function deckMapLayerRequiresPreservedTransform(
+  layer: Record<string, unknown>,
+) {
+  const layerType = layer['@@type'];
+  const binding = isDeckMapConfigRecord(layer._sqlroomsBinding)
+    ? layer._sqlroomsBinding
+    : undefined;
+
+  if (layerType === 'GeoArrowArcLayer') {
+    return (
+      typeof binding?.sourceGeometryColumn === 'string' ||
+      typeof binding?.targetGeometryColumn === 'string'
+    );
+  }
+  if (layerType === 'GeoArrowH3HexagonLayer') {
+    if (typeof binding?.hexagonColumn === 'string') return true;
+    return isDeckMapH3HexagonAccessor(layer.getHexagon);
+  }
+  if (layerType === 'GeoArrowTripsLayer') {
+    return typeof binding?.timestampColumn === 'string';
+  }
+  return false;
+}
+
+function isDeckMapH3HexagonAccessor(value: unknown) {
+  return typeof value === 'string' && /^@@=[A-Za-z_][\w]*$/.test(value.trim());
+}
+
+function retargetDeckMapDatasetTableName(
+  config: DeckMapConfig,
+  table: DataTable,
+): DeckMapConfig {
+  const datasetIds = Object.keys(config.datasets ?? {});
+  if (datasetIds.length !== 1) return config;
+  const datasetId = datasetIds[0]!;
+  const dataset = config.datasets[datasetId];
+  if (!dataset || !isDeckMapTableDatasetSource(dataset.source)) {
+    return config;
+  }
+
+  const tableName = quoteDeckMapSqlTableReference(table.table);
+  if (dataset.source.tableName === tableName) return config;
+
+  return {
+    ...config,
+    datasets: {
+      ...config.datasets,
+      [datasetId]: {
+        ...dataset,
+        source: {
+          ...dataset.source,
+          tableName,
+        },
+      },
+    },
+  };
 }
 
 function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
@@ -783,6 +885,9 @@ export function createDeckMapDashboardPanelConfigForTable(options: {
  * valid. Empty maps adopt the generated dataset and layer spec. Returns the
  * existing config unchanged when the table has no supported geospatial columns
  * or when multiple datasets make the target ambiguous.
+ *
+ * Authored arc, H3, and trips transforms are kept; only the table name
+ * is retargeted. Point and polygon maps still regenerate their dataset source.
  */
 export function regenerateMapConfigForTable(
   panel: {config: Record<string, unknown>},
@@ -822,6 +927,13 @@ export function regenerateMapConfigForTable(
 
   if (existingDatasetIds.length === 1 && nextDataset) {
     const datasetId = existingDatasetIds[0]!;
+    const existingDataset = existingConfig.datasets?.[datasetId];
+    if (
+      isDeckMapTableDatasetSource(existingDataset?.source) &&
+      deckMapDatasetRequiresPreservedTransform(existingConfig, datasetId)
+    ) {
+      return retargetDeckMapDatasetTableName(existingConfig, table);
+    }
     return updateDeckMapGeometryColumnBindings(
       {
         ...existingConfig,
@@ -865,28 +977,5 @@ export function applyDeckMapTableSelection(
     return regenerated as DeckMapConfig;
   }
 
-  const datasetIds = Object.keys(config.datasets ?? {});
-  if (datasetIds.length !== 1) return config;
-  const datasetId = datasetIds[0]!;
-  const dataset = config.datasets[datasetId];
-  if (!dataset || !isDeckMapTableDatasetSource(dataset.source)) {
-    return config;
-  }
-
-  const tableName = quoteDeckMapSqlTableReference(table.table);
-  if (dataset.source.tableName === tableName) return config;
-
-  return {
-    ...config,
-    datasets: {
-      ...config.datasets,
-      [datasetId]: {
-        ...dataset,
-        source: {
-          ...dataset.source,
-          tableName,
-        },
-      },
-    },
-  };
+  return retargetDeckMapDatasetTableName(config, table);
 }
