@@ -107,6 +107,17 @@ describe('ActivityBox header', () => {
     expect(container.textContent).toContain('log line');
   });
 
+  it('keeps the box open and ticking while the activity is running', () => {
+    // The gap between steps must not read as settled: the label, the clock
+    // and the open body all follow the same running flag.
+    render({isRunning: true, summaryLabel: 'Thinking', stepCount: 2});
+    act(() => {
+      jest.advanceTimersByTime(30_000);
+    });
+    expect(header()?.textContent).toBe('Thinking· 30s · step 2');
+    expect(container.textContent).toContain('log line');
+  });
+
   it('shows the activity with no header when there is nothing to summarize', () => {
     render({stepCount: 3});
     expect(header()).toBeNull();

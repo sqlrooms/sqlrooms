@@ -237,13 +237,16 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
 
   useRegisterChatSearchBlocks(searchBlockPrefix, searchBlocks);
 
+  // Keyed on the turn, not on `model.isActivityRunning`: the tool activity
+  // idles between steps (while the model writes the next call), and following
+  // that would drop the label — and with it the whole header — in every gap.
   const activitySummaryLabel = model.isAwaitingApproval
     ? // Stopped on the user, not working — the same distinction the timeline
       // groups and `ChatActiveStatus` make.
       'Waiting for approval'
-    : model.isActivityRunning
+    : !isCompleted
       ? 'Thinking'
-      : isCompleted && model.leafToolCount > 0
+      : model.leafToolCount > 0
         ? `Worked with ${model.leafToolCount} tool${
             model.leafToolCount === 1 ? '' : 's'
           }`

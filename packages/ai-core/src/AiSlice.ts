@@ -2035,9 +2035,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           // A client tool or an approval can pause `useChat` with no request
           // in flight. `stop()` then has nothing to abort and no transport
           // callback follows, so the terminal state has to be written here
-          // instead of waiting for `onChatFinish`.
+          // instead of waiting for `onChatFinish`. `ready` is also the idle
+          // status, so the run has to actually be running: cancelling an
+          // already-finished session must not rewrite its last turn.
           const isPaused =
             !!chat &&
+            state.ai.getIsRunning(sessionId) &&
             chat.status !== 'streaming' &&
             chat.status !== 'submitted';
 

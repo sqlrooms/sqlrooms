@@ -301,6 +301,7 @@ export {
 } from './components/collectHoistableRenderers';
 export type {HoistableToolCall} from './components/collectHoistableRenderers';
 export {
+  areAnyNestedAwaitingApproval,
   buildChatTurnModel,
   splitTextAroundHoists,
   computeActivityTimeSpan,

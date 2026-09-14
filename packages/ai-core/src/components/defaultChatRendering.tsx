@@ -370,9 +370,12 @@ export function createChatTurnPresentation({
     />
   ));
 
-  const isActivityRunning =
-    model.isActivityRunning ||
-    (!isCompleted && model.activity.some((item) => item.kind === 'reasoning'));
+  // The turn's activity as a whole runs until the turn ends. Following
+  // `model.isActivityRunning` alone would report it as settled in the gaps
+  // between steps, when no tool is pending because the model is writing the
+  // next call — collapsing the box and stopping its clock mid-run. Individual
+  // timeline groups still report their own pending state.
+  const isActivityRunning = !isCompleted || model.isActivityRunning;
 
   const timelineAgentContentByIndex = new Map<number, React.ElementType>();
 

@@ -4,12 +4,19 @@
  * How `ChatActiveStatus` presents each kind of wait: an approval stops the
  * run, so it is named rather than animated.
  */
+import {TransformStream} from 'node:stream/web';
 import {act} from 'react';
 import {createRoot} from 'react-dom/client';
-import {ChatActiveStatus} from '../src/components/ChatActiveStatus';
 import type {ChatActiveStatusInfo} from '../src/components/ChatRenderingTypes';
 
-Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
+// The status derivation shares its nested-approval walk with the turn model,
+// whose module graph reaches the AI SDK's stream parsing.
+Object.assign(globalThis, {
+  IS_REACT_ACT_ENVIRONMENT: true,
+  TransformStream,
+});
+
+const {ChatActiveStatus} = await import('../src/components/ChatActiveStatus');
 
 function renderStatus(status: ChatActiveStatusInfo): string {
   const container = document.createElement('div');

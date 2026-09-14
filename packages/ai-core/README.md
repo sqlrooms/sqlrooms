@@ -382,6 +382,12 @@ defaults for every slot.
 
 `ChatActivityProps` carries the timing an activity header needs:
 
+The turn-level activity reports `isRunning` until the turn itself ends, not
+just while a tool is pending: between steps no tool is in flight (the model is
+writing the next call), and following that would make the header, its clock and
+the open body flicker in every gap. Timeline groups still report their own
+pending state, since each one really has settled.
+
 - `startedAt` — epoch ms of the earliest tool start in the group. While
   `isRunning` is true, chrome can render a clock that ticks from it (the
   default recipe shows `· 12s · step 3`). Derive it with
@@ -563,8 +569,14 @@ the current messages and `ToolRenderBehavior` to reuse the same status model.
 
 `status.kind` separates a run that is working (`model`, `tool`) from one that
 has stopped and is waiting on the user (`approval`). The default indicator
-animates the former and labels the latter "Paused…", since animated dots on a
-halted run read as progress that is not happening.
+animates the former and labels the latter "Paused…" — with `status.label` kept
+for assistive technology — since animated dots on a halted run read as
+progress that is not happening.
+
+Pass the slice's `agentProgress` as the third argument to see approvals raised
+_inside_ a nested agent, whose own part still looks like a tool in progress.
+The same recursive check is exported from the turn model as
+`areAnyNestedAwaitingApproval()` and backs `ChatTurnModel.isAwaitingApproval`.
 
 `TextOutput` receives `isAnswer=true` only for text that is the final message
 part. Planning text followed by tool activity remains regular response text.

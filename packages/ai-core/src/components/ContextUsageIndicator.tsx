@@ -242,8 +242,11 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
       : `M ${center} ${center} L ${center} ${center - radius} A ${radius} ${radius} 0 ${sweep > Math.PI ? 1 : 0} 1 ${wedgeEndX} ${wedgeEndY} Z`;
 
   const tooltipText = `${percentage.toFixed(1)}% · ${formatTokenCount(contextTokens)} / ${formatTokenCount(contextWindow)} context used${cumulativeTokens > contextTokens ? `\n${formatTokenCount(cumulativeTokens)} total tokens consumed` : ''}`;
-  const fullTooltip =
-    percentage > USAGE_CRITICAL_THRESHOLD
+  // The click target changes while summarizing — it aborts — so the label has
+  // to follow it rather than still offering to start the summary.
+  const fullTooltip = isSummarizing
+    ? `${tooltipText}\nSummarizing… click to cancel`
+    : percentage > USAGE_CRITICAL_THRESHOLD
       ? `${tooltipText}\nClick to summarize current conversation and start a new session`
       : tooltipText;
 

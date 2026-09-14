@@ -179,13 +179,18 @@ function areAnyNestedPending(
   return false;
 }
 
-function areAnyNestedAwaitingApproval(
+/**
+ * Whether any call in this nested-agent subtree is stopped on an approval.
+ * Shared with the run-status derivation so the activity chrome and the status
+ * line agree about a paused run.
+ */
+export function areAnyNestedAwaitingApproval(
   calls: AgentToolCall[],
   agentProgress: Record<string, AgentToolCall[]>,
 ): boolean {
-  for (const tc of calls) {
-    if (tc.state === 'approval-requested') return true;
-    const nested = agentProgress[tc.toolCallId] ?? tc.agentToolCalls ?? [];
+  for (const call of calls) {
+    if (call.state === 'approval-requested') return true;
+    const nested = agentProgress[call.toolCallId] ?? call.agentToolCalls ?? [];
     if (
       nested.length > 0 &&
       areAnyNestedAwaitingApproval(nested, agentProgress)
