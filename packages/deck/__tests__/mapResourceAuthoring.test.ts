@@ -853,6 +853,7 @@ describe('Deck map resource authoring contract', () => {
     expect(instructions).toContain('min = max');
     expect(instructions).toContain('3D CAMERA');
     expect(instructions).toContain('pitch 45–60');
+    expect(instructions).toContain('omitted counts as extruded');
     expect(instructions).not.toContain('Mosaic');
   });
 
