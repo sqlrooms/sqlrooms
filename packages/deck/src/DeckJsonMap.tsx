@@ -589,6 +589,10 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
 
     const mapRef = useRef<{jumpTo: (opts: object) => void} | null>(null);
     const pendingJumpRef = useRef<object | null>(null);
+    // The authored camera seeds the map once, because the first fit would
+    // otherwise land on MapLibre's default pitch. Later jumps omit pitch and
+    // bearing so the camera the user moved to survives a Fit.
+    const authoredCameraAppliedRef = useRef(false);
     const mapInitialViewState = useMemo(
       () => completeDeckMapInitialViewState(initialViewState),
       [initialViewState],
@@ -598,7 +602,11 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       ref,
       () => ({
         jumpTo(opts) {
-          const jumpOpts = buildDeckMapJumpToOptions(opts, mapInitialViewState);
+          const authoredCamera = authoredCameraAppliedRef.current
+            ? undefined
+            : mapInitialViewState;
+          authoredCameraAppliedRef.current = true;
+          const jumpOpts = buildDeckMapJumpToOptions(opts, authoredCamera);
           if (mapRef.current) {
             mapRef.current.jumpTo(jumpOpts);
           } else {
