@@ -65,11 +65,21 @@ describe('useRelativeTime', () => {
     expect(container.textContent).toBe('5 minutes ago');
   });
 
-  it('never renders a timestamp newer than its last clock read as future', () => {
+  it('measures a timestamp that arrives later against a current clock', () => {
+    // Mounted with nothing to describe, hours before it gets a timestamp.
+    expect(render(undefined)).toBe('(none)');
+    act(() => {
+      jest.advanceTimersByTime(8 * 60 * MINUTE);
+    });
+
+    // Against the mount-time clock this would read "in 7 hours".
+    expect(render(Date.now() - 60 * MINUTE)).toBe('an hour ago');
+  });
+
+  it('never renders a timestamp from the current interval as future', () => {
     render(START - MINUTE);
-    // Time moves on without the interval firing, then a fresh timestamp
-    // arrives. Measured against the stale clock it would read "in 8 hours".
-    jest.setSystemTime(START + 8 * 60 * MINUTE);
-    expect(render(Date.now())).toBe('a few seconds ago');
+    // The label follows the clock only every `intervalMs`, so a timestamp
+    // from within the current interval sits after the reference.
+    expect(render(START + 20_000)).toBe('a few seconds ago');
   });
 });

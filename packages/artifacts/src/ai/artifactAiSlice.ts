@@ -66,8 +66,9 @@ export type ArtifactAiSliceState = {
     ) => string | undefined;
     /**
      * Open a blank new-chat screen without creating a session: selects
-     * `artifactId` (or clears the artifact selection when omitted) and
-     * deselects the current session.
+     * `artifactId` (or clears the artifact selection when omitted), deselects
+     * the current session, and clears the shared draft prompt so no text
+     * carries over from an earlier screen.
      *
      * The auto-sync would normally pull the artifact's latest chat back in;
      * while this screen is pending it leaves the empty selection alone, so a
@@ -116,6 +117,7 @@ type ArtifactAiCompatibleAiState = {
     ) => void;
     switchSession: (sessionId: string) => void;
     resetCurrentSession: () => void;
+    setDraftPrompt: (prompt: string) => void;
     getCurrentSession: () => ChatSessionSchema | undefined;
   };
 };
@@ -618,6 +620,11 @@ export function createArtifactAiSlice<
               }),
             );
             get().ai.resetCurrentSession();
+            // The draft prompt is shared by every sessionless composer, so
+            // text typed on an earlier blank screen would reappear here — and
+            // `ai.createSession()` would adopt it as the new chat's first
+            // prompt. A blank screen starts blank.
+            get().ai.setDraftPrompt('');
           } finally {
             get().artifactAi.setSyncSuspended(false);
           }

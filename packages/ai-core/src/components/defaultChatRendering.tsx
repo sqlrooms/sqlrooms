@@ -506,12 +506,21 @@ export function createChatTurnPresentation({
           const anyPending = segment.parts.some(({part}) =>
             isToolPartPending(part.state),
           );
+          // An approval is pending on the *user*, not on the model. Saying
+          // "Thinking" there contradicts the run status, which reports the
+          // same part as paused. The clock keeps running: the wait is part of
+          // the group's span, and so of the duration reported at the end.
+          const anyAwaitingApproval = segment.parts.some(
+            ({part}) => part.state === 'approval-requested',
+          );
           const toolCount = segment.parts.length;
-          const summaryLabel = anyPending
-            ? 'Thinking'
-            : toolCount > 0 && isCompleted
-              ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
-              : undefined;
+          const summaryLabel = anyAwaitingApproval
+            ? 'Waiting for approval'
+            : anyPending
+              ? 'Thinking'
+              : toolCount > 0 && isCompleted
+                ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
+                : undefined;
           const groupSpan = computeActivityTimeSpan(
             segment.parts.map(({part}) => part.toolCallId),
             toolTimings,
@@ -674,6 +683,7 @@ export function createChatTurnPresentation({
     activity: {
       isRunning: isActivityRunning,
       toolCount: model.leafToolCount,
+      startedAt: activityStartedAt,
       computationTimeMs,
       items: activityItems,
       Content: ActivityContent,

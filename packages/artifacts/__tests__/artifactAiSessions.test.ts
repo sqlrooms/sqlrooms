@@ -45,6 +45,8 @@ type TestRoomState = BaseRoomStoreState &
       ) => void;
       switchSession: (sessionId: string) => void;
       resetCurrentSession: () => void;
+      draftPrompt: string;
+      setDraftPrompt: (prompt: string) => void;
       getCurrentSession: () => ChatSessionSchema | undefined;
     };
   };
@@ -119,6 +121,14 @@ function createTestStore({autoSync = false}: {autoSync?: boolean} = {}) {
         set((state) =>
           produce(state, (draft: TestRoomState) => {
             draft.ai.config.currentSessionId = undefined;
+          }),
+        );
+      },
+      draftPrompt: '',
+      setDraftPrompt: (prompt) => {
+        set((state) =>
+          produce(state, (draft: TestRoomState) => {
+            draft.ai.draftPrompt = prompt;
           }),
         );
       },
@@ -874,6 +884,17 @@ describe('createArtifactAiSlice', () => {
     ).toBe(false);
     // An unlinked chat has no artifact, so the selection follows it.
     expect(store.getState().artifacts.config.currentArtifactId).toBeUndefined();
+    await store.getState().artifactAi.destroy();
+  });
+
+  it('starts the new-chat screen with no carried-over draft', async () => {
+    const store = createTestStore({autoSync: true});
+    await store.getState().artifactAi.initialize();
+    store.getState().ai.setDraftPrompt('half-typed question');
+
+    store.getState().artifactAi.startNewChat('artifact-a');
+
+    expect(store.getState().ai.draftPrompt).toBe('');
     await store.getState().artifactAi.destroy();
   });
 

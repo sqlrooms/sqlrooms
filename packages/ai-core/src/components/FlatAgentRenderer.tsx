@@ -477,6 +477,11 @@ const FlatSegmentList: React.FC<{
           const anyPending = seg.tools.some(
             (t) => t.state === 'pending' || t.state === 'approval-requested',
           );
+          // Waiting on the user is not the model thinking — the run status
+          // reports the same call as paused.
+          const anyAwaitingApproval = seg.tools.some(
+            (t) => t.state === 'approval-requested',
+          );
 
           const toolCount = seg.tools.length;
           const allToolsDone = !anyPending && toolCount > 0;
@@ -506,11 +511,13 @@ const FlatSegmentList: React.FC<{
                   groupComputationTimeMs,
                 )}`
               : undefined;
-          const summaryLabel = anyPending
-            ? 'Thinking'
-            : allToolsDone && isAgentComplete
-              ? 'Thought'
-              : undefined;
+          const summaryLabel = anyAwaitingApproval
+            ? 'Waiting for approval'
+            : anyPending
+              ? 'Thinking'
+              : allToolsDone && isAgentComplete
+                ? 'Thought'
+                : undefined;
 
           const logLines = seg.tools.map((tc) => {
             const isHoisted = canHoistAgentToolCall(

@@ -154,6 +154,12 @@ export type ChatActivityItem =
 export type ChatActivityRegion = {
   isRunning: boolean;
   toolCount: number;
+  /**
+   * When the activity started, so a custom Turn that lays out this region
+   * itself can render its own live elapsed time. It cannot be derived from
+   * `items`, which carry no timing.
+   */
+  startedAt?: number;
   computationTimeMs?: number;
   items: readonly ChatActivityItem[];
   Content: ChatComponentType;

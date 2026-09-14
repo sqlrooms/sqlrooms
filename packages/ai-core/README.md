@@ -392,6 +392,15 @@ defaults for every slot.
   activities receive both as well, so a custom `Activity` never has to parse
   the duration back out of `summaryLabel`.
 
+A group holding an `approval-requested` call is labelled `Waiting for approval`
+rather than `Thinking`: the run is paused on the user, which is what
+`ChatActiveStatus` reports at the same time. The clock keeps running, since the
+wait is part of the span the final duration reports.
+
+`turn.activity` carries `startedAt` and `computationTimeMs` too, so a custom
+`Turn` that lays the region out itself can render its own live timer instead of
+falling back to the pre-wired `Content`.
+
 `ActivityBox` takes the same values as `startedAt`, `stepCount` and
 `computationTimeLabel`; the duration replaces the derived step count once the
 activity has settled, so a summary that already names the tool count is not
