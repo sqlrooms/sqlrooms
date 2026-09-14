@@ -385,7 +385,10 @@ defaults for every slot.
 - `startedAt` — epoch ms of the earliest tool start in the group. While
   `isRunning` is true, chrome can render a clock that ticks from it (the
   default recipe shows `· 12s · step 3`). Derive it with
-  `computeActivityTimeSpan(toolCallIds, toolTimings)?.startedAt`.
+  `computeActivityTimeSpan(toolCallIds, toolTimings)?.startedAt`, or with
+  `computeTimeSpan(timings)` when the calls carry their own timing instead of
+  being looked up by id. Both ignore a call with no recorded start, so a
+  partially recorded entry cannot stretch the span or reverse it.
 - `toolCount` — tools in the group, shown as the current step while running.
 - `computationTimeMs` / `computationTimeLabel` — aggregated duration for a
   settled group, as a raw number and a presentation-ready label. Nested agent
@@ -395,7 +398,9 @@ defaults for every slot.
 A group holding an `approval-requested` call is labelled `Waiting for approval`
 rather than `Thinking`: the run is paused on the user, which is what
 `ChatActiveStatus` reports at the same time. The clock keeps running, since the
-wait is part of the span the final duration reports.
+wait is part of the span the final duration reports. The turn-level label uses
+`ChatTurnModel.isAwaitingApproval` for the same distinction — a subset of
+`isActivityRunning` that also covers approvals requested by nested agents.
 
 `turn.activity` carries `startedAt` and `computationTimeMs` too, so a custom
 `Turn` that lays the region out itself can render its own live timer instead of

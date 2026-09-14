@@ -36,6 +36,9 @@ function toolPart(toolCallId: string, state: string): UIMessagePart {
     state,
     input: {sql: 'select 1'},
     ...(state === 'output-available' ? {output: {rows: 1}} : {}),
+    ...(state === 'approval-requested'
+      ? {approval: {id: `approval-${toolCallId}`}}
+      : {}),
   } as UIMessagePart;
 }
 
@@ -100,6 +103,21 @@ describe('timeline tool-group activities', () => {
       startedAt: 1_000,
       computationTimeMs: 12_000,
       computationTimeLabel: 'Computation Time: 12s',
+    });
+  });
+
+  it('names a group waiting on the user instead of calling it thinking', () => {
+    const [activity] = renderTimeline({
+      parts: [
+        toolPart('query-1', 'output-available'),
+        toolPart('query-2', 'approval-requested'),
+      ],
+      isCompleted: false,
+    });
+
+    expect(activity).toMatchObject({
+      isRunning: true,
+      summaryLabel: 'Waiting for approval',
     });
   });
 

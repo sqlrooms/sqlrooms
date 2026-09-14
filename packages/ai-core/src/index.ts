@@ -305,6 +305,7 @@ export {
   splitTextAroundHoists,
   computeActivityTimeSpan,
   computeComputationTimeMs,
+  computeTimeSpan,
   getToolName,
   isAgentToolPart,
 } from './components/buildChatTurnModel';
@@ -313,6 +314,7 @@ export type {
   ChatTurnActivityItem,
   ChatTurnTextItem,
   ChatTurnSegment,
+  ToolCallTiming,
   ToolPartWithId,
 } from './components/buildChatTurnModel';
 /** @deprecated Prefer {@link buildChatTurnModel}. Chronological presentation adapter. */

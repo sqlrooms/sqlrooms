@@ -237,13 +237,17 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
 
   useRegisterChatSearchBlocks(searchBlockPrefix, searchBlocks);
 
-  const activitySummaryLabel = model.isActivityRunning
-    ? 'Thinking'
-    : isCompleted && model.leafToolCount > 0
-      ? `Worked with ${model.leafToolCount} tool${
-          model.leafToolCount === 1 ? '' : 's'
-        }`
-      : undefined;
+  const activitySummaryLabel = model.isAwaitingApproval
+    ? // Stopped on the user, not working — the same distinction the timeline
+      // groups and `ChatActiveStatus` make.
+      'Waiting for approval'
+    : model.isActivityRunning
+      ? 'Thinking'
+      : isCompleted && model.leafToolCount > 0
+        ? `Worked with ${model.leafToolCount} tool${
+            model.leafToolCount === 1 ? '' : 's'
+          }`
+        : undefined;
 
   const showComputationTime = !model.isActivityRunning && isCompleted;
   const activitySpan = useMemo(

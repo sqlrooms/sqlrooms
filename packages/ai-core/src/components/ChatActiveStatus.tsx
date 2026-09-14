@@ -86,8 +86,13 @@ const ChatActiveStatusLine: FC<{
       // An approval stops the run until the user acts, so it is named rather
       // than animated: the dots would read as work still in progress.
       <>
-        <PauseIcon className="size-3.5 shrink-0" />
-        <span className="ml-1.5 text-xs">Paused…</span>
+        <PauseIcon className="size-3.5 shrink-0" aria-hidden />
+        {/* The visible copy is short; assistive tech gets the actionable
+            state instead of reading both. */}
+        <span className="ml-1.5 text-xs" aria-hidden>
+          Paused…
+        </span>
+        <span className="sr-only">{status.label}</span>
       </>
     ) : (
       <>

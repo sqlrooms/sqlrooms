@@ -35,6 +35,17 @@ describe('ChatActiveStatus', () => {
     ).toContain('Paused…');
   });
 
+  it('keeps the actionable state for assistive technology', () => {
+    // The visible copy is aria-hidden, so the announced text is the full one.
+    expect(
+      renderStatus({
+        key: 'approval:1',
+        label: 'Waiting for approval…',
+        kind: 'approval',
+      }),
+    ).toContain('Waiting for approval…');
+  });
+
   it('leaves work in flight to the animated dots', () => {
     const text = renderStatus({
       key: 'model:waiting',

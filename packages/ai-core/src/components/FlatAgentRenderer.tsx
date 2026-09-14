@@ -19,6 +19,7 @@ import {
 } from './ChatRenderingContextBase';
 import {useHoistedRenderers} from './HoistedRenderersContext';
 import {ActivityBox} from './ActivityBox';
+import {computeTimeSpan} from './buildChatTurnModel';
 import {HighlightedChatSearchText} from './ChatSearch';
 import {
   canHoistAgentToolCall,
@@ -485,25 +486,14 @@ const FlatSegmentList: React.FC<{
 
           const toolCount = seg.tools.length;
           const allToolsDone = !anyPending && toolCount > 0;
-          const groupStartedAt = seg.tools.reduce<number | undefined>(
-            (earliest, tool) =>
-              tool.startedAt != null &&
-              (earliest == null || tool.startedAt < earliest)
-                ? tool.startedAt
-                : earliest,
-            undefined,
-          );
-          const groupCompletedAt = seg.tools.reduce<number | undefined>(
-            (latest, tool) =>
-              tool.completedAt != null &&
-              (latest == null || tool.completedAt > latest)
-                ? tool.completedAt
-                : latest,
-            undefined,
-          );
+          // Shared with the top-level timeline so nested and top-level
+          // activity report timing the same way: calls with no recorded start
+          // cannot contribute an end, and a span never runs backwards.
+          const groupSpan = computeTimeSpan(seg.tools);
+          const groupStartedAt = groupSpan?.startedAt;
           const groupComputationTimeMs =
-            !anyPending && groupStartedAt != null && groupCompletedAt != null
-              ? groupCompletedAt - groupStartedAt
+            !anyPending && groupSpan
+              ? groupSpan.endedAt - groupSpan.startedAt
               : undefined;
           const groupComputationTimeLabel =
             groupComputationTimeMs != null

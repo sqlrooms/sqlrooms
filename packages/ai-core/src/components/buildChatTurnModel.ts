@@ -72,6 +72,12 @@ export type ChatTurnModel = {
   leafToolCount: number;
   /** True when any activity tool is still pending. */
   isActivityRunning: boolean;
+  /**
+   * True when the turn is stopped on a tool approval, at any depth. A subset
+   * of {@link ChatTurnModel.isActivityRunning}: the run is unfinished, but it
+   * is waiting on the user rather than working.
+   */
+  isAwaitingApproval: boolean;
   /** Tool call ids contributing to turn-level timing aggregation. */
   timingToolCallIds: string[];
   suppressedIndices: ReadonlySet<number>;
@@ -167,6 +173,23 @@ function areAnyNestedPending(
     }
     const nested = agentProgress[tc.toolCallId] ?? tc.agentToolCalls ?? [];
     if (nested.length > 0 && areAnyNestedPending(nested, agentProgress)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function areAnyNestedAwaitingApproval(
+  calls: AgentToolCall[],
+  agentProgress: Record<string, AgentToolCall[]>,
+): boolean {
+  for (const tc of calls) {
+    if (tc.state === 'approval-requested') return true;
+    const nested = agentProgress[tc.toolCallId] ?? tc.agentToolCalls ?? [];
+    if (
+      nested.length > 0 &&
+      areAnyNestedAwaitingApproval(nested, agentProgress)
+    ) {
       return true;
     }
   }
@@ -319,6 +342,7 @@ export function buildChatTurnModel(options: {
   let firstHoistPartIndex: number | null = null;
   let leafToolCount = 0;
   let isActivityRunning = false;
+  let isAwaitingApproval = false;
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
@@ -354,6 +378,9 @@ export function buildChatTurnModel(options: {
     if (isToolPending(toolPart.state)) {
       isActivityRunning = true;
     }
+    if (toolPart.state === 'approval-requested') {
+      isAwaitingApproval = true;
+    }
 
     let isHoisted = false;
 
@@ -366,6 +393,9 @@ export function buildChatTurnModel(options: {
       leafToolCount += countLeafToolsWithProgress(nested, agentProgress);
       if (areAnyNestedPending(nested, agentProgress)) {
         isActivityRunning = true;
+      }
+      if (areAnyNestedAwaitingApproval(nested, agentProgress)) {
+        isAwaitingApproval = true;
       }
       collectNestedToolCallIds(nested, agentProgress, timingIds);
 
@@ -415,6 +445,7 @@ export function buildChatTurnModel(options: {
     firstHoistPartIndex,
     leafToolCount,
     isActivityRunning,
+    isAwaitingApproval,
     timingToolCallIds: [...timingIds],
     suppressedIndices,
   };
@@ -445,15 +476,20 @@ export function splitTextAroundHoists(model: ChatTurnModel): {
   return {responseText, summaryText};
 }
 
-/** Start and end of the supplied recorded tool calls. */
-export function computeActivityTimeSpan(
-  toolCallIds: Iterable<string>,
-  toolTimings: Record<string, {startedAt?: number; completedAt?: number}>,
+/** A recorded start, and end once the call finishes. */
+export type ToolCallTiming = {startedAt?: number; completedAt?: number};
+
+/**
+ * Start and end of the supplied timing entries. Entries with no recorded
+ * start are ignored — their end cannot be attributed to a span — and a
+ * still-running call ends at its own start, so the span never runs backwards.
+ */
+export function computeTimeSpan(
+  timings: Iterable<ToolCallTiming | undefined>,
 ): {startedAt: number; endedAt: number} | undefined {
   let earliest: number | undefined;
   let latest: number | undefined;
-  for (const id of toolCallIds) {
-    const timing = toolTimings[id];
+  for (const timing of timings) {
     if (timing?.startedAt == null) continue;
     earliest =
       earliest == null
@@ -464,6 +500,15 @@ export function computeActivityTimeSpan(
   }
   if (earliest == null || latest == null || latest < earliest) return undefined;
   return {startedAt: earliest, endedAt: latest};
+}
+
+/** Start and end of the supplied recorded tool calls. */
+export function computeActivityTimeSpan(
+  toolCallIds: Iterable<string>,
+  toolTimings: Record<string, ToolCallTiming>,
+): {startedAt: number; endedAt: number} | undefined {
+  const ids = [...toolCallIds];
+  return computeTimeSpan(ids.map((id) => toolTimings[id]));
 }
 
 /** Enclosing duration of the supplied recorded tool calls. */

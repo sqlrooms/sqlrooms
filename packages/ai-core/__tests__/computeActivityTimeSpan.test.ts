@@ -1,6 +1,7 @@
 import {
   computeActivityTimeSpan,
   computeComputationTimeMs,
+  computeTimeSpan,
 } from '../src/components/buildChatTurnModel';
 
 const TIMINGS = {
@@ -44,6 +45,35 @@ describe('computeActivityTimeSpan', () => {
   it('is undefined when nothing in the group was timed', () => {
     expect(computeActivityTimeSpan([], TIMINGS)).toBeUndefined();
     expect(computeActivityTimeSpan(['tool-missing'], TIMINGS)).toBeUndefined();
+  });
+});
+
+describe('computeTimeSpan', () => {
+  it('reads timing entries directly, for callers that hold no id map', () => {
+    expect(computeTimeSpan(Object.values(TIMINGS))).toEqual({
+      startedAt: 1_000,
+      endedAt: 9_000,
+    });
+  });
+
+  it('cannot be stretched by an end with no matching start', () => {
+    // A partially recorded entry used to extend the end past every real call.
+    expect(
+      computeTimeSpan([
+        {startedAt: 1_000, completedAt: 3_000},
+        {completedAt: 99_000},
+      ]),
+    ).toEqual({startedAt: 1_000, endedAt: 3_000});
+  });
+
+  it('is undefined rather than negative when only an end was recorded', () => {
+    expect(computeTimeSpan([{completedAt: 5_000}])).toBeUndefined();
+  });
+
+  it('skips missing entries', () => {
+    expect(
+      computeTimeSpan([undefined, {startedAt: 2_000, completedAt: 4_000}]),
+    ).toEqual({startedAt: 2_000, endedAt: 4_000});
   });
 });
 
