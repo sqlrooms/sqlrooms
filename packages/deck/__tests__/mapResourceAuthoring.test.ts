@@ -850,6 +850,7 @@ describe('Deck map resource authoring contract', () => {
     expect(instructions).toContain('pointBinding');
     expect(instructions).toContain('Do not author transformSql');
     expect(instructions).toContain('COLOR SCALE FIELD VARIANCE');
+    expect(instructions).toContain('omit maxZoom');
     expect(instructions).toContain('min = max');
     expect(instructions).not.toContain('Mosaic');
   });
