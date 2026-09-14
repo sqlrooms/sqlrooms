@@ -383,6 +383,13 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
    * These are runtime behavior and are not persisted in workspace config.
    */
   timeouts?: AiTimeoutOptions;
+  /**
+   * Let the model heal its own invalid tool calls instead of aborting the run
+   * (see `createModelToolCallRepair`). Enabled by default on the local chat
+   * transport. Each repair costs an extra LLM request; set to `false` to trade
+   * that resilience away.
+   */
+  repairInvalidToolCalls?: boolean;
   getApiKey?: (modelProvider: string) => string;
   getBaseUrl?: () => string;
   /** Optional remote endpoint to use for chat; if empty, local transport is used */
@@ -470,6 +477,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     getAvailableModels,
     getCustomModel,
     getProviderOptions,
+    repairInvalidToolCalls = true,
     chatEndPoint = '',
     chatHeaders = {},
     remoteClientToolNames = [],
@@ -2174,6 +2182,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             getCustomModel,
             sessionId,
             timeouts,
+            repairInvalidToolCalls,
           })();
         },
 

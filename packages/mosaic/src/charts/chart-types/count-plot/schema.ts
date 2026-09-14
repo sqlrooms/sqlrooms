@@ -20,7 +20,7 @@ export const MAX_COUNT_PLOT_MAX_BARS = 100;
 export const CountPlotChartSettings = z.object({
   field: z
     .string()
-    .optional()
+    .nullish()
     .describe('Categorical column used to group the horizontal bars'),
   metric: CountPlotMetric.optional()
     .default('count')
@@ -29,7 +29,7 @@ export const CountPlotChartSettings = z.object({
     ),
   valueField: z
     .string()
-    .optional()
+    .nullish()
     .describe('Numeric measure column to aggregate when metric is aggregate'),
   aggregate: AggregateFunction.optional()
     .default('sum')
@@ -50,7 +50,7 @@ export const CountPlotChartSettings = z.object({
     .int()
     .min(0)
     .max(320)
-    .optional()
+    .nullish()
     .describe('Manual left margin in pixels; omit to auto-size from metadata'),
 });
 

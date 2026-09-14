@@ -8,7 +8,7 @@ export const DEFAULT_BINS_COUNT = 20;
 export const HistogramChartSettings = z.object({
   field: z
     .string()
-    .optional()
+    .nullish()
     .describe('Numeric column to create histogram distribution for'),
   maxBins: z
     .number()
@@ -20,7 +20,7 @@ export const HistogramChartSettings = z.object({
     .describe(
       `Maximum number of bins for the histogram (default: ${DEFAULT_BINS_COUNT})`,
     ),
-  color: z.string().optional().describe('Optional color for histogram bars'),
+  color: z.string().nullish().describe('Optional color for histogram bars'),
 });
 
 export type HistogramChartSettings = z.infer<typeof HistogramChartSettings>;
