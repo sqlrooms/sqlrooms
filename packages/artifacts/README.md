@@ -280,9 +280,11 @@ the current artifact.
 creating a session: it selects the artifact (or clears the selection when the
 id is omitted) and deselects the current session, and the auto-sync leaves that
 empty selection alone instead of pulling the artifact's latest chat back in.
-Create the session from the screen's first send — with
-`createArtifactScopedSession()` so it lands on the artifact — so a chat the user
-never wrote in is never added to the chat list.
+Create the session from the screen's first send, so a chat the user never wrote
+in is never added to the chat list: `createArtifactScopedSession()` when an
+artifact is selected, and the plain `ai.createSession()` when none is —
+`createArtifactScopedSession()` returns `undefined` without a current artifact
+rather than creating an unscoped chat.
 `artifactAi.selectLatestSessionForArtifact()` and
 `artifactAi.syncCurrentArtifactAiSession()` keep the current AI session aligned
 with `artifacts.config.currentArtifactId`. Sessions without an explicit

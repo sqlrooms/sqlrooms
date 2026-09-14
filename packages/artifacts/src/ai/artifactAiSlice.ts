@@ -71,10 +71,13 @@ export type ArtifactAiSliceState = {
      *
      * The auto-sync would normally pull the artifact's latest chat back in;
      * while this screen is pending it leaves the empty selection alone, so a
-     * chat the user never wrote in is never added to the chat list. The
-     * session is created on the first send — use
-     * {@link ArtifactAiSliceState.artifactAi.createArtifactScopedSession}
-     * there so it lands on the artifact.
+     * chat the user never wrote in is never added to the chat list.
+     *
+     * The session is created on the first send, by whichever call matches the
+     * screen: `createArtifactScopedSession()` when an artifact is selected, so
+     * the chat lands on it, and the plain `ai.createSession()` otherwise —
+     * `createArtifactScopedSession()` deliberately does nothing without a
+     * current artifact.
      */
     startNewChat: (artifactId?: string) => void;
     selectLatestSessionForArtifact: (artifactId?: string) => void;
