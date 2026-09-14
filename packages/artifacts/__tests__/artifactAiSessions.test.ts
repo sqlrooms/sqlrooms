@@ -832,6 +832,51 @@ describe('createArtifactAiSlice', () => {
     await store.getState().artifactAi.destroy();
   });
 
+  it('links a plain session created from the pending new-chat screen', async () => {
+    const store = createTestStore({autoSync: true});
+    await store.getState().artifactAi.initialize();
+
+    store.getState().artifactAi.startNewChat('artifact-a');
+    expect(store.getState().ai.config.currentSessionId).toBeUndefined();
+
+    // The stock composer creates the session itself, without going through
+    // `createArtifactScopedSession`.
+    store.getState().ai.createSession('Chat 1');
+
+    expect(store.getState().ai.config.currentSessionId).toBe('session-1');
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-a',
+    );
+    expect(
+      store
+        .getState()
+        .artifactAi.hasSessionArtifactLink('session-1', 'artifact-a'),
+    ).toBe(true);
+    await store.getState().artifactAi.destroy();
+  });
+
+  it('does not adopt a pre-existing session selected from the pending screen', async () => {
+    const store = createTestStore({autoSync: true});
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [createSession('session-unlinked', 1)];
+      }),
+    );
+    await store.getState().artifactAi.initialize();
+
+    store.getState().artifactAi.startNewChat('artifact-a');
+    store.getState().ai.switchSession('session-unlinked');
+
+    expect(
+      store
+        .getState()
+        .artifactAi.hasSessionArtifactLink('session-unlinked', 'artifact-a'),
+    ).toBe(false);
+    // An unlinked chat has no artifact, so the selection follows it.
+    expect(store.getState().artifacts.config.currentArtifactId).toBeUndefined();
+    await store.getState().artifactAi.destroy();
+  });
+
   it('resumes normal sync once a pending new chat is abandoned', async () => {
     const store = createTestStore({autoSync: true});
     store.setState(

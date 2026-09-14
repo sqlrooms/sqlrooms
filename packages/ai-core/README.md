@@ -419,6 +419,19 @@ text-only turn is timestamped too. It is absent while the turn is still
 running, and for turns recorded before it was persisted, where `ChatTurnView`
 falls back to the end of the turn's tool span.
 
+It is persisted in the turn's own message metadata. Read it back with
+`getChatTurnCompletedAt(message)` rather than reaching into `message.metadata`,
+which keeps the storage shape private to the package;
+`getChatTurnsFromUiMessages()` already surfaces it as each `ChatTurn`'s
+`completedAt`.
+
+```ts
+import {getChatTurnCompletedAt} from '@sqlrooms/ai-core';
+
+// Epoch ms, or undefined for a turn that is still running or predates the stamp.
+const finishedAt = getChatTurnCompletedAt(turn.userMessage);
+```
+
 `useRelativeTime(timestamp, intervalMs?)` builds that label: it returns a
 formatted "x ago" string for an epoch-ms `timestamp`, re-reading the clock every
 `intervalMs` (default 30s) so the value stays current while the turn is on

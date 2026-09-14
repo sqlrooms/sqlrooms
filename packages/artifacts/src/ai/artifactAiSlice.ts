@@ -73,11 +73,12 @@ export type ArtifactAiSliceState = {
      * while this screen is pending it leaves the empty selection alone, so a
      * chat the user never wrote in is never added to the chat list.
      *
-     * The session is created on the first send, by whichever call matches the
-     * screen: `createArtifactScopedSession()` when an artifact is selected, so
-     * the chat lands on it, and the plain `ai.createSession()` otherwise —
-     * `createArtifactScopedSession()` deliberately does nothing without a
-     * current artifact.
+     * The session is created on the first send, by any means — including the
+     * stock composer's plain `ai.createSession()`. While the screen is
+     * pending, the first session that appears is linked to `artifactId`
+     * automatically, so the chat lands on the artifact whichever API created
+     * it. Selecting a session that already existed cancels the screen instead,
+     * and is never adopted.
      */
     startNewChat: (artifactId?: string) => void;
     selectLatestSessionForArtifact: (artifactId?: string) => void;
@@ -169,8 +170,14 @@ export function createArtifactAiSlice<
   let unsubscribe: (() => void) | undefined;
   let previousArtifactId: string | undefined;
   let previousSessionId: string | undefined;
-  /** Target of a pending `startNewChat`, while its blank screen is up. */
-  let pendingNewChat: {artifactId?: string} | undefined;
+  /**
+   * Target of a pending `startNewChat`, while its blank screen is up.
+   * `knownSessionIds` is what existed when the screen opened, so the sync can
+   * tell the session the screen created from one the user switched to.
+   */
+  let pendingNewChat:
+    | {artifactId?: string; knownSessionIds: Set<string>}
+    | undefined;
 
   return createSlice<ArtifactAiSliceState, TRoomState>((set, get, store) => {
     const getArtifactAiSyncSnapshot = (
@@ -301,13 +308,33 @@ export function createArtifactAiSlice<
         // another artifact is opened) the screen is gone and normal
         // reconciliation resumes.
         if (pendingNewChat) {
+          const {artifactId: pendingArtifactId, knownSessionIds} =
+            pendingNewChat;
           if (
-            currentArtifactId === pendingNewChat.artifactId &&
+            currentArtifactId === pendingArtifactId &&
             currentSessionId === undefined
           ) {
             return;
           }
           pendingNewChat = undefined;
+          // The screen's first send may create the session through any API —
+          // including the stock composer's plain `ai.createSession()` — so the
+          // link is applied here rather than being left to the caller.
+          // Sessions that already existed are the user switching away, not the
+          // screen resolving, and must not be adopted.
+          if (
+            pendingArtifactId &&
+            currentSessionId &&
+            !knownSessionIds.has(currentSessionId) &&
+            currentArtifactId === pendingArtifactId &&
+            state.artifacts.config.artifactsById[pendingArtifactId]
+          ) {
+            get().artifactAi.addSessionArtifactLink(
+              currentSessionId,
+              pendingArtifactId,
+            );
+            return;
+          }
         }
 
         // Note: the previous-artifact/previous-session baseline is NOT updated
@@ -574,7 +601,12 @@ export function createArtifactAiSlice<
           if (artifactId && !get().artifacts.config.artifactsById[artifactId]) {
             return;
           }
-          pendingNewChat = {artifactId};
+          pendingNewChat = {
+            artifactId,
+            knownSessionIds: new Set(
+              get().ai.config.sessions.map((session) => session.id),
+            ),
+          };
           // Both writes together are the new state; syncing on the
           // intermediate one would see an artifact whose session has not been
           // cleared yet and reconcile the selection away.
