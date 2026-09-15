@@ -217,6 +217,10 @@ export function hasMapId(action: KeplerAction): action is KeplerAction & {
 
 // support multiple kepler maps
 export type KeplerGlReduxState = {[id: string]: KeplerGlState};
+/**
+ * Optional dataset identity and cancellation for the positional add-table API.
+ * Aborting discards the result without cancelling the underlying database query.
+ */
 export type AddTableToMapLoadOptions = {
   /** Discard query results if aborted; the load resolves without adding data. */
   signal?: AbortSignal;
@@ -228,6 +232,10 @@ export type AddTableToMapLoadOptions = {
    */
   datasetId?: string;
 };
+/**
+ * Arguments for the preferred object-form add-table API.
+ * An aborted signal makes the load resolve without applying its query result.
+ */
 export type AddTableToMapParams = {
   mapId: string;
   /** Discard query results if aborted; the load resolves without adding data. */
@@ -834,67 +842,74 @@ export function createKeplerSlice({
             pendingKeplerSync = true;
             return syncKeplerPromise;
           }
-          syncKeplerPromise = (async () => {
-            // Loop until no new sync was requested during the current pass.
-            // Each iteration reads a fresh snapshot of db.tables and kepler.map,
-            // so tables/maps added concurrently are picked up on the next pass.
-            do {
-              pendingKeplerSync = false;
-              const {signal} = configRestoreController;
-              for (const mapId of Object.keys(get().kepler.map)) {
-                const mapState = get().kepler.map[mapId];
-                if (!mapState) continue;
-                const keplerDatasets = mapState.visState.datasets;
+          // Publish the promise before work starts, including an empty sync.
+          syncKeplerPromise = Promise.resolve().then(async () => {
+            try {
+              // Loop until no new sync was requested during the current pass.
+              // Each iteration reads a fresh snapshot of db.tables and kepler.map,
+              // so tables/maps added concurrently are picked up on the next pass.
+              do {
+                pendingKeplerSync = false;
+                const {signal} = configRestoreController;
+                maps: for (const mapId of Object.keys(get().kepler.map)) {
+                  const mapState = get().kepler.map[mapId];
+                  if (!mapState) continue;
+                  const keplerDatasets = mapState.visState.datasets;
 
-                const referencedDataIds = getReferencedKeplerDatasetIds(
-                  mapState.visState,
-                );
-
-                const availableTables = get().db.tables;
-
-                for (const dataId of referencedDataIds) {
-                  // Don't start another query from a superseded snapshot.
-                  if (signal.aborted) {
-                    pendingKeplerSync = true;
-                    break;
-                  }
-                  if (keplerDatasets?.[dataId]) {
-                    continue;
-                  }
-                  const table = findKeplerTableForDatasetId(
-                    availableTables,
-                    dataId,
-                    get().kepler.tableSelection,
+                  const referencedDataIds = getReferencedKeplerDatasetIds(
+                    mapState.visState,
                   );
-                  if (!table) {
-                    continue;
-                  }
-                  try {
-                    await get().kepler.addTableToMap({
-                      mapId,
-                      tableName: dataId,
-                      options: {
-                        autoCreateLayers: false,
-                        centerMap: false,
-                      },
-                      datasetId: dataId,
-                      signal,
-                    });
-                  } catch (e) {
-                    console.error('syncKeplerDatasets: addTableToMap failed', {
+
+                  const availableTables = get().db.tables;
+
+                  for (const dataId of referencedDataIds) {
+                    // Don't start another query from a superseded snapshot.
+                    if (signal.aborted) {
+                      pendingKeplerSync = true;
+                      break maps;
+                    }
+                    if (keplerDatasets?.[dataId]) {
+                      continue;
+                    }
+                    const table = findKeplerTableForDatasetId(
+                      availableTables,
                       dataId,
-                      e,
-                    });
+                      get().kepler.tableSelection,
+                    );
+                    if (!table) {
+                      continue;
+                    }
+                    try {
+                      await get().kepler.addTableToMap({
+                        mapId,
+                        tableName: dataId,
+                        options: {
+                          autoCreateLayers: false,
+                          centerMap: false,
+                        },
+                        datasetId: dataId,
+                        signal,
+                      });
+                    } catch (e) {
+                      console.error(
+                        'syncKeplerDatasets: addTableToMap failed',
+                        {
+                          dataId,
+                          e,
+                        },
+                      );
+                    }
                   }
                 }
-              }
-            } while (pendingKeplerSync);
-          })();
-          try {
-            await syncKeplerPromise;
-          } finally {
-            syncKeplerPromise = null;
-          }
+              } while (pendingKeplerSync);
+            } finally {
+              // Release ownership before this run resolves. A caller arriving
+              // after the final loop check must start a new run, not join one
+              // that can no longer observe pendingKeplerSync.
+              syncKeplerPromise = null;
+            }
+          });
+          return syncKeplerPromise;
         },
 
         deleteMap: (mapId) => {

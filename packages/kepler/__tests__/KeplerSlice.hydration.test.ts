@@ -175,6 +175,36 @@ describe('Kepler config hydration', () => {
     ]);
   });
 
+  it.each(['before sync starts', 'after the empty sync pass'])(
+    'restores maps when setConfig interleaves initialize %s',
+    async (timing) => {
+      const {store, loadDataset} = createTestStore({maps: []}, [
+        'points',
+        'other',
+      ]);
+      const initializing = store.getState().kepler.initialize();
+      if (timing === 'after the empty sync pass') await Promise.resolve();
+      store.getState().kepler.setConfig({
+        maps: [savedMap('a', ['points']), savedMap('b', ['other'])],
+      });
+
+      await settle(initializing);
+      await settle(store.getState().kepler.waitForConfigRestore());
+
+      expect(loadDataset).toHaveBeenCalledTimes(2);
+      for (const [mapId, dataId] of [
+        ['a', 'points'],
+        ['b', 'other'],
+      ] as const) {
+        expect(runtimeLayers(store, mapId)).toEqual([`${mapId}-${dataId}`]);
+        await lateAutosaves(store, mapId);
+        expect(savedLayers(store, mapId)).toEqual([
+          expect.objectContaining({id: `${mapId}-${dataId}`}),
+        ]);
+      }
+    },
+  );
+
   it('preserves an unavailable map through late actions and replay, then retries when its table appears', async () => {
     const {store, db} = createTestStore();
     await settle(store.getState().kepler.initialize());
