@@ -145,6 +145,53 @@ describe('Kepler config hydration', () => {
     jest.restoreAllMocks();
   });
 
+  it('exposes reactive pending status per map through missing data and retry', async () => {
+    const {store, db} = createTestStore({maps: []}, ['available']);
+    await settle(store.getState().kepler.initialize());
+    const statuses = [store.getState().kepler.isMapConfigPending('hidden')];
+    const unsubscribe = store.subscribe((state) => {
+      const pending = state.kepler.isMapConfigPending('hidden');
+      if (statuses.at(-1) !== pending) statuses.push(pending);
+    });
+    try {
+      await hydrate(store, [
+        savedMap('ready', ['available']),
+        savedMap('hidden', ['missing']),
+      ]);
+      expect(store.getState().kepler.isRestoringConfig).toBe(false);
+      expect(store.getState().kepler.isMapConfigPending('ready')).toBe(false);
+      expect(store.getState().kepler.isMapConfigPending('hidden')).toBe(true);
+      await lateAutosaves(store, 'hidden');
+      expect(store.getState().kepler.isMapConfigPending('hidden')).toBe(true);
+
+      db.tables.push(table('missing'));
+      await settle(store.getState().kepler.syncKeplerDatasets());
+      expect(store.getState().kepler.isMapConfigPending('hidden')).toBe(false);
+      expect(runtimeLayers(store, 'hidden')).toEqual(['hidden-missing']);
+      expect(statuses).toEqual([false, true, false]);
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it('distinguishes pending map config from registration and persistence pauses', async () => {
+    const {store} = createTestStore({maps: [savedMap('map', ['missing'])]});
+    expect(store.getState().kepler.isMapConfigPending('map')).toBe(false);
+    expect(store.getState().kepler.isMapConfigPending('unknown')).toBe(false);
+    await settle(store.getState().kepler.initialize());
+    expect(store.getState().kepler.isMapConfigPending('map')).toBe(true);
+    store.getState().kepler.deleteMap('map');
+    expect(store.getState().kepler.isMapConfigPending('map')).toBe(false);
+
+    await hydrate(store, [savedMap('empty', [])]);
+    await settle(
+      store.getState().kepler.withConfigPersistencePaused(() => {
+        expect(store.getState().kepler.isRestoringConfig).toBe(true);
+        expect(store.getState().kepler.isMapConfigPending('empty')).toBe(false);
+      }),
+    );
+  });
+
   it('restores all maps after initialization without mounting any map component', async () => {
     const {store, loadDataset} = createTestStore({maps: []}, ['points']);
     await settle(store.getState().kepler.initialize());
