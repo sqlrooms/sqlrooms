@@ -1,4 +1,5 @@
 import {tool} from 'ai';
+import {summarizeBlockDocumentBlock} from './summarizeBlockDocumentBlock';
 import {z} from 'zod';
 import {
   type BlockDocumentAiAdapter,
@@ -7,21 +8,7 @@ import {
 import {
   blockDocumentNodeToBlock,
   type BlockDocumentBlock,
-  type BlockDocumentNode,
 } from './BlockDocumentSliceConfig';
-
-/**
- * Extract plain text from an array of BlockDocumentNodes.
- */
-function extractTextFromNodes(nodes: BlockDocumentNode[]): string {
-  return nodes
-    .map((node) => {
-      if (node.text) return node.text;
-      if (node.content) return extractTextFromNodes(node.content);
-      return '';
-    })
-    .join('');
-}
 
 const ListBlockDocumentBlocksToolInput = z.object({
   reasoning: z
@@ -64,50 +51,6 @@ export type CreateListBlockDocumentBlocksToolOptions = {
   augmentBlockSummary?: BlockDocumentBlockSummaryAugmenter;
 };
 
-function summarizeBlock(
-  block: ReturnType<typeof blockDocumentNodeToBlock>,
-  index: number,
-): BlockDocumentBlockSummary | undefined {
-  if (!block) return undefined;
-
-  if (block.type === 'statefulBlock') {
-    return {
-      blockId: block.id,
-      index,
-      type: block.type,
-      ...(block.caption !== undefined ? {caption: block.caption} : {}),
-      ...(block.tableName !== undefined ? {tableName: block.tableName} : {}),
-      statefulBlock: {
-        blockType: block.blockType,
-        ...(block.blockInstanceId !== undefined
-          ? {blockInstanceId: block.blockInstanceId}
-          : {}),
-        ...(block.ownership !== undefined ? {ownership: block.ownership} : {}),
-      },
-    };
-  }
-
-  if (block.type === 'chart') {
-    return {
-      blockId: block.id,
-      index,
-      type: block.type,
-      tableName: block.tableName,
-      ...(block.caption !== undefined ? {caption: block.caption} : {}),
-    };
-  }
-
-  return {
-    blockId: block.id,
-    index,
-    type: block.type,
-    ...('text' in block ? {title: extractTextFromNodes(block.text)} : {}),
-    ...('caption' in block && block.caption !== undefined
-      ? {caption: block.caption}
-      : {}),
-  };
-}
-
 /**
  * Creates a tool for listing block-document blocks so agents can reuse or
  * update existing blocks instead of creating duplicates.
@@ -124,7 +67,7 @@ export function createListBlockDocumentBlocksTool({
   >({
     description: [
       'List existing blocks in the block document.',
-      'Use this before updating an existing stateful block or adding related content.',
+      'Use this when the supplied document snapshot or latest tool results lack the needed block IDs or current order.',
       usageHint,
     ]
       .filter(Boolean)
@@ -141,7 +84,7 @@ export function createListBlockDocumentBlocksTool({
             .map((node, index) =>
               (() => {
                 const block = blockDocumentNodeToBlock(node);
-                const summary = summarizeBlock(block, index);
+                const summary = summarizeBlockDocumentBlock(block, index);
                 if (!block || !summary) return undefined;
 
                 return {
