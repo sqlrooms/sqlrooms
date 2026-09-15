@@ -2,7 +2,11 @@ import type {KeplerGlState} from '@kepler.gl/reducers';
 
 type VisState = KeplerGlState['visState'];
 
-/** Include saved config awaiting datasets, even when no map component is mounted. */
+/**
+ * Collect dataset ids from live and pending layers/filters and pending tooltips.
+ * Custom dataset-sync implementations can use this before a map is mounted.
+ * Returns a new set, including references to datasets that are already loaded.
+ */
 export function getReferencedKeplerDatasetIds(visState: VisState): Set<string> {
   const dataIds = new Set<string>();
   for (const layer of [...visState.layers, ...visState.layerToBeMerged]) {
@@ -20,7 +24,11 @@ export function getReferencedKeplerDatasetIds(visState: VisState): Set<string> {
   return dataIds;
 }
 
-/** Kepler's serializer omits these pending values; saving would discard them. */
+/**
+ * Whether a map has config or dataset merges pending that prevent safe autosave.
+ * Kepler's serializer omits pending config; saving it would discard those values.
+ * This does not report the slice's persistence pause or outstanding async work.
+ */
 export function hasPendingKeplerConfig(visState: VisState): boolean {
   return (
     visState.layerToBeMerged.length > 0 ||

@@ -172,6 +172,37 @@ Persistence protection is based on each map's pending config, so it remains in
 effect after that promise resolves. Edits to an incomplete map do not replace
 its saved config until its pending config is resolved.
 
+Hosts that override dataset synchronization can reuse the same discovery and
+persistence checks from the public package:
+
+```ts
+import {
+  getReferencedKeplerDatasetIds,
+  hasPendingKeplerConfig,
+} from '@sqlrooms/kepler';
+
+const map = roomStore.getState().kepler.map[mapId];
+if (map) {
+  const referencedIds = getReferencedKeplerDatasetIds(map.visState);
+  const missingIds = [...referencedIds].filter(
+    (id) => !map.visState.datasets[id],
+  );
+  const configPending = hasPendingKeplerConfig(map.visState);
+  // Use missingIds in custom loading logic and configPending in host UI.
+}
+```
+
+Dataset discovery includes live and pending layers/filters and pending tooltip
+references. Split-map state references layer ids rather than dataset ids; its
+pending state is included in `hasPendingKeplerConfig`. That boolean reports
+pending config and dataset merges, not the slice's temporary persistence pause
+or completion of all async work. The helpers do not expose the base sync's
+restore cancellation signal; custom sync implementations still own cancellation.
+
+`getReferencedKeplerDatasetIds` returns a new set. With Zustand, select the raw
+`visState` and derive that set outside the selector. The boolean helper can be
+used directly in a selector to observe whether a map has pending config.
+
 ### Appearance
 
 Pass options to `createKeplerSlice()`:
