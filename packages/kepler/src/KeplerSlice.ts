@@ -367,6 +367,12 @@ export type KeplerSliceState = {
       autoCreateLayers: boolean,
     ) => void;
     addConfigToMap: (mapId: string, config: KeplerMapSchema) => void;
+    /**
+     * Whether a map has pending config or dataset merges that block autosave.
+     * Returns false for unregistered maps. Does not include the slice's
+     * persistence pause or report completion of all async work.
+     */
+    isMapConfigPending: (mapId: string) => boolean;
     isRestoringConfig: boolean;
     withConfigPersistencePaused: <TResult>(
       fn: () => TResult | Promise<TResult>,
@@ -532,6 +538,10 @@ export function createKeplerSlice({
         modalPortalTarget,
         tableSelection: resolvedTableSelection,
         map: {},
+        isMapConfigPending: (mapId) => {
+          const map = get().kepler.map[mapId];
+          return map ? hasPendingKeplerConfig(map.visState) : false;
+        },
         isRestoringConfig: false,
         dispatchAction: () => {},
         __reduxProviderStore: undefined,
