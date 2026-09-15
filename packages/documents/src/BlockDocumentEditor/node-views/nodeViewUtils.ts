@@ -1,5 +1,12 @@
 import type {DocumentAsset} from '../../DocumentAsset';
 
+/**
+ * Reconstructs a data URL from a stored {@link DocumentAsset}.
+ *
+ * Base64-encoded assets become `data:<mediaType>;base64,<data>`; other assets
+ * are percent-encoded as `data:<mediaType>;charset=utf-8,<data>`. Returns
+ * `undefined` when the asset is missing.
+ */
 export function documentAssetToDataUrl(
   asset: DocumentAsset | undefined,
 ): string | undefined {
