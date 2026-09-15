@@ -23,7 +23,7 @@ import {
 } from '@dnd-kit/sortable';
 import {
   EllipsisVerticalIcon,
-  ListCollapseIcon,
+  LayoutListIcon,
   PlusIcon,
   SearchIcon,
   XIcon,
@@ -180,7 +180,7 @@ const DEFAULT_TAB_DRAG_KIND = 'sqlrooms.tab';
 
 const TAB_STRIP_BUTTON_CLASSNAMES = [
   'flex h-full min-w-0 min-h-7 items-center',
-  'hover:bg-primary/10 overflow-hidden px-6 py-1 font-normal',
+  'hover:bg-muted overflow-hidden px-6 py-1 font-normal',
   'focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-inset',
 ];
 
@@ -243,7 +243,7 @@ function SortableTab({
       <div
         data-state={isEditing ? 'editing' : undefined}
         className={cn(
-          'data-[state=inactive]:hover:bg-primary/5',
+          'data-[state=inactive]:hover:bg-muted',
           'group/tab flex h-full max-w-[200px] min-w-[100px] shrink-0 cursor-grab',
           'items-center justify-between gap-1 overflow-hidden rounded-b-none',
           'py-0 pr-1 font-normal data-[state=active]:shadow-none',
@@ -260,7 +260,7 @@ function SortableTab({
               ...TAB_STRIP_BUTTON_CLASSNAMES,
               'flex-1 gap-1',
               isEditing ? 'justify-start' : 'justify-center text-center',
-              'data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none',
+              'data-[state=active]:bg-muted data-[state=active]:text-foreground data-[state=active]:shadow-none',
               isEditing && 'focus-visible:ring-0',
             )}
             style={fontSizeStyle}
@@ -297,7 +297,7 @@ function SortableTab({
                   <button
                     type="button"
                     aria-label="Tab options"
-                    className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-ring absolute top-1/2 left-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover/tab:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 data-[state=open]:opacity-100"
+                    className="hover:bg-muted focus-visible:bg-muted focus-visible:ring-ring absolute top-1/2 left-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover/tab:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 data-[state=open]:opacity-100"
                     onMouseDown={(event) => {
                       event.stopPropagation();
                       event.preventDefault();
@@ -319,7 +319,7 @@ function SortableTab({
               <button
                 type="button"
                 aria-label="Close tab"
-                className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-ring absolute top-1/2 right-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover/tab:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0"
+                className="hover:bg-muted focus-visible:bg-muted focus-visible:ring-ring absolute top-1/2 right-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover/tab:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0"
                 onMouseDown={(event) => {
                   event.stopPropagation();
                   event.preventDefault();
@@ -684,7 +684,7 @@ function TabDragOverlay({
   return (
     <div
       className={cn(
-        'bg-primary/15 text-foreground border-primary/50 flex h-7 max-w-[200px] min-w-[100px]',
+        'bg-muted text-foreground border-border flex h-7 max-w-[200px] min-w-[100px]',
         'cursor-grabbing items-center justify-center gap-1 overflow-hidden rounded-md border px-6 py-1',
         'text-sm shadow-lg',
       )}
@@ -835,7 +835,7 @@ function TabStripSearchDropdown({
         className={cn(...TAB_STRIP_BUTTON_CLASSNAMES, triggerClassName)}
         style={fontSizeStyle}
       >
-        {triggerIcon ?? <ListCollapseIcon className="h-4 w-4" />}
+        {triggerIcon ?? <LayoutListIcon className="h-4 w-4" />}
       </Button>
     </DropdownMenuTrigger>
   );
@@ -1393,7 +1393,7 @@ function TabStripRoot({
       value={selectedTabId ?? undefined}
       onValueChange={handleValueChange}
       activationMode="manual"
-      className={cn('bg-muted w-full min-w-0', className)}
+      className={cn('bg-background w-full min-w-0', className)}
       style={getFontSizeStyle(fontSize)}
     >
       <TabStripContext.Provider value={contextValue}>

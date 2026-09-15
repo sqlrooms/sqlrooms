@@ -42,6 +42,7 @@ export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
 export {useElapsedTime} from './hooks/useElapsedTime';
+export {useRelativeTime} from './hooks/useRelativeTime';
 export {
   cleanGeneratedSessionTitle,
   generateSessionTitle,
@@ -166,6 +167,7 @@ export type {
 export {
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,
+  getChatTurnCompletedAt,
   getChatTurnsFromUiMessages,
 } from './chatTurns';
 export type {
@@ -299,9 +301,12 @@ export {
 } from './components/collectHoistableRenderers';
 export type {HoistableToolCall} from './components/collectHoistableRenderers';
 export {
+  areAnyNestedAwaitingApproval,
   buildChatTurnModel,
   splitTextAroundHoists,
+  computeActivityTimeSpan,
   computeComputationTimeMs,
+  computeTimeSpan,
   getToolName,
   isAgentToolPart,
 } from './components/buildChatTurnModel';
@@ -310,6 +315,7 @@ export type {
   ChatTurnActivityItem,
   ChatTurnTextItem,
   ChatTurnSegment,
+  ToolCallTiming,
   ToolPartWithId,
 } from './components/buildChatTurnModel';
 /** @deprecated Prefer {@link buildChatTurnModel}. Chronological presentation adapter. */

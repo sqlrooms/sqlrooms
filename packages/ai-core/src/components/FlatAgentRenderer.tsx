@@ -19,6 +19,7 @@ import {
 } from './ChatRenderingContextBase';
 import {useHoistedRenderers} from './HoistedRenderersContext';
 import {ActivityBox} from './ActivityBox';
+import {computeTimeSpan} from './buildChatTurnModel';
 import {HighlightedChatSearchText} from './ChatSearch';
 import {
   canHoistAgentToolCall,
@@ -155,12 +156,7 @@ export const AgentToolActivityLogLine: React.FC<{
         )}
         {isError && <CircleXIcon className="h-3 w-3" />}
       </span>
-      <span
-        className={cn(
-          'min-w-0 leading-4 break-words hyphens-auto whitespace-normal',
-          reasoning && 'italic',
-        )}
-      >
+      <span className="min-w-0 leading-4 break-words hyphens-auto whitespace-normal">
         {labelNode}
       </span>
       {toolCall.startedAt != null ? (
@@ -222,7 +218,10 @@ export const AgentToolSummaryLine: React.FC<{
   }
 
   return (
-    <div className="min-w-0 py-1 text-xs leading-4 break-words whitespace-normal italic">
+    <div
+      data-slot="agent-tool-summary"
+      className="min-w-0 py-1 text-xs leading-4 break-words whitespace-normal"
+    >
       {searchBlockId ? (
         <HighlightedChatSearchText blockId={searchBlockId} text={reasoning} />
       ) : (
@@ -479,13 +478,36 @@ const FlatSegmentList: React.FC<{
           const anyPending = seg.tools.some(
             (t) => t.state === 'pending' || t.state === 'approval-requested',
           );
+          // Waiting on the user is not the model thinking — the run status
+          // reports the same call as paused.
+          const anyAwaitingApproval = seg.tools.some(
+            (t) => t.state === 'approval-requested',
+          );
 
           const toolCount = seg.tools.length;
           const allToolsDone = !anyPending && toolCount > 0;
-          const summaryLabel =
-            allToolsDone && isAgentComplete
-              ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
+          // Shared with the top-level timeline so nested and top-level
+          // activity report timing the same way: calls with no recorded start
+          // cannot contribute an end, and a span never runs backwards.
+          const groupSpan = computeTimeSpan(seg.tools);
+          const groupStartedAt = groupSpan?.startedAt;
+          const groupComputationTimeMs =
+            !anyPending && groupSpan
+              ? groupSpan.endedAt - groupSpan.startedAt
               : undefined;
+          const groupComputationTimeLabel =
+            groupComputationTimeMs != null
+              ? `Computation Time: ${formatShortDuration(
+                  groupComputationTimeMs,
+                )}`
+              : undefined;
+          const summaryLabel = anyAwaitingApproval
+            ? 'Waiting for approval'
+            : anyPending
+              ? 'Thinking'
+              : allToolsDone && isAgentComplete
+                ? 'Thought'
+                : undefined;
 
           const logLines = seg.tools.map((tc) => {
             const isHoisted = canHoistAgentToolCall(
@@ -565,11 +587,20 @@ const FlatSegmentList: React.FC<{
               isCompleted={allToolsDone && isAgentComplete === true}
               toolCount={toolCount}
               summaryLabel={summaryLabel}
+              startedAt={groupStartedAt}
+              computationTimeMs={groupComputationTimeMs}
+              computationTimeLabel={groupComputationTimeLabel}
             >
               {logLines}
             </Activity>
           ) : (
-            <ActivityBox isRunning={anyPending} summaryLabel={summaryLabel}>
+            <ActivityBox
+              isRunning={anyPending}
+              summaryLabel={summaryLabel}
+              startedAt={groupStartedAt}
+              stepCount={toolCount}
+              computationTimeLabel={groupComputationTimeLabel}
+            >
               {logLines}
             </ActivityBox>
           );
@@ -727,12 +758,7 @@ const OrchestratorLogLineInner: React.FC<{
         )}
         {isError && <CircleXIcon className="h-3 w-3" />}
       </span>
-      <span
-        className={cn(
-          'min-w-0 leading-4 break-words hyphens-auto whitespace-normal',
-          reasoning && 'italic',
-        )}
-      >
+      <span className="min-w-0 leading-4 break-words hyphens-auto whitespace-normal">
         {labelNode}
       </span>
       {elapsed ? (

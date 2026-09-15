@@ -11,7 +11,10 @@ import type {Components} from 'react-markdown';
 import {TOOL_CALL_CANCELLED} from '../constants';
 import type {AgentToolCall} from '../types';
 import {isReasoningPart, isTextPart} from '../utils';
+import {formatShortDuration} from '@sqlrooms/utils';
+import {useRelativeTime} from '../hooks/useRelativeTime';
 import {ActivityBox} from './ActivityBox';
+import {computeActivityTimeSpan} from './buildChatTurnModel';
 import {
   HighlightedChatSearchText,
   useActiveChatSearchMatchKey,
@@ -61,7 +64,7 @@ export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
   attachmentSearchBlockIds,
   searchBlockId,
 }) => (
-  <div className="group/prompt bg-muted relative ml-auto flex w-fit max-w-[85%] flex-col gap-2 rounded-md border p-2 text-sm">
+  <div className="group/prompt bg-muted relative ml-auto flex w-fit max-w-[85%] flex-col gap-2 rounded-md p-2 text-sm">
     {attachments.length > 0 ? (
       <div className="flex max-w-full flex-wrap justify-end gap-2">
         {attachments.map((attachment, index) => (
@@ -80,10 +83,11 @@ export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
         </div>
       </ExpandableContent>
     </div>
-    <div className="absolute top-1/2 right-full mr-1 shrink-0 -translate-y-1/2 opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
+    <div className="absolute top-0 right-full mr-1 shrink-0">
       <CopyButton
         text={prompt}
         className="h-6 w-6"
+        iconClassName="h-2.5 w-2.5"
         tooltipLabel="Copy prompt"
       />
     </div>
@@ -95,22 +99,23 @@ export const DefaultChatActivity: React.FC<ChatActivityProps> = ({
   children,
   isRunning,
   summaryLabel,
+  startedAt,
+  toolCount,
   computationTimeLabel,
   className,
-}) => {
-  const combinedSummaryLabel = [summaryLabel, computationTimeLabel]
-    .filter(Boolean)
-    .join(' · ');
-  return (
-    <ActivityBox
-      isRunning={isRunning}
-      summaryLabel={combinedSummaryLabel || undefined}
-      className={className}
-    >
-      {children}
-    </ActivityBox>
-  );
-};
+}) => (
+  <ActivityBox
+    isRunning={isRunning}
+    summaryLabel={summaryLabel}
+    startedAt={startedAt}
+    // A settled group reports its duration, not a step.
+    stepCount={isRunning ? toolCount : undefined}
+    computationTimeLabel={isRunning ? undefined : computationTimeLabel}
+    className={className}
+  >
+    {children}
+  </ActivityBox>
+);
 
 /** SQLRooms default reasoning disclosure. */
 export const DefaultChatReasoning: React.FC<ChatReasoningProps> = ({
@@ -255,18 +260,31 @@ const DefaultChatForkAction: React.FC<{run: () => void}> = ({run}) => (
   </Tooltip>
 );
 
+/** Relative timestamp that refreshes while the turn stays on screen. */
+const ChatTurnAge: React.FC<{completedAt: number}> = ({completedAt}) => {
+  const label = useRelativeTime(completedAt);
+  if (!label) return null;
+  return (
+    <span className="text-muted-foreground ml-1 self-center text-xs">
+      {label}
+    </span>
+  );
+};
+
 /** SQLRooms default action-row layout. */
 export const DefaultChatActions: React.FC<ChatActionsProps> = ({
   copy,
   fork,
+  completedAt,
 }) => {
-  if (!copy && !fork) return null;
+  if (!copy && !fork && completedAt == null) return null;
   const Copy = copy?.Content;
   const Fork = fork?.Content;
   return (
     <div className="flex justify-start gap-1">
       {Copy && <Copy />}
       {Fork && <Fork />}
+      {completedAt != null && <ChatTurnAge completedAt={completedAt} />}
     </div>
   );
 };
@@ -285,6 +303,15 @@ type CreateChatTurnPresentationOptions = {
   copyText?: string;
   errorMessage?: string;
   activitySummaryLabel?: string;
+  /** Earliest tool start in the group, for the header's live clock. */
+  activityStartedAt?: number;
+  /**
+   * Epoch ms the turn finished, for the actions row's "x ago" label.
+   * Undefined while the turn is still running.
+   */
+  turnCompletedAt?: number;
+  /** Per-tool-call timings, so each timeline group can report its own. */
+  toolTimings: Record<string, {startedAt?: number; completedAt?: number}>;
   computationTimeMs?: number;
   computationTimeLabel?: string;
   responseText: ChatTurnTextItem[];
@@ -312,6 +339,9 @@ export function createChatTurnPresentation({
   copyText,
   errorMessage,
   activitySummaryLabel,
+  activityStartedAt,
+  turnCompletedAt,
+  toolTimings,
   computationTimeMs,
   computationTimeLabel,
   responseText,
@@ -340,9 +370,12 @@ export function createChatTurnPresentation({
     />
   ));
 
-  const isActivityRunning =
-    model.isActivityRunning ||
-    (!isCompleted && model.activity.some((item) => item.kind === 'reasoning'));
+  // The turn's activity as a whole runs until the turn ends. Following
+  // `model.isActivityRunning` alone would report it as settled in the gaps
+  // between steps, when no tool is pending because the model is writing the
+  // next call — collapsing the box and stopping its clock mid-run. Individual
+  // timeline groups still report their own pending state.
+  const isActivityRunning = !isCompleted || model.isActivityRunning;
 
   const timelineAgentContentByIndex = new Map<number, React.ElementType>();
 
@@ -476,10 +509,34 @@ export function createChatTurnPresentation({
           const anyPending = segment.parts.some(({part}) =>
             isToolPartPending(part.state),
           );
+          // An approval is pending on the *user*, not on the model. Saying
+          // "Thinking" there contradicts the run status, which reports the
+          // same part as paused. The clock keeps running: the wait is part of
+          // the group's span, and so of the duration reported at the end.
+          const anyAwaitingApproval = segment.parts.some(
+            ({part}) => part.state === 'approval-requested',
+          );
           const toolCount = segment.parts.length;
-          const summaryLabel =
-            !anyPending && toolCount > 0 && isCompleted
-              ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
+          const summaryLabel = anyAwaitingApproval
+            ? 'Waiting for approval'
+            : anyPending
+              ? 'Thinking'
+              : toolCount > 0 && isCompleted
+                ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
+                : undefined;
+          const groupSpan = computeActivityTimeSpan(
+            segment.parts.map(({part}) => part.toolCallId),
+            toolTimings,
+          );
+          const groupComputationTimeMs =
+            !anyPending && groupSpan
+              ? groupSpan.endedAt - groupSpan.startedAt
+              : undefined;
+          const groupComputationTimeLabel =
+            groupComputationTimeMs != null
+              ? `Computation Time: ${formatShortDuration(
+                  groupComputationTimeMs,
+                )}`
               : undefined;
 
           return (
@@ -490,6 +547,9 @@ export function createChatTurnPresentation({
                   isCompleted={isCompleted}
                   toolCount={toolCount}
                   summaryLabel={summaryLabel}
+                  startedAt={groupSpan?.startedAt}
+                  computationTimeMs={groupComputationTimeMs}
+                  computationTimeLabel={groupComputationTimeLabel}
                 >
                   {segment.parts.map(({part, index}) => {
                     const item = activityByIndex.get(index);
@@ -549,6 +609,7 @@ export function createChatTurnPresentation({
         isCompleted={isCompleted}
         toolCount={model.leafToolCount}
         summaryLabel={activitySummaryLabel}
+        startedAt={activityStartedAt}
         computationTimeMs={computationTimeMs}
         computationTimeLabel={computationTimeLabel}
       >
@@ -608,6 +669,7 @@ export function createChatTurnPresentation({
   const actionProps: ChatActionsProps = {
     ...(copy ? {copy} : {}),
     ...(fork ? {fork} : {}),
+    ...(turnCompletedAt != null ? {completedAt: turnCompletedAt} : {}),
   };
   const ActionsContent = bindContent('actions', () => (
     <Actions {...actionProps} />
@@ -624,6 +686,7 @@ export function createChatTurnPresentation({
     activity: {
       isRunning: isActivityRunning,
       toolCount: model.leafToolCount,
+      startedAt: activityStartedAt,
       computationTimeMs,
       items: activityItems,
       Content: ActivityContent,
@@ -691,7 +754,7 @@ export const DefaultChatTurn: React.FC<ChatTurnSlotProps> = ({turn}) => {
   const Actions = turn.actions.Content;
   return (
     <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
-      <div className="bg-background sticky top-0 z-10 mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-100 dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.4)]">
+      <div className="bg-background sticky top-0 z-10 flex items-center gap-2 py-3 text-gray-700 dark:text-gray-100">
         <Prompt />
       </div>
       <div className="flex w-full flex-col gap-2">

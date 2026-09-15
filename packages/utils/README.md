@@ -31,6 +31,15 @@ formatDateTime(new Date()); // "Mon 2026-02-23 02:15 PM"
 formatTimeRelative(Date.now() - 60_000); // "a minute ago"
 ```
 
+`formatTimeRelative` takes an optional second argument, the point to measure
+from; it defaults to now. Passing it explicitly keeps the result a pure function
+of its inputs, which is what lets a React component recompute the label on a
+clock tick instead of relying on a hidden read of the current time:
+
+```ts
+formatTimeRelative(completedAt, now); // "18 minutes ago", relative to `now`
+```
+
 ## File/table name helpers
 
 ```ts
