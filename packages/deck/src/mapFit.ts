@@ -52,9 +52,10 @@ function columnAliasProducedByStAsWkb(
 /**
  * Resolves the effective fit-to-data configuration for a Deck map.
  *
- * Explicit coordinate or geometry fields take precedence. Missing geometry and
- * H3 fields are inferred from dataset metadata, interaction configuration, and
- * layer bindings without consulting host-specific state.
+ * Explicit multi-column geometry takes precedence. A visible arc layer
+ * upgrades a single endpoint column or lon/lat pair to both source and
+ * target. Remaining missing geometry and H3 fields are inferred from
+ * dataset metadata, interaction configuration, and layer bindings.
  *
  * @param config - Durable Deck map configuration to inspect.
  * @returns A normalized fit configuration, or `null` when fitting is disabled.
@@ -65,13 +66,7 @@ export function resolveDeckMapFitToData(
   if (!config) return null;
   const fitToData = config.fitToData;
   if (!fitToData?.dataset) return null;
-  if (fitToData.longitudeColumn && fitToData.latitudeColumn) return fitToData;
   if (fitToData.geometryColumns && fitToData.geometryColumns.length > 0) {
-    return fitToData;
-  }
-
-  // Explicit geometryColumn wins over inferred arc/H3.
-  if (fitToData.geometryColumn) {
     return fitToData;
   }
 
@@ -81,7 +76,6 @@ export function resolveDeckMapFitToData(
       : (config.spec as Record<string, unknown>);
   const layers = Array.isArray(spec?.layers) ? spec.layers : [];
 
-  // Prefer both arc endpoints when fitToData did not name a single column.
   for (const layer of layers) {
     if (!layer || typeof layer !== 'object') continue;
     const layerRecord = layer as Record<string, unknown>;
@@ -99,15 +93,18 @@ export function resolveDeckMapFitToData(
       typeof binding.targetGeometryColumn === 'string' &&
       binding.targetGeometryColumn.trim()
     ) {
-      return {
-        ...fitToData,
-        geometryColumns: [
-          String(binding.sourceGeometryColumn),
-          String(binding.targetGeometryColumn),
-        ],
-      };
+      const source = String(binding.sourceGeometryColumn);
+      const target = String(binding.targetGeometryColumn);
+      const explicit = fitToData.geometryColumn?.trim();
+      if (explicit && explicit !== source && explicit !== target) {
+        continue;
+      }
+      return {...fitToData, geometryColumns: [source, target]};
     }
   }
+
+  if (fitToData.longitudeColumn && fitToData.latitudeColumn) return fitToData;
+  if (fitToData.geometryColumn) return fitToData;
 
   // Dataset default geometry wins over inferred H3.
   const dataset = config.datasets[fitToData.dataset];
@@ -250,26 +247,15 @@ export function createDeckMapBoundsQuery(options: {
     `;
     }
 
-    // Multiple geom columns: unnest once so the source is scanned once.
-    const geomExprs = geometryColumns.map((col) => {
-      const column = escapeId(col);
-      return `CASE WHEN ${column} IS NOT NULL THEN ${asGeometry(col)} END`;
-    });
+    // Avoid UNNEST(GEOMETRY[]) — WASM spatial can drop all but the first endpoint.
+    const geoms = geometryColumns.map(asGeometry);
     return `
       SELECT
-        ST_XMin(extent) AS min_longitude,
-        ST_YMin(extent) AS min_latitude,
-        ST_XMax(extent) AS max_longitude,
-        ST_YMax(extent) AS max_latitude
-      FROM (
-        SELECT ST_Extent_Agg(geom) AS extent
-        FROM (
-          SELECT UNNEST([${geomExprs.join(', ')}]) AS geom
-          FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom"
-        ) AS "__sqlrooms_dashboard_map_geoms"
-        WHERE geom IS NOT NULL
-      ) AS "__sqlrooms_dashboard_map_extent"
-      WHERE extent IS NOT NULL
+        list_min([${geoms.map((g) => `MIN(ST_XMin(${g}))`).join(', ')}]) AS min_longitude,
+        list_min([${geoms.map((g) => `MIN(ST_YMin(${g}))`).join(', ')}]) AS min_latitude,
+        list_max([${geoms.map((g) => `MAX(ST_XMax(${g}))`).join(', ')}]) AS max_longitude,
+        list_max([${geoms.map((g) => `MAX(ST_YMax(${g}))`).join(', ')}]) AS max_latitude
+      FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom"
     `;
   }
 
@@ -374,21 +360,52 @@ function fitDeckMapView(options: {
 }
 
 /**
- * MapLibre `jumpTo` options. Omits pitch/bearing unless set so fit preserves
- * a pitched `initialViewState` (needed for extruded columns).
+ * Completes an authored `initialViewState` so MapLibre gets center/zoom as
+ * well as pitch/bearing. Incomplete `{pitch, bearing}` otherwise starts at zoom 0.
  */
-export function buildDeckMapJumpToOptions(opts: {
-  longitude: number;
-  latitude: number;
-  zoom: number;
-  bearing?: number;
-  pitch?: number;
-}): {
+export function completeDeckMapInitialViewState(
+  viewState: unknown,
+): Record<string, unknown> | undefined {
+  if (!viewState || typeof viewState !== 'object' || Array.isArray(viewState)) {
+    return undefined;
+  }
+  return {
+    longitude: 0,
+    latitude: 20,
+    zoom: 1.5,
+    ...viewState,
+  };
+}
+
+/**
+ * MapLibre `jumpTo` options. Omits pitch/bearing unless set on `opts` or on
+ * `authoredCamera`, so fit-to-data can apply a pitched `initialViewState`.
+ */
+export function buildDeckMapJumpToOptions(
+  opts: {
+    longitude: number;
+    latitude: number;
+    zoom: number;
+    bearing?: number;
+    pitch?: number;
+  },
+  authoredCamera?: {pitch?: unknown; bearing?: unknown},
+): {
   center: [number, number];
   zoom: number;
   bearing?: number;
   pitch?: number;
 } {
+  const pitch =
+    opts.pitch ??
+    (typeof authoredCamera?.pitch === 'number'
+      ? authoredCamera.pitch
+      : undefined);
+  const bearing =
+    opts.bearing ??
+    (typeof authoredCamera?.bearing === 'number'
+      ? authoredCamera.bearing
+      : undefined);
   const jumpOpts: {
     center: [number, number];
     zoom: number;
@@ -398,8 +415,8 @@ export function buildDeckMapJumpToOptions(opts: {
     center: [opts.longitude, opts.latitude],
     zoom: opts.zoom,
   };
-  if (opts.bearing != null) jumpOpts.bearing = opts.bearing;
-  if (opts.pitch != null) jumpOpts.pitch = opts.pitch;
+  if (bearing != null) jumpOpts.bearing = bearing;
+  if (pitch != null) jumpOpts.pitch = pitch;
   return jumpOpts;
 }
 
