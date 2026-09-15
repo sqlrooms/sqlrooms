@@ -172,6 +172,12 @@ Persistence protection is based on each map's pending config, so it remains in
 effect after that promise resolves. Edits to an incomplete map do not replace
 its saved config until its pending config is resolved.
 
+`duplicateMap` copies a pending map's last preserved saved config, including
+unresolved layers and settings. It does not wait for missing datasets. If no
+saved config is available, it returns `success: false` with code
+`source-map-config-pending` without creating a copy. Fully restored maps are
+duplicated from their current runtime state, including unsaved edits.
+
 Hosts that override dataset synchronization can reuse the same discovery and
 persistence checks from the public package:
 

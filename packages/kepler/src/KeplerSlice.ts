@@ -945,12 +945,22 @@ export function createKeplerSlice({
             };
           }
 
+          // Like autosave, duplication must not serialize incomplete state.
+          // A pending map's preserved config includes its unresolved references.
+          const savedConfig = hasPendingKeplerConfig(sourceMapState.visState)
+            ? structuredClone(sourceMap.config)
+            : KeplerGLSchemaManager.getConfigToSave(sourceMapState);
+          if (!savedConfig) {
+            return {
+              success: false,
+              message:
+                'Unable to duplicate map: source config is pending and no saved config is available',
+              code: 'source-map-config-pending',
+            };
+          }
+
           const newMapId = createId();
           const now = Date.now();
-
-          // Save the source map state using Kepler's schema manager
-          const savedConfig =
-            KeplerGLSchemaManager.getConfigToSave(sourceMapState);
 
           set((state) =>
             produce(state, (draft) => {

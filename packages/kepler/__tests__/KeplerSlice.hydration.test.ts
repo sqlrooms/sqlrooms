@@ -258,6 +258,117 @@ describe('Kepler config hydration', () => {
     expect(runtimeLayers(store, 'retry')).toEqual(['retry-points']);
   });
 
+  it('duplicates a map during an in-flight restore without losing its saved layer', async () => {
+    const {store, loadDataset} = createTestStore({maps: []}, ['points']);
+    await settle(store.getState().kepler.initialize());
+    let releaseLoad!: (result: Table) => void;
+    loadDataset.mockImplementationOnce(
+      () => new Promise<Table>((resolve) => (releaseLoad = resolve)),
+    );
+    const source = savedMap('source', ['points']);
+    store.getState().kepler.setConfig({maps: [source]});
+    await jest.runAllTimersAsync();
+    expect(store.getState().kepler.isRestoringConfig).toBe(true);
+
+    expect(await store.getState().kepler.duplicateMap('source')).toMatchObject({
+      success: true,
+    });
+    const copy = store
+      .getState()
+      .kepler.config.maps.find((m) => m.id !== 'source')!;
+    expect(copy.config).toEqual(source.config);
+    expect(copy.config).not.toBe(
+      store.getState().kepler.config.maps[0]!.config,
+    );
+
+    releaseLoad(tableFromArrays({lat: [47], lng: [8], value: [10]}));
+    await settle(store.getState().kepler.waitForConfigRestore());
+    expect(runtimeLayers(store, copy.id)).toEqual(['source-points']);
+    await lateAutosaves(store, copy.id);
+    expect(savedLayers(store, copy.id)).toHaveLength(1);
+  });
+
+  it('duplicates unavailable layers and settings, then restores the copy when data returns', async () => {
+    const {store, db} = createTestStore();
+    await settle(store.getState().kepler.initialize());
+    const source = savedMap('source', ['points']);
+    source.config!.config.visState.filters = [
+      {
+        id: 'saved-filter',
+        dataId: ['points'],
+        name: ['value'],
+        type: 'range',
+        value: [10, 20],
+        enlarged: false,
+      },
+    ];
+    source.config!.config.visState.interactionConfig = {
+      tooltip: {
+        enabled: true,
+        fieldsToShow: {points: [{name: 'value', format: ''}]},
+      },
+    };
+    source.config!.config.visState.splitMaps = [
+      {layers: {'source-points': true}},
+      {layers: {'source-points': false}},
+    ];
+    await hydrate(store, [source]);
+    expect(await store.getState().kepler.duplicateMap('source')).toMatchObject({
+      success: true,
+    });
+    const copy = store
+      .getState()
+      .kepler.config.maps.find((m) => m.id !== 'source')!;
+    await lateAutosaves(store, copy.id);
+    expect(
+      store.getState().kepler.config.maps.find((m) => m.id === copy.id)!.config,
+    ).toEqual(source.config);
+
+    db.tables.push(table('points'));
+    await settle(store.getState().kepler.syncKeplerDatasets());
+    const vis = store.getState().kepler.map[copy.id]!.visState;
+    expect(runtimeLayers(store, copy.id)).toEqual(['source-points']);
+    expect(vis.filters.map((filter) => filter.id)).toEqual(['saved-filter']);
+    expect(vis.splitMaps).toEqual(source.config!.config.visState.splitMaps);
+    expect(vis.interactionConfig.tooltip.config.fieldsToShow.points).toEqual([
+      {name: 'value', format: ''},
+    ]);
+  });
+
+  it('duplicates current runtime edits on a ready map even while persistence is paused', async () => {
+    const {store} = createTestStore({maps: []}, ['points']);
+    await settle(store.getState().kepler.initialize());
+    await hydrate(store, [savedMap('source', ['points'])]);
+    const work = store
+      .getState()
+      .kepler.withConfigPersistencePaused(async () => {
+        store
+          .getState()
+          .kepler.dispatchAction('source', removeLayer('source-points'));
+        return store.getState().kepler.duplicateMap('source');
+      });
+    await settle(work);
+    expect(await work).toMatchObject({success: true});
+    const copy = store
+      .getState()
+      .kepler.config.maps.find((m) => m.id !== 'source')!;
+    expect(savedLayers(store, 'source')).toHaveLength(1);
+    expect(savedLayers(store, copy.id)).toEqual([]);
+  });
+
+  it('refuses to duplicate pending config without a preserved saved config', async () => {
+    const {store} = createTestStore({maps: [{id: 'source', name: 'Source'}]});
+    await settle(store.getState().kepler.initialize());
+    store
+      .getState()
+      .kepler.addConfigToMap('source', savedMap('source', ['points']).config!);
+    expect(await store.getState().kepler.duplicateMap('source')).toMatchObject({
+      success: false,
+      code: 'source-map-config-pending',
+    });
+    expect(store.getState().kepler.config.maps).toHaveLength(1);
+  });
+
   it('saves intentional last-layer deletion while another map is still pending', async () => {
     const {store} = createTestStore({maps: []}, ['available']);
     await settle(store.getState().kepler.initialize());
