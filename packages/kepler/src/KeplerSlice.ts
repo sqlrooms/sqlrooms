@@ -218,6 +218,8 @@ export function hasMapId(action: KeplerAction): action is KeplerAction & {
 // support multiple kepler maps
 export type KeplerGlReduxState = {[id: string]: KeplerGlState};
 export type AddTableToMapLoadOptions = {
+  /** Discard query results if aborted; the load resolves without adding data. */
+  signal?: AbortSignal;
   /**
    * Load the table under an explicit Kepler dataset id.
    *
@@ -228,6 +230,8 @@ export type AddTableToMapLoadOptions = {
 };
 export type AddTableToMapParams = {
   mapId: string;
+  /** Discard query results if aborted; the load resolves without adding data. */
+  signal?: AbortSignal;
   /**
    * Table reference to load. This can also be an existing/saved Kepler dataset
    * id when the table-selection policy can resolve it back to a table.
@@ -279,6 +283,7 @@ function normalizeAddTableToMapParams(
     options,
     config,
     datasetId: loadOptions.datasetId,
+    signal: loadOptions.signal,
   };
 }
 
@@ -405,7 +410,7 @@ export function createKeplerSlice({
   });
   let syncKeplerPromise: Promise<void> | null = null;
   let configRestoreDepth = 0;
-  let configRestoreGeneration = 0;
+  let configRestoreController = new AbortController();
   const configRestorePromises = new Set<Promise<unknown>>();
   // When a caller arrives while a sync is already in-flight, the in-flight run
   // may have captured a stale snapshot of db.tables/kepler.map (missing maps or
@@ -528,7 +533,8 @@ export function createKeplerSlice({
           void get()
             .kepler.withConfigPersistencePaused(async () => {
               const nextConfig = KeplerSliceConfig.parse(config);
-              configRestoreGeneration += 1;
+              configRestoreController.abort();
+              configRestoreController = new AbortController();
               set((state) =>
                 produce(state, (draft) => {
                   draft.kepler.config = nextConfig;
@@ -548,7 +554,8 @@ export function createKeplerSlice({
         },
 
         async initialize() {
-          configRestoreGeneration += 1;
+          configRestoreController.abort();
+          configRestoreController = new AbortController();
           const config = get().kepler.config;
           const keplerInitialState = config.maps.reduce<KeplerGlReduxState>(
             (mapState, map) =>
@@ -711,6 +718,7 @@ export function createKeplerSlice({
             options,
             config,
             datasetId: explicitDatasetId,
+            signal,
           } = normalizeAddTableToMapParams(
             paramsOrMapId,
             legacyTableName,
@@ -718,7 +726,7 @@ export function createKeplerSlice({
             legacyConfig,
             legacyLoadOptions,
           );
-          const restoreGeneration = configRestoreGeneration;
+          if (signal?.aborted) return;
           const tableSelection = get().kepler.tableSelection;
           const table = findKeplerTableForDatasetId(
             get().db.tables,
@@ -749,12 +757,9 @@ export function createKeplerSlice({
             duckDbColumns,
           );
           const arrowResult = await connector.query(adjustedQuery).result;
-          // A newer restore owns the map now. Let its sync load the datasets it
-          // references instead of adding a stale result from an earlier config.
-          if (
-            restoreGeneration !== configRestoreGeneration ||
-            !get().kepler.map[mapId]
-          ) {
+          // Sync supplies a restore-owned signal. Explicit add-table requests
+          // stay independent of restores unless their caller supplies a signal.
+          if (signal?.aborted || !get().kepler.map[mapId]) {
             return;
           }
           setGeoArrowWKBExtension(arrowResult, duckDbColumns);
@@ -835,7 +840,7 @@ export function createKeplerSlice({
             // so tables/maps added concurrently are picked up on the next pass.
             do {
               pendingKeplerSync = false;
-              const syncGeneration = configRestoreGeneration;
+              const {signal} = configRestoreController;
               for (const mapId of Object.keys(get().kepler.map)) {
                 const mapState = get().kepler.map[mapId];
                 if (!mapState) continue;
@@ -849,7 +854,7 @@ export function createKeplerSlice({
 
                 for (const dataId of referencedDataIds) {
                   // Don't start another query from a superseded snapshot.
-                  if (syncGeneration !== configRestoreGeneration) {
+                  if (signal.aborted) {
                     pendingKeplerSync = true;
                     break;
                   }
@@ -873,6 +878,7 @@ export function createKeplerSlice({
                         centerMap: false,
                       },
                       datasetId: dataId,
+                      signal,
                     });
                   } catch (e) {
                     console.error('syncKeplerDatasets: addTableToMap failed', {

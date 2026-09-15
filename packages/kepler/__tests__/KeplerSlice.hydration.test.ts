@@ -284,6 +284,90 @@ describe('Kepler config hydration', () => {
     ]);
   });
 
+  it('finishes an explicit table load when another map is restored', async () => {
+    const unchanged = savedMap('unchanged', []);
+    const {store, loadDataset} = createTestStore(
+      {maps: [unchanged, savedMap('changed', [])]},
+      ['points', 'other'],
+    );
+    await settle(store.getState().kepler.initialize());
+    const originalLoader = loadDataset.getMockImplementation()!;
+    let releaseLoad!: () => void;
+    loadDataset.mockImplementationOnce(
+      (query) =>
+        new Promise<Table>((resolve) => {
+          releaseLoad = () => {
+            void originalLoader(query).then(resolve);
+          };
+        }),
+    );
+    const addTable = store.getState().kepler.addTableToMap({
+      mapId: 'unchanged',
+      tableName: 'points',
+      options: {autoCreateLayers: true, centerMap: false},
+    });
+    await jest.runAllTimersAsync();
+
+    await hydrate(store, [unchanged, savedMap('changed', ['other'])]);
+    releaseLoad();
+    await settle(addTable);
+    await lateAutosaves(store, 'unchanged');
+
+    expect(
+      Object.keys(store.getState().kepler.map.unchanged!.visState.datasets),
+    ).toEqual(['points']);
+    expect(savedLayers(store, 'unchanged')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          config: expect.objectContaining({dataId: 'points'}),
+        }),
+      ]),
+    );
+    expect(runtimeLayers(store, 'changed')).toEqual(['changed-other']);
+  });
+
+  it.each(['object', 'positional'] as const)(
+    'honors cancellation of an in-flight %s add-table call',
+    async (signature) => {
+      const {store, loadDataset} = createTestStore(
+        {maps: [savedMap('map', [])]},
+        ['points'],
+      );
+      await settle(store.getState().kepler.initialize());
+      const controller = new AbortController();
+      let releaseLoad!: (result: Table) => void;
+      loadDataset.mockImplementationOnce(
+        () => new Promise<Table>((resolve) => (releaseLoad = resolve)),
+      );
+      const addTableToMap = store.getState().kepler.addTableToMap;
+      const work =
+        signature === 'object'
+          ? addTableToMap({
+              mapId: 'map',
+              tableName: 'points',
+              signal: controller.signal,
+            })
+          : addTableToMap(
+              'map',
+              'points',
+              {},
+              {},
+              {
+                signal: controller.signal,
+              },
+            );
+      await jest.runAllTimersAsync();
+      controller.abort();
+      releaseLoad(tableFromArrays({lat: [47], lng: [8]}));
+      await settle(work);
+      await lateAutosaves(store, 'map');
+
+      expect(loadDataset).toHaveBeenCalledTimes(1);
+      expect(store.getState().kepler.map.map!.visState.datasets).toEqual({});
+      expect(savedLayers(store, 'map')).toEqual([]);
+    },
+  );
+
   it('restores a filter-only dataset and preserves the filter while it is unavailable', async () => {
     const {store, db} = createTestStore();
     await settle(store.getState().kepler.initialize());

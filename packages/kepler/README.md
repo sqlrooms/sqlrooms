@@ -141,6 +141,12 @@ The older positional signature is still accepted for compatibility, but new code
 should use the object form so the table reference, Kepler options, config, and
 dataset-id override remain clear at the call site.
 
+An optional `signal: AbortSignal` lets a caller discard a load's results if it
+is cancelled before they are applied. The promise resolves without adding data;
+the underlying database query is not cancelled. Overrides of `addTableToMap`
+should forward or honor this signal. The positional form accepts it in its final
+load-options argument.
+
 ## Common customization
 
 ### Restoring saved maps
@@ -150,6 +156,10 @@ initialization, then `await kepler.waitForConfigRestore()` to wait for the
 restore operation. Initial configuration and later restores both load datasets
 referenced by pending layers, filters, and tooltips for every registered map;
 mounting a map component is not required.
+
+A newer restore cancels results from earlier dataset-sync requests. Explicit
+`addTableToMap` calls remain independent of restores unless the caller supplies
+a cancellation signal; restoring another map does not discard a requested table.
 
 If a referenced table is unavailable or fails to load, the map's saved config is
 preserved. Deferred Kepler actions cannot replace it with a partially restored
