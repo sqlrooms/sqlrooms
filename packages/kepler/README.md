@@ -143,6 +143,27 @@ dataset-id override remain clear at the call site.
 
 ## Common customization
 
+### Restoring saved maps
+
+Use `kepler.setConfig(savedConfig)` to replay configuration received after room
+initialization, then `await kepler.waitForConfigRestore()` to wait for the
+restore operation. Initial configuration and later restores both load datasets
+referenced by pending layers, filters, and tooltips for every registered map;
+mounting a map component is not required.
+
+If a referenced table is unavailable or fails to load, the map's saved config is
+preserved. Deferred Kepler actions cannot replace it with a partially restored
+config. Refresh the available tables and call `await kepler.syncKeplerDatasets()`
+to retry. Other, fully restored maps continue to autosave normally, including
+intentional deletion of all their layers.
+
+`waitForConfigRestore()` does not guarantee that unavailable datasets have loaded.
+Persistence protection is based on each map's pending config, so it remains in
+effect after that promise resolves. Edits to an incomplete map do not replace
+its saved config until its pending config is resolved.
+
+### Appearance
+
 Pass options to `createKeplerSlice()`:
 
 ```ts

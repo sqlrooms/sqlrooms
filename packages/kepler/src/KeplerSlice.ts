@@ -77,6 +77,10 @@ import {
   type KeplerDbSchemaReference,
   type KeplerTableSelectionOptions,
 } from './keplerTableSelection';
+import {
+  getReferencedKeplerDatasetIds,
+  hasPendingKeplerConfig,
+} from './keplerConfigPersistence';
 
 setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
@@ -401,6 +405,7 @@ export function createKeplerSlice({
   });
   let syncKeplerPromise: Promise<void> | null = null;
   let configRestoreDepth = 0;
+  let configRestoreGeneration = 0;
   const configRestorePromises = new Set<Promise<unknown>>();
   // When a caller arrives while a sync is already in-flight, the in-flight run
   // may have captured a stale snapshot of db.tables/kepler.map (missing maps or
@@ -523,6 +528,7 @@ export function createKeplerSlice({
           void get()
             .kepler.withConfigPersistencePaused(async () => {
               const nextConfig = KeplerSliceConfig.parse(config);
+              configRestoreGeneration += 1;
               set((state) =>
                 produce(state, (draft) => {
                   draft.kepler.config = nextConfig;
@@ -542,6 +548,7 @@ export function createKeplerSlice({
         },
 
         async initialize() {
+          configRestoreGeneration += 1;
           const config = get().kepler.config;
           const keplerInitialState = config.maps.reduce<KeplerGlReduxState>(
             (mapState, map) =>
@@ -577,8 +584,10 @@ export function createKeplerSlice({
             },
           });
           updateForwardDispatch();
-          await get().kepler.syncKeplerDatasets();
-          updateMapConfigs();
+          await get().kepler.withConfigPersistencePaused(async () => {
+            updateMapConfigs();
+            await get().kepler.syncKeplerDatasets();
+          });
           for (const mapId of Object.keys(get().kepler.map)) {
             requestMapStyle(mapId);
           }
@@ -709,6 +718,7 @@ export function createKeplerSlice({
             legacyConfig,
             legacyLoadOptions,
           );
+          const restoreGeneration = configRestoreGeneration;
           const tableSelection = get().kepler.tableSelection;
           const table = findKeplerTableForDatasetId(
             get().db.tables,
@@ -739,6 +749,14 @@ export function createKeplerSlice({
             duckDbColumns,
           );
           const arrowResult = await connector.query(adjustedQuery).result;
+          // A newer restore owns the map now. Let its sync load the datasets it
+          // references instead of adding a stale result from an earlier config.
+          if (
+            restoreGeneration !== configRestoreGeneration ||
+            !get().kepler.map[mapId]
+          ) {
+            return;
+          }
           setGeoArrowWKBExtension(arrowResult, duckDbColumns);
           // TODO remove once DuckDB doesn't drop geoarrow metadata
           restoreGeoarrowMetadata(arrowResult, {});
@@ -817,27 +835,24 @@ export function createKeplerSlice({
             // so tables/maps added concurrently are picked up on the next pass.
             do {
               pendingKeplerSync = false;
+              const syncGeneration = configRestoreGeneration;
               for (const mapId of Object.keys(get().kepler.map)) {
                 const mapState = get().kepler.map[mapId];
                 if (!mapState) continue;
                 const keplerDatasets = mapState.visState.datasets;
 
-                // Only sync tables that are referenced by existing layers or filters
-                const referencedDataIds = new Set<string>();
-                for (const layer of mapState.visState.layers ?? []) {
-                  if (layer.config.dataId) {
-                    referencedDataIds.add(layer.config.dataId);
-                  }
-                }
-                for (const filter of mapState.visState.filters ?? []) {
-                  for (const dataId of filter.dataId ?? []) {
-                    referencedDataIds.add(dataId);
-                  }
-                }
+                const referencedDataIds = getReferencedKeplerDatasetIds(
+                  mapState.visState,
+                );
 
                 const availableTables = get().db.tables;
 
                 for (const dataId of referencedDataIds) {
+                  // Don't start another query from a superseded snapshot.
+                  if (syncGeneration !== configRestoreGeneration) {
+                    pendingKeplerSync = true;
+                    break;
+                  }
                   if (keplerDatasets?.[dataId]) {
                     continue;
                   }
@@ -1114,11 +1129,13 @@ export function createKeplerSlice({
           const mapId = hasMapId(action) ? action.payload.meta._id_ : undefined;
           if (!mapId) throw new Error('Map ID not found in action payload');
           const result = next(action);
+          const mapState = get().kepler.map[mapId];
           if (
             configRestoreDepth === 0 &&
             !get().kepler.isRestoringConfig &&
             !SKIP_AUTO_SAVE_ACTIONS.includes(action.type) &&
-            mapId
+            mapState &&
+            !hasPendingKeplerConfig(mapState.visState)
           ) {
             // save kepler config to store
             set((state) =>
