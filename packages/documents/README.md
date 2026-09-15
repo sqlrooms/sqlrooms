@@ -232,6 +232,20 @@ data URLs up front and look them up by the node's `id` attribute here, as in
 the example above. `documentAssetToDataUrl(asset)` reconstructs a data URL from
 a stored `DocumentAsset`.
 
+### AI Document Context
+
+`formatBlockDocumentContext(content, {targetBlockId, maxChars, augmentBlockSummary})`
+creates a read-only text snapshot with zero-based block indices, stable IDs,
+stateful resource references, and Markdown content. It reuses the Markdown
+exporter without resolving image data or including visualization configuration.
+
+The default output budget is 24,000 characters (minimum 256). Individual block
+text is capped at 2,000 characters. Truncated text and omitted blocks are marked;
+a selected block and its neighbors receive priority, with included blocks still
+shown in document order. Optional host metadata can include live runtime issues.
+Regenerate the snapshot from current state when preparing an agent step, and use
+existing commands/tools for edits. This lossy view cannot round-trip a document.
+
 ### Block-Scoped Ask AI
 
 `startBlockScopedChat(...)` opens or reuses an artifact-scoped AI session for a

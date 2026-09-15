@@ -240,6 +240,15 @@ independently.
 Hosted SQL queries reuse the `@sqlrooms/sql-editor` single-query block surface.
 The same query block can also be opened as a top-level SQL Query artifact tab.
 
+### Document Agent Context
+
+The document editing agent receives a fresh, bounded Markdown snapshot before
+each model step, including block order, IDs, stateful resource references, and
+map runtime issues. It uses those references directly and lists blocks only
+when required references are omitted. Selected-block edits remain restricted
+to their original target. Snapshots are transient model context; document
+changes continue through the existing tools and commands.
+
 ## HTML App Revision History
 
 Generated `html-app` artifacts and document HTML app blocks store source

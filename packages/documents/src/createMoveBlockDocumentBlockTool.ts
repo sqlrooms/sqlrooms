@@ -51,7 +51,7 @@ export function createMoveBlockDocumentBlockTool({
     MoveBlockDocumentBlockToolOutput
   >({
     description: `Move a top-level block in the block document to a new index.
-Use this after listing blocks when the user asks to reorder block document content, such as moving a paragraph to the top.`,
+Use block IDs and current indices from the supplied document snapshot or latest listing when the user asks to reorder content, such as moving a paragraph to the top.`,
     inputSchema: MoveBlockDocumentBlockToolInput,
     execute: async ({blockId, toIndex}) => {
       try {

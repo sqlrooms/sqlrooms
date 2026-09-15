@@ -209,3 +209,8 @@ export {
 } from './knowledgeIndex';
 export * from './block-settings';
 export type {Editor} from '@tiptap/react';
+
+export {
+  formatBlockDocumentContext,
+  type FormatBlockDocumentContextOptions,
+} from './formatBlockDocumentContext';
