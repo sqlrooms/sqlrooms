@@ -5,6 +5,7 @@ import {
 import {blockDocumentToMarkdown} from './blockDocumentToMarkdown';
 import type {BlockDocumentBlockSummaryAugmenter} from './createListBlockDocumentBlocksTool';
 import {summarizeBlockDocumentBlock} from './summarizeBlockDocumentBlock';
+import {createBlockDocumentExcerpt} from './createBlockDocumentExcerpt';
 
 /** Options for a bounded, read-only block document snapshot for AI context. */
 export type FormatBlockDocumentContextOptions = {
@@ -51,7 +52,16 @@ export function formatBlockDocumentContext(
   let truncated = false;
   for (const index of indices) {
     const node = nodes[index]!;
-    const block = blockDocumentNodeToBlock(node);
+    const excerpt = createBlockDocumentExcerpt(
+      node,
+      Math.min(2_000, remaining),
+    );
+    // Preserve exact resource references, but keep the summary adapter from
+    // parsing or flattening unbounded text/list content before serialization.
+    const block = blockDocumentNodeToBlock({
+      ...excerpt.node,
+      attrs: node.attrs,
+    });
     const summary = summarizeBlockDocumentBlock(block, index);
     // Text is rendered below, so don't duplicate potentially large titles here.
     const metadata = summary
@@ -81,9 +91,12 @@ export function formatBlockDocumentContext(
       continue;
     }
 
-    const markdown = blockDocumentToMarkdown({type: 'doc', content: [node]});
+    const markdown = blockDocumentToMarkdown({
+      type: 'doc',
+      content: [excerpt.node],
+    });
     const limit = Math.min(2_000, remaining - header.length - 80);
-    const omitted = markdown.length > limit;
+    const omitted = excerpt.truncated || markdown.length > limit;
     truncated ||= omitted;
     const text = `${header}\n${markdown.slice(0, limit)}${omitted ? '\n[Block content truncated; read this block for full content.]' : ''}`;
     rows.push({index, text});

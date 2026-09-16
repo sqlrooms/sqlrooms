@@ -240,7 +240,11 @@ stateful resource references, and Markdown content. It reuses the Markdown
 exporter without resolving image data or including visualization configuration.
 
 The default output budget is 24,000 characters (minimum 256). Individual block
-text is capped at 2,000 characters. Truncated text and omitted blocks are marked;
+text is capped at 2,000 characters. Before summarizing or serializing, each block
+is copied with a budget of 2,000 text/attribute characters, 256 nodes (including
+marks), and 32 levels of nesting. Discarded subtrees are not visited, so large
+pasted logs or nested lists cannot make serialization process the entire block.
+Truncated text and omitted blocks are marked;
 a selected block and its neighbors receive priority, with included blocks still
 shown in document order. Optional host metadata can include live runtime issues.
 Regenerate the snapshot from current state when preparing an agent step, and use

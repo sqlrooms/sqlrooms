@@ -136,6 +136,105 @@ describe('formatBlockDocumentContext', () => {
     expect(snapshot).not.toContain('wrong');
   });
 
+  it('clips large text before the summary adapter and exporter see it', () => {
+    const node: BlockDocumentNode = {
+      type: 'heading',
+      attrs: {id: 'logs', level: 2},
+      content: [{type: 'text', text: 'x'.repeat(1_000_000)}],
+    };
+    let summaryText = '';
+    const snapshot = formatBlockDocumentContext(doc(node), {
+      augmentBlockSummary: ({summary}) => {
+        summaryText = summary.title ?? '';
+        return undefined;
+      },
+    });
+    expect(summaryText).toHaveLength(2_000);
+    expect(snapshot).toContain('"blockId":"logs"');
+    expect(snapshot).toContain('Block content truncated');
+    expect(snapshot.length).toBeLessThan(2_200);
+    expect(node.content?.[0]?.text).toHaveLength(1_000_000);
+  });
+
+  it('does not traverse backing chart configuration', () => {
+    const config = Object.defineProperty({}, 'data', {
+      enumerable: true,
+      get() {
+        throw new Error('Visited backing chart configuration');
+      },
+    });
+    const snapshot = formatBlockDocumentContext(
+      doc({
+        type: 'blockDocumentChart',
+        attrs: {id: 'chart', tableName: 'sales', config},
+      }),
+      {
+        augmentBlockSummary: ({block}) => {
+          expect(block.type === 'chart' && block.config).toBe(config);
+          return undefined;
+        },
+      },
+    );
+    expect(snapshot).toContain('"blockId":"chart"');
+    expect(snapshot).toContain('"tableName":"sales"');
+    expect(snapshot).toContain('"truncated":false');
+  });
+
+  it('stops visiting wide subtrees even when their nodes contain no text', () => {
+    const content = Array.from({length: 100_000}, () => ({
+      type: 'listItem',
+      content: [{type: 'paragraph'}],
+    }));
+    // Fails if either the summary adapter or serializer visits the discarded tail.
+    Object.defineProperty(content, 300, {
+      get() {
+        throw new Error('Visited discarded subtree');
+      },
+    });
+    const snapshot = formatBlockDocumentContext(
+      doc({
+        type: 'bulletList',
+        attrs: {id: 'wide-list'},
+        content,
+      }),
+    );
+    expect(snapshot).toContain('"blockId":"wide-list"');
+    expect(snapshot).toContain('"truncated":true');
+    expect(snapshot).toContain('Block content truncated');
+  });
+
+  it('bounds nesting depth before recursive serialization', () => {
+    let node: BlockDocumentNode = paragraph('leaf', 'Deep text');
+    for (let index = 0; index < 5_000; index++) {
+      node = {type: 'blockquote', content: [node]};
+    }
+    node.attrs = {id: 'deep-quote'};
+    const snapshot = formatBlockDocumentContext(doc(node));
+    expect(snapshot).toContain('"blockId":"deep-quote"');
+    expect(snapshot).toContain('"truncated":true');
+    expect(snapshot).not.toContain('Deep text');
+  });
+
+  it('preserves ordinary inline formatting and links in the bounded copy', () => {
+    const snapshot = formatBlockDocumentContext(
+      doc({
+        type: 'paragraph',
+        attrs: {id: 'rich'},
+        content: [
+          {type: 'text', text: 'Important', marks: [{type: 'bold'}]},
+          {
+            type: 'text',
+            text: ' source',
+            marks: [{type: 'link', attrs: {href: 'https://example.com'}}],
+          },
+        ],
+      }),
+    );
+    expect(snapshot).toContain('**Important**');
+    expect(snapshot).toContain('](https://example.com)');
+    expect(snapshot).toContain('"truncated":false');
+  });
+
   it('reports empty documents and does not invent IDs for unnormalized text', () => {
     expect(formatBlockDocumentContext(doc())).toContain(
       '"blockCount":0,"omittedBlockCount":0,"truncated":false',

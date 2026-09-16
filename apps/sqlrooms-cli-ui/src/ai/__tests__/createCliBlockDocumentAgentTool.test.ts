@@ -146,7 +146,7 @@ describe('createCliBlockDocumentAgentTool', () => {
         getModel: () => model,
         blockDocumentAdapter: adapter,
         runSubAgent: async ({agent, prompt}) => {
-          const output = await agent.generate({prompt});
+          const output = await agent.generate({prompt, options: undefined});
           return {finalOutput: output.text};
         },
       }),
