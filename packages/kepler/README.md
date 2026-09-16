@@ -172,6 +172,26 @@ Persistence protection is based on each map's pending config, so it remains in
 effect after that promise resolves. Edits to an incomplete map do not replace
 its saved config until its pending config is resolved.
 
+Use `kepler.isMapConfigPending(mapId)` to observe that per-map condition without
+inspecting Kepler's internal merge fields. It reads current state and returns a
+boolean, so it can be used directly in a Zustand selector inside a React component:
+
+```ts
+import {useStoreWithKepler} from '@sqlrooms/kepler';
+
+const configPending = useStoreWithKepler((state) =>
+  state.kepler.isMapConfigPending(mapId),
+);
+// Show a warning that changes to this map are not being saved while pending.
+```
+
+The result stays `true` if required data remains unavailable after
+`waitForConfigRestore()` resolves, and becomes `false` once the pending config
+and dataset merges are resolved. Other maps are checked independently. Unknown,
+unregistered, and deleted maps return `false`; that does not mean they are ready
+to render. This status does not include the slice's temporary persistence pause
+or guarantee completion of all async work, and it does not itself disable editing.
+
 `duplicateMap` copies a pending map's last preserved saved config, including
 unresolved layers and settings. It does not wait for missing datasets. If no
 saved config is available, it returns `success: false` with code
