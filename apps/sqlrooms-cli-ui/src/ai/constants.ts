@@ -19,4 +19,4 @@ export const KnownBlockDocumentTools = {
 export const EXPERIMENTAL_BLOCK_DOCUMENT_AGENT_INSTRUCTIONS = `Direct document map blocks are available in this CLI app.
 In this app, a Document is a block document artifact, and direct map blocks are block-document map blocks.
 For document map requests, call ${KnownBlockDocumentTools.create_block_document_map_block}. Do not create a dashboard block just to hold a map.
-If updating an existing document map, call ${KnownBlockDocumentTools.list_blocks} first and pass its statefulBlock.blockInstanceId as mapId to ${KnownBlockDocumentTools.create_block_document_map_block}.`;
+If updating an existing document map, use the supplied document snapshot (or ${KnownBlockDocumentTools.list_blocks} if the map is omitted) and pass its statefulBlock.blockInstanceId as mapId to ${KnownBlockDocumentTools.create_block_document_map_block}.`;

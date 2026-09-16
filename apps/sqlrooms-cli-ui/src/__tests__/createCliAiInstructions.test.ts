@@ -26,6 +26,23 @@ describe('createCliAiInstructions', () => {
     DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
     EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
   ])(
+    'routes reordering directly to the document agent for $name',
+    (profile) => {
+      const instructions = createCliAiInstructions(store, profile);
+      expect(instructions).toContain(
+        'For document block reordering, call block_document_agent directly',
+      );
+      expect(instructions).toContain(
+        'no preliminary document read or command discovery is needed',
+      );
+    },
+  );
+
+  it.each([
+    DEFAULT_CLI_CAPABILITY_PROFILE,
+    DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+    EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
+  ])(
     'routes visual inspection directly to capture tools for $name',
     (profile) => {
       const instructions = createCliAiInstructions(
