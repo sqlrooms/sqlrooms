@@ -39,18 +39,16 @@ export function formatBlockDocumentContext(
   const targetIndex = targetBlockId
     ? nodes.findIndex((node) => node.attrs?.id === targetBlockId)
     : -1;
-  const indices = nodes.map((_, index) => index);
-  if (targetIndex >= 0) {
-    indices.sort(
-      (a, b) => Math.abs(a - targetIndex) - Math.abs(b - targetIndex),
-    );
-  }
-
   const rows: {index: number; text: string}[] = [];
-  // Reserve space for the completeness header and separators.
-  let remaining = maxChars - 160;
+  // Reserve the largest possible completeness header, including small budgets.
+  const completeness = {
+    blockCount: nodes.length,
+    omittedBlockCount: nodes.length,
+    truncated: false,
+  };
+  let remaining = maxChars - JSON.stringify(completeness).length;
   let truncated = false;
-  for (const index of indices) {
+  for (const index of prioritizedBlockIndices(nodes.length, targetIndex)) {
     const node = nodes[index]!;
     const excerpt = createBlockDocumentExcerpt(
       node,
@@ -88,7 +86,7 @@ export function formatBlockDocumentContext(
     }
     if (header.length + 80 > remaining) {
       truncated = true;
-      continue;
+      break;
     }
 
     const markdown = blockDocumentToMarkdown({
@@ -106,10 +104,25 @@ export function formatBlockDocumentContext(
   rows.sort((a, b) => a.index - b.index);
   return [
     JSON.stringify({
-      blockCount: nodes.length,
+      ...completeness,
       omittedBlockCount: nodes.length - rows.length,
       truncated,
     }),
     ...rows.map((row) => row.text),
   ].join('\n\n');
+}
+
+// Generate only the indices the snapshot consumes, without allocating or
+// sorting an entry for every block in a potentially much larger document.
+function* prioritizedBlockIndices(blockCount: number, targetIndex: number) {
+  if (targetIndex < 0) {
+    for (let index = 0; index < blockCount; index++) yield index;
+    return;
+  }
+  yield targetIndex;
+  const maxDistance = Math.max(targetIndex, blockCount - targetIndex - 1);
+  for (let distance = 1; distance <= maxDistance; distance++) {
+    if (targetIndex - distance >= 0) yield targetIndex - distance;
+    if (targetIndex + distance < blockCount) yield targetIndex + distance;
+  }
 }

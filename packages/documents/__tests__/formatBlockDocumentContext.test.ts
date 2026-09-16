@@ -124,6 +124,49 @@ describe('formatBlockDocumentContext', () => {
     expect(oversized).toContain('"metadataTruncated":true');
   });
 
+  it.each([undefined, 'p2'])(
+    'stops enumerating blocks when the snapshot fills (target %s)',
+    (targetBlockId) => {
+      const content = Array.from({length: 100_000}, (_, index) =>
+        paragraph(`p${index}`, `Text ${index}`),
+      );
+      Object.defineProperty(content, 300, {
+        get() {
+          throw new Error('Visited a block beyond the snapshot budget');
+        },
+      });
+      const snapshot = formatBlockDocumentContext(
+        {type: 'doc', content},
+        {maxChars: 600, targetBlockId},
+      );
+      expect(snapshot.length).toBeLessThanOrEqual(600);
+      expect(snapshot).toContain(`"blockId":"${targetBlockId ?? 'p0'}"`);
+      expect(snapshot).toContain('"truncated":true');
+    },
+  );
+
+  it.each(['Short text', 'x'.repeat(1_000)])(
+    'keeps the target at the minimum budget (%#. case)',
+    (text) => {
+      const snapshot = formatBlockDocumentContext(
+        doc(paragraph('target', text)),
+        {
+          maxChars: 256,
+          targetBlockId: 'target',
+        },
+      );
+      expect(snapshot.length).toBeLessThanOrEqual(256);
+      expect(snapshot).toContain('"blockId":"target"');
+      expect(snapshot).toContain('"omittedBlockCount":0');
+      if (text.length < 256) {
+        expect(snapshot).toContain(text);
+        expect(snapshot).toContain('"truncated":false');
+      } else {
+        expect(snapshot).toContain('Block content truncated');
+      }
+    },
+  );
+
   it('marks shortened intent metadata and protects stable IDs from augmentation', () => {
     const node = paragraph('original', 'Short text');
     node.attrs = {...node.attrs, intent: 'purpose '.repeat(100)};

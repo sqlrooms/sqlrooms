@@ -246,7 +246,9 @@ marks), and 32 levels of nesting. Discarded subtrees are not visited, so large
 pasted logs or nested lists cannot make serialization process the entire block.
 Truncated text and omitted blocks are marked;
 a selected block and its neighbors receive priority, with included blocks still
-shown in document order. Optional host metadata can include live runtime issues.
+shown in document order. Blocks are considered lazily in priority order, stopping
+when the next block's metadata no longer fits. Optional host metadata can include
+live runtime issues.
 Regenerate the snapshot from current state when preparing an agent step, and use
 existing commands/tools for edits. This lossy view cannot round-trip a document.
 
