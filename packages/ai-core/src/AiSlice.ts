@@ -71,6 +71,7 @@ import {
 import {
   getAnalysisResultsFromUiMessages,
   setChatRequestErrorMessage,
+  setChatTurnCompletedAt,
   uiMessagesHaveChatRequestError,
 } from './chatTurns';
 import {
@@ -285,11 +286,20 @@ export type AiSliceState = {
       sessionId: string,
       uiMessages: UIMessage[],
     ) => boolean;
-    /** Persist a terminal timeout result and force the chat runtime to reload. */
+    /**
+     * Persist a terminal result for a run that ended without a transport
+     * callback, and force the chat runtime to reload. Pending tool calls and
+     * approvals are completed with `terminalMessage`, the turn is stamped as
+     * finished, and the session stops running.
+     *
+     * Used by the run timeout and by cancellation while `useChat` is paused on
+     * a client tool or approval — in both cases nothing is in flight, so
+     * `onChatFinish` never runs.
+     */
     persistTimedOutSession: (
       sessionId: string,
       uiMessages: UIMessage[],
-      timeoutMessage: string,
+      terminalMessage: string,
     ) => void;
     getAnalysisResults: () => AnalysisResultSchema[] | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
@@ -1544,11 +1554,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         persistTimedOutSession: (
           sessionId: string,
           uiMessages: UIMessage[],
-          timeoutMessage: string,
+          terminalMessage: string,
         ) => {
           const completedMessages = fixIncompleteToolCalls(
             structuredClone(uiMessages),
-            timeoutMessage,
+            terminalMessage,
             {completeApprovalRequests: true},
           );
           const lastUserMessage = completedMessages
@@ -1556,8 +1566,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             .at(-1);
           if (lastUserMessage) {
             setChatRequestErrorMessage(lastUserMessage, {
-              error: timeoutMessage,
+              error: terminalMessage,
             });
+            // The turn ends here just as a normal finish would end it, and
+            // no transport callback will run, so the completion stamp has to
+            // be written on this path too.
+            setChatTurnCompletedAt(lastUserMessage, Date.now());
           }
 
           const currentState = get();
@@ -1569,7 +1583,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             completedMessages,
             currentState.ai.agentProgress,
             currentState.ai.pendingSubAgentApprovals,
-            timeoutMessage,
+            terminalMessage,
           );
 
           for (const approvalId of timedOutAgentState.approvalIds) {
@@ -2018,10 +2032,31 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const state = get();
           const abortController = state.ai.getAbortController(sessionId);
           const chat = sessionChatRuntimes.get(sessionId)?.runtime.chat;
+          // A client tool or an approval can pause `useChat` with no request
+          // in flight. `stop()` then has nothing to abort and no transport
+          // callback follows, so the terminal state has to be written here
+          // instead of waiting for `onChatFinish`. `ready` is also the idle
+          // status, so the run has to actually be running: cancelling an
+          // already-finished session must not rewrite its last turn.
+          const isPaused =
+            !!chat &&
+            state.ai.getIsRunning(sessionId) &&
+            chat.status !== 'streaming' &&
+            chat.status !== 'submitted';
 
           abortController?.abort(ANALYSIS_CANCELLED);
 
           void chat?.stop();
+
+          if (isPaused) {
+            get().ai.persistTimedOutSession(
+              sessionId,
+              chat.messages,
+              TOOL_CALL_CANCELLED,
+            );
+            disposeSessionChatRuntime(sessionId);
+            return;
+          }
 
           set((stateToUpdate) =>
             produce(stateToUpdate, (draft) => {
