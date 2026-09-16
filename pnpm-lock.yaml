@@ -3818,6 +3818,9 @@ importers:
         specifier: 6.1.8
         version: 6.1.8(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
     devDependencies:
+      '@jest/globals':
+        specifier: ^30.4.1
+        version: 30.4.1
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
@@ -3830,6 +3833,9 @@ importers:
       ts-jest:
         specifier: ^29.4.4
         version: 29.4.9(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.4.1)(jest@30.4.2(@types/node@24.12.4))(typescript@5.9.3)
+      zustand:
+        specifier: ^5.0.13
+        version: 5.0.13(@types/react@19.2.7)(immer@11.1.8)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
 
   packages/kepler-config:
     dependencies:
