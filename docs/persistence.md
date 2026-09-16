@@ -55,9 +55,9 @@ Use the layers this way:
 
 ## Recommended Room Store Setup
 
-For a normal SQLRooms app, define the persistable slice configs, create helpers,
-then pass the same partialization function to both Zustand persist and the
-persistence helper.
+Define the slice configs to save and provide your storage callbacks.
+`persistSliceConfigs()` handles config extraction and merging automatically;
+the persistence helper uses the same schemas to track saved state.
 
 ```ts
 import {
@@ -72,27 +72,23 @@ import {LayoutConfig} from '@sqlrooms/layout-config';
 const sliceConfigSchemas = {
   room: BaseRoomConfig,
   layout: LayoutConfig,
-} as const;
+};
 
-const persistHelpers = createPersistHelpers(sliceConfigSchemas);
+const {partialize} = createPersistHelpers(sliceConfigSchemas);
 
-const persistence = createRoomStorePersistence<RoomState>({
-  partialize: persistHelpers.partialize,
+const persistence = createRoomStorePersistence({
+  partialize: (state: RoomState) => partialize(state),
   autosaveDelayMs: 300,
-  load: async () => loadWorkspaceState(),
-  save: async (snapshot, metadata) => {
-    await saveWorkspaceState(snapshot, metadata?.reason);
-  },
+  load: loadWorkspaceState,
+  save: (snapshot, metadata) => saveWorkspaceState(snapshot, metadata?.reason),
 });
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persistSliceConfigs<RoomState, typeof sliceConfigSchemas>(
+  persistSliceConfigs(
     {
       name: 'workspace-state',
       sliceConfigSchemas,
       storage: persistence.storage,
-      partialize: persistence.partialize,
-      merge: persistHelpers.merge,
       onRehydrateStorage: persistence.onRehydrateStorage,
     },
     (set, get, store) => ({
@@ -102,9 +98,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 );
 ```
 
-The important invariant is that `storage` receives the already-partialized
-persisted state shape. That is why `createRoomStorePersistence()` returns
-`PersistStorage<TPersisted>`, not `PersistStorage<RoomState>`.
+`loadWorkspaceState()` returns a saved JSON string or `null`;
+`saveWorkspaceState()` writes that string. Both callbacks return promises.
+The `RoomState` annotation lets TypeScript infer the persisted config shape
+separately from the full runtime state.
+
+Keep `onRehydrateStorage`: it marks the restored state as saved after merging.
+If you customize config extraction, also pass `persistence.partialize` to
+`persistSliceConfigs()` so saving and dirty tracking use the same shape.
 
 ## Hydration Flow
 
@@ -172,9 +173,9 @@ responding to Zustand persist storage calls. Pass `store` when creating
 persistence, or call `bindStore()` later.
 
 ```ts
-const persistence = createRoomStorePersistence<RoomState>({
+const persistence = createRoomStorePersistence({
   store: roomStore,
-  partialize: persistHelpers.partialize,
+  partialize,
   autosaveDelayMs: 300,
   load,
   save,
@@ -340,11 +341,12 @@ When integrating persistence in an app:
 
 1. Decide the durable state shape. Prefer persisted slice configs first.
 2. Define Zod schemas for persisted slice configs.
-3. Use `createPersistHelpers()` for `partialize` and `merge`.
+3. Use `persistSliceConfigs()` for schema-based config extraction and merging.
 4. Use `createRoomStorePersistence()` for storage, dirty tracking, autosave, and
    final flush.
-5. Pass `persistence.storage`, `persistence.partialize`, and
-   `persistence.onRehydrateStorage` to Zustand persist.
+5. Pass `persistence.storage` and `persistence.onRehydrateStorage` to
+   `persistSliceConfigs()`. Pass `persistence.partialize` too if you customize
+   config extraction.
 6. Register `persistence.flush('final-flush')` for unload, close, or project
    switch.
 7. Use `createPersistenceController()` directly only for non-Zustand persistence
