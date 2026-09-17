@@ -1,13 +1,18 @@
 import type {JsonObject, JsonValue} from '@sqlrooms/evals';
 import {getTableIdentity} from '@sqlrooms/duckdb';
-import type {RoomState} from '../store-types';
+import type {CliDomainState} from '../createCliDomainSlice';
 
 function toJsonValue(value: unknown): JsonValue {
   return JSON.parse(JSON.stringify(value)) as JsonValue;
 }
 
 /** Captures the durable CLI state used by target-neutral behavioral checks. */
-export function snapshotCliEvalState(state: RoomState): JsonObject {
+export function snapshotCliEvalState(
+  state: Pick<
+    CliDomainState,
+    'artifacts' | 'blockDocuments' | 'deckMaps' | 'db'
+  >,
+): JsonObject {
   const documents = Object.values(state.artifacts.config.artifactsById)
     .filter((artifact) => artifact.type === 'block-document')
     .map((artifact) => ({
