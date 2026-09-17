@@ -697,7 +697,8 @@ function getPointTransformGeometryAlias(
 /**
  * Binds a point layer to longitude/latitude columns. A single-axis pick is
  * stored on `fitToData` so the settings UI can update immediately; once both
- * axes are set the canonical WKB point transform is applied.
+ * axes are known — from this pick, `fitToData`, or the current point transform
+ * SQL — the canonical WKB point transform is applied.
  */
 export function setDeckMapLayerCoordinateColumns(
   config: DeckMapConfig,
@@ -717,14 +718,34 @@ export function setDeckMapLayerCoordinateColumns(
   const dataset = config.datasets[datasetId];
   const currentFit =
     config.fitToData?.dataset === datasetId ? config.fitToData : undefined;
+  const parsedTransform =
+    isDeckMapTableDatasetSource(dataset.source) && dataset.source.transformSql
+      ? parseDeckMapPointTransformSql(dataset.source.transformSql)
+      : undefined;
+  const interactionCoordinates =
+    config.interaction?.type === 'point-radius-brush' &&
+    config.interaction.dataset === datasetId
+      ? config.interaction
+      : undefined;
+  // The settings UI shows lon/lat from fitToData *or* the current transform SQL.
+  // Keep the other axis from those same places so changing one column on a map
+  // that already has a point transform actually rewrites the geometry.
+  const currentLatitude =
+    currentFit?.latitudeColumn ||
+    parsedTransform?.latitudeColumn ||
+    interactionCoordinates?.latitudeColumn;
+  const currentLongitude =
+    currentFit?.longitudeColumn ||
+    parsedTransform?.longitudeColumn ||
+    interactionCoordinates?.longitudeColumn;
   const latitudeColumn =
     columns.latitudeColumn === null
       ? undefined
-      : columns.latitudeColumn?.trim() || currentFit?.latitudeColumn;
+      : columns.latitudeColumn?.trim() || currentLatitude;
   const longitudeColumn =
     columns.longitudeColumn === null
       ? undefined
-      : columns.longitudeColumn?.trim() || currentFit?.longitudeColumn;
+      : columns.longitudeColumn?.trim() || currentLongitude;
   const keepSourceGeometry = !latitudeColumn || !longitudeColumn;
   const nextFitToData = {
     dataset: datasetId,
@@ -751,12 +772,29 @@ export function setDeckMapLayerCoordinateColumns(
     return withFit;
   }
 
+  const sourceColumnNames = new Set(
+    sourceColumns.map((column) => column.name.toLowerCase()),
+  );
+  if (
+    sourceColumnNames.size === 0 ||
+    !sourceColumnNames.has(latitudeColumn.toLowerCase()) ||
+    !sourceColumnNames.has(longitudeColumn.toLowerCase())
+  ) {
+    return withFit;
+  }
+  const existingGeometryAlias = parsedTransform?.geometryColumn;
+  const preserveGeometryAlias =
+    existingGeometryAlias &&
+    !sourceColumnNames.has(existingGeometryAlias.toLowerCase())
+      ? existingGeometryAlias
+      : undefined;
   const bound = applyDeckMapPointBinding({
     config: withFit,
     pointBinding: {
       dataset: datasetId,
       longitudeColumn,
       latitudeColumn,
+      ...(preserveGeometryAlias ? {geometryColumn: preserveGeometryAlias} : {}),
     },
     sourceColumns,
   });
@@ -1010,21 +1048,29 @@ export function setDeckMapLayerArcCoordinateColumns(
   const binding = isRecord(layer?._sqlroomsBinding)
     ? layer._sqlroomsBinding
     : {};
+  const parsedArcTransform =
+    isDeckMapTableDatasetSource(dataset.source) && dataset.source.transformSql
+      ? parseDeckMapArcTransformSql(dataset.source.transformSql)
+      : undefined;
   const sourceLatitudeColumn = nextBindingColumn(
     columns.sourceLatitudeColumn,
-    readBindingColumn(binding, 'sourceLatitudeColumn'),
+    readBindingColumn(binding, 'sourceLatitudeColumn') ||
+      parsedArcTransform?.sourceLatitudeColumn,
   );
   const sourceLongitudeColumn = nextBindingColumn(
     columns.sourceLongitudeColumn,
-    readBindingColumn(binding, 'sourceLongitudeColumn'),
+    readBindingColumn(binding, 'sourceLongitudeColumn') ||
+      parsedArcTransform?.sourceLongitudeColumn,
   );
   const targetLatitudeColumn = nextBindingColumn(
     columns.targetLatitudeColumn,
-    readBindingColumn(binding, 'targetLatitudeColumn'),
+    readBindingColumn(binding, 'targetLatitudeColumn') ||
+      parsedArcTransform?.targetLatitudeColumn,
   );
   const targetLongitudeColumn = nextBindingColumn(
     columns.targetLongitudeColumn,
-    readBindingColumn(binding, 'targetLongitudeColumn'),
+    readBindingColumn(binding, 'targetLongitudeColumn') ||
+      parsedArcTransform?.targetLongitudeColumn,
   );
   const nextBinding: Record<string, unknown> = {...binding};
   if (sourceLatitudeColumn) {

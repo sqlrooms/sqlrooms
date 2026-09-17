@@ -311,6 +311,82 @@ describe('mapLayerConfigUtils', () => {
     });
   });
 
+  it('rewrites an existing point transform when one lon/lat axis is already in SQL', () => {
+    const heatmapConfig = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            id: 'earthquake-heatmap',
+            _sqlroomsBinding: {
+              dataset: 'earthquakes',
+              geometryColumn: 'geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        earthquakes: {
+          source: {
+            tableName: 'earthquakes',
+            transformSql:
+              'SELECT Latitude, Longitude, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM __sqlrooms_source',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb' as const,
+        },
+      },
+      fitToData: {
+        dataset: 'earthquakes',
+        padding: 40,
+        maxZoom: 12,
+        geometryColumn: 'geom',
+      },
+    };
+    const sourceColumns = [
+      {name: 'Latitude', type: 'DOUBLE'},
+      {name: 'Longitude', type: 'DOUBLE'},
+      {name: 'Magnitude', type: 'DOUBLE'},
+    ];
+
+    const nextLongitude = setDeckMapLayerCoordinateColumns(
+      heatmapConfig,
+      0,
+      {longitudeColumn: 'Magnitude'},
+      sourceColumns,
+    );
+    expect(nextLongitude.datasets.earthquakes.source).toMatchObject({
+      tableName: 'earthquakes',
+      transformSql: expect.stringContaining(
+        'ST_Point("Magnitude", "Latitude")',
+      ),
+    });
+    expect(nextLongitude.datasets.earthquakes.geometryColumn).toBe('geom');
+    expect(nextLongitude.fitToData).toMatchObject({
+      dataset: 'earthquakes',
+      longitudeColumn: 'Magnitude',
+      latitudeColumn: 'Latitude',
+    });
+
+    const nextLatitude = setDeckMapLayerCoordinateColumns(
+      heatmapConfig,
+      0,
+      {latitudeColumn: 'Magnitude'},
+      sourceColumns,
+    );
+    expect(nextLatitude.datasets.earthquakes.source).toMatchObject({
+      tableName: 'earthquakes',
+      transformSql: expect.stringContaining(
+        'ST_Point("Longitude", "Magnitude")',
+      ),
+    });
+    expect(nextLatitude.fitToData).toMatchObject({
+      dataset: 'earthquakes',
+      longitudeColumn: 'Longitude',
+      latitudeColumn: 'Magnitude',
+    });
+  });
+
   it('switches a lon/lat point map back to a source geometry column', () => {
     const pointConfig = {
       spec: {
@@ -1153,5 +1229,43 @@ describe('arc geometry vs lon/lat bindings', () => {
       targetLatitudeColumn: 'dest_lat',
       targetLongitudeColumn: 'dest_lon',
     });
+  });
+
+  it('rewrites an existing arc transform when one lon/lat axis is already in SQL', () => {
+    const existing = setDeckMapLayerArcCoordinateColumns(
+      arcConfig,
+      0,
+      {
+        sourceLatitudeColumn: 'origin_lat',
+        sourceLongitudeColumn: 'origin_lon',
+        targetLatitudeColumn: 'dest_lat',
+        targetLongitudeColumn: 'dest_lon',
+      },
+      sourceColumns,
+    );
+    const withoutBindingAxes = updateDeckMapLayer(existing, 0, (layer) => {
+      const binding = {
+        ...((layer._sqlroomsBinding as Record<string, unknown>) ?? {}),
+      };
+      delete binding.sourceLatitudeColumn;
+      delete binding.sourceLongitudeColumn;
+      delete binding.targetLatitudeColumn;
+      delete binding.targetLongitudeColumn;
+      return {...layer, _sqlroomsBinding: binding};
+    });
+
+    const nextConfig = setDeckMapLayerArcCoordinateColumns(
+      withoutBindingAxes,
+      0,
+      {sourceLongitudeColumn: 'dest_lon'},
+      sourceColumns,
+    );
+
+    expect(String(nextConfig.datasets.trips.source.transformSql)).toContain(
+      'ST_Point("dest_lon", "origin_lat")',
+    );
+    expect(String(nextConfig.datasets.trips.source.transformSql)).toContain(
+      'ST_Point("dest_lon", "dest_lat")',
+    );
   });
 });
