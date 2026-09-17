@@ -153,15 +153,33 @@ def test_external_mode_skips_ai_configuration_and_preserves_profile(
     assert captured["ai_providers"] == {}
 
 
-def test_claude_rejects_missing_database_and_missing_ui(monkeypatch, tmp_path):
+@pytest.mark.parametrize("in_memory", [False, True])
+def test_claude_accepts_new_database_or_memory(monkeypatch, tmp_path, in_memory):
+    from sqlrooms.web.launcher import SqlroomsHttpServer
+
+    database = ":memory:" if in_memory else str(tmp_path / "new.duckdb")
+    run_session = AsyncMock(return_value=0)
+
+    async def start(server, session):
+        assert server.duckdb_database == database
+        assert server.execution_mode == "external"
+        assert server.mcp_enabled_default
+        return await session()
+
     monkeypatch.setattr(
         "sqlrooms.web.claude.claude_prerequisites", lambda: ("claude", Path("/plugin"))
     )
-    result = CliRunner().invoke(
-        app, ["--claude", "--no-config", str(tmp_path / "missing.duckdb")]
+    monkeypatch.setattr(SqlroomsHttpServer, "start", start)
+    monkeypatch.setattr("sqlrooms.web.claude.run_claude_session", run_session)
+    result = CliRunner().invoke(app, ["--claude", "--no-config", database])
+    assert result.exit_code == 0, result.output
+    run_session.assert_awaited_once()
+
+
+def test_claude_rejects_missing_ui(monkeypatch):
+    monkeypatch.setattr(
+        "sqlrooms.web.claude.claude_prerequisites", lambda: ("claude", Path("/plugin"))
     )
-    assert result.exit_code == 1
-    assert "existing DuckDB" in result.output
     result = CliRunner().invoke(app, ["--claude", "--no-ui", ":memory:"])
     assert result.exit_code == 1
     assert "requires the browser UI" in result.output

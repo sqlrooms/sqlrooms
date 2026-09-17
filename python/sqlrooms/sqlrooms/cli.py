@@ -570,7 +570,7 @@ def main(
     claude: bool = typer.Option(
         False,
         "--claude",
-        help="Open an existing database in an AI-free browser workspace and launch interactive Claude Code.",
+        help="Open or create a database in an AI-free browser workspace and launch interactive Claude Code.",
     ),
     execution_mode: str = typer.Option(
         "embedded",
@@ -693,10 +693,6 @@ def main(
             "or pass `--db-path :memory:` for a temporary in-memory session.",
             err=True,
         )
-        raise typer.Exit(code=1)
-
-    if claude and not Path(resolved_db_path).is_file():
-        typer.echo("--claude requires an existing DuckDB database file.", err=True)
         raise typer.Exit(code=1)
 
     # config_path may be None when the file doesn't exist yet; for saving we

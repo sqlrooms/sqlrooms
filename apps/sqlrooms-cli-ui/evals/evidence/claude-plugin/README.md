@@ -105,3 +105,12 @@ they are not a substitute for that demonstration. Windows terminal/process
 behavior and arbitrary Claude-spawned descendant cleanup are not verified.
 Existing embedded deterministic tests pass; no new live embedded-model comparison
 was attempted. No existing evidence was uploaded.
+
+## Follow-up: create missing databases
+
+Removed the extra existing-file restriction after user feedback. `--claude`
+now uses normal CLI database startup: open an existing file, create a missing
+one, or use `:memory:`. This does not add data import operations. Fifteen focused
+launcher tests passed, including missing-file and in-memory CLI routing, and a
+disposable smoke test confirmed the production database initializer creates a
+missing file. Neither check invokes Claude or sends data to a model provider.

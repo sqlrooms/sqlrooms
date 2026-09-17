@@ -230,13 +230,15 @@ Notes:
 ```sh
 # Claude must already be installed and authenticated (claude auth login).
 # Options precede the positional database path, following the CLI's parser.
-sqlrooms --claude --profile document-charts-maps ./existing.duckdb
+sqlrooms --claude --profile document-charts-maps ./my-project.duckdb
 ```
 
 `--claude` enables MCP and external execution mode, opens the browser, waits up
 to 90 seconds for its authenticated workspace bridge, then runs a normal
-interactive Claude terminal session with inherited stdin/stdout. An existing
-DuckDB file and a terminal are required. `--no-open-browser` is supported if you
+interactive Claude terminal session with inherited stdin/stdout. DuckDB opens an
+existing database or creates a missing file, just as in normal CLI startup;
+`:memory:` is also supported for a temporary workspace. A terminal is required.
+`--no-open-browser` is supported if you
 open the printed URL yourself; `--no-ui` is incompatible. No SQLRooms AI
 configuration is needed (`--no-config` is optional).
 
