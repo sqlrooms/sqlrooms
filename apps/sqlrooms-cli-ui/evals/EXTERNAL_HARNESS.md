@@ -218,3 +218,45 @@ runner API.
 Browser external mode, imports, rendered/capture correctness, production
 persistence/restart, WebMCP, and additional harnesses remain outside this milestone.
 Embedded specialist routing, session links, models, and tools are retained.
+
+## Claude Code adapter
+
+The same supervised suite can run actual Claude Code with the native SQLRooms
+plugin, the same real MCP host, domain runtime, policy, fixture, scenarios,
+snapshots and independent checks:
+
+```sh
+pnpm --filter sqlrooms-cli-app evals:external:build
+SQLROOMS_EVAL_HARNESS=claude node apps/sqlrooms-cli-ui/evals/run-external.mjs /tmp/sqlrooms-claude-attempt-01
+```
+
+Prerequisites are installed/authenticated Claude Code and access to its configured
+provider. Tested loading with Claude Code 2.1.260. The adapter uses supported
+`--plugin-dir`, `--mcp-config`, `--strict-mcp-config`, and print-mode stream JSON.
+It pre-approves reads only beneath the staged plugin guidance directory, the
+SQLRooms skill, and SQLRooms MCP tools, and requires successful native
+Skill invocation, a full skill read, and focused reference reads before accepting
+a run. The exact CLI invocation, model reported by actual assistant events,
+provider errors, MCP calls, raw streams and cleanup remain separate evidence.
+Synthetic authentication-error messages do not establish a resolved model.
+
+Claude uses its own authentication and default model; `SQLROOMS_CLAUDE_EVAL_MODEL`
+can explicitly override the evaluation model. Codex/OpenRouter environment
+configuration and `.env.local` are not translated into Claude configuration.
+Claude's user settings and discoverable skills remain its own; `--strict-mcp-config`
+limits MCP servers, not skill discovery or filesystem reads. This is not an
+adversarial isolation boundary. Tokens are environment references in the MCP
+config, and the runtime/skill workspace is removed in `finally`. The existing
+Codex command and CI jobs are unchanged.
+
+Canonical skill v5 corrects the browser chart example to `count-plot` with
+aggregate settings and uses block `caption` for a visible title. Browser testing
+found that the previous `bar` example passed the existing state checks but was
+not a registered renderer. Scenario fixtures and behavioral expectations are
+unchanged; in particular the existing mutation fixture still includes that
+legacy state-only chart config. Headless success does not prove rendering.
+
+See [Claude delivery evidence](evidence/claude-plugin/README.md). The supported
+native mechanisms are described in Anthropic's [plugin guide](https://code.claude.com/docs/en/plugins),
+[CLI reference](https://code.claude.com/docs/en/cli-reference), and
+[MCP environment configuration](https://code.claude.com/docs/en/mcp#environment-variable-expansion-in-mcpjson).

@@ -347,4 +347,21 @@ the browser retains its optional current-document read behavior.
 
 See [external harness evaluation](evals/EXTERNAL_HARNESS.md) for the Codex/MCP run
 command, isolated fixture policy, evidence, and fidelity limits. This does not
-enable browser external mode or change production AI/persistence behavior.
+change production AI/persistence behavior; browser external mode is a separate
+launcher option described below.
+
+### External Claude execution
+
+The Python launcher supports `sqlrooms --claude --profile document-charts-maps
+./existing.duckdb`. It serves this browser app in `executionMode: "external"`,
+waits for the production MCP bridge, and attaches a native Claude Code terminal
+session. Capability profiles remain independent of execution mode. AI slices,
+model tools, chat actions and AI-settings autosave are absent in external mode;
+dormant saved conversations/settings round-trip through existing persistence.
+Manual authoring and browser query approvals remain active.
+
+`skills/sqlrooms` is the canonical guidance source for both external harnesses.
+`build-claude-plugin.mjs` generates the distributable plugin in the Python package
+from those files and `claude-plugin` metadata. Generated copies are ignored;
+edit the canonical source and rebuild. See the [launcher guide](../../python/sqlrooms/README.md#interactive-claude-code-workspace)
+and [evaluation adapter](evals/EXTERNAL_HARNESS.md#claude-code-adapter).

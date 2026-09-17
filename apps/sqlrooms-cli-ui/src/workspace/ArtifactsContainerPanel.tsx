@@ -172,10 +172,10 @@ function useCreateCliArtifactCommand(): CreateCliArtifactCommand {
   const artifactActions = useCliArtifactWorkspaceActions();
   const invokeCommand = useRoomStore((state) => state.commands.invokeCommand);
   const currentSessionId = useRoomStore(
-    (state) => state.ai.config.currentSessionId,
+    (state) => state.ai?.config.currentSessionId,
   );
   const addSessionArtifactLink = useRoomStore(
-    (state) => state.artifactAi.addSessionArtifactLink,
+    (state) => state.artifactAi?.addSessionArtifactLink,
   );
 
   return useCallback(

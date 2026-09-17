@@ -45,3 +45,9 @@ examples/*/CHANGELOG.md
 !/apps/sqlrooms-cli-ui/evals/evidence/headless-delivery/
 /apps/sqlrooms-cli-ui/evals/evidence/headless-delivery/*
 !/apps/sqlrooms-cli-ui/evals/evidence/headless-delivery/README.md
+!/apps/sqlrooms-cli-ui/evals/evidence/claude-plugin/
+/apps/sqlrooms-cli-ui/evals/evidence/claude-plugin/*
+!/apps/sqlrooms-cli-ui/evals/evidence/claude-plugin/README.md
+
+# Generated from canonical CLI skills and Claude plugin metadata
+/python/sqlrooms/sqlrooms/claude_plugin/

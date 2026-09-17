@@ -567,6 +567,16 @@ def main(
         envvar="SQLROOMS_AI_DEVTOOLS",
         help="Enable the AI session devtools button in the UI, including production-built UI bundles.",
     ),
+    claude: bool = typer.Option(
+        False,
+        "--claude",
+        help="Open an existing database in an AI-free browser workspace and launch interactive Claude Code.",
+    ),
+    execution_mode: str = typer.Option(
+        "embedded",
+        "--execution-mode",
+        help="Model execution owner: embedded or external. Independent of --profile.",
+    ),
     mcp: bool = typer.Option(
         False,
         "--mcp",
@@ -621,6 +631,21 @@ def main(
             err=True,
         )
         raise typer.Exit(code=1)
+    if execution_mode not in {"embedded", "external"}:
+        raise typer.BadParameter(
+            "Expected embedded or external", param_hint="--execution-mode"
+        )
+    claude_resources = None
+    if claude:
+        from .web.claude import claude_prerequisites
+
+        execution_mode = "external"
+        mcp = True
+        try:
+            claude_resources = claude_prerequisites()
+        except RuntimeError as exc:
+            typer.echo(str(exc), err=True)
+            raise typer.Exit(code=1) from exc
     if mcp and no_ui:
         typer.echo(
             "--mcp requires the browser UI and cannot be used with --no-ui.", err=True
@@ -642,7 +667,11 @@ def main(
             ai_providers,
             ai_custom_models,
             ai_model_parameters,
-        ) = _load_ai_runtime_config(config_path)
+        ) = (
+            _load_ai_runtime_config(config_path)
+            if execution_mode == "embedded"
+            else (None, None, {}, [], {})
+        )
     except Exception as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
@@ -664,6 +693,10 @@ def main(
             "or pass `--db-path :memory:` for a temporary in-memory session.",
             err=True,
         )
+        raise typer.Exit(code=1)
+
+    if claude and not Path(resolved_db_path).is_file():
+        typer.echo("--claude requires an existing DuckDB database file.", err=True)
         raise typer.Exit(code=1)
 
     # config_path may be None when the file doesn't exist yet; for saving we
@@ -707,12 +740,25 @@ def main(
         external_url=external_url,
         external_ws_url=external_ws_url,
         ai_devtools=ai_devtools,
+        execution_mode=execution_mode,
         mcp_enabled=mcp,
         mcp_port=mcp_port,
         debug=debug,
     )
     try:
-        asyncio.run(server.start())
+        if claude_resources:
+            from .web.claude import run_claude_session
+
+            executable, plugin = claude_resources
+            exit_code = asyncio.run(
+                server.start(
+                    session=lambda: run_claude_session(server, executable, plugin)
+                )
+            )
+            if exit_code:
+                raise typer.Exit(code=exit_code)
+        else:
+            asyncio.run(server.start())
     except RuntimeError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
