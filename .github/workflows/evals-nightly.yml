@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  SQLROOMS_EVAL_MODEL: ${{ vars.SQLROOMS_EVAL_MODEL }}
+
 jobs:
   document-canary:
     name: Document charts/maps canary
@@ -21,6 +24,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Validate model and credentials
+        run: |
+          test -n "$SQLROOMS_EVAL_MODEL" || { echo '::error::Set repository variable SQLROOMS_EVAL_MODEL'; exit 1; }
+          test -n "$OPENROUTER_API_KEY" || { echo '::error::Missing OPENROUTER_API_KEY secret'; exit 1; }
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -70,3 +78,73 @@ jobs:
             artifacts/results.json
             artifacts/summary.json
             artifacts/summary.md
+
+  external-document-canary:
+    name: External Codex document charts/maps canary
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 30
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      SQLROOMS_EVAL_PROVIDER: openrouter
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate model and credentials
+        run: |
+          test -n "$SQLROOMS_EVAL_MODEL" || { echo '::error::Set repository variable SQLROOMS_EVAL_MODEL'; exit 1; }
+          test -n "$OPENROUTER_API_KEY" || { echo '::error::Missing OPENROUTER_API_KEY secret'; exit 1; }
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install pinned Codex harness
+        run: npm install --global @openai/codex@0.143.0
+
+      - name: Build workspace packages and external target
+        run: |
+          pnpm build
+          pnpm --filter sqlrooms-cli-app evals:external:build
+
+      - name: Run real external-harness scenarios
+        run: |
+          mkdir -p artifacts
+          node apps/sqlrooms-cli-ui/evals/run-external.mjs artifacts/external
+
+      - name: Publish external status
+        if: always()
+        run: |
+          echo '### External Codex evaluation' >> "$GITHUB_STEP_SUMMARY"
+          if [ -f artifacts/external/manifest.json ]; then
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            node --input-type=module -e '
+              import {readFileSync} from "node:fs";
+              const {harnessVersion, model, modelProvider, passed, results, failureKind, error} =
+                JSON.parse(readFileSync("artifacts/external/manifest.json", "utf8"));
+              console.log(JSON.stringify({harnessVersion, model, modelProvider, passed, results, failureKind, error}, null, 2));
+            ' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'No manifest: setup did not complete; this is not a passing evaluation.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload external evidence, including failed attempts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: sqlrooms-external-evals-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: artifacts/external/

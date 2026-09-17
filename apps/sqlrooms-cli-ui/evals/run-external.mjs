@@ -28,6 +28,7 @@ try {
       outputDir,
       skillDir: path.resolve(directory, '../skills/sqlrooms'),
       model: process.env.SQLROOMS_EVAL_MODEL,
+      modelProvider: process.env.SQLROOMS_EVAL_PROVIDER,
       signal: controller.signal,
       onResource: (resource) => process.send?.(resource),
     });

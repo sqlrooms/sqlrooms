@@ -10,11 +10,17 @@ multi-turn scenario.
 ## Run
 
 Prerequisites: workspace dependencies and built packages, Node 24.9+, an installed
-Codex CLI supporting the options below, `codex login`, access to the chosen model,
+Codex CLI supporting the options below, authentication for the selected provider,
 and permission to bind a loopback socket. Tested with **codex-cli 0.143.0** and
 **@modelcontextprotocol/sdk 1.30.0**. The runner defaults to `gpt-5.5` with medium
-reasoning; override the model with `SQLROOMS_EVAL_MODEL`. No SQLRooms/OpenRouter key
-is used by this target.
+reasoning. By default, local runs use existing Codex authentication (`codex login`)
+and `gpt-5.5`. Set `SQLROOMS_EVAL_PROVIDER=openrouter` to route the actual Codex
+process through OpenRouter's Responses endpoint with `OPENROUTER_API_KEY`; no
+ChatGPT login is needed in that mode. `SQLROOMS_EVAL_MODEL` selects the model in
+both this mode and the embedded Promptfoo evaluator. OpenRouter mode defaults
+locally to `deepseek/deepseek-v4-flash-0731` if no model override is supplied.
+CI requires the shared repository variable explicitly. Local OpenRouter runs can
+load credentials/model from `.env.local`, as the embedded target does.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -22,6 +28,10 @@ pnpm build
 pnpm --filter sqlrooms-cli-app evals:external:build
 # From the repository root; the output directory MUST NOT already exist.
 node apps/sqlrooms-cli-ui/evals/run-external.mjs /tmp/sqlrooms-external-attempt-01
+
+# Same provider/model as the CI jobs (OPENROUTER_API_KEY in env or .env.local):
+SQLROOMS_EVAL_PROVIDER=openrouter SQLROOMS_EVAL_MODEL=deepseek/deepseek-v4-flash-0731 \
+  node apps/sqlrooms-cli-ui/evals/run-external.mjs /tmp/sqlrooms-openrouter-attempt-01
 ```
 
 Each scenario gets a fresh Node DuckDB fixture and workspace. The harness runs in
@@ -49,7 +59,13 @@ MCP servers/hooks do not participate. Other locally discoverable user, admin, bu
 are disabled with supported per-invocation `skills.config` entries; their paths
 are recorded in the manifest. User settings and authentication files are not
 changed or copied. The selected SQLRooms skill and successful reads are recorded.
-Codex's shell is read-only, but that is not a complete host filesystem sandbox.
+OpenRouter mode adds `model_provider="openrouter"` and a provider definition with
+`base_url="https://openrouter.ai/api/v1"`, `wire_api="responses"`, and
+`env_key="OPENROUTER_API_KEY"`; the key value is passed only in the environment,
+never in invocation arguments. The model's provider is recorded as `openrouter`,
+while the target remains `cli-external-codex`. SQLRooms still owns no model client
+or reasoning loop in this target. Codex's shell is read-only, but that is not a
+complete host filesystem sandbox.
 The temporary working directory and instructions prevent accidental evaluation
 source access; they are not an adversarial anti-cheating boundary.
 
@@ -156,18 +172,26 @@ Deterministic MCP discovery, policy, and lifecycle tests already run in the PR
 workflow's CLI tests and `evals:test`. The explicit-target discovery regression
 belongs there; it needs no model credentials.
 
-Live external runs should be a separate, initially manual, non-blocking job
-alongside the embedded Promptfoo job in `evals-nightly.yml`. Keep the actual
-Codex process and its native skill/MCP path, with independent results and exit
-status; do not replace it with a Promptfoo model-provider call. The targets
-already reuse SQLRooms scenarios, fixtures, snapshots, and checks. A shared
-runner or observatory adapter can wait until there is a concrete consumer.
+The `external-document-canary` job runs alongside the embedded Promptfoo job in
+`evals-nightly.yml`, on the same nightly schedule and manual dispatch. Both use
+`secrets.OPENROUTER_API_KEY` and `vars.SQLROOMS_EVAL_MODEL`. The repository variable
+starts at `deepseek/deepseek-v4-flash-0731`; change it in Settings → Secrets and
+variables → Actions → Variables to change both targets. Missing configuration is
+an explicit failed step, never a passing skip. The canaries remain non-blocking.
 
-No hosted external job is enabled yet. Before enabling one, establish dedicated
-CI harness authentication/model access, pin the tested CLI version, verify its
-sandbox on the runner, and agree on artifact retention. Missing prerequisites
-must fail explicitly, and all attempts need retention even on failure. Current
-external evidence stays local; the existing embedded Promptfoo job is unchanged.
+The external job installs pinned `@openai/codex@0.143.0`, builds the target, runs
+both scenarios once (the embedded suite runs three repetitions), and retains
+manifest, raw harness output, evidence envelopes and supervisor status for 30
+days even on failure. Model compatibility with Codex/OpenRouter Responses is an
+evaluation prerequisite; the runner does not silently switch models or providers.
+CI evidence is uploaded as workflow artifacts, never committed. Existing local
+attempts remain local. Independent statuses and evidence preserve the distinction
+between the embedded AI loop and the actual external harness. Same model does
+not imply identical reasoning settings or orchestration.
+
+Codex custom-provider configuration and environment authentication are documented
+in [OpenAI's authentication guide](https://learn.chatgpt.com/docs/auth#alternative-model-providers)
+and [OpenRouter configuration example](https://learn.chatgpt.com/docs/security/sdk).
 
 ## Milestone evidence and exclusions
 

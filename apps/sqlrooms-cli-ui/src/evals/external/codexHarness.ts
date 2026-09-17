@@ -110,6 +110,7 @@ export function codexArguments(options: {
   cwd: string;
   url: string;
   model: string;
+  modelProvider?: 'codex' | 'openrouter';
   prompt: string;
   disabledSkills: string[];
 }) {
@@ -128,6 +129,14 @@ export function codexArguments(options: {
     options.cwd,
     '--model',
     options.model,
+    ...(options.modelProvider === 'openrouter'
+      ? [
+          '-c',
+          'model_provider="openrouter"',
+          '-c',
+          'model_providers.openrouter={name="OpenRouter",base_url="https://openrouter.ai/api/v1",env_key="OPENROUTER_API_KEY",wire_api="responses",requires_openai_auth=false}',
+        ]
+      : []),
     '-c',
     'model_reasoning_effort="medium"',
     '-c',

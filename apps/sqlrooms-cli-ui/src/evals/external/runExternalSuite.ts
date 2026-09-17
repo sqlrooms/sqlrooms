@@ -20,6 +20,8 @@ import {createCliHeadlessWorkspace} from '../createCliHeadlessWorkspace';
 import {CLI_BEHAVIORAL_SCENARIOS, createCliScenarioChecks} from '../scenarios';
 import {snapshotCliEvalState} from '../snapshot';
 import {fixtureWorkspaceMode, seedDocument} from '../workspaceFixture';
+import {getOpenRouterEvalModel} from '../evalModel';
+import {loadLocalEvalEnvironment} from '../loadLocalEvalEnvironment';
 import {
   codexArguments,
   runHarnessProcess,
@@ -40,6 +42,8 @@ export async function runExternalSuite(options: {
   outputDir: string;
   skillDir: string;
   model?: string;
+  /** codex uses existing harness auth; openrouter uses OPENROUTER_API_KEY. */
+  modelProvider?: string;
   timeoutMs?: number;
   signal?: AbortSignal;
   /** Reports resources to the executable's independent process supervisor. */
@@ -52,11 +56,13 @@ export async function runExternalSuite(options: {
   // Exclusive creation prevents overwriting a previous failed attempt.
   await mkdir(options.outputDir, {recursive: false});
   const started = new Date();
-  const model = options.model ?? 'gpt-5.5';
+  const modelProvider = options.modelProvider ?? 'codex';
+  let model = options.model ?? 'gpt-5.5';
   const manifest: Record<string, unknown> = {
     startedAt: started.toISOString(),
     harness: 'codex',
     model,
+    modelProvider,
     policy: EXTERNAL_EVAL_POLICY,
     scenarios: CLI_BEHAVIORAL_SCENARIOS.map(({id, version}) => ({id, version})),
     attempts: 'One attempt per scenario; no automatic retries.',
@@ -68,6 +74,18 @@ export async function runExternalSuite(options: {
   let version: string;
   let disabledSkills: string[];
   try {
+    if (modelProvider !== 'codex' && modelProvider !== 'openrouter')
+      throw new Error(`Unsupported SQLROOMS_EVAL_PROVIDER: ${modelProvider}`);
+    if (modelProvider === 'openrouter') {
+      loadLocalEvalEnvironment();
+      model = options.model ?? getOpenRouterEvalModel();
+      manifest.model = model;
+      if (!process.env.OPENROUTER_API_KEY?.trim())
+        throw new Error('Missing OPENROUTER_API_KEY for the external harness.');
+    }
+    model = model.trim();
+    if (!model) throw new Error('SQLROOMS_EVAL_MODEL must be non-empty.');
+    manifest.model = model;
     version = execFileSync('codex', ['--version'], {
       encoding: 'utf8',
       timeout: 10_000,
@@ -236,6 +254,7 @@ export async function runExternalSuite(options: {
         cwd,
         url: host.url,
         model,
+        modelProvider: modelProvider === 'openrouter' ? 'openrouter' : 'codex',
         prompt: scenario.turns[0]!.input,
         disabledSkills,
       });
@@ -248,6 +267,9 @@ export async function runExternalSuite(options: {
           HOME: process.env.HOME,
           CODEX_HOME: process.env.CODEX_HOME,
           TMPDIR: process.env.TMPDIR,
+          ...(modelProvider === 'openrouter'
+            ? {OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY}
+            : {}),
           SQLROOMS_EVAL_MCP_TOKEN: host.token,
         },
         timeoutMs: options.timeoutMs ?? 240_000,
@@ -366,7 +388,8 @@ export async function runExternalSuite(options: {
       },
       repository: manifest.repository,
       model: {
-        provider: 'codex-harness',
+        provider:
+          modelProvider === 'openrouter' ? 'openrouter' : 'codex-harness',
         modelId: model,
         settings: {reasoningEffort: 'medium'},
         observedModelId: null,

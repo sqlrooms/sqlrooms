@@ -25,8 +25,14 @@ An existing environment variable takes precedence over `.env.local`. The
 nightly GitHub Actions workflow supplies `OPENROUTER_API_KEY` from GitHub
 Secrets, so CI does not depend on a local environment file.
 
-The model revision, temperature, maximum steps, scenario/profile versions, and
-three repetitions are pinned in `promptfooconfig.yaml`. Promptfoo stores its
+Both nightly jobs use the repository variable `SQLROOMS_EVAL_MODEL` for the
+OpenRouter model ID, initially `deepseek/deepseek-v4-flash-0731`. Export the same
+variable locally to override the local default. The resolved model is recorded
+in each evidence envelope, so provider labels do not claim a fixed model.
+Temperature (0), maximum steps (24), scenario/profile versions, and three
+repetitions remain fixed. Provider-reported costs are retained; fallback estimates
+use the existing DeepSeek rates only for that exact model and remain unknown for
+other models when billing metadata is absent. Promptfoo stores its
 SQLite database beneath `PROMPTFOO_CONFIG_DIR` (or its normal user config
 directory). The CI job uploads that database plus JSON and compact Markdown
 summaries for 30 days. Provider/transport errors are tagged separately from
@@ -44,7 +50,7 @@ Both targets and the production browser share the app-local domain composition,
 scenario fixtures, normalized snapshots, and behavioral checks. External execution
 is not a model swap inside the embedded target.
 
-Its deterministic regressions already run in PR CI. For live external runs, see
-the [CI placement recommendation](EXTERNAL_HARNESS.md#ci-placement): a separate
-manual job alongside the embedded canary, once harness authentication and
-artifact retention are established. External evidence currently stays local.
+Its deterministic regressions run in PR CI. The nightly workflow now runs a
+separate external canary alongside Promptfoo using the same OpenRouter secret
+and model variable. Both jobs retain their own workflow artifacts for 30 days;
+local evidence stays local. See [CI configuration](EXTERNAL_HARNESS.md#ci-placement).
