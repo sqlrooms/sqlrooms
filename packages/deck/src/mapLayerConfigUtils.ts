@@ -952,7 +952,7 @@ function withArcLayerBinding(
 
 /**
  * Binds an arc layer to source/target geometry columns and drops a generated
- * lon/lat transform when leaving coordinate mode.
+ * lon/lat transform once both endpoints have left the generated aliases.
  */
 export function setDeckMapLayerArcGeometryColumns(
   config: DeckMapConfig,
@@ -987,13 +987,17 @@ export function setDeckMapLayerArcGeometryColumns(
       : undefined;
   const leavingGenerated = Boolean(
     generatedAliases &&
-    (sourceGeometryColumn !== generatedAliases.sourceGeometryColumn ||
-      targetGeometryColumn !== generatedAliases.targetGeometryColumn),
+    sourceGeometryColumn !== generatedAliases.sourceGeometryColumn &&
+    targetGeometryColumn !== generatedAliases.targetGeometryColumn,
   );
   const nextSource =
     leavingGenerated && isDeckMapTableDatasetSource(source)
       ? {tableName: source.tableName}
       : source;
+  const nextDataset = {...dataset};
+  if (leavingGenerated) {
+    delete nextDataset.geometryEncodingHint;
+  }
   const nextBinding: Record<string, unknown> = {...binding};
   if (sourceGeometryColumn) {
     nextBinding.sourceGeometryColumn = sourceGeometryColumn;
@@ -1014,7 +1018,7 @@ export function setDeckMapLayerArcGeometryColumns(
     config,
     layerIndex,
     datasetId,
-    dataset,
+    nextDataset,
     nextSource,
     nextBinding,
     sourceGeometryColumn,
@@ -1100,6 +1104,22 @@ export function setDeckMapLayerArcCoordinateColumns(
     !targetLatitudeColumn ||
     !targetLongitudeColumn ||
     !isDeckMapTableDatasetSource(dataset.source)
+  ) {
+    return updateDeckMapLayer(config, layerIndex, (nextLayer) => ({
+      ...nextLayer,
+      _sqlroomsBinding: nextBinding,
+    }));
+  }
+
+  const sourceColumnNames = new Set(
+    sourceColumns.map((column) => column.name.toLowerCase()),
+  );
+  if (
+    sourceColumnNames.size === 0 ||
+    !sourceColumnNames.has(sourceLatitudeColumn.toLowerCase()) ||
+    !sourceColumnNames.has(sourceLongitudeColumn.toLowerCase()) ||
+    !sourceColumnNames.has(targetLatitudeColumn.toLowerCase()) ||
+    !sourceColumnNames.has(targetLongitudeColumn.toLowerCase())
   ) {
     return updateDeckMapLayer(config, layerIndex, (nextLayer) => ({
       ...nextLayer,
