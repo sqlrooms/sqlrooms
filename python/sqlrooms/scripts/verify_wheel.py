@@ -29,6 +29,17 @@ def _verify_wheel(path: Path) -> None:
     if index_path not in names:
         raise RuntimeError(f"{path} is missing {index_path}")
 
+    for plugin_file in (
+        ".claude-plugin/plugin.json",
+        "mcp.json",
+        "skills/sqlrooms/SKILL.md",
+        "skills/sqlrooms/references/documents.md",
+        "skills/sqlrooms/references/charts.md",
+        "skills/sqlrooms/references/maps.md",
+    ):
+        if f"sqlrooms/claude_plugin/{plugin_file}" not in names:
+            raise RuntimeError(f"{path} is missing Claude plugin file {plugin_file}")
+
     asset_paths = [
         name for name in names if name.startswith("sqlrooms/web/static/assets/")
     ]

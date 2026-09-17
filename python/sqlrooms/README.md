@@ -224,3 +224,48 @@ Notes:
 
 - Configure connectors in `sqlrooms.toml` using `[[db.connectors]]` entries.
 - Connector libraries are optional extras (`postgres`, `snowflake`, or `connectors`).
+
+## Interactive Claude Code workspace
+
+```sh
+# Claude must already be installed and authenticated (claude auth login).
+# Options precede the positional database path, following the CLI's parser.
+sqlrooms --claude --profile document-charts-maps ./existing.duckdb
+```
+
+`--claude` enables MCP and external execution mode, opens the browser, waits up
+to 90 seconds for its authenticated workspace bridge, then runs a normal
+interactive Claude terminal session with inherited stdin/stdout. An existing
+DuckDB file and a terminal are required. `--no-open-browser` is supported if you
+open the printed URL yourself; `--no-ui` is incompatible. No SQLRooms AI
+configuration is needed (`--no-config` is optional).
+
+Claude retains its own authentication and model preferences. The launcher loads
+the bundled native plugin and session-only MCP configuration; it does not edit
+Claude's global configuration or select an evaluation model. Use
+`/sqlrooms:sqlrooms` to load the document/chart/map workflow. Only this session's
+SQLRooms MCP server is attached. The random session token is passed in the child
+environment, never written to a config file or printed as a command argument.
+
+The browser owns the workspace. Keep it open; manually edited content is visible
+through MCP. Every MCP query still requires the existing browser approval, and
+commands retain their existing validation. Disconnects fail pending operations;
+the launcher reports disconnect/reconnect without replaying edits. On Claude
+exit or cancellation, the launcher stops the HTTP/MCP listeners and reaps its
+Claude child. It does not close browser windows or terminate unrelated sessions.
+The DuckDB backend thread shares the launcher process lifetime, as in ordinary
+CLI launches. Forced termination of arbitrary Claude-spawned descendants is not
+claimed; Claude owns its native tool/subagent lifecycle.
+
+For a browser managed by another client, use
+`sqlrooms --execution-mode external --mcp ./existing.duckdb`. Execution mode is
+independent of `--profile`. External mode composes no SQLRooms AI, AI-settings,
+or artifact/chat slice. Existing saved conversations and settings pass through
+workspace persistence unchanged until embedded mode is used again. This retains
+the existing persistence mechanism; it is not a new durability guarantee.
+
+Source builds generate the plugin from the canonical CLI skill during the UI
+build. `pnpm --filter sqlrooms-python build` packages and verifies the UI and
+plugin in the wheel. No marketplace installation or publication is needed.
+See the [verification record](../../apps/sqlrooms-cli-ui/evals/evidence/claude-plugin/README.md)
+for tested behavior and outstanding real-Claude authentication requirements.

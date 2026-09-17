@@ -1,11 +1,25 @@
 # Charts
 
 Use `block-document.create-chart-block` with `artifactId`, canonical `tableName`,
-and a chart `config`. For a numeric measure grouped by a category, a bar config
-can use `chartType: "bar"`, `x: {field: "category"}` and
-`y: {field: "metric", aggregate: "sum"}`. Choose fields from the real schema and
-match the requested analytical intent; do not use a histogram for category totals.
+and a chart `config`. For a numeric measure grouped by a category, the browser's
+built-in horizontal bar chart uses this configuration:
 
-To change a title, read the chart block, preserve its table binding and encodings,
-and update `config.title` through `block-document.update-block`. Preserve the block
-ID. Confirm the new value with `block-document.get`.
+```json
+{
+  "chartType": "count-plot",
+  "settings": {
+    "field": "category",
+    "metric": "aggregate",
+    "valueField": "metric",
+    "aggregate": "sum"
+  }
+}
+```
+
+Choose fields from the actual schema and match the analytical intent. A histogram
+is for a numeric distribution, not category totals. `chartType: "bar"` with
+`x`/`y` encodings is not a built-in browser chart configuration.
+
+To change the displayed title, read the chart block, preserve its ID, table
+binding and configuration, and update the block's `caption` through
+`block-document.update-block`. Confirm the new value with `block-document.get`.

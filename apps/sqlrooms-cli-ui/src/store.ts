@@ -1,3 +1,4 @@
+import {createCliPersistence} from './createCliPersistence';
 import {ArtifactsSliceConfig} from '@sqlrooms/artifacts';
 import {
   ArtifactAiConfigSchema,
@@ -58,7 +59,6 @@ import {
 } from '@sqlrooms/python/runtime';
 import {
   BaseRoomConfig,
-  createPersistHelpers,
   createRoomStore,
   DEFAULT_ROOM_TITLE,
   LayoutConfig,
@@ -108,6 +108,7 @@ import {
 import type {RuntimeConfig} from './runtimeConfig';
 import {
   aiDevtoolsEnabled,
+  embeddedAiEnabled,
   cliCapabilityProfile,
   runtimeConfig,
 } from './runtimeEnvironment';
@@ -585,7 +586,10 @@ const sliceConfigSchemas = {
   python: PythonSliceConfig,
 } as const;
 
-const persistHelpers = createPersistHelpers(sliceConfigSchemas);
+const persistHelpers = createCliPersistence(
+  sliceConfigSchemas,
+  !embeddedAiEnabled,
+);
 type PersistedRoomState = ReturnType<typeof persistHelpers.partialize>;
 const cliUiPersistStorage = createDuckDbPersistStorage<PersistedRoomState>(
   connector,
@@ -611,7 +615,7 @@ function getAvailableAiModels(config: AiSettingsSliceConfig) {
 }
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persistSliceConfigs<RoomState, typeof sliceConfigSchemas>(
+  persistSliceConfigs<RoomState, typeof sliceConfigSchemas, PersistedRoomState>(
     {
       name: 'sqlrooms-cli-app-state',
       sliceConfigSchemas,
@@ -652,7 +656,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           return;
         }
         if (!state) return;
-        state.artifactAi.syncCurrentArtifactAiSession();
+        if (embeddedAiEnabled) state.artifactAi.syncCurrentArtifactAiSession();
         cliUiPersistStorage.completeHydration(
           persistHelpers.partialize(roomStore.getState()),
         );
@@ -664,7 +668,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           (artifact) => artifact.type === 'dashboard',
         )?.id;
       const getRunContextDashboardArtifactId = () => {
-        const currentSession = get().ai.getCurrentSession();
+        const currentSession = get().ai?.getCurrentSession();
         const primaryItem = getAiRunContextPrimaryItem(
           currentSession?.runContext,
         );
@@ -833,7 +837,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             createCommandProps: {
               // createRoomShellSlice is typed to the base room state, but this
               // app middleware needs the composed CLI RoomState at runtime.
-              middleware: [artifactChatAssociationMiddleware as any],
+              middleware: embeddedAiEnabled
+                ? [artifactChatAssociationMiddleware as any]
+                : [],
             },
             createDbProps: {
               duckDb: {
@@ -874,7 +880,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createArtifactAiSlice()(set, get, store),
+        ...(embeddedAiEnabled ? createArtifactAiSlice()(set, get, store) : {}),
 
         ...createHtmlAppRuntimeSlice()(set, get, store),
 
@@ -934,69 +940,77 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createAiSettingsSlice({
-          config: {
-            providers: runtimeAiProviders,
-            ...(runtimeAiSettings.customModels
-              ? {customModels: runtimeAiSettings.customModels}
-              : {}),
-            ...(runtimeAiSettings.modelParameters
-              ? {
-                  modelParameters: {
-                    maxSteps: runtimeAiSettings.modelParameters.maxSteps ?? 50,
-                    additionalInstruction:
-                      runtimeAiSettings.modelParameters.additionalInstruction ??
-                      '',
-                  },
-                }
-              : {}),
-          },
-        })(set, get, store),
+        ...(embeddedAiEnabled
+          ? {
+              ...createAiSettingsSlice({
+                config: {
+                  providers: runtimeAiProviders,
+                  ...(runtimeAiSettings.customModels
+                    ? {customModels: runtimeAiSettings.customModels}
+                    : {}),
+                  ...(runtimeAiSettings.modelParameters
+                    ? {
+                        modelParameters: {
+                          maxSteps:
+                            runtimeAiSettings.modelParameters.maxSteps ?? 50,
+                          additionalInstruction:
+                            runtimeAiSettings.modelParameters
+                              .additionalInstruction ?? '',
+                        },
+                      }
+                    : {}),
+                },
+              })(set, get, store),
 
-        ...(() => {
-          const webContainerToolkit = createWebContainerToolkit(store);
-          const renderedSurfaceToolkit = createRenderedSurfaceAiToolkit();
-          const tools = createCliAiTools({
-            store,
-            profile: cliCapabilityProfile,
-            webContainerTools: webContainerToolkit.tools,
-            createDashboardAgentTool: dashboardAgentTool,
-            createHtmlAppAgentTool: htmlAppAgentTool,
-            createStandaloneChartTool: createVegaChartTool,
-            createChartImageTool: createChartImageForMarkdownTool,
-            createRenderedSurfaceImageTools: () => renderedSurfaceToolkit.tools,
-          });
-          return createAiSlice({
-            config: AiSliceConfig.parse({sessions: []}),
-            defaultProvider: defaultProviderFromConfig as any,
-            defaultModel: defaultModelFromConfig,
-            getAvailableModels: () =>
-              getAvailableAiModels(get().aiSettings.config),
-            getApiKey: (provider) =>
-              get().aiSettings.config.providers[provider]?.apiKey || '',
-            getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
-            getInstructions: () =>
-              createCliAiInstructions(store, cliCapabilityProfile),
-            getRunContext: (sessionId) =>
-              getRunContext(store, sessionId, {
-                profile: cliCapabilityProfile,
-              }),
-            formatRunContextInstructions: ({runContext}) =>
-              formatRunContextInstructions(runContext, store),
-            tools,
-            toolRenderers: {
-              ...createDefaultAiToolRenderers(),
-              ...webContainerToolkit.toolRenderers,
-              ...renderedSurfaceToolkit.toolRenderers,
-              chart: VegaChartToolResult,
-            },
-            devtools: {
-              captureAgentSnapshots: aiDevtoolsEnabled,
-              persistAgentSnapshots: aiDevtoolsEnabled,
-            },
-          })(set, get, store);
-        })(),
-      };
+              ...(() => {
+                const webContainerToolkit = createWebContainerToolkit(store);
+                const renderedSurfaceToolkit = createRenderedSurfaceAiToolkit();
+                const tools = createCliAiTools({
+                  store,
+                  profile: cliCapabilityProfile,
+                  webContainerTools: webContainerToolkit.tools,
+                  createDashboardAgentTool: dashboardAgentTool,
+                  createHtmlAppAgentTool: htmlAppAgentTool,
+                  createStandaloneChartTool: createVegaChartTool,
+                  createChartImageTool: createChartImageForMarkdownTool,
+                  createRenderedSurfaceImageTools: () =>
+                    renderedSurfaceToolkit.tools,
+                });
+                return createAiSlice({
+                  config: AiSliceConfig.parse({sessions: []}),
+                  defaultProvider: defaultProviderFromConfig as any,
+                  defaultModel: defaultModelFromConfig,
+                  getAvailableModels: () =>
+                    getAvailableAiModels(get().aiSettings.config),
+                  getApiKey: (provider) =>
+                    get().aiSettings.config.providers[provider]?.apiKey || '',
+                  getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
+                  getInstructions: () =>
+                    createCliAiInstructions(store, cliCapabilityProfile),
+                  getRunContext: (sessionId) =>
+                    getRunContext(store, sessionId, {
+                      profile: cliCapabilityProfile,
+                    }),
+                  formatRunContextInstructions: ({runContext}) =>
+                    formatRunContextInstructions(runContext, store),
+                  tools,
+                  toolRenderers: {
+                    ...createDefaultAiToolRenderers(),
+                    ...webContainerToolkit.toolRenderers,
+                    ...renderedSurfaceToolkit.toolRenderers,
+                    chart: VegaChartToolResult,
+                  },
+                  devtools: {
+                    captureAgentSnapshots: aiDevtoolsEnabled,
+                    persistAgentSnapshots: aiDevtoolsEnabled,
+                  },
+                })(set, get, store);
+              })(),
+            }
+          : {}),
+        // Command/artifact factories still share the embedded host type. External
+        // mode omits AI keys entirely; shared UI reads them only as optional state.
+      } as RoomState;
     },
   ),
 );
@@ -1021,7 +1035,7 @@ function getAiSettingsTomlPayload(state: RoomState) {
 }
 
 function startAiSettingsTomlAutosave() {
-  if (!runtimeConfig.configWritable) return;
+  if (!embeddedAiEnabled || !runtimeConfig.configWritable) return;
 
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let latestSaveRequestId = 0;
