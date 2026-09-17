@@ -37,11 +37,14 @@ export function readCodexOutput(stdout: string) {
       message:
         item?.message ??
         `Command exited with ${item?.exit_code}: ${item?.command}`,
-      severity: item?.message?.startsWith(
-        'Skill descriptions were shortened to fit',
-      )
-        ? 'warning'
-        : 'error',
+      severity:
+        item?.message &&
+        (item.message.startsWith('Skill descriptions were shortened to fit') ||
+          /^Model metadata for `[^`]+` not found\. Defaulting to fallback metadata; this can degrade performance and cause issues\.$/.test(
+            item.message,
+          ))
+          ? 'warning'
+          : 'error',
     }));
   return {
     diagnostics,

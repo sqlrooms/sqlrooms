@@ -136,3 +136,27 @@ The outer harness's read-only shell is not a filesystem read allowlist. The
 isolated fixture policy and disabled DuckDB external access do not establish a
 complete OS sandbox or a query CPU/memory budget. Resolved backend model identity
 and costs remain unknown when the harness does not emit them.
+
+## Shared OpenRouter CI follow-up
+
+The user explicitly authorized both CI targets to use `OPENROUTER_API_KEY`,
+superseding the earlier provider-approval blocker. Repository variable
+`SQLROOMS_EVAL_MODEL` now selects both targets, initially
+`deepseek/deepseek-v4-flash-0731`. This does not provide a historical embedded
+before-extraction baseline.
+
+[First CI attempt](https://github.com/sqlrooms/sqlrooms/actions/runs/35229116358),
+revision `c920072cc`: external authentication and real MCP worked, but both
+scenarios errored. The Linux sandbox shell could not launch, so required skill
+reads were not observed. Create also made invalid map calls and failed canonical
+bindings; mutate passed its four state/answer checks. The custom-model fallback
+metadata warning was initially classified as an error. Supervisor cleanup was
+normal. Full failed evidence is retained in the workflow artifact and locally at
+`artifacts/ci-openrouter-35229116358/external/`; the job log is
+`artifacts/ci-openrouter-external-35229116358.log`.
+
+Before any follow-up: install the documented Ubuntu Bubblewrap/AppArmor profile
+and verify read-only shell access before invoking the model; narrowly classify
+the known fallback-metadata message as a retained warning. Scenarios, guidance,
+checks and expected snapshots remain unchanged. The follow-up will use the
+external-only manual dispatch and fresh fixtures, without discarding this failure.

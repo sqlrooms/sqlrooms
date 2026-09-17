@@ -45,3 +45,32 @@ it('retains benign catalog warnings but fails unexpected harness diagnostics', (
     diagnostics: [{severity: 'error'}],
   });
 });
+it('retains custom-model fallback metadata as a warning without suppressing failures', () => {
+  const warning = JSON.stringify({
+    type: 'item.completed',
+    item: {
+      type: 'error',
+      message:
+        'Model metadata for `deepseek/deepseek-v4-flash-0731` not found. Defaulting to fallback metadata; this can degrade performance and cause issues.',
+    },
+  });
+  expect(readCodexOutput(warning)).toMatchObject({
+    failed: false,
+    diagnostics: [{severity: 'warning'}],
+  });
+  expect(
+    readCodexOutput(warning + '\n' + JSON.stringify({type: 'turn.failed'}))
+      .failed,
+  ).toBe(true);
+  expect(
+    readCodexOutput(
+      JSON.stringify({
+        type: 'item.completed',
+        item: {
+          type: 'error',
+          message: 'Model metadata for `unknown` not found. Request failed.',
+        },
+      }),
+    ).failed,
+  ).toBe(true);
+});

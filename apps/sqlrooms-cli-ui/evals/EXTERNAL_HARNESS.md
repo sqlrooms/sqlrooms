@@ -173,7 +173,8 @@ workflow's CLI tests and `evals:test`. The explicit-target discovery regression
 belongs there; it needs no model credentials.
 
 The `external-document-canary` job runs alongside the embedded Promptfoo job in
-`evals-nightly.yml`, on the same nightly schedule and manual dispatch. Both use
+`evals-nightly.yml`, on the same nightly schedule and manual dispatch (both targets by default, or
+select one target for a declared follow-up). Both use
 `secrets.OPENROUTER_API_KEY` and `vars.SQLROOMS_EVAL_MODEL`. The repository variable
 starts at `deepseek/deepseek-v4-flash-0731`; change it in Settings → Secrets and
 variables → Actions → Variables to change both targets. Missing configuration is
@@ -184,6 +185,14 @@ both scenarios once (the embedded suite runs three repetitions), and retains
 manifest, raw harness output, evidence envelopes and supervisor status for 30
 days even on failure. Model compatibility with Codex/OpenRouter Responses is an
 evaluation prerequisite; the runner does not silently switch models or providers.
+On Ubuntu 24.04, CI installs Bubblewrap and the distribution AppArmor profile,
+then proves that the Codex sandbox can read repository files and rejects writes
+before starting the model. This follows [Codex sandbox prerequisites](https://learn.chatgpt.com/docs/sandboxing)
+without disabling the system user-namespace restriction. Custom models can emit a
+known fallback-metadata diagnostic; it is retained as a warning, while unexpected
+diagnostics and failed turns remain errors. Fallback metadata is a harness
+compatibility limitation, not proof of model-specific tuning.
+
 CI evidence is uploaded as workflow artifacts, never committed. Existing local
 attempts remain local. Independent statuses and evidence preserve the distinction
 between the embedded AI loop and the actual external harness. Same model does

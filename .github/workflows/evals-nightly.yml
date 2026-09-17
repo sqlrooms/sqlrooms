@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '17 2 * * *'
   workflow_dispatch:
+    inputs:
+      target:
+        description: Evaluation target
+        type: choice
+        default: both
+        options: [both, embedded, external]
 
 permissions:
   contents: read
@@ -13,6 +19,7 @@ env:
 
 jobs:
   document-canary:
+    if: github.event_name != 'workflow_dispatch' || inputs.target != 'external'
     name: Document charts/maps canary
     runs-on: ubuntu-latest
     continue-on-error: true
@@ -80,8 +87,9 @@ jobs:
             artifacts/summary.md
 
   external-document-canary:
+    if: github.event_name != 'workflow_dispatch' || inputs.target != 'embedded'
     name: External Codex document charts/maps canary
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     continue-on-error: true
     timeout-minutes: 30
     env:
@@ -112,6 +120,14 @@ jobs:
 
       - name: Install pinned Codex harness
         run: npm install --global @openai/codex@0.143.0
+
+      - name: Configure and verify Codex read-only sandbox
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap apparmor-profiles apparmor-utils
+          sudo install -m 0644 /usr/share/apparmor/extra-profiles/bwrap-userns-restrict /etc/apparmor.d/bwrap-userns-restrict
+          sudo apparmor_parser -r /etc/apparmor.d/bwrap-userns-restrict
+          codex sandbox -c 'sandbox_mode="read-only"' -- /bin/sh -c 'test -r package.json && ! touch .codex-sandbox-write-probe'
 
       - name: Build workspace packages and external target
         run: |
