@@ -353,7 +353,7 @@ launcher option described below.
 ### External Claude execution
 
 The Python launcher supports `sqlrooms --claude --profile document-charts-maps
-./existing.duckdb`. It serves this browser app in `executionMode: "external"`,
+./my-project.duckdb` (opening or creating the database). It serves this browser app in `executionMode: "external"`,
 waits for the production MCP bridge, and attaches a native Claude Code terminal
 session. Capability profiles remain independent of execution mode. AI slices,
 model tools, chat actions and AI-settings autosave are absent in external mode;
