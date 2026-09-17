@@ -186,3 +186,15 @@ Investigation found that the skill's paragraph example itself omitted `id`,
 despite correct command discovery requiring it. Before one further declared
 external-only attempt, skill v3 corrects that example and explains new-block ID
 uniqueness. No command, policy, scenario, fixture, snapshot or check is changed.
+
+[Skill-v3 follow-up](https://github.com/sqlrooms/sqlrooms/actions/runs/35231912962),
+clean revision `2a7ca16f9`: **both scenarios passed all five checks each** through
+Codex CLI 0.143.0 and the configured shared OpenRouter model
+`deepseek/deepseek-v4-flash-0731`. Both read the installed skill and all three
+references, used real MCP, made zero SQLRooms-owned model calls, and completed
+cleanup. Supervisor exit 0, no forced termination or cleanup errors. Create took
+82.557 seconds; mutate took 55.443 seconds. The fallback-metadata warning remains
+visible. Full evidence is retained in the workflow artifact and locally at
+`artifacts/ci-openrouter-35231912962/external/`. This was the declared follow-up
+after the guidance correction; previous failed attempts remain retained. No
+additional embedded run or reliability claim is implied.
