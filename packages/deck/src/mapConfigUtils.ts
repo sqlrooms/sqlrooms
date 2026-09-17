@@ -1,4 +1,5 @@
 import {
+  getColumnTypeCategory,
   getRawSqlTableReference,
   makeQualifiedTableName,
   quoteParsedRawSqlTableReference,
@@ -266,6 +267,151 @@ export function createDeckMapPointTransformSql(options: {
     `SELECT *, ST_AsWKB(ST_Point(${quotedLongitude}, ${quotedLatitude})) AS ${quoteDeckMapSqlIdentifier(options.geometryColumn)}`,
     `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
     `WHERE ${quotedLongitude} IS NOT NULL AND ${quotedLatitude} IS NOT NULL`,
+  ].join(' ');
+}
+
+/**
+ * SQL that yields a `GEOMETRY` value for a geometry-ish column. `ST_Centroid`
+ * rejects encoded columns, and the decode differs by type: plain `BLOB` only
+ * accepts `ST_GeomFromWKB`, while `GEOMETRY`, `WKB_BLOB`, and WKT text all
+ * accept a `::GEOMETRY` cast.
+ */
+function decodeDeckMapGeometryExpression(
+  geometryColumn: string,
+  geometryColumnType?: string,
+) {
+  const quotedGeometry = quoteDeckMapSqlIdentifier(geometryColumn);
+  return geometryColumnType &&
+    getColumnTypeCategory(geometryColumnType) === 'binary'
+    ? `ST_GeomFromWKB(${quotedGeometry})`
+    : `${quotedGeometry}::GEOMETRY`;
+}
+
+/**
+ * Builds WKB point SQL from a source geometry column via `ST_Centroid`.
+ * Point geometries are unchanged; polygons/lines become representative points
+ * so scatterplot/heatmap/column layers can bind the same field.
+ *
+ * Pass `geometryColumnType` so WKB-encoded columns are decoded correctly.
+ */
+export function createDeckMapCentroidTransformSql(options: {
+  geometryColumn: string;
+  geometryColumnType?: string;
+}) {
+  const quotedGeometry = quoteDeckMapSqlIdentifier(options.geometryColumn);
+  const geometry = decodeDeckMapGeometryExpression(
+    options.geometryColumn,
+    options.geometryColumnType,
+  );
+  return [
+    `SELECT * REPLACE (ST_AsWKB(ST_Centroid(${geometry})) AS ${quotedGeometry})`,
+    `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+  ].join(' ');
+}
+
+/**
+ * Reads the source geometry column from canonical centroid point transform SQL.
+ */
+export function parseDeckMapCentroidTransformSql(
+  transformSql: string,
+): {geometryColumn: string} | undefined {
+  const match = transformSql.match(
+    /ST_AsWKB\s*\(\s*ST_Centroid\s*\(\s*(?:ST_GeomFromWKB\s*\(\s*)?"?([^"\s,()]+)"?\s*(?:::\s*GEOMETRY\s*)?\)+\s*AS\s+"?([^\s",]+)"?/i,
+  );
+  if (!match?.[1] || !match[2] || match[1] !== match[2]) return undefined;
+  return {geometryColumn: match[1]};
+}
+
+/**
+ * Reads longitude/latitude/geometry aliases from canonical point transform SQL.
+ */
+export function parseDeckMapPointTransformSql(transformSql: string):
+  | {
+      longitudeColumn: string;
+      latitudeColumn: string;
+      geometryColumn: string;
+    }
+  | undefined {
+  const match = transformSql.match(
+    /ST_AsWKB\s*\(\s*ST_Point\s*\(\s*"?([^"\s,]+)"?\s*,\s*"?([^"\s,]+)"?\s*\)\s*\)\s*AS\s+"?([^\s",]+)"?/i,
+  );
+  if (!match?.[1] || !match[2] || !match[3]) return undefined;
+  return {
+    longitudeColumn: match[1],
+    latitudeColumn: match[2],
+    geometryColumn: match[3],
+  };
+}
+
+/**
+ * Reads origin/destination lon/lat and geometry aliases from canonical arc
+ * transform SQL.
+ */
+export function parseDeckMapArcTransformSql(transformSql: string):
+  | {
+      sourceLongitudeColumn: string;
+      sourceLatitudeColumn: string;
+      targetLongitudeColumn: string;
+      targetLatitudeColumn: string;
+      sourceGeometryColumn: string;
+      targetGeometryColumn: string;
+    }
+  | undefined {
+  const matches = [
+    ...transformSql.matchAll(
+      /ST_AsWKB\s*\(\s*ST_Point\s*\(\s*"?([^"\s,]+)"?\s*,\s*"?([^"\s,]+)"?\s*\)\s*\)\s*AS\s+"?([^\s",]+)"?/gi,
+    ),
+  ];
+  const source = matches[0];
+  const target = matches[1];
+  if (
+    !source?.[1] ||
+    !source[2] ||
+    !source[3] ||
+    !target?.[1] ||
+    !target[2] ||
+    !target[3]
+  ) {
+    return undefined;
+  }
+  return {
+    sourceLongitudeColumn: source[1],
+    sourceLatitudeColumn: source[2],
+    sourceGeometryColumn: source[3],
+    targetLongitudeColumn: target[1],
+    targetLatitudeColumn: target[2],
+    targetGeometryColumn: target[3],
+  };
+}
+
+/**
+ * Builds the standard origin/destination lon/lat → WKB arc transform SQL.
+ */
+export function createDeckMapArcTransformSql(options: {
+  sourceLongitudeColumn: string;
+  sourceLatitudeColumn: string;
+  targetLongitudeColumn: string;
+  targetLatitudeColumn: string;
+  sourceGeometryColumn: string;
+  targetGeometryColumn: string;
+}) {
+  const quotedSourceLongitude = quoteDeckMapSqlIdentifier(
+    options.sourceLongitudeColumn,
+  );
+  const quotedSourceLatitude = quoteDeckMapSqlIdentifier(
+    options.sourceLatitudeColumn,
+  );
+  const quotedTargetLongitude = quoteDeckMapSqlIdentifier(
+    options.targetLongitudeColumn,
+  );
+  const quotedTargetLatitude = quoteDeckMapSqlIdentifier(
+    options.targetLatitudeColumn,
+  );
+
+  return [
+    `SELECT *, ST_AsWKB(ST_Point(${quotedSourceLongitude}, ${quotedSourceLatitude})) AS ${quoteDeckMapSqlIdentifier(options.sourceGeometryColumn)}, ST_AsWKB(ST_Point(${quotedTargetLongitude}, ${quotedTargetLatitude})) AS ${quoteDeckMapSqlIdentifier(options.targetGeometryColumn)}`,
+    `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    `WHERE ${quotedSourceLongitude} IS NOT NULL AND ${quotedSourceLatitude} IS NOT NULL AND ${quotedTargetLongitude} IS NOT NULL AND ${quotedTargetLatitude} IS NOT NULL`,
   ].join(' ');
 }
 

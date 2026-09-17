@@ -44,14 +44,40 @@ export type DeckMapColumnKind =
   | 'quantitative'
   | 'categorical'
   /** Numeric/temporal + string columns usable for color scales. */
-  | 'colorable';
+  | 'colorable'
+  /** Geometry / WKB / well-known geometry column names. */
+  | 'geometry';
+
+const GEOMETRY_COLUMN_NAME_PATTERN = /(?:^|_)((?:wkb_)?geom(?:etry)?)$/i;
 
 /** True for columns that can drive a color scale (excludes geometry blobs/structs). */
 export function isDeckMapColorableColumn(column: TableColumn): boolean {
   if (!column.type) return false;
-  if (isColumnQuantitative(column.type)) return true;
   const category = getColumnTypeCategory(column.type);
+  if (
+    category === 'geometry' ||
+    category === 'binary' ||
+    category === 'struct'
+  ) {
+    return false;
+  }
+  if (isColumnQuantitative(column.type)) return true;
   return category === 'string' || category === 'boolean';
+}
+
+/** True for columns that can be bound as map geometry. */
+export function isDeckMapGeometryPickerColumn(column: TableColumn): boolean {
+  if (GEOMETRY_COLUMN_NAME_PATTERN.test(column.name)) return true;
+  const type = column.type?.toLowerCase() ?? '';
+  if (!type) return false;
+  const category = getColumnTypeCategory(column.type);
+  return (
+    category === 'geometry' ||
+    category === 'binary' ||
+    type.includes('geoarrow') ||
+    type.includes('wkb') ||
+    type.includes('wkt')
+  );
 }
 
 /** String/boolean (and binary) fields that need a categorical color scale. */
@@ -72,12 +98,159 @@ export function filterDeckMapColumns(
 ) {
   if (kind === 'all') return columns;
   return columns.filter((column) => {
+    if (kind === 'geometry') return isDeckMapGeometryPickerColumn(column);
     if (!column.type) return false;
     if (kind === 'numeric') return isColumnNumeric(column.type);
     if (kind === 'quantitative') return isColumnQuantitative(column.type);
     if (kind === 'colorable') return isDeckMapColorableColumn(column);
     return isDeckMapCategoricalColorColumn(column);
   });
+}
+
+/** Dedupes column lists by name, last definition wins. */
+export function mergeDeckMapPickerColumns(
+  ...columnSets: Array<TableColumn[] | undefined>
+): TableColumn[] {
+  const columnsByName = new Map<string, TableColumn>();
+  for (const columns of columnSets) {
+    for (const column of columns ?? []) {
+      columnsByName.set(column.name, column);
+    }
+  }
+  return [...columnsByName.values()];
+}
+
+/**
+ * Geometry columns for the Geom tab. Prefers the source table over inspected
+ * transform output so generated WKB aliases and Arrow type rewrites cannot
+ * hide native geometry after switching back to lon/lat. Non-generated geometry
+ * produced by an authored transform is still listed.
+ */
+export function listDeckMapGeometryPickerColumns(options: {
+  sourceColumns: TableColumn[];
+  outputColumns?: TableColumn[];
+  extraColumnNames?: Array<string | undefined>;
+  isGeneratedColumn?: (columnName: string) => boolean;
+}): TableColumn[] {
+  const isGenerated = options.isGeneratedColumn ?? (() => false);
+  const extraColumns: TableColumn[] = [];
+  const seenExtra = new Set<string>();
+  for (const columnName of options.extraColumnNames ?? []) {
+    if (!columnName || isGenerated(columnName) || seenExtra.has(columnName)) {
+      continue;
+    }
+    if (
+      options.sourceColumns.length > 0 &&
+      !options.sourceColumns.some((column) => column.name === columnName) &&
+      !(options.outputColumns ?? []).some(
+        (column) => column.name === columnName,
+      )
+    ) {
+      continue;
+    }
+    seenExtra.add(columnName);
+    extraColumns.push({name: columnName, type: 'GEOMETRY'});
+  }
+
+  const catalogGeometry = filterDeckMapColumns(
+    options.sourceColumns,
+    'geometry',
+  ).filter((column) => !isGenerated(column.name));
+  const inspectedGeometry = filterDeckMapColumns(
+    options.outputColumns ?? [],
+    'geometry',
+  ).filter((column) => !isGenerated(column.name));
+
+  return mergeDeckMapPickerColumns(
+    inspectedGeometry,
+    catalogGeometry,
+    extraColumns,
+  );
+}
+
+/**
+ * Returns `columnName` when it still exists on the source table.
+ */
+export function pickDeckMapExistingColumnName(
+  columnName: string | undefined,
+  sourceColumns: ReadonlyArray<{name: string}>,
+): string | undefined {
+  if (!columnName) return undefined;
+  return sourceColumns.some((column) => column.name === columnName)
+    ? columnName
+    : undefined;
+}
+
+/**
+ * Source geometry column to restore after leaving lon/lat mode. Prefers the
+ * previously bound column; if the table has exactly one geometry column, uses
+ * that.
+ */
+export function pickDeckMapSourceGeometryColumn(
+  sourceColumns: TableColumn[],
+  preferredColumn?: string,
+): string | undefined {
+  const geometryColumns = filterDeckMapColumns(sourceColumns, 'geometry');
+  if (
+    preferredColumn &&
+    geometryColumns.some((column) => column.name === preferredColumn)
+  ) {
+    return preferredColumn;
+  }
+  if (geometryColumns.length === 1) {
+    return geometryColumns[0]?.name;
+  }
+  return undefined;
+}
+
+/**
+ * Source/target geometry columns to restore after leaving arc lon/lat mode.
+ * Prefers previously bound columns; if the table has exactly two geometry
+ * columns, uses those as source then target.
+ */
+export function pickDeckMapArcGeometryColumns(
+  sourceColumns: TableColumn[],
+  preferred?: {
+    sourceGeometryColumn?: string;
+    targetGeometryColumn?: string;
+  },
+): {sourceGeometryColumn?: string; targetGeometryColumn?: string} {
+  const names = filterDeckMapColumns(sourceColumns, 'geometry').map(
+    (column) => column.name,
+  );
+  const source =
+    preferred?.sourceGeometryColumn &&
+    names.includes(preferred.sourceGeometryColumn)
+      ? preferred.sourceGeometryColumn
+      : undefined;
+  const target =
+    preferred?.targetGeometryColumn &&
+    names.includes(preferred.targetGeometryColumn) &&
+    preferred.targetGeometryColumn !== source
+      ? preferred.targetGeometryColumn
+      : undefined;
+  if (source && target) {
+    return {sourceGeometryColumn: source, targetGeometryColumn: target};
+  }
+  if (names.length === 2) {
+    if (source) {
+      return {
+        sourceGeometryColumn: source,
+        targetGeometryColumn: names.find((name) => name !== source),
+      };
+    }
+    if (target) {
+      return {
+        sourceGeometryColumn: names.find((name) => name !== target),
+        targetGeometryColumn: target,
+      };
+    }
+    return {
+      sourceGeometryColumn: names[0],
+      targetGeometryColumn: names[1],
+    };
+  }
+  return {sourceGeometryColumn: source, targetGeometryColumn: target};
 }
 
 const DeckMapColumnsContext = createContext<TableColumn[]>([]);
@@ -108,8 +281,15 @@ const DeckMapColumnSelectorRoot: FC<DeckMapColumnSelectorProps> = ({
   disabled,
 }) => {
   const contextColumns = useContext(DeckMapColumnsContext);
-  const options = filterDeckMapColumns(columns ?? contextColumns, kind);
-  const selectedColumn = options.find((column) => column.name === value);
+  const allColumns = columns ?? contextColumns;
+  const filtered = filterDeckMapColumns(allColumns, kind);
+  const selectedColumn = allColumns.find((column) => column.name === value);
+  // Keep a bound column selectable even when it fails the kind filter, so
+  // switching layer types does not report existing bindings as missing.
+  const options =
+    selectedColumn && !filtered.some((column) => column.name === value)
+      ? [selectedColumn, ...filtered]
+      : filtered;
   const isMissing = Boolean(value && !selectedColumn);
   return (
     <Combobox value={value ?? ''} onChange={onChange} disabled={disabled}>
@@ -162,6 +342,9 @@ export const DeckMapColumnSelector = Object.assign(DeckMapColumnSelectorRoot, {
   ),
   Colorable: (props: Omit<DeckMapColumnSelectorProps, 'kind'>) => (
     <DeckMapColumnSelectorRoot {...props} kind="colorable" />
+  ),
+  Geometry: (props: Omit<DeckMapColumnSelectorProps, 'kind'>) => (
+    <DeckMapColumnSelectorRoot {...props} kind="geometry" />
   ),
 });
 
