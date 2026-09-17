@@ -123,7 +123,8 @@ export function mergeDeckMapPickerColumns(
 /**
  * Geometry columns for the Geom tab. Prefers the source table over inspected
  * transform output so generated WKB aliases and Arrow type rewrites cannot
- * hide native geometry after switching back to lon/lat.
+ * hide native geometry after switching back to lon/lat. Non-generated geometry
+ * produced by an authored transform is still listed.
  */
 export function listDeckMapGeometryPickerColumns(options: {
   sourceColumns: TableColumn[];
@@ -140,7 +141,10 @@ export function listDeckMapGeometryPickerColumns(options: {
     }
     if (
       options.sourceColumns.length > 0 &&
-      !options.sourceColumns.some((column) => column.name === columnName)
+      !options.sourceColumns.some((column) => column.name === columnName) &&
+      !(options.outputColumns ?? []).some(
+        (column) => column.name === columnName,
+      )
     ) {
       continue;
     }
@@ -152,12 +156,10 @@ export function listDeckMapGeometryPickerColumns(options: {
     options.sourceColumns,
     'geometry',
   ).filter((column) => !isGenerated(column.name));
-  const inspectedGeometry =
-    options.sourceColumns.length > 0
-      ? []
-      : filterDeckMapColumns(options.outputColumns ?? [], 'geometry').filter(
-          (column) => !isGenerated(column.name),
-        );
+  const inspectedGeometry = filterDeckMapColumns(
+    options.outputColumns ?? [],
+    'geometry',
+  ).filter((column) => !isGenerated(column.name));
 
   return mergeDeckMapPickerColumns(
     inspectedGeometry,

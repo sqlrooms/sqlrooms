@@ -100,6 +100,17 @@ describe('Deck map settings controls', () => {
         isGeneratedColumn,
       }).map((column) => column.name),
     ).toEqual(['shape']);
+    expect(
+      listDeckMapGeometryPickerColumns({
+        sourceColumns,
+        outputColumns: [
+          ...outputColumns,
+          {name: 'buffered_geom', type: 'GEOMETRY'},
+        ],
+        extraColumnNames: ['buffered_geom'],
+        isGeneratedColumn,
+      }).map((column) => column.name),
+    ).toEqual(['buffered_geom', 'shape']);
   });
 
   test('restores a source geometry column after lon/lat mode', () => {
