@@ -198,3 +198,33 @@ visible. Full evidence is retained in the workflow artifact and locally at
 `artifacts/ci-openrouter-35231912962/external/`. This was the declared follow-up
 after the guidance correction; previous failed attempts remain retained. No
 additional embedded run or reliability claim is implied.
+
+## Generic block inspection follow-up
+
+The initial `block-document.get-map` command closed a real inspection gap, but
+its map-specific API is replaced before release by the shared documents command
+`block-document.inspect-block({artifactId, blockId})`. Inline blocks return their
+metadata/configuration; stateful blocks resolve backing state through an optional
+`readState` callback in the existing command type registration. The map
+registration owns its lookup. Unsupported readers, wrong-document block IDs,
+and missing instances fail explicitly; inspection does not initialize state.
+No second registry or alternate operation implementation was introduced.
+
+Skill v4 and isolated policy v2 use the new command. Previous evidence and hashes
+retain their original versions. A single external-only CI attempt will verify
+the new discovery/guidance path with the shared OpenRouter model and fresh
+fixtures. The two scenario definitions, snapshots, behavioral checks and
+expectations remain unchanged.
+
+Initial deterministic verification: 153 document-package tests / 17 suites
+passed, including three new generic inspection cases; real MCP tests passed
+after rerunning with loopback access (the initial sandbox attempt hit `EPERM`).
+The full document suite emitted a worker-teardown warning; the targeted command
+suite completed normally. CLI type checking passed.
+
+The complete CLI regression suite also passed (185 tests / 35 suites / 3
+snapshots plus 16 CLI/supervisor Node tests), as did the workspace package build,
+browser build, external bundle, skill validator, and independent code review.
+Deterministic logs, including the sandbox-denied MCP attempt, remain local under
+`artifacts/block-inspection-checks-20260917/`. Existing bundle-size and dependency
+`eval` warnings remain.

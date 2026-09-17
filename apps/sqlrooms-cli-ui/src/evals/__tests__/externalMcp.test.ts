@@ -8,6 +8,9 @@ import {
   isolatedEvalPolicy,
 } from '../external/policy';
 import {startEvalMcpHost} from '../external/mcpHost';
+import {seedDocument} from '../workspaceFixture';
+import {CLI_BEHAVIORAL_SCENARIOS} from '../scenarios';
+import {snapshotCliEvalState} from '../snapshot';
 
 it('discovers and executes through real MCP, enforces fixture policy and closes the host', async () => {
   const workspace = createCliHeadlessWorkspace();
@@ -144,6 +147,81 @@ it('discovers and executes through real MCP, enforces fixture policy and closes 
         input: {artifactId: id},
       }),
     ).toMatchObject({ok: true});
+    const documentId = seedDocument(
+      workspace.store,
+      CLI_BEHAVIORAL_SCENARIOS[1]!,
+      0,
+      'document-chart-map',
+    );
+    const mapId = `${documentId}-map`;
+    const before = snapshotCliEvalState(workspace.store.getState());
+    expect(
+      await call('get_command', {commandId: 'block-document.inspect-block'}),
+    ).toMatchObject({
+      ok: true,
+      data: {
+        command: {
+          readOnly: true,
+          inputSchema: {required: ['artifactId', 'blockId']},
+        },
+      },
+    });
+    expect(
+      await call('execute_command', {
+        commandId: 'block-document.inspect-block',
+        input: {artifactId: documentId, blockId: 'seed-map-block'},
+      }),
+    ).toMatchObject({
+      ok: true,
+      data: {
+        data: {
+          artifactId: documentId,
+          block: {id: 'seed-map-block', blockInstanceId: mapId},
+          backingState: {id: mapId, config: {mapStyle: 'light'}},
+        },
+      },
+    });
+    expect(
+      await call('execute_command', {
+        commandId: 'block-document.inspect-block',
+        input: {artifactId: documentId, blockId: 'seed-chart'},
+      }),
+    ).toMatchObject({
+      ok: true,
+      data: {
+        data: {
+          block: {id: 'seed-chart', config: {title: 'Original metric chart'}},
+        },
+      },
+    });
+    expect(snapshotCliEvalState(workspace.store.getState())).toEqual(before);
+    for (const input of [
+      {blockId: 'seed-map-block'},
+      {artifactId: id, blockId: 'seed-map-block'},
+      {artifactId: documentId, blockId: mapId},
+    ]) {
+      expect(
+        await call('execute_command', {
+          commandId: 'block-document.inspect-block',
+          input,
+        }),
+      ).toMatchObject({ok: false});
+    }
+    expect(
+      await call('execute_command', {
+        commandId: 'block-document.get-map',
+        input: {blockDocumentId: documentId, mapId},
+      }),
+    ).toMatchObject({ok: false, code: 'permission_denied'});
+    workspace.store.getState().deckMaps.removeMap(mapId);
+    const missing = snapshotCliEvalState(workspace.store.getState());
+    expect(
+      await call('execute_command', {
+        commandId: 'block-document.inspect-block',
+        input: {artifactId: documentId, blockId: 'seed-map-block'},
+      }),
+    ).toMatchObject({ok: false});
+    expect(snapshotCliEvalState(workspace.store.getState())).toEqual(missing);
   } finally {
     await client.close();
     await host?.dispose();

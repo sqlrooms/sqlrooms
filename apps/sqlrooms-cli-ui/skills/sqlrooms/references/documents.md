@@ -10,5 +10,10 @@ unmodified fields. `block-document.append-blocks` adds new blocks; each needs a 
 `id`. Inspect the schemas: text paragraphs use inline text nodes, for example
 `{"id":"note-1","type":"paragraph","text":[{"type":"text","text":"A note"}]}`.
 
+Use `block-document.inspect-block({artifactId, blockId})` to read one block.
+Inline blocks carry their configuration in `block`; stateful blocks additionally
+return `backingState` through their registered type reader. Unsupported readers
+and missing resources fail explicitly.
+
 Owned stateful blocks reference a resource through `blockInstanceId`. Do not
 replace a map block to edit a neighboring chart. Read back after mutations.

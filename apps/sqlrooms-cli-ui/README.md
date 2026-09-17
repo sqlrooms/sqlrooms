@@ -339,8 +339,9 @@ sessions when upgrading. Existing local workspace migrations remain supported.
 
 The browser and both evaluation targets share `createCliDomainSlice`. CLI MCP
 capabilities accept an injected store through `createCliCapabilityRuntime`; the
-browser retains its query approval policy. `block-document.get-map` inspects an
-owned map using explicit `blockDocumentId` and `mapId`.
+browser retains its query approval policy. `block-document.inspect-block` reads a document block using explicit `artifactId`
+and `blockId`, resolving backing state through the registered block type. Maps
+register a reader; other stateful types without readers fail explicitly.
 The isolated host projects command discovery to require explicit document IDs;
 the browser retains its optional current-document read behavior.
 

@@ -37,7 +37,7 @@ export function describeIsolatedEvalCommand(
 
 /** Trusted host policy for disposable fixtures only; never used by the browser. */
 export const EXTERNAL_EVAL_POLICY = {
-  id: 'isolated-document-charts-maps-v1',
+  id: 'isolated-document-charts-maps-v2',
   database: 'DuckDB Node :memory:; ambiguous-geospatial-v1',
   queries:
     'One bounded SELECT; external access disabled after connector initialization. Not an OS sandbox or a query resource-cost limit.',
@@ -52,7 +52,7 @@ export const EXTERNAL_EVAL_POLICY = {
   commands: [
     'block-document.list',
     'block-document.get',
-    'block-document.get-map',
+    'block-document.inspect-block',
     'block-document.create-artifact',
     'block-document.create-chart-block',
     'block-document.add-map-block',
@@ -94,12 +94,10 @@ export const isolatedEvalPolicy: RoomCapabilityPolicy = {
         request.commandId,
       )
     ) {
-      const idKey = [
-        'block-document.add-map-block',
-        'block-document.get-map',
-      ].includes(request.commandId)
-        ? 'blockDocumentId'
-        : 'artifactId';
+      const idKey =
+        request.commandId === 'block-document.add-map-block'
+          ? 'blockDocumentId'
+          : 'artifactId';
       if (typeof request.input?.[idKey] !== 'string' || !request.input[idKey])
         return deny(`Explicit ${idKey} is required.`);
     }

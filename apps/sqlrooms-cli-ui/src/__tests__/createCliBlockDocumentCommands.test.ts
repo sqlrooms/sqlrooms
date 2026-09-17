@@ -162,7 +162,6 @@ describe('createCliBlockDocumentCommands', () => {
         DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
     }).map(({id}) => id);
     expect(documentCommandIds).toEqual([
-      'block-document.get-map',
       'block-document.update-block-metadata',
       'block-document.add-map-block',
     ]);

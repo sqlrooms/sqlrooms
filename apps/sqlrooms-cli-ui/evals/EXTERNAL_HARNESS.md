@@ -86,9 +86,15 @@ removes the old evaluation-specific slice assembly and fake dashboard adapter.
 `createCliCapabilityRuntime` injects a store and mandatory host policy into the
 existing `createRoomCapabilityRuntime`. Both it and the browser `CliMcpBridge`
 use the same six capability handlers. Command serialization belongs to each
-runtime, rather than a module-global queue. A `block-document.get-map` read
-command fills the one missing inspection operation, validates document ownership,
-and works through the same command registry for UI, embedded, and MCP callers.
+runtime, rather than a module-global queue. The shared `block-document.inspect-block`
+command takes explicit `artifactId` and document `blockId`, validates document
+membership, and returns the block plus backing state where applicable. Stateful
+types provide a `readState` callback through the existing document command type
+registry. The map registration owns its lookup; the document command knows no
+map-specific state. Unsupported readers and missing instances fail explicitly,
+and reads never initialize state. This replaces the milestone's original
+`block-document.get-map` command. Skill v4 and isolated policy v2 use the generic
+command; historical evidence retains its original command IDs and versions.
 
 Hosts may project command discovery metadata through `describeCommand` without
 replacing handlers or changing registry entries. The isolated host uses this to

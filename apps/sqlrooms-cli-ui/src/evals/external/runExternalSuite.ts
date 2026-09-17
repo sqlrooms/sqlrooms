@@ -124,7 +124,7 @@ export async function runExternalSuite(options: {
     ];
     manifest.skill = {
       name: 'sqlrooms',
-      version: 3,
+      version: 4,
       files: Object.fromEntries(
         await Promise.all(
           skillFiles.map(async (file) => [
