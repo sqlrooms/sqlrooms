@@ -1,0 +1,433 @@
+import {execFileSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
+import {cp, mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {fileURLToPath} from 'node:url';
+import {readCodexOutput} from './codexOutput';
+import {findOtherCodexSkills} from './codexSkills';
+import path from 'node:path';
+import {
+  evaluateBehavioralChecks,
+  summarizeBehavioralCheckResults,
+  RunEvidenceSchema,
+  RUN_EVIDENCE_SCHEMA_VERSION,
+  type RunEvidence,
+  type JsonObject,
+  type ObservedError,
+} from '@sqlrooms/evals';
+import {createCliCapabilityRuntime} from '../../createCliCapabilityRuntime';
+import {createCliHeadlessWorkspace} from '../createCliHeadlessWorkspace';
+import {CLI_BEHAVIORAL_SCENARIOS, createCliScenarioChecks} from '../scenarios';
+import {snapshotCliEvalState} from '../snapshot';
+import {fixtureWorkspaceMode, seedDocument} from '../workspaceFixture';
+import {
+  codexArguments,
+  runHarnessProcess,
+  type HarnessResult,
+} from './codexHarness';
+import {startEvalMcpHost} from './mcpHost';
+import {EXTERNAL_EVAL_POLICY, isolatedEvalPolicy} from './policy';
+
+const json = (value: unknown) =>
+  JSON.parse(JSON.stringify(value)) as JsonObject;
+
+/** Runs the two pinned scenarios once each. Never retries or repairs model output. */
+export async function runExternalSuite(options: {
+  outputDir: string;
+  skillDir: string;
+  model?: string;
+  timeoutMs?: number;
+  signal?: AbortSignal;
+  /** Reports resources to the executable's independent process supervisor. */
+  onResource?: (resource: {
+    kind: 'workspace' | 'harness';
+    value: string | number;
+    active: boolean;
+  }) => void;
+}) {
+  // Exclusive creation prevents overwriting a previous failed attempt.
+  await mkdir(options.outputDir, {recursive: false});
+  const started = new Date();
+  const model = options.model ?? 'gpt-5.5';
+  const manifest: Record<string, unknown> = {
+    startedAt: started.toISOString(),
+    harness: 'codex',
+    model,
+    policy: EXTERNAL_EVAL_POLICY,
+    scenarios: CLI_BEHAVIORAL_SCENARIOS.map(({id, version}) => ({id, version})),
+    attempts: 'One attempt per scenario; no automatic retries.',
+  };
+  await writeFile(
+    path.join(options.outputDir, 'manifest.json'),
+    JSON.stringify(manifest, null, 2),
+  );
+  let version: string;
+  let disabledSkills: string[];
+  try {
+    version = execFileSync('codex', ['--version'], {
+      encoding: 'utf8',
+      timeout: 10_000,
+    }).trim();
+    manifest.harnessVersion = version;
+    disabledSkills = await findOtherCodexSkills();
+    manifest.disabledSkillPaths = disabledSkills;
+    manifest.executionBundleSha256 = createHash('sha256')
+      .update(await readFile(fileURLToPath(import.meta.url)))
+      .digest('hex');
+    manifest.repository = {
+      commitSha: execFileSync('git', ['rev-parse', 'HEAD'], {
+        encoding: 'utf8',
+        timeout: 10_000,
+      }).trim(),
+      dirty: Boolean(
+        execFileSync(
+          'git',
+          [
+            '-c',
+            'filter.lfs.process=',
+            '-c',
+            'filter.lfs.required=false',
+            'status',
+            '--porcelain',
+          ],
+          {encoding: 'utf8', timeout: 10_000},
+        ).trim(),
+      ),
+    };
+    const skillFiles = [
+      'SKILL.md',
+      'references/documents.md',
+      'references/charts.md',
+      'references/maps.md',
+    ];
+    manifest.skill = {
+      name: 'sqlrooms',
+      version: 2,
+      files: Object.fromEntries(
+        await Promise.all(
+          skillFiles.map(async (file) => [
+            file,
+            createHash('sha256')
+              .update(await readFile(path.join(options.skillDir, file)))
+              .digest('hex'),
+          ]),
+        ),
+      ),
+    };
+  } catch (error) {
+    manifest.failureKind = 'setup';
+    manifest.error = String(error);
+    await writeFile(
+      path.join(options.outputDir, 'manifest.json'),
+      JSON.stringify(manifest, null, 2),
+    );
+    throw error;
+  }
+  await writeFile(
+    path.join(options.outputDir, 'manifest.json'),
+    JSON.stringify(manifest, null, 2),
+  );
+  const skillContents = await readFile(
+    path.join(options.skillDir, 'SKILL.md'),
+    'utf8',
+  );
+  const results: RunEvidence[] = [];
+  for (const scenario of CLI_BEHAVIORAL_SCENARIOS) {
+    if (options.signal?.aborted) break;
+    const startedAt = new Date();
+    const events: RunEvidence['events'] = [];
+    const errors: ObservedError[] = [];
+    const protocol: string[] = [];
+    let failureKind: string | null = null;
+    let fixtureState: JsonObject = {},
+      finalState: JsonObject = {};
+    let finalAnswer = '';
+    let processResult: HarnessResult | undefined;
+    let harnessOutput: ReturnType<typeof readCodexOutput> | undefined;
+    let cwd: string | undefined;
+    let workspace: ReturnType<typeof createCliHeadlessWorkspace> | undefined;
+    let host: Awaited<ReturnType<typeof startEvalMcpHost>> | undefined;
+    let runtime: ReturnType<typeof createCliCapabilityRuntime> | undefined;
+    let invocation: string[] = [];
+    const recordError = (error: unknown, kind: string) => {
+      failureKind ??= kind;
+      errors.push({
+        name: error instanceof Error ? error.name : kind,
+        message: String(error),
+        metadata: {kind},
+      });
+    };
+    try {
+      cwd = await mkdtemp(path.join(tmpdir(), 'sqlrooms-external-'));
+      options.onResource?.({kind: 'workspace', value: cwd, active: true});
+      await cp(options.skillDir, path.join(cwd, '.agents/skills/sqlrooms'), {
+        recursive: true,
+      });
+      workspace = createCliHeadlessWorkspace();
+      await workspace.initialize();
+      const mode = fixtureWorkspaceMode(scenario);
+      if (mode !== 'empty') seedDocument(workspace.store, scenario, 0, mode);
+      fixtureState = snapshotCliEvalState(workspace.store.getState());
+      const state = workspace.store.getState();
+      if ('ai' in state || 'artifactAi' in state || 'aiSettings' in state)
+        throw new Error('External target contains AI state.');
+      runtime = createCliCapabilityRuntime({
+        store: workspace.store,
+        policy: isolatedEvalPolicy,
+        onInvocation: (trace) => {
+          events.push({
+            sequence: events.length,
+            timestamp: new Date().toISOString(),
+            type: 'tool',
+            name: trace.capability.name,
+            data: json({
+              requestId: trace.context.requestId,
+              durationMs: trace.durationMs,
+              inputBytes: trace.inputBytes,
+              outputBytes: trace.outputBytes,
+              result: trace.result,
+            }),
+          });
+          if (!trace.result.ok)
+            errors.push({
+              name: trace.result.code,
+              message: trace.result.message,
+              metadata: {kind: 'operation'},
+            });
+          const next = snapshotCliEvalState(workspace!.store.getState());
+          if (JSON.stringify(next) !== JSON.stringify(finalState)) {
+            events.push({
+              sequence: events.length,
+              timestamp: new Date().toISOString(),
+              type: 'mutation',
+              name: 'workspace-state',
+              data: {finalState: next},
+            });
+            finalState = next;
+          }
+        },
+      });
+      finalState = fixtureState;
+      host = await startEvalMcpHost(runtime, (method, input) => {
+        protocol.push(method);
+        if (input !== undefined)
+          events.push({
+            sequence: events.length,
+            timestamp: new Date().toISOString(),
+            type: 'tool',
+            name: 'mcp-request',
+            data:
+              JSON.stringify(input).length <= 256 * 1024
+                ? json(input)
+                : {truncated: true},
+          });
+      });
+      // Connection and policy context are separate from the unmodified scenario.
+      await writeFile(
+        path.join(cwd, 'AGENTS.md'),
+        `Use the installed SQLRooms skill to operate the SQLRooms MCP workspace. For this auditable run, explicitly read .agents/skills/sqlrooms/SKILL.md from disk even if native skill invocation already supplied its body, then read its focused references before authoring. The host is an isolated disposable fixture. Use MCP for all workspace reads and writes. Do not read repository source, evaluation evidence, or other user files. Rendering and capture are unavailable. Policy: ${JSON.stringify(EXTERNAL_EVAL_POLICY)}\n`,
+      );
+      invocation = codexArguments({
+        cwd,
+        url: host.url,
+        model,
+        prompt: scenario.turns[0]!.input,
+        disabledSkills,
+      });
+      processResult = await runHarnessProcess({
+        command: 'codex',
+        args: invocation,
+        cwd,
+        env: {
+          PATH: process.env.PATH,
+          HOME: process.env.HOME,
+          CODEX_HOME: process.env.CODEX_HOME,
+          TMPDIR: process.env.TMPDIR,
+          SQLROOMS_EVAL_MCP_TOKEN: host.token,
+        },
+        timeoutMs: options.timeoutMs ?? 240_000,
+        signal: options.signal,
+        onProcess: (pid, active) =>
+          options.onResource?.({kind: 'harness', value: pid, active}),
+        evidencePrefix: path.join(options.outputDir, scenario.id),
+      });
+      harnessOutput = readCodexOutput(processResult.stdout);
+      finalAnswer = harnessOutput.finalAnswer;
+      if (
+        !harnessOutput.skillReads.some((read) =>
+          read.output.includes(skillContents.trim()),
+        )
+      ) {
+        recordError(
+          new Error('Successful native SQLRooms skill read was not observed.'),
+          'guidance',
+        );
+      }
+      if (processResult.cancelled)
+        recordError(new Error('Harness cancelled.'), 'cancelled');
+      else if (processResult.timedOut)
+        recordError(new Error('Harness deadline exceeded.'), 'timeout');
+      else if (processResult.outputLimited)
+        recordError(new Error('Harness output limit exceeded.'), 'harness');
+      else if (
+        processResult.exitCode !== 0 ||
+        harnessOutput.failed ||
+        !harnessOutput.completed
+      ) {
+        const authentication =
+          /unauthori[sz]ed|authentication|not logged in|login required|401/i.test(
+            processResult.stdout + processResult.stderr,
+          );
+        recordError(
+          new Error(
+            `Harness failed (exit ${processResult.exitCode}); see raw output.`,
+          ),
+          authentication ? 'authentication' : 'harness',
+        );
+      }
+      if (
+        !protocol.includes('tools/list') ||
+        !protocol.some((method) => method.startsWith('tools/call:'))
+      )
+        recordError(
+          new Error('Real MCP discovery and invocation were not observed.'),
+          'transport',
+        );
+    } catch (error) {
+      recordError(error, 'setup');
+    } finally {
+      try {
+        if (host) await host.dispose();
+        else {
+          runtime?.dispose();
+          await runtime?.drain();
+        }
+      } catch (error) {
+        recordError(error, 'cleanup');
+      }
+      if (workspace) {
+        finalState = snapshotCliEvalState(workspace.store.getState());
+        try {
+          await workspace.dispose();
+        } catch (error) {
+          recordError(error, 'cleanup');
+        }
+      }
+      if (cwd) {
+        try {
+          await rm(cwd, {recursive: true, force: true});
+          options.onResource?.({kind: 'workspace', value: cwd, active: false});
+        } catch (error) {
+          recordError(error, 'cleanup');
+        }
+      }
+    }
+    const endedAt = new Date();
+    const mutations =
+      JSON.stringify(fixtureState) === JSON.stringify(finalState)
+        ? []
+        : [{kind: 'workspace-state', data: {finalState}}];
+    const checkResults = await evaluateBehavioralChecks(
+      createCliScenarioChecks(scenario),
+      {
+        scenario,
+        workspace: finalState,
+        database: {tables: finalState.tables ?? []},
+        finalAnswer,
+        errors,
+        mutations,
+        metadata: {initialState: fixtureState},
+      },
+    );
+    const pass = summarizeBehavioralCheckResults(checkResults).pass;
+    if (!pass && !failureKind) failureKind = 'behavior';
+    for (const error of errors)
+      events.push({
+        sequence: events.length,
+        timestamp: endedAt.toISOString(),
+        type: 'error',
+        name: error.name ?? 'Error',
+        data: json(error),
+      });
+    const usageRecord = harnessOutput?.usage;
+    const evidence = RunEvidenceSchema.parse({
+      schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
+      runId: `${scenario.id}-${startedAt.getTime()}`,
+      scenario: {id: scenario.id, version: scenario.version, repetition: 0},
+      target: {
+        type: 'cli-external-codex',
+        profileName: 'document-charts-maps',
+        profileVersion: workspace?.profile.version ?? 1,
+      },
+      repository: manifest.repository,
+      model: {
+        provider: 'codex-harness',
+        modelId: model,
+        settings: {reasoningEffort: 'medium'},
+        observedModelId: null,
+      },
+      timing: {
+        startedAt: startedAt.toISOString(),
+        endedAt: endedAt.toISOString(),
+        latencyMs: endedAt.getTime() - startedAt.getTime(),
+      },
+      status: processResult?.cancelled
+        ? 'cancelled'
+        : errors.length
+          ? 'error'
+          : pass
+            ? 'passed'
+            : 'failed',
+      promptTurns: scenario.turns,
+      finalAnswer,
+      finalState,
+      events,
+      checkResults,
+      usage: usageRecord
+        ? {
+            inputTokens: usageRecord.input_tokens,
+            outputTokens: usageRecord.output_tokens,
+            grader: {totalTokens: 0},
+          }
+        : undefined,
+      metadata: {
+        initialState: fixtureState,
+        fixtureState,
+        failureKind,
+        harnessVersion: version,
+        invocation,
+        skill: manifest.skill,
+        harnessDiagnostics: harnessOutput?.diagnostics ?? [],
+        observedSkillReads:
+          harnessOutput?.skillReads.map((read) => read.command) ?? [],
+        executionBundleSha256: manifest.executionBundleSha256,
+        policy: EXTERNAL_EVAL_POLICY,
+        mcpRequests: protocol,
+        sqlroomsModelCalls: 0,
+        skillLoading:
+          'Native .agents/skills discovery and explicit $sqlrooms invocation; raw harness output retained.',
+        cleanupCompleted: !errors.some(
+          (error) => error.metadata?.kind === 'cleanup',
+        ),
+      },
+    });
+    await writeFile(
+      path.join(options.outputDir, `${scenario.id}.evidence.json`),
+      JSON.stringify(evidence, null, 2),
+    );
+    results.push(evidence);
+  }
+  manifest.endedAt = new Date().toISOString();
+  manifest.results = results.map((result) => ({
+    scenario: result.scenario.id,
+    status: result.status,
+  }));
+  manifest.passed =
+    results.length === CLI_BEHAVIORAL_SCENARIOS.length &&
+    results.every((result) => result.status === 'passed');
+  await writeFile(
+    path.join(options.outputDir, 'manifest.json'),
+    JSON.stringify(manifest, null, 2),
+  );
+  return results;
+}

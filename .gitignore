@@ -37,3 +37,5 @@ packages/*/CHANGELOG.md
 examples/*/CHANGELOG.md
 .worktrees/
 .wrangler/
+
+/apps/sqlrooms-cli-ui/evals/external-dist/

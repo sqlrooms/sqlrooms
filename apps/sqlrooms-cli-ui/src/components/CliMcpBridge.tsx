@@ -1,7 +1,6 @@
-import {createRoomCapabilityRuntime} from '@sqlrooms/mcp';
 import {registerBrowserMcpBridge} from '@sqlrooms/mcp/browser';
 import {useEffect} from 'react';
-import {createCliRoomCapabilities} from '../createCliRoomCapabilities';
+import {createCliCapabilityRuntime} from '../createCliCapabilityRuntime';
 import {
   cancelAllMcpQueryApprovals,
   requestMcpQueryApproval,
@@ -20,10 +19,9 @@ export function CliMcpBridge() {
     if (!token) {
       throw new Error('MCP browser bridge requires a session auth token.');
     }
-    const runtime = createRoomCapabilityRuntime({
-      capabilities: createCliRoomCapabilities({
-        metaNamespace: runtimeConfig.metaNamespace,
-      }),
+    const runtime = createCliCapabilityRuntime({
+      store: roomStore,
+      metaNamespace: runtimeConfig.metaNamespace,
       policy: {
         authorize: async ({capability, input, context}) => {
           if (capability.name !== 'query') return {allowed: true};
@@ -57,9 +55,6 @@ export function CliMcpBridge() {
           };
         },
       },
-      timeoutMs: 30_000,
-      maxInputBytes: 256 * 1024,
-      maxOutputBytes: 1024 * 1024,
     });
     const bridge = registerBrowserMcpBridge(runtime, {
       url: runtimeConfig.mcp.bridgeUrl,

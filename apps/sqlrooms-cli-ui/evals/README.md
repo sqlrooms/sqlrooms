@@ -35,3 +35,11 @@ behavioral check failures in provider metadata.
 The scripted-model test in Jest is wiring coverage only. It proves the real
 transport/tool/state path is connected without credentials or network access;
 it is not evidence of production-model behavior.
+
+## External harness
+
+The separate [headless external target](EXTERNAL_HARNESS.md) runs the actual Codex
+CLI over real MCP, with a natively loaded SQLRooms skill and no SQLRooms AI slice.
+Both targets and the production browser share the app-local domain composition,
+scenario fixtures, normalized snapshots, and behavioral checks. External execution
+is not a model swap inside the embedded target.

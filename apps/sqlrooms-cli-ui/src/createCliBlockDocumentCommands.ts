@@ -176,6 +176,36 @@ export function createCliBlockDocumentCommands({
   const statefulBlockTypeSet = new Set<string>(statefulBlockTypes);
   const commands: RoomCommand<RoomState>[] = [
     {
+      id: 'block-document.get-map',
+      name: 'Read document map',
+      description:
+        'Read a map resource belonging to an explicitly targeted document.',
+      group: 'Document',
+      keywords: ['map', 'read', 'inspect', 'document'],
+      inputSchema: BlockDocumentIdInput.extend({mapId: z.string()}),
+      metadata: {readOnly: true, idempotent: true, riskLevel: 'low'},
+      execute: ({getState}, input) => {
+        const {blockDocumentId, mapId} = input as {
+          blockDocumentId: string;
+          mapId: string;
+        };
+        const state = getState();
+        resolveBlockDocumentArtifact(state, blockDocumentId);
+        if (!findStatefulBlock(state, blockDocumentId, mapId, 'map')) {
+          throw new Error(
+            `Map ${mapId} does not belong to document ${blockDocumentId}`,
+          );
+        }
+        const map = state.deckMaps.config.mapsById[mapId];
+        if (!map) throw new Error(`Map resource ${mapId} was not found`);
+        return {
+          success: true,
+          commandId: 'block-document.get-map',
+          data: {map},
+        };
+      },
+    },
+    {
       id: BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID,
       name: 'Add block document dashboard block',
       description: 'Add an owned dashboard block to a block document.',
@@ -509,6 +539,8 @@ export function createCliBlockDocumentCommands({
   ];
   const enabledBlockTypes = new Set(statefulBlockTypes);
   return commands.filter((command) => {
+    if (command.id === 'block-document.get-map')
+      return enabledBlockTypes.has('map');
     const blockType =
       CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES[
         command.id as keyof typeof CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES
