@@ -89,9 +89,14 @@ export async function superviseExternalWorker({
     if (!existsSync(outputDir)) mkdirSync(outputDir);
     if (reason || result?.exitCode !== 0 || cleanupErrors.length) {
       const manifestPath = path.join(outputDir, 'manifest.json');
-      const manifest = existsSync(manifestPath)
-        ? JSON.parse(readFileSync(manifestPath, 'utf8'))
-        : {};
+      let manifest = {};
+      if (existsSync(manifestPath)) {
+        try {
+          manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+        } catch (error) {
+          cleanupErrors.push(`Failed to read manifest: ${String(error)}`);
+        }
+      }
       writeFileSync(
         manifestPath,
         JSON.stringify(

@@ -29,8 +29,10 @@ Both nightly jobs use the repository variable `SQLROOMS_EVAL_MODEL` for the
 OpenRouter model ID, initially `deepseek/deepseek-v4-flash-0731`. Export the same
 variable locally to override the local default. The resolved model is recorded
 in each evidence envelope, so provider labels do not claim a fixed model.
-Temperature (0), maximum steps (24), scenario/profile versions, and three
-repetitions remain fixed. Provider-reported costs are retained; fallback estimates
+For the embedded Promptfoo evaluation, temperature (0), maximum steps (24),
+scenario/profile versions, and three repetitions remain fixed. The external
+Codex harness uses the same scenario/profile versions, runs each scenario once,
+and uses medium reasoning. Provider-reported costs are retained; fallback estimates
 use the existing DeepSeek rates only for that exact model and remain unknown for
 other models when billing metadata is absent. Promptfoo stores its
 SQLite database beneath `PROMPTFOO_CONFIG_DIR` (or its normal user config

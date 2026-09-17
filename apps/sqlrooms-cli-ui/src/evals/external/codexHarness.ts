@@ -1,6 +1,7 @@
 import {spawn} from 'node:child_process';
 import {createWriteStream} from 'node:fs';
 import {finished} from 'node:stream/promises';
+import {StringDecoder} from 'node:string_decoder';
 
 /** A bounded process result; raw harness streams are retained separately. */
 export type HarnessResult = {
@@ -34,6 +35,8 @@ export async function runHarnessProcess(options: {
   let stdout = '',
     stderr = '',
     bytes = 0;
+  const stdoutDecoder = new StringDecoder('utf8');
+  const stderrDecoder = new StringDecoder('utf8');
   let timedOut = false,
     cancelled = false,
     outputLimited = false;
@@ -75,10 +78,10 @@ export async function runHarnessProcess(options: {
       return;
     }
     if (stream === 'stdout') {
-      stdout += chunk.toString();
+      stdout += stdoutDecoder.write(chunk);
       stdoutFile.write(chunk);
     } else {
-      stderr += chunk.toString();
+      stderr += stderrDecoder.write(chunk);
       stderrFile.write(chunk);
     }
   };
@@ -92,6 +95,8 @@ export async function runHarnessProcess(options: {
       child.once('error', reject);
       child.once('close', (exitCode, signal) => resolve({exitCode, signal}));
     });
+    stdout += stdoutDecoder.end();
+    stderr += stderrDecoder.end();
     return {...result, timedOut, cancelled, outputLimited, stdout, stderr};
   } finally {
     clearTimeout(timeout);
