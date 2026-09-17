@@ -72,7 +72,10 @@ external --profile document-charts-maps`. Initialized browser store inspection
 
 - Workspace packages built (50 tasks); CLI TypeScript and production UI build passed.
 - Before restacking: CLI 192 tests / 38 suites / 3 snapshots; 16 Node/supervisor
-  tests passed. Final repository checks run again through the pre-push hook.
+  tests passed. After restacking: CLI 193 tests / 38 suites / 3 snapshots and
+  22 Node/supervisor tests passed. The final pre-push hook passed unused-code,
+  type checking (56 tasks), circular-dependency and repository tests (34 tasks).
+  Some unchanged package tests reported worker-teardown warnings; no test failed.
 - Python: 123 tests passed, including readiness, missing prerequisites/options,
   inherited authentication/model environment, terminal wiring, cancellation before
   launch, owned-child cleanup, HTTP failure/cancellation cleanup and stopped MCP
