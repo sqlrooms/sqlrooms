@@ -113,9 +113,15 @@ continued policy denial for missing/empty IDs. TypeScript and both MCP tests
 passed; the initial sandbox test attempt failed only on loopback binding and was
 rerun with permission. No scenario, check, policy, or skill was relaxed.
 
-A new real-harness attempt will run both scenarios from fresh fixtures after the
-fix. The original manual evidence and investigation remain local and unchanged;
-these follow-up runs are not part of the earlier 38-file archive.
+The declared follow-up `artifacts/external-explicit-target-4eb17b6f5` ran both
+scenarios from fresh fixtures on clean revision `4eb17b6f5`: **both passed all
+five checks**, with zero failed operations. The mutate trace observed the required
+`artifactId` schema and used the explicit ID on its first read. Supervisor exit 0,
+no forced termination or cleanup errors. Create took 54.967 seconds; mutate took
+53.914 seconds. CLI/model/skill settings and all behavioral checks were unchanged.
+Repository pre-push checks also passed, including the full CLI suite. The original
+manual evidence and investigation remain local and unchanged; these follow-up
+runs are not part of the earlier 38-file archive.
 
 The **live embedded before/after comparison remains unverified**. Credentials are
 configured, but automatic approval review denied egress of the synthetic scenario
