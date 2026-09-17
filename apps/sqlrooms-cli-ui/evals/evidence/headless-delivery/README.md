@@ -123,11 +123,11 @@ Repository pre-push checks also passed, including the full CLI suite. The origin
 manual evidence and investigation remain local and unchanged; these follow-up
 runs are not part of the earlier 38-file archive.
 
-The **live embedded before/after comparison remains unverified**. Credentials are
-configured, but automatic approval review denied egress of the synthetic scenario
-prompts, fixture/tool results, and repository metadata to OpenRouter without
-explicit provider approval. This is a comparison prerequisite, not an external
-harness pass or a missing-credential skip.
+The **live embedded before/after comparison remains unverified**. The original
+pre-extraction attempt was blocked by DNS and automatic approval review. The
+subsequent explicit CI authorization enabled the post-extraction runs below, but
+there is still no valid pre-extraction baseline. Neither infrastructure failures
+nor timeouts count as passing evaluations.
 
 Only the document/charts/maps domain is shared headlessly. Browser layout,
 rendering/capture, imports, Python/browser bridges, production persistence/CRDT,
@@ -160,3 +160,29 @@ and verify read-only shell access before invoking the model; narrowly classify
 the known fallback-metadata message as a retained warning. Scenarios, guidance,
 checks and expected snapshots remain unchanged. The follow-up will use the
 external-only manual dispatch and fresh fixtures, without discarding this failure.
+
+The embedded job in that first CI attempt completed all six repetitions: **four
+passed and two errored at the existing 180-second limit** (create repetition 1,
+mutate repetition 0). Results and evidence envelopes are retained in the workflow
+artifact and `artifacts/ci-openrouter-35229116358/embedded/`. The successful
+post-extraction runs do not establish a before/after comparison.
+
+The pre-push checks for the sandbox follow-up passed: workspace Knip, type checks,
+circular-dependency checks and tests, including **185 CLI tests / 35 suites / 3
+snapshots** plus 16 CLI/supervisor Node tests. Workflow YAML and shell syntax, the
+local sandbox preflight, and independent review also passed.
+
+[Sandbox follow-up](https://github.com/sqlrooms/sqlrooms/actions/runs/35230862385),
+revision `67dbb747a`: the read-only sandbox preflight passed, both scenarios read
+the native skill and all three references, real MCP worked, and cleanup completed
+without forced termination. Create **passed all five checks** (95.631 seconds).
+Mutate **errored** (68.998 seconds): all four state/answer checks passed, but its
+first append omitted the required block ID, so `no-errors` correctly failed even
+after recovery. Full evidence is in the workflow artifact and locally at
+`artifacts/ci-openrouter-35230862385/external/`. The metadata fallback diagnostic
+is retained as a warning.
+
+Investigation found that the skill's paragraph example itself omitted `id`,
+despite correct command discovery requiring it. Before one further declared
+external-only attempt, skill v3 corrects that example and explains new-block ID
+uniqueness. No command, policy, scenario, fixture, snapshot or check is changed.
