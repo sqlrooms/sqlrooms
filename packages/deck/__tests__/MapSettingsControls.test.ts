@@ -3,14 +3,12 @@ import type {TableColumn} from '@sqlrooms/duckdb';
 import {existsSync, readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {
-  classifyDeckMapCoordinateColumn,
   filterDeckMapColumns,
   listDeckMapGeometryPickerColumns,
   pickDeckMapArcCoordinateColumns,
   pickDeckMapArcGeometryColumns,
   pickDeckMapCoordinateColumns,
   pickDeckMapSourceGeometryColumn,
-  resolveDeckMapLonLatPair,
 } from '../src/MapSettingsControls';
 
 const columns: TableColumn[] = [
@@ -40,9 +38,6 @@ describe('Deck map settings controls', () => {
     expect(
       filterDeckMapColumns(columns, 'geometry').map((column) => column.name),
     ).toEqual(['geometry']);
-    expect(
-      filterDeckMapColumns(columns, 'position').map((column) => column.name),
-    ).toEqual(['magnitude', 'geometry']);
     expect(
       filterDeckMapColumns(
         [
@@ -215,24 +210,6 @@ describe('Deck map settings controls', () => {
       sourceLongitudeColumn: 'longitude',
       targetLatitudeColumn: undefined,
       targetLongitudeColumn: undefined,
-    });
-  });
-
-  test('pairs first/second position columns into lon/lat', () => {
-    expect(classifyDeckMapCoordinateColumn('lat')).toBe('latitude');
-    expect(classifyDeckMapCoordinateColumn('longitude')).toBe('longitude');
-    expect(classifyDeckMapCoordinateColumn('count')).toBe('unknown');
-    expect(resolveDeckMapLonLatPair('lat', 'lon')).toEqual({
-      latitudeColumn: 'lat',
-      longitudeColumn: 'lon',
-    });
-    expect(resolveDeckMapLonLatPair('longitude', 'latitude')).toEqual({
-      longitudeColumn: 'longitude',
-      latitudeColumn: 'latitude',
-    });
-    expect(resolveDeckMapLonLatPair('start_x', 'start_y')).toEqual({
-      latitudeColumn: 'start_x',
-      longitudeColumn: 'start_y',
     });
   });
 

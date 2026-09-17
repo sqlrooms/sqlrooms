@@ -458,7 +458,10 @@ dataset, point layers, brush interaction, and fit binding. Choosing a native
 geometry column on a scatterplot, heatmap, or column layer uses
 `createDeckMapCentroidTransformSql(...)` so Point geometries stay points and
 polygon/line footprints become representative points instead of failing the
-Point-position check. The host table lookup
+Point-position check. Pass the column's DuckDB type as `geometryColumnType` so
+encoded columns are decoded before `ST_Centroid`: plain `BLOB` needs
+`ST_GeomFromWKB`, while `GEOMETRY`, `WKB_BLOB`, and WKT text accept a
+`::GEOMETRY` cast. The host table lookup
 also supplies source columns so missing coordinate columns and a generated
 geometry alias that would duplicate an existing column are rejected before
 durable state is written. For a single table-backed dataset, its canonical table

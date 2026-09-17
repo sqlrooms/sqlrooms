@@ -1100,7 +1100,7 @@ const PointLonLatFields: FC<{
   <ColumnsProvider columns={sourceColumns}>
     <div className="flex flex-col gap-2">
       <Field label="Latitude" required>
-        <ColumnSelector
+        <ColumnSelector.Numeric
           value={latitudeColumn}
           onChange={(nextLatitudeColumn) => {
             onSelectLonLat?.();
@@ -1118,7 +1118,7 @@ const PointLonLatFields: FC<{
         />
       </Field>
       <Field label="Longitude" required>
-        <ColumnSelector
+        <ColumnSelector.Numeric
           value={longitudeColumn}
           onChange={(nextLongitudeColumn) => {
             onSelectLonLat?.();
@@ -1180,7 +1180,7 @@ const ArcLonLatFields: FC<{
     <ColumnsProvider columns={sourceColumns}>
       <div className="flex flex-col gap-2">
         <Field label="Source latitude" required>
-          <ColumnSelector
+          <ColumnSelector.Numeric
             value={sourceLatitudeColumn}
             onChange={(column) => setCoordinate({sourceLatitudeColumn: column})}
             placeholder="Select source latitude..."
@@ -1188,7 +1188,7 @@ const ArcLonLatFields: FC<{
           />
         </Field>
         <Field label="Source longitude" required>
-          <ColumnSelector
+          <ColumnSelector.Numeric
             value={sourceLongitudeColumn}
             onChange={(column) =>
               setCoordinate({sourceLongitudeColumn: column})
@@ -1198,7 +1198,7 @@ const ArcLonLatFields: FC<{
           />
         </Field>
         <Field label="Target latitude" required>
-          <ColumnSelector
+          <ColumnSelector.Numeric
             value={targetLatitudeColumn}
             onChange={(column) => setCoordinate({targetLatitudeColumn: column})}
             placeholder="Select target latitude..."
@@ -1206,7 +1206,7 @@ const ArcLonLatFields: FC<{
           />
         </Field>
         <Field label="Target longitude" required>
-          <ColumnSelector
+          <ColumnSelector.Numeric
             value={targetLongitudeColumn}
             onChange={(column) =>
               setCoordinate({targetLongitudeColumn: column})
@@ -2332,6 +2332,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                                 mapConfig,
                                 activeLayerIndex,
                                 geometryColumn,
+                                sourceColumns,
                               ),
                             );
                           }}
@@ -2359,6 +2360,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                                       mapConfig,
                                       activeLayerIndex,
                                       geometryColumn,
+                                      sourceColumns,
                                     ),
                                   );
                                 }}
@@ -2409,6 +2411,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                                   mapConfig,
                                   activeLayerIndex,
                                   geometryColumn,
+                                  sourceColumns,
                                 ),
                               )
                             }

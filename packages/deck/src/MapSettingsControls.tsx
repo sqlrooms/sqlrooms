@@ -46,13 +46,9 @@ export type DeckMapColumnKind =
   /** Numeric/temporal + string columns usable for color scales. */
   | 'colorable'
   /** Geometry / WKB / well-known geometry column names. */
-  | 'geometry'
-  /** Geometry or numeric columns that can define a point position. */
-  | 'position';
+  | 'geometry';
 
 const GEOMETRY_COLUMN_NAME_PATTERN = /(?:^|_)((?:wkb_)?geom(?:etry)?)$/i;
-const LATITUDE_COLUMN_NAME_PATTERN = /^(lat|latitude|y|northing)$/i;
-const LONGITUDE_COLUMN_NAME_PATTERN = /^(lon|lng|long|longitude|x|easting)$/i;
 
 /** True for columns that can drive a color scale (excludes geometry blobs/structs). */
 export function isDeckMapColorableColumn(column: TableColumn): boolean {
@@ -84,42 +80,6 @@ export function isDeckMapGeometryPickerColumn(column: TableColumn): boolean {
   );
 }
 
-/** Classifies a coordinate column name as latitude, longitude, or unknown. */
-export function classifyDeckMapCoordinateColumn(
-  columnName: string,
-): 'latitude' | 'longitude' | 'unknown' {
-  const name = columnName.trim();
-  if (LATITUDE_COLUMN_NAME_PATTERN.test(name)) return 'latitude';
-  if (LONGITUDE_COLUMN_NAME_PATTERN.test(name)) return 'longitude';
-  return 'unknown';
-}
-
-/**
- * Assigns a first/second position pair to longitude/latitude. Named lon/lat
- * columns win; otherwise the first column is latitude and the second is
- * longitude.
- */
-export function resolveDeckMapLonLatPair(
-  firstColumn: string,
-  secondColumn: string,
-): {latitudeColumn: string; longitudeColumn: string} {
-  const first = classifyDeckMapCoordinateColumn(firstColumn);
-  const second = classifyDeckMapCoordinateColumn(secondColumn);
-  if (first === 'longitude' && second !== 'longitude') {
-    return {longitudeColumn: firstColumn, latitudeColumn: secondColumn};
-  }
-  if (first === 'latitude' && second !== 'latitude') {
-    return {latitudeColumn: firstColumn, longitudeColumn: secondColumn};
-  }
-  if (second === 'longitude' && first !== 'longitude') {
-    return {longitudeColumn: secondColumn, latitudeColumn: firstColumn};
-  }
-  if (second === 'latitude' && first !== 'latitude') {
-    return {latitudeColumn: secondColumn, longitudeColumn: firstColumn};
-  }
-  return {latitudeColumn: firstColumn, longitudeColumn: secondColumn};
-}
-
 /** String/boolean (and binary) fields that need a categorical color scale. */
 export function isDeckMapCategoricalColorColumn(column: TableColumn): boolean {
   if (!column.type || isColumnQuantitative(column.type)) return false;
@@ -139,12 +99,6 @@ export function filterDeckMapColumns(
   if (kind === 'all') return columns;
   return columns.filter((column) => {
     if (kind === 'geometry') return isDeckMapGeometryPickerColumn(column);
-    if (kind === 'position') {
-      return (
-        isDeckMapGeometryPickerColumn(column) ||
-        Boolean(column.type && isColumnNumeric(column.type))
-      );
-    }
     if (!column.type) return false;
     if (kind === 'numeric') return isColumnNumeric(column.type);
     if (kind === 'quantitative') return isColumnQuantitative(column.type);
@@ -364,12 +318,6 @@ export const DeckMapColumnsProvider: FC<
   </DeckMapColumnsContext.Provider>
 );
 
-export type DeckMapColumnSelectorExtraOption = {
-  value: string;
-  label: string;
-  keywords?: string[];
-};
-
 export type DeckMapColumnSelectorProps = {
   columns?: TableColumn[];
   kind?: DeckMapColumnKind;
@@ -377,7 +325,6 @@ export type DeckMapColumnSelectorProps = {
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
-  extraOptions?: readonly DeckMapColumnSelectorExtraOption[];
 };
 
 const DeckMapColumnSelectorRoot: FC<DeckMapColumnSelectorProps> = ({
@@ -387,18 +334,18 @@ const DeckMapColumnSelectorRoot: FC<DeckMapColumnSelectorProps> = ({
   onChange,
   placeholder = 'Select column…',
   disabled,
-  extraOptions,
 }) => {
   const contextColumns = useContext(DeckMapColumnsContext);
   const allColumns = columns ?? contextColumns;
   const filtered = filterDeckMapColumns(allColumns, kind);
   const selectedColumn = allColumns.find((column) => column.name === value);
-  const selectedExtra = extraOptions?.find((option) => option.value === value);
+  // Keep a bound column selectable even when it fails the kind filter, so
+  // switching layer types does not report existing bindings as missing.
   const options =
     selectedColumn && !filtered.some((column) => column.name === value)
       ? [selectedColumn, ...filtered]
       : filtered;
-  const isMissing = Boolean(value && !selectedColumn && !selectedExtra);
+  const isMissing = Boolean(value && !selectedColumn);
   return (
     <Combobox value={value ?? ''} onChange={onChange} disabled={disabled}>
       <Combobox.Trigger
@@ -407,9 +354,7 @@ const DeckMapColumnSelectorRoot: FC<DeckMapColumnSelectorProps> = ({
           isMissing && 'border-destructive/60 bg-destructive/5',
         )}
       >
-        {selectedExtra ? (
-          <span className="truncate">{selectedExtra.label}</span>
-        ) : selectedColumn ? (
+        {selectedColumn ? (
           <span className="flex min-w-0 items-baseline gap-1">
             <span className="truncate">{selectedColumn.name}</span>
             <span className="text-muted-foreground truncate text-[8px]">
@@ -427,15 +372,6 @@ const DeckMapColumnSelectorRoot: FC<DeckMapColumnSelectorProps> = ({
         searchPlaceholder="Search columns..."
         emptyMessage="No matching column."
       >
-        {extraOptions?.map((option) => (
-          <Combobox.Item
-            key={option.value}
-            value={option.value}
-            keywords={option.keywords ?? [option.label]}
-          >
-            <span className="truncate">{option.label}</span>
-          </Combobox.Item>
-        ))}
         {options.map((column) => (
           <Combobox.Item key={column.name} value={column.name}>
             <span className="truncate">{column.name}</span>
@@ -464,9 +400,6 @@ export const DeckMapColumnSelector = Object.assign(DeckMapColumnSelectorRoot, {
   ),
   Geometry: (props: Omit<DeckMapColumnSelectorProps, 'kind'>) => (
     <DeckMapColumnSelectorRoot {...props} kind="geometry" />
-  ),
-  Position: (props: Omit<DeckMapColumnSelectorProps, 'kind'>) => (
-    <DeckMapColumnSelectorRoot {...props} kind="position" />
   ),
 });
 

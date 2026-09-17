@@ -582,6 +582,7 @@ export function setDeckMapLayerGeometryColumn(
   config: DeckMapConfig,
   layerIndex: number,
   geometryColumn: string,
+  sourceColumns: ReadonlyArray<{name: string; type?: string}> = [],
 ): DeckMapConfig {
   const layer = getDeckMapLayerRecords(config)[layerIndex];
   const datasetId = getDeckMapLayerDatasetId(layer);
@@ -613,7 +614,12 @@ export function setDeckMapLayerGeometryColumn(
   ) {
     nextSource = {
       tableName: source.tableName,
-      transformSql: createDeckMapCentroidTransformSql({geometryColumn}),
+      transformSql: createDeckMapCentroidTransformSql({
+        geometryColumn,
+        geometryColumnType: sourceColumns.find(
+          (column) => column.name === geometryColumn,
+        )?.type,
+      }),
     };
     nextGeometryEncodingHint = 'wkb';
   } else if (
@@ -776,27 +782,6 @@ export function setDeckMapLayerHexagonColumn(
     _sqlroomsBinding: {
       ...(isRecord(layer._sqlroomsBinding) ? layer._sqlroomsBinding : {}),
       hexagonColumn,
-    },
-  }));
-}
-
-export function setDeckMapLayerArcColumns(
-  config: DeckMapConfig,
-  layerIndex: number,
-  columns: {
-    sourceGeometryColumn?: string;
-    targetGeometryColumn?: string;
-    sourceLatitudeColumn?: string;
-    sourceLongitudeColumn?: string;
-    targetLatitudeColumn?: string;
-    targetLongitudeColumn?: string;
-  },
-): DeckMapConfig {
-  return updateDeckMapLayer(config, layerIndex, (layer) => ({
-    ...layer,
-    _sqlroomsBinding: {
-      ...(isRecord(layer._sqlroomsBinding) ? layer._sqlroomsBinding : {}),
-      ...columns,
     },
   }));
 }

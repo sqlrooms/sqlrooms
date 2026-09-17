@@ -219,15 +219,32 @@ describe('mapLayerConfigUtils', () => {
   });
 
   it('updates the bound dataset geometry column for geometry-backed layers', () => {
-    const nextConfig = setDeckMapLayerGeometryColumn(config, 0, 'geometry');
+    const nextConfig = setDeckMapLayerGeometryColumn(config, 0, 'geometry', [
+      {name: 'geometry', type: 'GEOMETRY'},
+    ]);
 
     expect(nextConfig.datasets.places.geometryColumn).toBe('geometry');
     expect(nextConfig.datasets.places.source).toMatchObject({
       tableName: 'places',
-      transformSql: expect.stringContaining('ST_Centroid("geometry")'),
+      transformSql: expect.stringContaining(
+        'ST_Centroid("geometry"::GEOMETRY)',
+      ),
     });
     expect(nextConfig.datasets.places.geometryEncodingHint).toBe('wkb');
     expect(config.datasets.places.geometryColumn).toBe('geom');
+  });
+
+  it('decodes a WKB blob geometry column before taking its centroid', () => {
+    const nextConfig = setDeckMapLayerGeometryColumn(config, 0, 'geometry', [
+      {name: 'geometry', type: 'BLOB'},
+    ]);
+
+    expect(nextConfig.datasets.places.source).toMatchObject({
+      tableName: 'places',
+      transformSql: expect.stringContaining(
+        'ST_Centroid(ST_GeomFromWKB("geometry"))',
+      ),
+    });
   });
 
   it('stores a single lat/lon pick without dropping a source geometry column', () => {
@@ -328,12 +345,14 @@ describe('mapLayerConfigUtils', () => {
       },
     };
 
-    const nextConfig = setDeckMapLayerGeometryColumn(pointConfig, 0, 'geom');
+    const nextConfig = setDeckMapLayerGeometryColumn(pointConfig, 0, 'geom', [
+      {name: 'geom', type: 'GEOMETRY'},
+    ]);
 
     expect(nextConfig.datasets.places.geometryColumn).toBe('geom');
     expect(nextConfig.datasets.places.source).toMatchObject({
       tableName: 'places',
-      transformSql: expect.stringContaining('ST_Centroid("geom")'),
+      transformSql: expect.stringContaining('ST_Centroid("geom"::GEOMETRY)'),
     });
     expect(nextConfig.datasets.places.geometryEncodingHint).toBe('wkb');
     expect(nextConfig.fitToData).toMatchObject({

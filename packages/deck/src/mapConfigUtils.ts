@@ -1,4 +1,5 @@
 import {
+  getColumnTypeCategory,
   getRawSqlTableReference,
   makeQualifiedTableName,
   quoteParsedRawSqlTableReference,
@@ -270,16 +271,40 @@ export function createDeckMapPointTransformSql(options: {
 }
 
 /**
+ * SQL that yields a `GEOMETRY` value for a geometry-ish column. `ST_Centroid`
+ * rejects encoded columns, and the decode differs by type: plain `BLOB` only
+ * accepts `ST_GeomFromWKB`, while `GEOMETRY`, `WKB_BLOB`, and WKT text all
+ * accept a `::GEOMETRY` cast.
+ */
+function decodeDeckMapGeometryExpression(
+  geometryColumn: string,
+  geometryColumnType?: string,
+) {
+  const quotedGeometry = quoteDeckMapSqlIdentifier(geometryColumn);
+  return geometryColumnType &&
+    getColumnTypeCategory(geometryColumnType) === 'binary'
+    ? `ST_GeomFromWKB(${quotedGeometry})`
+    : `${quotedGeometry}::GEOMETRY`;
+}
+
+/**
  * Builds WKB point SQL from a source geometry column via `ST_Centroid`.
  * Point geometries are unchanged; polygons/lines become representative points
  * so scatterplot/heatmap/column layers can bind the same field.
+ *
+ * Pass `geometryColumnType` so WKB-encoded columns are decoded correctly.
  */
 export function createDeckMapCentroidTransformSql(options: {
   geometryColumn: string;
+  geometryColumnType?: string;
 }) {
   const quotedGeometry = quoteDeckMapSqlIdentifier(options.geometryColumn);
+  const geometry = decodeDeckMapGeometryExpression(
+    options.geometryColumn,
+    options.geometryColumnType,
+  );
   return [
-    `SELECT * REPLACE (ST_AsWKB(ST_Centroid(${quotedGeometry})) AS ${quotedGeometry})`,
+    `SELECT * REPLACE (ST_AsWKB(ST_Centroid(${geometry})) AS ${quotedGeometry})`,
     `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
   ].join(' ');
 }
@@ -291,7 +316,7 @@ export function parseDeckMapCentroidTransformSql(
   transformSql: string,
 ): {geometryColumn: string} | undefined {
   const match = transformSql.match(
-    /ST_AsWKB\s*\(\s*ST_Centroid\s*\(\s*"?([^"\s,]+)"?\s*\)\s*\)\s*AS\s+"?([^\s",]+)"?/i,
+    /ST_AsWKB\s*\(\s*ST_Centroid\s*\(\s*(?:ST_GeomFromWKB\s*\(\s*)?"?([^"\s,()]+)"?\s*(?:::\s*GEOMETRY\s*)?\)+\s*AS\s+"?([^\s",]+)"?/i,
   );
   if (!match?.[1] || !match[2] || match[1] !== match[2]) return undefined;
   return {geometryColumn: match[1]};

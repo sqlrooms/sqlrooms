@@ -55,6 +55,14 @@ describe('normalizeDeckMapPointConfig', () => {
     ).toEqual({geometryColumn: 'geometry'});
     expect(
       parseDeckMapCentroidTransformSql(
+        createDeckMapCentroidTransformSql({
+          geometryColumn: 'geom',
+          geometryColumnType: 'BLOB',
+        }),
+      ),
+    ).toEqual({geometryColumn: 'geom'});
+    expect(
+      parseDeckMapCentroidTransformSql(
         createDeckMapPointTransformSql({
           longitudeColumn: 'longitude',
           latitudeColumn: 'latitude',
@@ -71,6 +79,28 @@ describe('normalizeDeckMapPointConfig', () => {
       latitudeColumn: 'lat',
       geometryColumn: 'geom',
     });
+  });
+
+  it('decodes encoded geometry columns in the centroid transform', () => {
+    // ST_Centroid rejects WKB_BLOB/BLOB/VARCHAR; the decode differs per type.
+    expect(
+      createDeckMapCentroidTransformSql({
+        geometryColumn: 'geom',
+        geometryColumnType: 'GEOMETRY',
+      }),
+    ).toContain('ST_Centroid("geom"::GEOMETRY)');
+    expect(
+      createDeckMapCentroidTransformSql({
+        geometryColumn: 'geom',
+        geometryColumnType: 'WKB_BLOB',
+      }),
+    ).toContain('ST_Centroid("geom"::GEOMETRY)');
+    expect(
+      createDeckMapCentroidTransformSql({
+        geometryColumn: 'geom',
+        geometryColumnType: 'BLOB',
+      }),
+    ).toContain('ST_Centroid(ST_GeomFromWKB("geom"))');
   });
 
   it('parses origin/destination lon/lat columns back out of canonical arc transform SQL', () => {
