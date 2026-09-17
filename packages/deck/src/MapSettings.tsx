@@ -107,9 +107,9 @@ import {
   filterDeckMapColumns,
   isDeckMapCategoricalColorColumn,
   listDeckMapGeometryPickerColumns,
-  pickDeckMapArcCoordinateColumns,
+  mergeDeckMapPickerColumns,
   pickDeckMapArcGeometryColumns,
-  pickDeckMapCoordinateColumns,
+  pickDeckMapExistingColumnName,
   pickDeckMapSourceGeometryColumn,
 } from './MapSettingsControls';
 import {
@@ -122,18 +122,6 @@ import {
 } from './json/heatmapDefaults';
 
 const EMPTY_COLUMNS: DataTable['columns'] = [];
-
-function mergeDeckMapColumns(
-  ...columnSets: Array<DataTable['columns'] | undefined>
-): DataTable['columns'] {
-  const columnsByName = new Map<string, DataTable['columns'][number]>();
-  for (const columns of columnSets) {
-    for (const column of columns ?? []) {
-      columnsByName.set(column.name, column);
-    }
-  }
-  return [...columnsByName.values()];
-}
 
 function getBoundGeometryColumnNames(
   datasetGeometryColumn: string | undefined,
@@ -1344,7 +1332,10 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   const dataOutputColumns = datasetSchema.dataOutputColumns.filter(
     (column) => !boundGeometryColumnNames.has(column.name),
   );
-  const positionColumns = mergeDeckMapColumns(sourceColumns, outputColumns);
+  const positionColumns = mergeDeckMapPickerColumns(
+    sourceColumns,
+    outputColumns,
+  );
   const datasetSchemaErrorMessage = datasetSchema.error?.message;
 
   const showGeometryColumnSetting =
@@ -2299,10 +2290,17 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                           onValueChange={(value) => {
                             if (value === 'lonlat') {
                               setGeometryTabOverride('lonlat');
-                              const restored = pickDeckMapCoordinateColumns(
-                                sourceColumns,
-                                lastPointCoordinatesRef.current,
-                              );
+                              const last = lastPointCoordinatesRef.current;
+                              const restored = {
+                                latitudeColumn: pickDeckMapExistingColumnName(
+                                  last.latitudeColumn,
+                                  sourceColumns,
+                                ),
+                                longitudeColumn: pickDeckMapExistingColumnName(
+                                  last.longitudeColumn,
+                                  sourceColumns,
+                                ),
+                              };
                               if (
                                 !restored.latitudeColumn &&
                                 !restored.longitudeColumn
@@ -2477,10 +2475,29 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                           onValueChange={(value) => {
                             if (value === 'lonlat') {
                               setGeometryTabOverride('lonlat');
-                              const restored = pickDeckMapArcCoordinateColumns(
-                                sourceColumns,
-                                lastArcCoordinatesRef.current,
-                              );
+                              const last = lastArcCoordinatesRef.current;
+                              const restored = {
+                                sourceLatitudeColumn:
+                                  pickDeckMapExistingColumnName(
+                                    last.sourceLatitudeColumn,
+                                    sourceColumns,
+                                  ),
+                                sourceLongitudeColumn:
+                                  pickDeckMapExistingColumnName(
+                                    last.sourceLongitudeColumn,
+                                    sourceColumns,
+                                  ),
+                                targetLatitudeColumn:
+                                  pickDeckMapExistingColumnName(
+                                    last.targetLatitudeColumn,
+                                    sourceColumns,
+                                  ),
+                                targetLongitudeColumn:
+                                  pickDeckMapExistingColumnName(
+                                    last.targetLongitudeColumn,
+                                    sourceColumns,
+                                  ),
+                              };
                               if (
                                 !restored.sourceLatitudeColumn &&
                                 !restored.sourceLongitudeColumn &&

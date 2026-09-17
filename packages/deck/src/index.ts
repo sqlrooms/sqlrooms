@@ -31,7 +31,6 @@ export {
   createDeckMapConfigForTable,
   createDeckMapDashboardPanelConfigForTable,
   createDeckMapPointTransformSql,
-  createDeckMapCentroidTransformSql,
   findDeckMapLongitudeLatitudeColumns,
   findGeometryColumn,
   findLongitudeLatitudeColumns,

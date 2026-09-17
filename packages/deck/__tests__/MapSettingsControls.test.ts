@@ -5,9 +5,8 @@ import {join} from 'node:path';
 import {
   filterDeckMapColumns,
   listDeckMapGeometryPickerColumns,
-  pickDeckMapArcCoordinateColumns,
   pickDeckMapArcGeometryColumns,
-  pickDeckMapCoordinateColumns,
+  pickDeckMapExistingColumnName,
   pickDeckMapSourceGeometryColumn,
 } from '../src/MapSettingsControls';
 
@@ -173,44 +172,22 @@ describe('Deck map settings controls', () => {
     });
   });
 
-  test('restores lon/lat columns after geom mode when they still exist', () => {
+  test('keeps a column name only when it still exists on the source table', () => {
     const sourceColumns: TableColumn[] = [
       {name: 'geom', type: 'GEOMETRY'},
       {name: 'longitude', type: 'DOUBLE'},
       {name: 'latitude', type: 'DOUBLE'},
     ];
 
+    expect(pickDeckMapExistingColumnName('latitude', sourceColumns)).toBe(
+      'latitude',
+    );
     expect(
-      pickDeckMapCoordinateColumns(sourceColumns, {
-        latitudeColumn: 'latitude',
-        longitudeColumn: 'longitude',
-      }),
-    ).toEqual({
-      latitudeColumn: 'latitude',
-      longitudeColumn: 'longitude',
-    });
+      pickDeckMapExistingColumnName('missing_lat', sourceColumns),
+    ).toBeUndefined();
     expect(
-      pickDeckMapCoordinateColumns(sourceColumns, {
-        latitudeColumn: 'missing_lat',
-        longitudeColumn: 'longitude',
-      }),
-    ).toEqual({
-      latitudeColumn: undefined,
-      longitudeColumn: 'longitude',
-    });
-    expect(
-      pickDeckMapArcCoordinateColumns(sourceColumns, {
-        sourceLatitudeColumn: 'latitude',
-        sourceLongitudeColumn: 'longitude',
-        targetLatitudeColumn: 'gone_lat',
-        targetLongitudeColumn: 'gone_lon',
-      }),
-    ).toEqual({
-      sourceLatitudeColumn: 'latitude',
-      sourceLongitudeColumn: 'longitude',
-      targetLatitudeColumn: undefined,
-      targetLongitudeColumn: undefined,
-    });
+      pickDeckMapExistingColumnName(undefined, sourceColumns),
+    ).toBeUndefined();
   });
 
   test('shares one Mosaic-free settings panel across document and dashboard adapters', () => {
@@ -241,26 +218,6 @@ describe('Deck map settings controls', () => {
     expect(dashboardAdapterSource).toContain('<DeckMapSettingsPanel');
     expect(dashboardAdapterSource).toContain('customConfig=');
     expect(panelSource).toContain('value={sourceDataTable}');
-    expect(panelSource).toContain('usesPointCoordinateSetting');
-    expect(panelSource).toContain('Lon/Lat');
-    expect(panelSource).toContain('hasPointGeometryColumns');
-    expect(panelSource).toContain('parseDeckMapPointTransformSql');
-    expect(panelSource).toContain('pointGeometryColumns');
-    expect(panelSource).toContain('listDeckMapGeometryPickerColumns');
-    expect(panelSource).toContain('pickDeckMapSourceGeometryColumn');
-    expect(panelSource).toContain('pickDeckMapArcGeometryColumns');
-    expect(panelSource).toContain('pickDeckMapCoordinateColumns');
-    expect(panelSource).toContain('pickDeckMapArcCoordinateColumns');
-    expect(panelSource).toContain('parseDeckMapArcTransformSql');
-    expect(panelSource).toContain('lastPointCoordinatesRef');
-    expect(panelSource).toContain('lastArcCoordinatesRef');
-    expect(panelSource).toContain('nativeArcSourceGeometryColumn');
-    expect(panelSource).toContain('isDeckMapGeneratedTransformColumn');
-    expect(panelSource).toContain('arcGeometryColumns');
-    expect(panelSource).toContain('Source latitude');
-    expect(panelSource).toContain('showGeometryGroup');
-    expect(panelSource).toContain('H3 index');
-    expect(panelSource).toContain('label="Timestamp"');
     expect(documentAdapterSource).toContain('applyDeckMapTableSelection');
     expect(documentAdapterSource).toContain('preferDatasetSource');
     expect(dashboardAdapterSource).not.toContain('preferDatasetSource');

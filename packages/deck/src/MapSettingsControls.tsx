@@ -107,7 +107,8 @@ export function filterDeckMapColumns(
   });
 }
 
-function mergeDeckMapPickerColumns(
+/** Dedupes column lists by name, last definition wins. */
+export function mergeDeckMapPickerColumns(
   ...columnSets: Array<TableColumn[] | undefined>
 ): TableColumn[] {
   const columnsByName = new Map<string, TableColumn>();
@@ -165,7 +166,10 @@ export function listDeckMapGeometryPickerColumns(options: {
   );
 }
 
-function pickExistingColumnName(
+/**
+ * Returns `columnName` when it still exists on the source table.
+ */
+export function pickDeckMapExistingColumnName(
   columnName: string | undefined,
   sourceColumns: ReadonlyArray<{name: string}>,
 ): string | undefined {
@@ -173,67 +177,6 @@ function pickExistingColumnName(
   return sourceColumns.some((column) => column.name === columnName)
     ? columnName
     : undefined;
-}
-
-/**
- * Lon/lat columns to restore after leaving geom mode. Only returns names that
- * still exist on the source table.
- */
-export function pickDeckMapCoordinateColumns(
-  sourceColumns: ReadonlyArray<{name: string}>,
-  preferred?: {
-    latitudeColumn?: string;
-    longitudeColumn?: string;
-  },
-): {latitudeColumn?: string; longitudeColumn?: string} {
-  return {
-    latitudeColumn: pickExistingColumnName(
-      preferred?.latitudeColumn,
-      sourceColumns,
-    ),
-    longitudeColumn: pickExistingColumnName(
-      preferred?.longitudeColumn,
-      sourceColumns,
-    ),
-  };
-}
-
-/**
- * Origin/destination lon/lat columns to restore after leaving arc geom mode.
- * Only returns names that still exist on the source table.
- */
-export function pickDeckMapArcCoordinateColumns(
-  sourceColumns: ReadonlyArray<{name: string}>,
-  preferred?: {
-    sourceLatitudeColumn?: string;
-    sourceLongitudeColumn?: string;
-    targetLatitudeColumn?: string;
-    targetLongitudeColumn?: string;
-  },
-): {
-  sourceLatitudeColumn?: string;
-  sourceLongitudeColumn?: string;
-  targetLatitudeColumn?: string;
-  targetLongitudeColumn?: string;
-} {
-  return {
-    sourceLatitudeColumn: pickExistingColumnName(
-      preferred?.sourceLatitudeColumn,
-      sourceColumns,
-    ),
-    sourceLongitudeColumn: pickExistingColumnName(
-      preferred?.sourceLongitudeColumn,
-      sourceColumns,
-    ),
-    targetLatitudeColumn: pickExistingColumnName(
-      preferred?.targetLatitudeColumn,
-      sourceColumns,
-    ),
-    targetLongitudeColumn: pickExistingColumnName(
-      preferred?.targetLongitudeColumn,
-      sourceColumns,
-    ),
-  };
 }
 
 /**
