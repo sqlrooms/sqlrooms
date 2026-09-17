@@ -205,4 +205,6 @@ function App() {
 }
 ```
 
-For more details on layout configuration and customization, see the [Layout API Reference](/api/layout/).
+For examples of panels, tabs, grids, and docking, see the
+[Layout guide](/layout). For the full API, see the
+[Layout API Reference](/api/layout/).

@@ -1,4 +1,6 @@
 import {MarkdownDocumentsSliceConfig} from '@sqlrooms/documents';
+import {ArtifactsSliceConfig} from '@sqlrooms/artifacts';
+import {ArtifactAiConfigSchema} from '@sqlrooms/artifacts/ai';
 import {migrateCliPersistedWorkspace} from '../migrateCliPersistedWorkspace';
 
 type PersistedWorkspaceFixture = {
@@ -80,6 +82,79 @@ function persistedWorkspace(): PersistedWorkspaceFixture {
 }
 
 describe('migrateCliPersistedWorkspace', () => {
+  it('restores legacy session associations and pinned artifacts alongside documents', () => {
+    const persisted = {
+      ...persistedWorkspace(),
+      artifactAi: {
+        sessionArtifactLinks: [
+          {
+            sessionId: 'chat',
+            artifactId: 'legacyBlockDocument',
+            createdAt: 1786377310614,
+            linkType: 'attached',
+          },
+        ],
+        pinnedArtifactIds: ['legacyBlockDocument'],
+      },
+    };
+    const migrated = migrateCliPersistedWorkspace(persisted);
+    expect(ArtifactAiConfigSchema.parse(migrated.artifactAi)).toEqual({
+      sessionArtifactLinks: [
+        {
+          sessionId: 'chat',
+          artifactId: 'legacyBlockDocument',
+          linkedAt: 1786377310614,
+        },
+      ],
+    });
+    expect(ArtifactsSliceConfig.parse(migrated.artifacts)).toMatchObject({
+      pinnedArtifactIds: ['legacyBlockDocument'],
+      artifactsById: {legacyBlockDocument: {type: 'block-document'}},
+    });
+    expect(migrateCliPersistedWorkspace(migrated)).toEqual(migrated);
+    expect(persisted.artifactAi.sessionArtifactLinks[0]).toHaveProperty(
+      'createdAt',
+      1786377310614,
+    );
+  });
+
+  it('preserves canonical association timestamps and pins, including empty pins', () => {
+    const migrated = migrateCliPersistedWorkspace({
+      artifacts: {pinnedArtifactIds: []},
+      artifactAi: {
+        pinnedArtifactIds: ['old-pin'],
+        sessionArtifactLinks: [
+          {
+            sessionId: 'chat',
+            artifactId: 'doc',
+            linkedAt: 2,
+            createdAt: 1,
+            linkType: 'created',
+          },
+        ],
+      },
+    });
+    expect(ArtifactAiConfigSchema.parse(migrated.artifactAi)).toEqual({
+      sessionArtifactLinks: [
+        {sessionId: 'chat', artifactId: 'doc', linkedAt: 2},
+      ],
+    });
+    expect(
+      ArtifactsSliceConfig.parse(migrated.artifacts).pinnedArtifactIds,
+    ).toEqual([]);
+  });
+
+  it('keeps invalid legacy associations subject to schema validation', () => {
+    const migrated = migrateCliPersistedWorkspace({
+      artifactAi: {
+        sessionArtifactLinks: [
+          {sessionId: 'chat', artifactId: 'doc', linkType: 'attached'},
+        ],
+      },
+    });
+    expect(() => ArtifactAiConfigSchema.parse(migrated.artifactAi)).toThrow();
+  });
+
   it('uses backing state to migrate artifact and embedded block types', () => {
     const migrated = migrateCliPersistedWorkspace(persistedWorkspace());
     const artifacts = (

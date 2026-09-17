@@ -109,6 +109,11 @@ export {
 } from './MarkdownDocumentsSlice';
 export {createMarkdownDocumentCommands} from './MarkdownDocumentCommands';
 export {
+  blockDocumentToMarkdown,
+  type BlockDocumentDataUrlResolver,
+} from './blockDocumentToMarkdown';
+export {documentAssetToDataUrl} from './BlockDocumentEditor/node-views/nodeViewUtils';
+export {
   BLOCK_DOCUMENT_COMMAND_SUFFIXES,
   createBlockDocumentCommandIds,
   createBlockDocumentCommands,
@@ -204,3 +209,8 @@ export {
 } from './knowledgeIndex';
 export * from './block-settings';
 export type {Editor} from '@tiptap/react';
+
+export {
+  formatBlockDocumentContext,
+  type FormatBlockDocumentContextOptions,
+} from './formatBlockDocumentContext';

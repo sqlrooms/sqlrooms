@@ -84,9 +84,11 @@ export const ChatMessagesContainer: React.FC<{
     (s) => s.ai.getCurrentSession()?.uiMessages,
   );
   const toolRenderBehavior = useToolRenderBehavior();
+  const agentProgress = useStoreWithAi((s) => s.ai.agentProgress);
   const activeStatus = getChatActiveStatus(
     uiMessages as UIMessage[] | undefined,
     toolRenderBehavior,
+    agentProgress,
   );
   const ActiveStatus = useChatRenderingComponents().ActiveStatus;
   const chatTurns = React.useMemo(
@@ -141,7 +143,7 @@ export const ChatMessagesContainer: React.FC<{
         ref={containerRef}
         className="scrollbar-thin flex min-h-0 w-full min-w-0 grow flex-col gap-5 overflow-x-hidden overflow-y-auto"
       >
-        <div className="px-3">
+        <div className="px-5">
           {chatTurns.map((chatTurn) => (
             <React.Fragment key={chatTurn.id}>
               <ChatTurnView

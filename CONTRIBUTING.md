@@ -35,6 +35,10 @@ If you've added a new feature, changed the configuration or public methods, plea
 
 ## Pull Requests
 
+CI checks Prettier formatting for TypeScript, TSX, and Markdown files using the
+repository's Prettier configuration and ignore rules. Run `pnpm format:check`
+before submitting a PR, and use `pnpm format:ts` to fix formatting issues.
+
 We actively welcome pull requests. If you want to submit one, please follow the following process:
 
 1. Fork the repo and create your branch from `main`

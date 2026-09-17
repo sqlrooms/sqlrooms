@@ -153,7 +153,10 @@ export {
   streamSubAgent,
   updateAgentToolCallData,
   withRunContextTools,
+  createModelToolCallRepair,
+  DEFAULT_MAX_REPAIRS_PER_TOOL,
 } from '@sqlrooms/ai-core';
+export type {ModelToolCallRepairOptions} from '@sqlrooms/ai-core';
 export {
   getEffectiveSessionContextItemIds,
   getRunContextItemIds,

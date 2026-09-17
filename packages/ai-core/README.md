@@ -378,6 +378,92 @@ So:
 Without a `Chat.Rendering` ancestor, `ChatTurnView` uses the built-in SQLRooms
 defaults for every slot.
 
+#### Activity timing
+
+`ChatActivityProps` carries the timing an activity header needs:
+
+The turn-level activity reports `isRunning` until the turn itself ends, not
+just while a tool is pending: between steps no tool is in flight (the model is
+writing the next call), and following that would make the header, its clock and
+the open body flicker in every gap. Timeline groups still report their own
+pending state, since each one really has settled.
+
+- `startedAt` — epoch ms of the earliest tool start in the group. While
+  `isRunning` is true, chrome can render a clock that ticks from it (the
+  default recipe shows `· 12s · step 3`). Derive it with
+  `computeActivityTimeSpan(toolCallIds, toolTimings)?.startedAt`, or with
+  `computeTimeSpan(timings)` when the calls carry their own timing instead of
+  being looked up by id. Both ignore a call with no recorded start, so a
+  partially recorded entry cannot stretch the span or reverse it.
+- `toolCount` — tools in the group, shown as the current step while running.
+- `computationTimeMs` / `computationTimeLabel` — aggregated duration for a
+  settled group, as a raw number and a presentation-ready label. Nested agent
+  activities receive both as well, so a custom `Activity` never has to parse
+  the duration back out of `summaryLabel`.
+
+A group holding an `approval-requested` call is labelled `Waiting for approval`
+rather than `Thinking`: the run is paused on the user, which is what
+`ChatActiveStatus` reports at the same time. The clock keeps running, since the
+wait is part of the span the final duration reports. The turn-level label uses
+`ChatTurnModel.isAwaitingApproval` for the same distinction — a subset of
+`isActivityRunning` that also covers approvals requested by nested agents.
+
+`turn.activity` carries `startedAt` and `computationTimeMs` too, so a custom
+`Turn` that lays the region out itself can render its own live timer instead of
+falling back to the pre-wired `Content`.
+
+`ActivityBox` takes the same values as `startedAt`, `stepCount` and
+`computationTimeLabel`; the duration replaces the derived step count once the
+activity has settled, so a summary that already names the tool count is not
+repeated.
+
+```tsx
+<ActivityBox
+  isRunning={isRunning}
+  summaryLabel={isRunning ? 'Thinking' : 'Worked with 3 tools'}
+  startedAt={startedAt}
+  stepCount={isRunning ? toolCount : undefined}
+  computationTimeLabel={isRunning ? undefined : computationTimeLabel}
+>
+  {children}
+</ActivityBox>
+```
+
+`ChatActionsProps` carries `completedAt` alongside the copy/fork actions, so an
+actions row can show how long ago the turn finished. The default recipe renders
+it as a relative label that refreshes every 30s.
+
+`completedAt` is the moment the run terminated, recorded on the turn when the
+stream ends, is cancelled, or errors — not the end of the last tool call, so a
+text-only turn is timestamped too. It is absent while the turn is still
+running, and for turns recorded before it was persisted, where `ChatTurnView`
+falls back to the end of the turn's tool span.
+
+It is persisted in the turn's own message metadata. Read it back with
+`getChatTurnCompletedAt(message)` rather than reaching into `message.metadata`,
+which keeps the storage shape private to the package;
+`getChatTurnsFromUiMessages()` already surfaces it as each `ChatTurn`'s
+`completedAt`.
+
+```ts
+import {getChatTurnCompletedAt} from '@sqlrooms/ai-core';
+
+// Epoch ms, or undefined for a turn that is still running or predates the stamp.
+const finishedAt = getChatTurnCompletedAt(turn.userMessage);
+```
+
+`useRelativeTime(timestamp, intervalMs?)` builds that label: it returns a
+formatted "x ago" string for an epoch-ms `timestamp`, re-reading the clock every
+`intervalMs` (default 30s) so the value stays current while the turn is on
+screen. A timestamp newer than the last clock read is measured against itself
+rather than the stale reference, so a fresh value never renders as a
+future-relative label. Returns `undefined` when `timestamp` is
+undefined.
+
+```tsx
+const label = useRelativeTime(completedAt); // "18 minutes ago"
+```
+
 #### Override a single slot
 
 Pass a partial `components` map. Only the slots you provide change; everything
@@ -480,6 +566,17 @@ function AppActiveStatus({status}: ChatActiveStatusProps) {
 Set `ActiveStatus` to a component that returns `null` when the host owns the
 indicator's placement entirely. For that case, call `getChatActiveStatus` with
 the current messages and `ToolRenderBehavior` to reuse the same status model.
+
+`status.kind` separates a run that is working (`model`, `tool`) from one that
+has stopped and is waiting on the user (`approval`). The default indicator
+animates the former and labels the latter "Paused…" — with `status.label` kept
+for assistive technology — since animated dots on a halted run read as
+progress that is not happening.
+
+Pass the slice's `agentProgress` as the third argument to see approvals raised
+_inside_ a nested agent, whose own part still looks like a tool in progress.
+The same recursive check is exported from the turn model as
+`areAnyNestedAwaitingApproval()` and backs `ChatTurnModel.isAwaitingApproval`.
 
 `TextOutput` receives `isAnswer=true` only for text that is the final message
 part. Planning text followed by tool activity remains regular response text.
@@ -662,6 +759,53 @@ tools and registered tools awaiting client output are covered, including hybrid
 client tools named by `remoteClientToolNames` whose remote definition omits
 `execute`. Remote endpoints remain responsible for enforcing timeouts around
 tools they execute server-side.
+
+### Tool-call repair
+
+When the model emits tool-call arguments that fail the tool's input schema, the
+AI SDK aborts the run with an opaque `InvalidToolInputError`. The local chat
+transport attempts to heal this by default: it re-asks the model to correct the
+call (forcing a fresh call to the same tool, without running the tool's side
+effects). Repair is best-effort — if it fails, hits its per-tool limit, or
+produces no corrected call, the original `InvalidToolInputError` still surfaces.
+Each repair costs one extra LLM request, so apps that want to trade that
+resilience away can opt out — either through `createAiSlice` or directly on the
+transport factory:
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  repairInvalidToolCalls: false, // default: true
+});
+```
+
+The primitive is also exported for hosts that build their own `ToolLoopAgent`
+sub-agents:
+
+```ts
+import {createModelToolCallRepair} from '@sqlrooms/ai-core';
+
+new ToolLoopAgent({
+  model,
+  tools,
+  experimental_repairToolCall: createModelToolCallRepair(model, {
+    abortSignal, // cancel a pending repair when the run is stopped
+    providerOptions, // inherit the run's caching/reasoning configuration
+    onRepairUsage: (usage) => accumulate(usage), // account repair tokens
+  }),
+});
+```
+
+`createModelToolCallRepair(model, options)` never recurses into itself, never
+triggers tool side effects (the failing tool is re-sent as a schema-only
+definition, stripped of `execute` and input-lifecycle/approval callbacks),
+leaves the outer step limit untouched, and stops after `maxRepairsPerTool`
+(default `2`) failures for the same tool so a persistently-invalid call cannot
+fan out into unbounded repair requests. The returned handler is single-run — its
+per-tool counter lives in the closure, so construct a fresh handler for each
+agent run. It never logs validation-error text or regenerated arguments, so user
+data does not leak into the console.
 
 Assistant messages can be forked into a new active chat through
 `ai.forkSessionFromMessage()`. The action snapshots the source session's

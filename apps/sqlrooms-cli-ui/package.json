@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest && node --test ../../scripts/cli-dev-args.test.mjs ../../scripts/cli-dev-readiness.test.mjs cliDevProxy.test.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^1.0.22",

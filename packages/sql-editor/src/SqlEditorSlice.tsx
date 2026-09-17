@@ -709,7 +709,10 @@ export function createSqlEditorSlice({
               set((state) =>
                 produce(state, (draft) => {
                   const r = draft.sqlEditor.queryResultsById[queryId];
-                  if (r?.status === 'loading' && r.controller === queryController) {
+                  if (
+                    r?.status === 'loading' &&
+                    r.controller === queryController
+                  ) {
                     r.isWrite = isWrite;
                   }
                 }),

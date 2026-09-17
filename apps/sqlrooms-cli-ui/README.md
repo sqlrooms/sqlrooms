@@ -217,6 +217,14 @@ They can contain editable text, images, standalone Mosaic/vgplot chart blocks, a
 direct stateful blocks such as dashboards, pivot tables, Data Table Explorers,
 SQL queries, and Markdown documents.
 
+Workspace loading also migrates legacy AI/artifact associations from `createdAt`
+to `linkedAt`, removes the obsolete `linkType`, and moves pinned artifact IDs
+from `artifactAi` to `artifacts`. Saving stays disabled until the saved workspace
+has been successfully validated and restored. A loading failure shows an error
+and preserves the existing database snapshot for recovery.
+After successful restoration, migrations and startup changes retained by the
+merge are saved automatically if they differ from the loaded snapshot.
+
 Standalone chart blocks reuse the same Mosaic chart view and settings panel as
 dashboard charts. Charts with the same `selectionGroupId` in one Document share
 a crossfilter selection; charts without a group are independent.
@@ -231,6 +239,15 @@ independently.
 
 Hosted SQL queries reuse the `@sqlrooms/sql-editor` single-query block surface.
 The same query block can also be opened as a top-level SQL Query artifact tab.
+
+### Document Agent Context
+
+The document editing agent receives a fresh, bounded Markdown snapshot before
+each model step, including block order, IDs, stateful resource references, and
+map runtime issues. It uses those references directly and lists blocks only
+when required references are omitted. Selected-block edits remain restricted
+to their original target. Snapshots are transient model context; document
+changes continue through the existing tools and commands.
 
 ## HTML App Revision History
 

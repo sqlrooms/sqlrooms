@@ -4,7 +4,6 @@ import {
   createListBlockDocumentBlocksTool,
   createMoveBlockDocumentBlockTool,
   type BlockDocumentAiAdapter,
-  type BlockDocumentBlock,
   type BlockDocumentMoveBlockAiAdapter,
   type BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
@@ -17,7 +16,7 @@ import {
 } from '@sqlrooms/mosaic/ai';
 import {createAddHtmlAppBlockDocumentBlockTool} from './createAddHtmlAppBlockDocumentBlockTool';
 import {KnownBlockDocumentTools} from './constants';
-import {getMapBlockRuntimeIssues} from './getMapBlockRuntimeIssues';
+import {getBlockDocumentRuntimeSummary} from './formatDocumentAgentContext';
 import type {RoomState} from '../store-types';
 
 export type ExtraBlockDocumentAiToolsParams = {
@@ -168,7 +167,7 @@ export function createCliBlockDocumentAiTools({
   const listBlocksTool = createListBlockDocumentBlocksTool({
     blockDocumentAdapter,
     blockDocumentId,
-    usageHint: `Use this before updating an existing stateful block in the Document or reordering blocks. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId.${
+    usageHint: `Use this when the document snapshot omits the needed block or resource ID. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId.${
       dashboardBlocksEnabled
         ? ` For dashboard blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_dashboard_agent} as dashboardId.`
         : ''
@@ -177,26 +176,8 @@ export function createCliBlockDocumentAiTools({
         ? ` For html-app blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_html_app_agent} as appId. For a new document HTML app, use ${KnownBlockDocumentTools.add_html_app_block} first.`
         : ''
     } If a map block has runtimeIssues, repair the map config in place instead of creating a replacement block.`,
-    augmentBlockSummary: ({block}) => {
-      if (
-        !getState ||
-        block.type !== 'statefulBlock' ||
-        block.blockType !== 'map' ||
-        !block.blockInstanceId
-      ) {
-        return undefined;
-      }
-
-      const runtimeIssues = getMapBlockRuntimeIssues(
-        getState(),
-        block.blockInstanceId,
-      );
-      return runtimeIssues.length > 0 ? {runtimeIssues} : undefined;
-    },
-  } as Parameters<typeof createListBlockDocumentBlocksTool>[0] & {
-    augmentBlockSummary: (params: {
-      block: BlockDocumentBlock;
-    }) => Record<string, unknown> | undefined;
+    augmentBlockSummary: ({block}) =>
+      getState ? getBlockDocumentRuntimeSummary(getState(), block) : undefined,
   });
 
   const moveBlockTool = createMoveBlockDocumentBlockTool({

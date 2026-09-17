@@ -36,7 +36,12 @@ const DeckMapFitToDataConfig = z.looseObject({
   geometryColumns: z.array(z.string()).optional(),
   h3Column: z.string().optional(),
   padding: z.number().optional(),
-  maxZoom: z.number().optional(),
+  maxZoom: z
+    .number()
+    .optional()
+    .describe(
+      'Optional zoom cap after fitting bounds. Omit unless the user asks to limit zoom-in. Do not set 12 by default — that is city-scale and leaves neighborhood data looking far too zoomed out.',
+    ),
 });
 
 const DeckMapPointBindingParameter = z.object({

@@ -2,11 +2,11 @@ import {z} from 'zod';
 import {ChartDataPolicyOverrideConfig} from '../data-policy-schema';
 
 export const ScatterPlotChartSettings = z.object({
-  x: z.string().optional().describe('Numeric column for X axis position'),
-  y: z.string().optional().describe('Numeric column for Y axis position'),
+  x: z.string().nullish().describe('Numeric column for X axis position'),
+  y: z.string().nullish().describe('Numeric column for Y axis position'),
   size: z
     .string()
-    .optional()
+    .nullish()
     .describe('Numeric column for point size (optional)'),
 });
 

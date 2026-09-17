@@ -1,9 +1,10 @@
 import {cn} from '@sqlrooms/ui';
+import {PauseIcon} from 'lucide-react';
 import type {UIMessage, UIMessagePart} from 'ai';
-import {Loader2} from 'lucide-react';
 import React, {type FC} from 'react';
 import type {AgentToolCall} from '../types';
-import {useElapsedTime} from '../hooks/useElapsedTime';
+import {AiThinkingDots} from './AiThinkingDots';
+import {areAnyNestedAwaitingApproval} from './buildChatTurnModel';
 import type {ToolRenderBehavior} from './FlatAgentRenderer';
 import type {
   ChatActiveStatusInfo,
@@ -22,6 +23,7 @@ type AnyUIMessagePart = UIMessagePart<any, any>;
 export function getChatActiveStatus(
   messages: UIMessage[] | undefined,
   behavior: ToolRenderBehavior = {},
+  agentProgress: Record<string, AgentToolCall[]> = {},
 ): ChatActiveStatusInfo {
   const currentTurnMessages = getCurrentTurnMessages(messages);
   const activeTool = findLastActiveTool(currentTurnMessages);
@@ -29,6 +31,21 @@ export function getChatActiveStatus(
   if (activeTool?.state === 'approval-requested') {
     return {
       key: `approval:${activeTool.toolCallId}`,
+      label: 'Waiting for approval…',
+      kind: 'approval',
+    };
+  }
+
+  // An approval raised inside a nested agent pauses the run just as much, but
+  // the part that holds it is the agent call, which still looks like a tool in
+  // progress. Without this the status would animate a run that is waiting.
+  const nestedApprovalOwner = findNestedApprovalOwner(
+    currentTurnMessages,
+    agentProgress,
+  );
+  if (nestedApprovalOwner) {
+    return {
+      key: `approval:${nestedApprovalOwner}`,
       label: 'Waiting for approval…',
       kind: 'approval',
     };
@@ -76,32 +93,32 @@ export const ChatActiveStatus: FC<ChatActiveStatusProps> = ({
 const ChatActiveStatusLine: FC<{
   status: ChatActiveStatusInfo;
   className?: string;
-}> = ({status, className}) => {
-  const [startedAt] = React.useState(() => Date.now());
-  const elapsed = useElapsedTime(true, startedAt);
-
-  return (
-    <div
-      className={cn(
-        'text-muted-foreground flex items-center gap-2 text-sm',
-        className,
-      )}
-      role="status"
-      aria-live="polite"
-    >
-      <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-      <span>{status.label}</span>
-      {elapsed && (
-        <span
-          className="text-muted-foreground/60 text-xs tabular-nums"
-          aria-hidden="true"
-        >
-          {elapsed}
+}> = ({status, className}) => (
+  <div
+    className={cn('text-muted-foreground flex items-center', className)}
+    role="status"
+    aria-live="polite"
+  >
+    {status.kind === 'approval' ? (
+      // An approval stops the run until the user acts, so it is named rather
+      // than animated: the dots would read as work still in progress.
+      <>
+        <PauseIcon className="size-3.5 shrink-0" aria-hidden />
+        {/* The visible copy is short; assistive tech gets the actionable
+            state instead of reading both. */}
+        <span className="ml-1.5 text-xs" aria-hidden>
+          Paused…
         </span>
-      )}
-    </div>
-  );
-};
+        <span className="sr-only">{status.label}</span>
+      </>
+    ) : (
+      <>
+        <AiThinkingDots />
+        <span className="sr-only">{status.label}</span>
+      </>
+    )}
+  </div>
+);
 
 function getCurrentTurnMessages(
   messages: UIMessage[] | undefined,
@@ -111,6 +128,25 @@ function getCurrentTurnMessages(
     if (messages[index]?.role === 'user') return messages.slice(index);
   }
   return messages;
+}
+
+/** Tool call id of the nested-agent part whose subtree awaits an approval. */
+function findNestedApprovalOwner(
+  messages: UIMessage[],
+  agentProgress: Record<string, AgentToolCall[]>,
+): string | undefined {
+  for (const message of messages) {
+    if (message.role !== 'assistant') continue;
+    for (const part of message.parts ?? []) {
+      if (!isToolPart(part)) continue;
+      const toolCallId = (part as {toolCallId?: string}).toolCallId;
+      const nested = toolCallId ? agentProgress[toolCallId] : undefined;
+      if (nested && areAnyNestedAwaitingApproval(nested, agentProgress)) {
+        return toolCallId;
+      }
+    }
+  }
+  return undefined;
 }
 
 function findLastActiveTool(messages: UIMessage[]): AgentToolCall | undefined {

@@ -1,4 +1,5 @@
 import {jest} from '@jest/globals';
+import {MockLanguageModelV3} from 'ai/test';
 import {tool, type ToolLoopAgent} from 'ai';
 import {
   blockDocumentBlockToNode,
@@ -94,6 +95,90 @@ describe('createCliBlockDocumentAgentTool', () => {
       {toolCallId: 'tool-call-1'},
     )) as {success: boolean; finalOutput: string; error?: string};
   }
+
+  it('refreshes the snapshot after a real tool step without accumulating old copies', async () => {
+    const nodes: BlockDocumentNode[] = [
+      {
+        type: 'heading',
+        attrs: {id: 'intro', level: 2},
+        content: [{type: 'text', text: 'Introduction'}],
+      },
+      {
+        type: 'paragraph',
+        attrs: {id: 'conclusion'},
+        content: [{type: 'text', text: 'Final thoughts'}],
+      },
+    ];
+    let calls = 0;
+    const model = new MockLanguageModelV3({
+      doGenerate: async () => ({
+        content:
+          calls++ === 0
+            ? [
+                {
+                  type: 'tool-call',
+                  toolCallId: 'move-1',
+                  toolName: KnownBlockDocumentTools.move_block,
+                  input: JSON.stringify({blockId: 'conclusion', toIndex: 0}),
+                },
+              ]
+            : [{type: 'text', text: 'Moved the conclusion.'}],
+        finishReason: {
+          unified: calls === 1 ? 'tool-calls' : 'stop',
+          raw: undefined,
+        },
+        usage: {
+          inputTokens: {total: 0, noCache: 0, cacheRead: 0, cacheWrite: 0},
+          outputTokens: {total: 0, text: 0, reasoning: 0},
+        },
+        warnings: [],
+      }),
+    });
+    const adapter = createBlockDocumentAdapter(nodes);
+    adapter.moveBlock = (_documentId, blockId, toIndex) => {
+      const from = nodes.findIndex((node) => node.attrs?.id === blockId);
+      nodes.splice(toIndex, 0, nodes.splice(from, 1)[0]!);
+      return true;
+    };
+    const result = await executeAgentTool(
+      createOptions({
+        htmlAppBlocksEnabled: false,
+        getModel: () => model,
+        blockDocumentAdapter: adapter,
+        runSubAgent: async ({agent, prompt}) => {
+          const output = await agent.generate({prompt, options: undefined});
+          return {finalOutput: output.text};
+        },
+      }),
+      {intent: 'Move the conclusion to the top'},
+    );
+    expect(result.success).toBe(true);
+    expect(model.doGenerateCalls).toHaveLength(2);
+    const snapshots = model.doGenerateCalls.map(({prompt}) =>
+      prompt
+        .filter((message) => message.role === 'user')
+        .flatMap((message) => message.content)
+        .filter(
+          (part) =>
+            part.type === 'text' &&
+            part.text.includes('Current document snapshot'),
+        ),
+    );
+    expect(snapshots[0]).toHaveLength(1);
+    expect(snapshots[1]).toHaveLength(1);
+    expect(JSON.stringify(snapshots[0])).toContain('Introduction');
+    const firstText = snapshots[0]?.[0];
+    const nextText = snapshots[1]?.[0];
+    expect(firstText?.type === 'text' && firstText.text).toContain(
+      '"blockId":"conclusion","index":1',
+    );
+    expect(nextText?.type === 'text' && nextText.text).toContain(
+      '"blockId":"conclusion","index":0',
+    );
+    expect(nextText?.type === 'text' && nextText.text).not.toContain(
+      '"blockId":"conclusion","index":1',
+    );
+  });
 
   it('describes the wrapped create result and unsupported-block fallback', () => {
     const agentTool = createCliBlockDocumentAgentTool(createOptions()) as any;

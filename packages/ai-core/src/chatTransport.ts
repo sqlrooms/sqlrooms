@@ -26,6 +26,7 @@ import {
   CHAT_REQUEST_ERROR_PART_TYPE,
   createChatRequestErrorPart,
   setChatRequestErrorMessage,
+  setChatTurnCompletedAt,
 } from './chatTurns';
 import type {
   AiSliceStateForTransport,
@@ -42,6 +43,7 @@ import {
   shouldEndAnalysis,
 } from './utils';
 import {formatAbortSnapshot} from './agents/AgentUtils';
+import {createModelToolCallRepair} from './agents/createModelToolCallRepair';
 import {
   ChatTimeoutError,
   createToolTimeoutError,
@@ -224,6 +226,12 @@ export type ChatTransportConfig = {
   getCustomModel?: () => LanguageModel | undefined;
   /** Optional timeout safety limits; all limits are disabled when omitted. */
   timeouts?: AiTimeoutOptions;
+  /**
+   * Let the model heal its own invalid tool calls instead of aborting the run
+   * (see {@link createModelToolCallRepair}). Enabled by default. Each repair
+   * costs an extra LLM request; set to `false` to trade that resilience away.
+   */
+  repairInvalidToolCalls?: boolean;
 };
 
 function getSessionById(
@@ -511,6 +519,7 @@ export function createLocalChatTransportFactory({
   getInstructions,
   getCustomModel,
   timeouts,
+  repairInvalidToolCalls = true,
 }: ChatTransportConfig) {
   return () => {
     const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -600,11 +609,37 @@ export function createLocalChatTransportFactory({
       const diagnosticsByStep: string[] = [];
       let completedDiagnosticStep = 0;
 
+      // Tokens spent by tool-call repair sub-requests. The outer agent only
+      // reports its own steps, so these are folded into the final usage below.
+      const repairUsage: MessageTokenUsage = {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+      };
+
       const agent = new ToolLoopAgent({
         model,
         instructions: systemInstructions,
         tools,
         stopWhen: stepCountIs(maxSteps),
+        // Heal invalid tool calls instead of aborting the run. Uses the same
+        // `model`, `abortSignal`, and `providerOptions` resolved above so the
+        // repair request matches this run's configuration and is cancelled with
+        // it. Repair never recurses (its sub-request has no repair handler) and
+        // does not consume the agent's step budget.
+        ...(repairInvalidToolCalls
+          ? {
+              experimental_repairToolCall: createModelToolCallRepair(model, {
+                abortSignal,
+                providerOptions,
+                onRepairUsage: (usage) => {
+                  repairUsage.inputTokens += usage.inputTokens ?? 0;
+                  repairUsage.outputTokens += usage.outputTokens ?? 0;
+                  repairUsage.totalTokens += usage.totalTokens ?? 0;
+                },
+              }),
+            }
+          : {}),
         prepareStep: async ({stepNumber, messages}) => {
           const providerMessages = usesOpenAiCompatibleModel
             ? prepareOpenAiCompatibleToolImages(messages)
@@ -710,6 +745,11 @@ export function createLocalChatTransportFactory({
               finishUsage.outputTokens > 0
                 ? finishUsage
                 : accumulatedUsage;
+            // Fold in tokens spent by tool-call repair sub-requests, which the
+            // agent's own usage does not include.
+            finalUsage.inputTokens += repairUsage.inputTokens;
+            finalUsage.outputTokens += repairUsage.outputTokens;
+            finalUsage.totalTokens += repairUsage.totalTokens;
             finalUsage.lastStepInputTokens = lastStepInputTokens;
             rememberSessionTokenUsage(sessionId, finalUsage);
             return {
@@ -819,6 +859,16 @@ function hasChatRequestErrorPart(message: UIMessage | undefined): boolean {
   );
 }
 
+/**
+ * Marks the last turn in `messages` as finished now. Called from every path
+ * that ends a run, so the timestamp reflects turn completion rather than the
+ * end of the last tool call — which a text-only turn never has.
+ */
+function stampLastTurnCompletion(messages: UIMessage[]): void {
+  const lastUserMessage = messages.filter((msg) => msg.role === 'user').at(-1);
+  if (lastUserMessage) setChatTurnCompletedAt(lastUserMessage, Date.now());
+}
+
 function createChatRequestErrorMessage(error: string): UIMessage {
   return {
     id: createId(),
@@ -882,6 +932,7 @@ export function createChatHandlers({
               error: abortMessage,
             });
           }
+          stampLastTurnCompletion(completedMessages);
           state.ai.setSessionUiMessages(sessionId, completedMessages);
 
           state.ai.setIsRunning(sessionId, false);
@@ -915,6 +966,8 @@ export function createChatHandlers({
           completedMessages,
           state.ai.getToolTimings(),
         );
+        const analysisEnded = shouldEndAnalysis(completedMessages);
+        if (analysisEnded) stampLastTurnCompletion(completedMessages);
         state.ai.setSessionUiMessages(sessionId, completedMessages);
 
         store.setState((stateToUpdate: AiSliceStateForTransport) =>
@@ -928,7 +981,7 @@ export function createChatHandlers({
           }),
         );
 
-        if (shouldEndAnalysis(completedMessages)) {
+        if (analysisEnded) {
           state.ai.setIsRunning(sessionId, false);
           state.ai.setAbortController(sessionId, undefined);
           onChatFinish?.({sessionId, messages: completedMessages});
@@ -994,6 +1047,7 @@ export function createChatHandlers({
               if (lastUserMessage) {
                 setChatRequestErrorMessage(lastUserMessage, {error: errMsg});
               }
+              stampLastTurnCompletion(completedMessages);
 
               if (!hasChatRequestErrorPart(completedMessages.at(-1))) {
                 completedMessages.push(createChatRequestErrorMessage(errMsg));

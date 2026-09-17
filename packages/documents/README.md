@@ -199,6 +199,59 @@ const blockDocumentAdapter = createBlockDocumentCommandAiAdapter({
 
 The adapter accepts only `block-document` artifacts.
 
+### Markdown Export
+
+`blockDocumentToMarkdown(content, {title})` serializes a block document's
+Tiptap JSON content to Markdown. Standard nodes (headings, paragraphs, lists,
+tasks, tables, code, marks) are rendered by `@tiptap/markdown`; the block
+document's custom nodes render as image-style Markdown so their captions
+survive a paste into any Markdown renderer:
+
+- `blockDocumentTitle` → `# <text>`
+- `blockDocumentImage` / `blockDocumentChartImage` → `![<caption>](<assetId>)`
+- `blockDocumentChart` → `![<caption>](chart)`
+- `blockDocumentStatefulBlock` → `![<caption>](<blockType>)`
+
+Pass the artifact title via `options.title` to prepend it as an `# <title>`
+heading, since stored block document content does not include the title node.
+
+To embed real pixels in the copied Markdown, pass `options.resolveDataUrl`. It
+is an optional synchronous callback invoked per visual block; when it returns a
+data URL (e.g. `data:image/png;base64,...`) that URL becomes the image source
+instead of the placeholder:
+
+```ts
+blockDocumentToMarkdown(content, {
+  title: 'My Report',
+  resolveDataUrl: (node) => dataUrls[node.attrs?.id],
+});
+```
+
+Callers that need async work (DOM capture, store lookups) should precompute the
+data URLs up front and look them up by the node's `id` attribute here, as in
+the example above. `documentAssetToDataUrl(asset)` reconstructs a data URL from
+a stored `DocumentAsset`.
+
+### AI Document Context
+
+`formatBlockDocumentContext(content, {targetBlockId, maxChars, augmentBlockSummary})`
+creates a read-only text snapshot with zero-based block indices, stable IDs,
+stateful resource references, and Markdown content. It reuses the Markdown
+exporter without resolving image data or including visualization configuration.
+
+The default output budget is 24,000 characters (minimum 256). Individual block
+text is capped at 2,000 characters. Before summarizing or serializing, each block
+is copied with a budget of 2,000 text/attribute characters, 256 nodes (including
+marks), and 32 levels of nesting. Discarded subtrees are not visited, so large
+pasted logs or nested lists cannot make serialization process the entire block.
+Truncated text and omitted blocks are marked;
+a selected block and its neighbors receive priority, with included blocks still
+shown in document order. Blocks are considered lazily in priority order, stopping
+when the next block's metadata no longer fits. Optional host metadata can include
+live runtime issues.
+Regenerate the snapshot from current state when preparing an agent step, and use
+existing commands/tools for edits. This lossy view cannot round-trip a document.
+
 ### Block-Scoped Ask AI
 
 `startBlockScopedChat(...)` opens or reuses an artifact-scoped AI session for a

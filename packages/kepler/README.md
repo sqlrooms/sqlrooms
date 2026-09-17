@@ -141,7 +141,95 @@ The older positional signature is still accepted for compatibility, but new code
 should use the object form so the table reference, Kepler options, config, and
 dataset-id override remain clear at the call site.
 
+An optional `signal: AbortSignal` lets a caller discard a load's results if it
+is cancelled before they are applied. The promise resolves without adding data;
+the underlying database query is not cancelled. Overrides of `addTableToMap`
+should forward or honor this signal. The positional form accepts it in its final
+load-options argument.
+
 ## Common customization
+
+### Restoring saved maps
+
+Use `kepler.setConfig(savedConfig)` to replay configuration received after room
+initialization, then `await kepler.waitForConfigRestore()` to wait for the
+restore operation. Initial configuration and later restores both load datasets
+referenced by pending layers, filters, and tooltips for every registered map;
+mounting a map component is not required.
+
+A newer restore cancels results from earlier dataset-sync requests. Explicit
+`addTableToMap` calls remain independent of restores unless the caller supplies
+a cancellation signal; restoring another map does not discard a requested table.
+
+If a referenced table is unavailable or fails to load, the map's saved config is
+preserved. Deferred Kepler actions cannot replace it with a partially restored
+config. Refresh the available tables and call `await kepler.syncKeplerDatasets()`
+to retry. Other, fully restored maps continue to autosave normally, including
+intentional deletion of all their layers.
+
+`waitForConfigRestore()` does not guarantee that unavailable datasets have loaded.
+Persistence protection is based on each map's pending config, so it remains in
+effect after that promise resolves. Edits to an incomplete map do not replace
+its saved config until its pending config is resolved.
+
+Use `kepler.isMapConfigPending(mapId)` to observe that per-map condition without
+inspecting Kepler's internal merge fields. It reads current state and returns a
+boolean, so it can be used directly in a Zustand selector inside a React component:
+
+```ts
+import {useStoreWithKepler} from '@sqlrooms/kepler';
+
+const configPending = useStoreWithKepler((state) =>
+  state.kepler.isMapConfigPending(mapId),
+);
+// Show a warning that changes to this map are not being saved while pending.
+```
+
+The result stays `true` if required data remains unavailable after
+`waitForConfigRestore()` resolves, and becomes `false` once the pending config
+and dataset merges are resolved. Other maps are checked independently. Unknown,
+unregistered, and deleted maps return `false`; that does not mean they are ready
+to render. This status does not include the slice's temporary persistence pause
+or guarantee completion of all async work, and it does not itself disable editing.
+
+`duplicateMap` copies a pending map's last preserved saved config, including
+unresolved layers and settings. It does not wait for missing datasets. If no
+saved config is available, it returns `success: false` with code
+`source-map-config-pending` without creating a copy. Fully restored maps are
+duplicated from their current runtime state, including unsaved edits.
+
+Hosts that override dataset synchronization can reuse the same discovery and
+persistence checks from the public package:
+
+```ts
+import {
+  getReferencedKeplerDatasetIds,
+  hasPendingKeplerConfig,
+} from '@sqlrooms/kepler';
+
+const map = roomStore.getState().kepler.map[mapId];
+if (map) {
+  const referencedIds = getReferencedKeplerDatasetIds(map.visState);
+  const missingIds = [...referencedIds].filter(
+    (id) => !map.visState.datasets[id],
+  );
+  const configPending = hasPendingKeplerConfig(map.visState);
+  // Use missingIds in custom loading logic and configPending in host UI.
+}
+```
+
+Dataset discovery includes live and pending layers/filters and pending tooltip
+references. Split-map state references layer ids rather than dataset ids; its
+pending state is included in `hasPendingKeplerConfig`. That boolean reports
+pending config and dataset merges, not the slice's temporary persistence pause
+or completion of all async work. The helpers do not expose the base sync's
+restore cancellation signal; custom sync implementations still own cancellation.
+
+`getReferencedKeplerDatasetIds` returns a new set. With Zustand, select the raw
+`visState` and derive that set outside the selector. The boolean helper can be
+used directly in a selector to observe whether a map has pending config.
+
+### Appearance
 
 Pass options to `createKeplerSlice()`:
 

@@ -44,9 +44,12 @@ export const LocalAgentChatMessages: FC<LocalAgentChatMessagesProps> = ({
           {runtime.messages.map((message) => (
             <LocalAgentMessageView key={message.id} message={message} />
           ))}
-          {runtime.isStreaming && activeStatus && (
-            <ActiveStatus status={activeStatus} className="px-1" />
-          )}
+          {/* An approval pauses the runtime, so `isStreaming` is false while
+              the run is very much unfinished — keep reporting it. */}
+          {activeStatus &&
+            (runtime.isStreaming || activeStatus.kind === 'approval') && (
+              <ActiveStatus status={activeStatus} className="px-1" />
+            )}
           <div className="h-4 w-full shrink-0" />
         </div>
         <ScrollBar orientation="vertical" />

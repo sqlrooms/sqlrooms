@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
   cn,
 } from '@sqlrooms/ui';
-import {FileTextIcon, ImageIcon, PaperclipIcon, XIcon} from 'lucide-react';
+import {FileTextIcon, ImageIcon, PlusIcon, XIcon} from 'lucide-react';
 import {
   createContext,
   useCallback,
@@ -325,7 +325,7 @@ export const Attachments: FC<ChatComposerAttachmentsProps> = ({
             title="Attach files"
             disabled={isReading || attachments.length >= maxFiles}
           >
-            <PaperclipIcon className="h-4 w-4" />
+            <PlusIcon className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="top" className="w-64">

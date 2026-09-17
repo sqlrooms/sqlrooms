@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/kepler",
-  "version": "0.29.0-rc.13",
+  "version": "0.29.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sqlrooms/sqlrooms.git"
@@ -55,10 +55,12 @@
     "styled-components": "6.1.8"
   },
   "devDependencies": {
+    "@jest/globals": "^30.4.1",
     "@types/jest": "^30.0.0",
     "@types/redux-logger": "^3.0.13",
     "jest": "^30.1.3",
-    "ts-jest": "^29.4.4"
+    "ts-jest": "^29.4.4",
+    "zustand": "^5.0.13"
   },
   "peerDependencies": {
     "react": ">=18",

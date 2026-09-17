@@ -1,8 +1,12 @@
+import {TransformStream} from 'node:stream/web';
 import type {UIMessage} from 'ai';
-import {
-  getChatActiveStatus,
-  hasPendingToolApproval,
-} from '../src/components/ChatActiveStatus';
+
+// The status derivation shares its nested-approval walk with the turn model,
+// whose module graph reaches the AI SDK's stream parsing.
+Object.assign(globalThis, {TransformStream});
+
+const {getChatActiveStatus, hasPendingToolApproval} =
+  await import('../src/components/ChatActiveStatus');
 
 describe('getChatActiveStatus', () => {
   it('distinguishes the initial model wait from continued analysis', () => {
@@ -141,6 +145,82 @@ describe('getChatActiveStatus', () => {
         message('user', [{type: 'text', text: 'new'}]),
       ]),
     ).toMatchObject({label: 'Waiting for model…', kind: 'model'});
+  });
+});
+
+describe('getChatActiveStatus nested approvals', () => {
+  const agentPart = {
+    type: 'tool-agent',
+    toolCallId: 'agent-1',
+    state: 'input-available',
+    input: {task: 'dig in'},
+  } as UIMessage['parts'][number];
+
+  it('reports an approval raised inside a nested agent as an approval wait', () => {
+    const messages = [
+      message('user', [{type: 'text', text: 'hello'}]),
+      message('assistant', [agentPart]),
+    ];
+
+    // Without the nested state this looks like an agent tool still working.
+    expect(getChatActiveStatus(messages)).toMatchObject({kind: 'tool'});
+
+    expect(
+      getChatActiveStatus(
+        messages,
+        {},
+        {
+          'agent-1': [
+            {
+              toolCallId: 'nested-1',
+              toolName: 'deleteItem',
+              state: 'approval-requested',
+            },
+          ],
+        },
+      ),
+    ).toMatchObject({label: 'Waiting for approval…', kind: 'approval'});
+  });
+
+  it('finds an approval two agents deep', () => {
+    expect(
+      getChatActiveStatus(
+        [
+          message('user', [{type: 'text', text: 'hello'}]),
+          message('assistant', [agentPart]),
+        ],
+        {},
+        {
+          'agent-1': [
+            {toolCallId: 'agent-2', toolName: 'agent', state: 'pending'},
+          ],
+          'agent-2': [
+            {
+              toolCallId: 'nested-1',
+              toolName: 'deleteItem',
+              state: 'approval-requested',
+            },
+          ],
+        },
+      ),
+    ).toMatchObject({kind: 'approval'});
+  });
+
+  it('leaves a working nested agent reported as a tool', () => {
+    expect(
+      getChatActiveStatus(
+        [
+          message('user', [{type: 'text', text: 'hello'}]),
+          message('assistant', [agentPart]),
+        ],
+        {},
+        {
+          'agent-1': [
+            {toolCallId: 'nested-1', toolName: 'query', state: 'pending'},
+          ],
+        },
+      ),
+    ).toMatchObject({kind: 'tool'});
   });
 });
 
