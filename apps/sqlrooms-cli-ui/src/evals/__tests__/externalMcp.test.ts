@@ -1,0 +1,286 @@
+import {expect, it} from '@jest/globals';
+import {Client} from '@modelcontextprotocol/sdk/client/index.js';
+import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import {createCliHeadlessWorkspace} from '../createCliHeadlessWorkspace';
+import {createCliCapabilityRuntime} from '../../createCliCapabilityRuntime';
+import {
+  describeIsolatedEvalCommand,
+  isolatedEvalPolicy,
+} from '../external/policy';
+import {startEvalMcpHost} from '../external/mcpHost';
+import {seedDocument} from '../workspaceFixture';
+import {CLI_BEHAVIORAL_SCENARIOS} from '../scenarios';
+import {snapshotCliEvalState} from '../snapshot';
+
+it('discovers and executes through real MCP, enforces fixture policy and closes the host', async () => {
+  const workspace = createCliHeadlessWorkspace();
+  const client = new Client({name: 'deterministic-mcp-check', version: '1'});
+  let host: Awaited<ReturnType<typeof startEvalMcpHost>> | undefined;
+  try {
+    await workspace.initialize();
+    const runtime = createCliCapabilityRuntime({
+      store: workspace.store,
+      policy: isolatedEvalPolicy,
+      describeCommand: describeIsolatedEvalCommand,
+    });
+    host = await startEvalMcpHost(runtime);
+    expect((await fetch(host.url)).status).toBe(403);
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(host.url), {
+        requestInit: {headers: {Authorization: `Bearer ${host.token}`}},
+      }),
+    );
+    expect((await client.listTools()).tools.map((tool) => tool.name)).toContain(
+      'execute_command',
+    );
+    const call = async (name: string, args: Record<string, unknown>) =>
+      (await client.callTool({name, arguments: args})).structuredContent;
+    const discoveredRead = await call('get_command', {
+      commandId: 'block-document.get',
+    });
+    expect(discoveredRead).toMatchObject({
+      ok: true,
+      data: {
+        command: {
+          requiresInput: true,
+          description: expect.not.stringContaining('Defaults to'),
+          inputDescription: expect.stringContaining('Required'),
+          inputSchema: {
+            required: ['artifactId'],
+            properties: {artifactId: {type: 'string', minLength: 1}},
+          },
+        },
+      },
+    });
+    expect(discoveredRead).not.toHaveProperty(
+      'data.command.inputSchema.default',
+    );
+    expect(
+      await call('search_commands', {query: 'block-document.get'}),
+    ).toMatchObject({
+      ok: true,
+      data: {
+        commands: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'block-document.get',
+            description: expect.stringContaining('does not allow implicit'),
+          }),
+        ]),
+      },
+    });
+    // The projection must not mutate descriptors in the shared registry or
+    // change the browser's discovery/implicit-current-document behavior.
+    const browserRuntime = createCliCapabilityRuntime({
+      store: workspace.store,
+      policy: {authorize: () => ({allowed: true})},
+    });
+    try {
+      const browserRead = await browserRuntime.callTool(
+        'get_command',
+        {commandId: 'block-document.get'},
+        {surface: 'mcp-http'},
+      );
+      expect(browserRead).toMatchObject({
+        ok: true,
+        data: {
+          command: {
+            requiresInput: false,
+            description: expect.stringContaining('Defaults to'),
+            inputSchema: {default: {}},
+          },
+        },
+      });
+      expect(browserRead).not.toHaveProperty(
+        'data.command.inputSchema.required',
+      );
+    } finally {
+      browserRuntime.dispose();
+      await browserRuntime.drain();
+    }
+    expect(await call('list_tables', {})).toMatchObject({
+      ok: true,
+      data: {totalCount: 2},
+    });
+    expect(await call('read_table_schema', {tableId: 'events'})).toMatchObject({
+      ok: false,
+      code: 'table_ambiguous',
+    });
+    expect(
+      await call('query', {sql: 'select * from analytics.events', maxRows: 1}),
+    ).toMatchObject({ok: true, data: {rowCount: 1, truncated: true}});
+    expect(
+      await call('query', {sql: 'drop table analytics.events'}),
+    ).toMatchObject({ok: false, code: 'query_not_readonly'});
+    expect(
+      await call('query', {
+        sql: "select * from read_csv('/tmp/nonexistent.csv')",
+      }),
+    ).toMatchObject({ok: false, code: 'query_failed'});
+    expect(
+      await call('execute_command', {
+        commandId: 'room.add-sql-data-source',
+        input: {confirmed: true},
+      }),
+    ).toMatchObject({ok: false, code: 'permission_denied'});
+    expect(
+      await call('execute_command', {
+        commandId: 'block-document.get',
+        input: {},
+      }),
+    ).toMatchObject({ok: false, code: 'permission_denied'});
+    expect(
+      await call('execute_command', {
+        commandId: 'block-document.get',
+        input: {artifactId: ''},
+      }),
+    ).toMatchObject({ok: false, code: 'permission_denied'});
+    expect(
+      await call('execute_command', {
+        commandId: 'block-document.create-artifact',
+        input: {title: 'MCP proof'},
+      }),
+    ).toMatchObject({ok: true});
+    const id = workspace.store.getState().artifacts.config.currentArtifactId;
+    expect(
+      await call('execute_command', {
+        commandId: 'block-document.get',
+        input: {artifactId: id},
+      }),
+    ).toMatchObject({ok: true});
+    const documentId = seedDocument(
+      workspace.store,
+      CLI_BEHAVIORAL_SCENARIOS[1]!,
+      0,
+      'document-chart-map',
+    );
+    const mapId = `${documentId}-map`;
+    const before = snapshotCliEvalState(workspace.store.getState());
+    expect(
+      await call('get_command', {commandId: 'block-document.inspect-block'}),
+    ).toMatchObject({
+      ok: true,
+      data: {
+        command: {
+          readOnly: true,
+          inputSchema: {required: ['artifactId', 'blockId']},
+        },
+      },
+    });
+    expect(
+      await call('execute_command', {
+        commandId: 'block-document.inspect-block',
+        input: {artifactId: documentId, blockId: 'seed-map-block'},
+      }),
+    ).toMatchObject({
+      ok: true,
+      data: {
+        data: {
+          artifactId: documentId,
+          block: {id: 'seed-map-block', blockInstanceId: mapId},
+          backingState: {id: mapId, config: {mapStyle: 'light'}},
+        },
+      },
+    });
+    expect(
+      await call('execute_command', {
+        commandId: 'block-document.inspect-block',
+        input: {artifactId: documentId, blockId: 'seed-chart'},
+      }),
+    ).toMatchObject({
+      ok: true,
+      data: {
+        data: {
+          block: {id: 'seed-chart', config: {title: 'Original metric chart'}},
+        },
+      },
+    });
+    expect(snapshotCliEvalState(workspace.store.getState())).toEqual(before);
+    for (const input of [
+      {blockId: 'seed-map-block'},
+      {artifactId: id, blockId: 'seed-map-block'},
+      {artifactId: documentId, blockId: mapId},
+    ]) {
+      expect(
+        await call('execute_command', {
+          commandId: 'block-document.inspect-block',
+          input,
+        }),
+      ).toMatchObject({ok: false});
+    }
+    expect(
+      await call('execute_command', {
+        commandId: 'block-document.get-map',
+        input: {blockDocumentId: documentId, mapId},
+      }),
+    ).toMatchObject({ok: false, code: 'permission_denied'});
+    workspace.store.getState().deckMaps.removeMap(mapId);
+    const missing = snapshotCliEvalState(workspace.store.getState());
+    expect(
+      await call('execute_command', {
+        commandId: 'block-document.inspect-block',
+        input: {artifactId: documentId, blockId: 'seed-map-block'},
+      }),
+    ).toMatchObject({ok: false});
+    expect(snapshotCliEvalState(workspace.store.getState())).toEqual(missing);
+  } finally {
+    await client.close();
+    await host?.dispose();
+    await workspace.dispose();
+  }
+  await expect(fetch(host!.url)).rejects.toThrow();
+});
+
+it('drains a command that ignores abort before host disposal completes', async () => {
+  const workspace = createCliHeadlessWorkspace();
+  let finish!: () => void;
+  let started!: () => void;
+  const startedPromise = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  let host: Awaited<ReturnType<typeof startEvalMcpHost>> | undefined;
+  try {
+    await workspace.initialize();
+    workspace.store.getState().commands.registerCommand('test', {
+      id: 'test.delayed',
+      name: 'Delayed mutation',
+      execute: async () => {
+        started();
+        await new Promise<void>((resolve) => {
+          finish = resolve;
+        });
+        workspace.store.getState().artifacts.createArtifact({
+          type: 'block-document',
+          title: 'Late mutation',
+        });
+        return {success: true, commandId: 'test.delayed'};
+      },
+    });
+    const runtime = createCliCapabilityRuntime({
+      store: workspace.store,
+      policy: {authorize: () => ({allowed: true})},
+    });
+    host = await startEvalMcpHost(runtime);
+    const call = runtime.callTool(
+      'execute_command',
+      {commandId: 'test.delayed'},
+      {surface: 'mcp-http'},
+    );
+    await startedPromise;
+    let disposed = false;
+    const shutdown = host.dispose().then(() => {
+      disposed = true;
+    });
+    expect(await call).toMatchObject({ok: false, code: 'cancelled'});
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(disposed).toBe(false);
+    finish();
+    await shutdown;
+    expect(
+      Object.values(workspace.store.getState().artifacts.config.artifactsById),
+    ).toHaveLength(1);
+  } finally {
+    finish?.();
+    await host?.dispose();
+    await workspace.dispose();
+  }
+});

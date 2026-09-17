@@ -53,9 +53,9 @@ function reportedTokenUsage(value: unknown): TokenUsage | undefined {
 
 function estimatedCostUsd(
   usage: TokenUsage | undefined,
-  options: OpenRouterCostTrackerOptions,
+  options: OpenRouterCostTrackerOptions | undefined,
 ): number | undefined {
-  if (!usage) return undefined;
+  if (!usage || !options) return undefined;
   return (
     ((usage.inputTokens ?? 0) * options.inputCostUsdPerMillionTokens) /
       1_000_000 +
@@ -66,7 +66,7 @@ function estimatedCostUsd(
 
 /** Collects OpenRouter's billed cost from AI SDK response metadata. */
 export function createOpenRouterCostTracker(
-  options: OpenRouterCostTrackerOptions,
+  options?: OpenRouterCostTrackerOptions,
 ): {
   metadataExtractor: MetadataExtractor;
   resolveCost(usage: TokenUsage | undefined): OpenRouterCost | undefined;
