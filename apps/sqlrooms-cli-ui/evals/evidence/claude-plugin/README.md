@@ -1,7 +1,8 @@
 # Claude plugin and interactive launcher — 2026-09-17
 
 This change is stacked on open PR [#924](https://github.com/sqlrooms/sqlrooms/pull/924),
-head `bdd326e6fda776ae963af1605bd861605a958818`. Its branch/workspace was not changed.
+initially at `bdd326e6fda776ae963af1605bd861605a958818`, restacked before delivery
+onto `61855993937305685e74e5ca1086055c1e8bd375`. Its branch/workspace was not changed.
 
 ## Design
 
@@ -70,7 +71,8 @@ external --profile document-charts-maps`. Initialized browser store inspection
 ## Verification
 
 - Workspace packages built (50 tasks); CLI TypeScript and production UI build passed.
-- CLI: 192 tests / 38 suites / 3 snapshots; 16 Node/supervisor tests passed.
+- Before restacking: CLI 192 tests / 38 suites / 3 snapshots; 16 Node/supervisor
+  tests passed. Final repository checks run again through the pre-push hook.
 - Python: 123 tests passed, including readiness, missing prerequisites/options,
   inherited authentication/model environment, terminal wiring, cancellation before
   launch, owned-child cleanup, HTTP failure/cancellation cleanup and stopped MCP
