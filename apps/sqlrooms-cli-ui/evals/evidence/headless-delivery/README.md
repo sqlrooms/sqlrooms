@@ -228,3 +228,21 @@ browser build, external bundle, skill validator, and independent code review.
 Deterministic logs, including the sandbox-denied MCP attempt, remain local under
 `artifacts/block-inspection-checks-20260917/`. Existing bundle-size and dependency
 `eval` warnings remain.
+
+[Declared generic-inspection CI attempt](https://github.com/sqlrooms/sqlrooms/actions/runs/35235507141),
+clean revision `bdd326e6f`, skill v4, isolated policy v2, configured
+`deepseek/deepseek-v4-flash-0731`: both scenarios loaded the native skill and
+references and successfully used `block-document.inspect-block` through real MCP.
+Create **passed all five checks** (65.412 seconds). Mutate **errored** (120.032
+seconds): it first attempted `block-document.insert-blocks`, which is outside
+the isolated allowlist, then recovered with `append-blocks`. All four state/answer
+checks passed; `no-errors` correctly failed. The new inspection returned the
+seeded map's backing state successfully. This is not an all-passing suite result
+for the new revision, and no further attempt was made.
+
+Both workspaces cleaned up, with zero SQLRooms-owned model calls. Supervisor
+exit 1 reflects the scenario failure; no forced termination or cleanup errors.
+The fallback-metadata warning remains visible. Full failed evidence is retained
+in the CI artifact and locally at `artifacts/ci-openrouter-35235507141/external/`.
+The command replacement did not expand the isolated allowlist to include insert
+or change any scenario, snapshot, behavioral check, or production permission.
