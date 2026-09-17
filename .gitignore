@@ -39,3 +39,9 @@ examples/*/CHANGELOG.md
 .wrangler/
 
 /apps/sqlrooms-cli-ui/evals/external-dist/
+
+# Generated evaluation evidence; keep the concise milestone record.
+/apps/sqlrooms-cli-ui/evals/evidence/*
+!/apps/sqlrooms-cli-ui/evals/evidence/headless-delivery/
+/apps/sqlrooms-cli-ui/evals/evidence/headless-delivery/*
+!/apps/sqlrooms-cli-ui/evals/evidence/headless-delivery/README.md

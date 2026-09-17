@@ -136,7 +136,9 @@ temporary directories, and records `supervisor.json`; forced termination is neve
 a pass. SQLRooms/DuckDB resources are then reclaimed with the worker process. POSIX process groups are used; Windows is not verified.
 
 There are **no automatic reruns**. Keep all failed directories. Record the cause
-and change before starting a new attempt. Infrastructure retries must use a fresh
+and change before starting a new attempt. Retain full runs as local or hosted
+artifacts outside Git; commit concise delivery records with artifact locations
+and checksums. Preserve failed attempts in the same archive as successful ones. Infrastructure retries must use a fresh
 fixture. A successful two-scenario demonstration establishes feasibility, not a
 reliability rate or equivalence of orchestration. The embedded live suite is a
 separate before/after comparison, never a substitute for the external harness.
