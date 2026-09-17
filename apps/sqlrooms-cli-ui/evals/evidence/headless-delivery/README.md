@@ -97,6 +97,26 @@ unchanged live-model behavior.
 
 ## Remaining verification and fidelity limits
 
+### Follow-up: explicit-target discovery
+
+The user's local `artifacts/external-20260917-144353` run passed create and errored
+on mutate. All four mutation/state/answer checks passed, but `no-errors` failed:
+the harness first read `block-document.get` with `{}`, received
+`permission_denied: Explicit artifactId is required.`, then recovered successfully.
+Discovery had incorrectly advertised the browser's optional current-document
+default despite the isolated host's stricter policy. Cleanup succeeded.
+
+The fix projects search/inspection metadata in the isolated host while retaining
+the shared command and browser defaults. Real MCP regression tests verify the
+required non-empty ID, absence of the default, unchanged browser metadata, and
+continued policy denial for missing/empty IDs. TypeScript and both MCP tests
+passed; the initial sandbox test attempt failed only on loopback binding and was
+rerun with permission. No scenario, check, policy, or skill was relaxed.
+
+A new real-harness attempt will run both scenarios from fresh fixtures after the
+fix. The original manual evidence and investigation remain local and unchanged;
+these follow-up runs are not part of the earlier 38-file archive.
+
 The **live embedded before/after comparison remains unverified**. Credentials are
 configured, but automatic approval review denied egress of the synthetic scenario
 prompts, fixture/tool results, and repository metadata to OpenRouter without

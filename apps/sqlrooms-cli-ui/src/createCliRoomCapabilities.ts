@@ -29,6 +29,8 @@ const MCP_EXCLUDED_COMMAND_IDS = new Set([
 type CreateCliRoomCapabilitiesOptions = {
   store: StoreApi<RoomShellSliceState>;
   metaNamespace?: string;
+  /** Projects discovery metadata for the host; does not replace authorization. */
+  describeCommand?: (command: RoomCommandDescriptor) => RoomCommandDescriptor;
   /** Tracks real commands, which can outlive a cancelled caller. */
   trackPendingOperation?: (operation: Promise<unknown>) => void;
 };
@@ -37,6 +39,7 @@ type CreateCliRoomCapabilitiesOptions = {
 export function createCliRoomCapabilities({
   store: roomStore,
   metaNamespace = '__sqlrooms',
+  describeCommand,
   trackPendingOperation,
 }: CreateCliRoomCapabilitiesOptions): RoomCapability[] {
   let commandInvocationQueue = Promise.resolve();
@@ -515,7 +518,8 @@ export function createCliRoomCapabilities({
         includeDisabled: true,
         includeInputSchema,
       })
-      .filter((command) => !MCP_EXCLUDED_COMMAND_IDS.has(command.id));
+      .filter((command) => !MCP_EXCLUDED_COMMAND_IDS.has(command.id))
+      .map((command) => describeCommand?.(command) ?? command);
   }
 
   function scoreCommand(command: RoomCommandDescriptor, query: string) {

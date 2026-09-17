@@ -43,3 +43,8 @@ CLI over real MCP, with a natively loaded SQLRooms skill and no SQLRooms AI slic
 Both targets and the production browser share the app-local domain composition,
 scenario fixtures, normalized snapshots, and behavioral checks. External execution
 is not a model swap inside the embedded target.
+
+Its deterministic regressions already run in PR CI. For live external runs, see
+the [CI placement recommendation](EXTERNAL_HARNESS.md#ci-placement): a separate
+manual job alongside the embedded canary, once harness authentication and
+artifact retention are established. External evidence currently stays local.

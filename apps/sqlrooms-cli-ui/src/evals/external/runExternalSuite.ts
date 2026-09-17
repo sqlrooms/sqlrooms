@@ -26,7 +26,11 @@ import {
   type HarnessResult,
 } from './codexHarness';
 import {startEvalMcpHost} from './mcpHost';
-import {EXTERNAL_EVAL_POLICY, isolatedEvalPolicy} from './policy';
+import {
+  describeIsolatedEvalCommand,
+  EXTERNAL_EVAL_POLICY,
+  isolatedEvalPolicy,
+} from './policy';
 
 const json = (value: unknown) =>
   JSON.parse(JSON.stringify(value)) as JsonObject;
@@ -174,6 +178,7 @@ export async function runExternalSuite(options: {
       runtime = createCliCapabilityRuntime({
         store: workspace.store,
         policy: isolatedEvalPolicy,
+        describeCommand: describeIsolatedEvalCommand,
         onInvocation: (trace) => {
           events.push({
             sequence: events.length,

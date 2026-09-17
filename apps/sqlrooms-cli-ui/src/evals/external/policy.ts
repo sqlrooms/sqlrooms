@@ -1,4 +1,39 @@
 import type {RoomCapabilityPolicy} from '@sqlrooms/mcp';
+import type {RoomCommandDescriptor} from '@sqlrooms/room-shell';
+
+/** Reflects the host's explicit-target rule without changing the shared command. */
+export function describeIsolatedEvalCommand(
+  command: RoomCommandDescriptor,
+): RoomCommandDescriptor {
+  // Other allowed commands already require their target IDs in discovery.
+  // The browser's document read uniquely supports implicit current selection.
+  if (command.id !== 'block-document.get') return command;
+  const inputSchema = command.inputSchema
+    ? {
+        ...command.inputSchema,
+        required: [
+          ...new Set([...(command.inputSchema.required ?? []), 'artifactId']),
+        ],
+        properties: {
+          ...command.inputSchema.properties,
+          artifactId: {
+            ...command.inputSchema.properties?.artifactId,
+            type: 'string',
+            minLength: 1,
+          },
+        },
+      }
+    : undefined;
+  if (inputSchema) delete inputSchema.default;
+  return {
+    ...command,
+    description:
+      'Read blocks from an explicitly identified block document. Use block-document.list to discover artifact IDs; this host does not allow implicit current-document reads.',
+    requiresInput: true,
+    inputDescription: 'Required non-empty artifactId from block-document.list.',
+    ...(inputSchema ? {inputSchema} : {}),
+  };
+}
 
 /** Trusted host policy for disposable fixtures only; never used by the browser. */
 export const EXTERNAL_EVAL_POLICY = {

@@ -341,6 +341,8 @@ The browser and both evaluation targets share `createCliDomainSlice`. CLI MCP
 capabilities accept an injected store through `createCliCapabilityRuntime`; the
 browser retains its query approval policy. `block-document.get-map` inspects an
 owned map using explicit `blockDocumentId` and `mapId`.
+The isolated host projects command discovery to require explicit document IDs;
+the browser retains its optional current-document read behavior.
 
 See [external harness evaluation](evals/EXTERNAL_HARNESS.md) for the Codex/MCP run
 command, isolated fixture policy, evidence, and fidelity limits. This does not

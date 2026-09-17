@@ -74,6 +74,13 @@ runtime, rather than a module-global queue. A `block-document.get-map` read
 command fills the one missing inspection operation, validates document ownership,
 and works through the same command registry for UI, embedded, and MCP callers.
 
+Hosts may project command discovery metadata through `describeCommand` without
+replacing handlers or changing registry entries. The isolated host uses this to
+make `block-document.get` require a non-empty `artifactId` in `get_command` and
+explain explicit targeting in `search_commands`. Its policy still enforces that
+requirement. The browser keeps the shared command's optional current-document
+default. A denied call remains an evaluation error even if the harness recovers.
+
 | Layer                                                    | Browser                                                 | Embedded evaluation                                | External evaluation            |
 | -------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------- | ------------------------------ |
 | Domain slices, document artifact hooks, profile commands | Shared                                                  | Shared                                             | Shared                         |
@@ -142,6 +149,25 @@ and checksums. Preserve failed attempts in the same archive as successful ones. 
 fixture. A successful two-scenario demonstration establishes feasibility, not a
 reliability rate or equivalence of orchestration. The embedded live suite is a
 separate before/after comparison, never a substitute for the external harness.
+
+## CI placement
+
+Deterministic MCP discovery, policy, and lifecycle tests already run in the PR
+workflow's CLI tests and `evals:test`. The explicit-target discovery regression
+belongs there; it needs no model credentials.
+
+Live external runs should be a separate, initially manual, non-blocking job
+alongside the embedded Promptfoo job in `evals-nightly.yml`. Keep the actual
+Codex process and its native skill/MCP path, with independent results and exit
+status; do not replace it with a Promptfoo model-provider call. The targets
+already reuse SQLRooms scenarios, fixtures, snapshots, and checks. A shared
+runner or observatory adapter can wait until there is a concrete consumer.
+
+No hosted external job is enabled yet. Before enabling one, establish dedicated
+CI harness authentication/model access, pin the tested CLI version, verify its
+sandbox on the runner, and agree on artifact retention. Missing prerequisites
+must fail explicitly, and all attempts need retention even on failure. Current
+external evidence stays local; the existing embedded Promptfoo job is unchanged.
 
 ## Milestone evidence and exclusions
 

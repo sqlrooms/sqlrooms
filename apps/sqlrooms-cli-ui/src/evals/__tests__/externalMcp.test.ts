@@ -3,7 +3,10 @@ import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import {createCliHeadlessWorkspace} from '../createCliHeadlessWorkspace';
 import {createCliCapabilityRuntime} from '../../createCliCapabilityRuntime';
-import {isolatedEvalPolicy} from '../external/policy';
+import {
+  describeIsolatedEvalCommand,
+  isolatedEvalPolicy,
+} from '../external/policy';
 import {startEvalMcpHost} from '../external/mcpHost';
 
 it('discovers and executes through real MCP, enforces fixture policy and closes the host', async () => {
@@ -15,6 +18,7 @@ it('discovers and executes through real MCP, enforces fixture policy and closes 
     const runtime = createCliCapabilityRuntime({
       store: workspace.store,
       policy: isolatedEvalPolicy,
+      describeCommand: describeIsolatedEvalCommand,
     });
     host = await startEvalMcpHost(runtime);
     expect((await fetch(host.url)).status).toBe(403);
@@ -28,6 +32,68 @@ it('discovers and executes through real MCP, enforces fixture policy and closes 
     );
     const call = async (name: string, args: Record<string, unknown>) =>
       (await client.callTool({name, arguments: args})).structuredContent;
+    const discoveredRead = await call('get_command', {
+      commandId: 'block-document.get',
+    });
+    expect(discoveredRead).toMatchObject({
+      ok: true,
+      data: {
+        command: {
+          requiresInput: true,
+          description: expect.not.stringContaining('Defaults to'),
+          inputDescription: expect.stringContaining('Required'),
+          inputSchema: {
+            required: ['artifactId'],
+            properties: {artifactId: {type: 'string', minLength: 1}},
+          },
+        },
+      },
+    });
+    expect(discoveredRead).not.toHaveProperty(
+      'data.command.inputSchema.default',
+    );
+    expect(
+      await call('search_commands', {query: 'block-document.get'}),
+    ).toMatchObject({
+      ok: true,
+      data: {
+        commands: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'block-document.get',
+            description: expect.stringContaining('does not allow implicit'),
+          }),
+        ]),
+      },
+    });
+    // The projection must not mutate descriptors in the shared registry or
+    // change the browser's discovery/implicit-current-document behavior.
+    const browserRuntime = createCliCapabilityRuntime({
+      store: workspace.store,
+      policy: {authorize: () => ({allowed: true})},
+    });
+    try {
+      const browserRead = await browserRuntime.callTool(
+        'get_command',
+        {commandId: 'block-document.get'},
+        {surface: 'mcp-http'},
+      );
+      expect(browserRead).toMatchObject({
+        ok: true,
+        data: {
+          command: {
+            requiresInput: false,
+            description: expect.stringContaining('Defaults to'),
+            inputSchema: {default: {}},
+          },
+        },
+      });
+      expect(browserRead).not.toHaveProperty(
+        'data.command.inputSchema.required',
+      );
+    } finally {
+      browserRuntime.dispose();
+      await browserRuntime.drain();
+    }
     expect(await call('list_tables', {})).toMatchObject({
       ok: true,
       data: {totalCount: 2},
@@ -57,6 +123,12 @@ it('discovers and executes through real MCP, enforces fixture policy and closes 
       await call('execute_command', {
         commandId: 'block-document.get',
         input: {},
+      }),
+    ).toMatchObject({ok: false, code: 'permission_denied'});
+    expect(
+      await call('execute_command', {
+        commandId: 'block-document.get',
+        input: {artifactId: ''},
       }),
     ).toMatchObject({ok: false, code: 'permission_denied'});
     expect(
