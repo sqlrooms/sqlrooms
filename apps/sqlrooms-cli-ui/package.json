@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -b && vite build && node build-claude-plugin.mjs",
+    "build": "tsc -b && vite build",
     "dev": "vite --host --port 3100",
     "evals:external": "pnpm evals:external:build && node evals/run-external.mjs",
     "evals:external:build": "vite build -c evals/vite.external.config.ts",

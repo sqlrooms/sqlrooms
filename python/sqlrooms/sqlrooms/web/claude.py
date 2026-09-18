@@ -23,7 +23,7 @@ def claude_prerequisites() -> tuple[str, Path]:
     plugin = Path(__file__).resolve().parents[1] / "claude_plugin"
     if not (plugin / "skills/sqlrooms/SKILL.md").is_file():
         raise RuntimeError(
-            "SQLRooms Claude plugin is missing. Rebuild the CLI UI/package first."
+            "SQLRooms Claude plugin is missing. Rebuild the Python package first."
         )
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         raise RuntimeError(
