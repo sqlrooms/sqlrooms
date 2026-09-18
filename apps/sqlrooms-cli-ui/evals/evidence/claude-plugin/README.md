@@ -95,6 +95,17 @@ An additional interactive startup smoke test was rejected before execution by
 automatic approval review because its separate demo fixture was outside the
 explicitly approved provider payload. It was not retried or counted as a pass.
 
+## Packaging review follow-up — 2026-09-18
+
+PR #925 identified that Turbo restores only the UI `dist/**` output, so a cache
+hit skipped plugin generation. Generation now runs in the Python packaging step
+after the cached UI build and before `uv build`. Removed both generated UI and
+plugin directories after seeding the cache, then ran the Python package build:
+all 41 Turbo tasks were cache hits, the plugin was regenerated, and wheel
+verification passed. Every bundled plugin file also matched its canonical
+source byte-for-byte. Local logs are in `review-2026-09-18/` under the evidence
+directory above. No model calls were needed for this packaging verification.
+
 ## Outstanding acceptance
 
 Claude authentication remains unavailable. The two real scenarios and a real
