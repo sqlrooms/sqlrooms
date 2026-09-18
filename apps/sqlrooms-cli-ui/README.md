@@ -35,8 +35,10 @@ uv run --project python/sqlrooms sqlrooms \
   /tmp/sqlrooms-smoke.duckdb
 ```
 
-Open the UI URL printed in the terminal. It should be
-`http://127.0.0.1:3000` or the next free port.
+Open the temporary single-use launch link printed in the interactive terminal.
+A bare base URL requires a fresh launch link. See the
+[authentication contract](../../python/sqlrooms/AUTHENTICATION.md) for session
+renewal, native handoff, and explicit development origin mapping.
 
 The bare CLI command works only after installing the CLI somewhere on your
 `PATH`:

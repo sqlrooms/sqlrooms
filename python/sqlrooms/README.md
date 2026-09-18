@@ -239,15 +239,17 @@ interactive Claude terminal session with inherited stdin/stdout. DuckDB opens an
 existing database or creates a missing file, just as in normal CLI startup;
 `:memory:` is also supported for a temporary workspace. A terminal is required.
 `--no-open-browser` is supported if you
-open the printed URL yourself; `--no-ui` is incompatible. No SQLRooms AI
+open the temporary single-use link printed on the interactive terminal; `--no-ui` is incompatible. No SQLRooms AI
 configuration is needed (`--no-config` is optional).
 
 Claude retains its own authentication and model preferences. The launcher loads
 the bundled native plugin and session-only MCP configuration; it does not edit
 Claude's global configuration or select an evaluation model. Use
 `/sqlrooms:sqlrooms` to load the document/chart/map workflow. Only this session's
-SQLRooms MCP server is attached. The random session token is passed in the child
-environment, never written to a config file or printed as a command argument.
+SQLRooms MCP server is attached. The child receives a private credential-file path;
+a scoped header helper reads it to authenticate MCP. Tokens never appear in command
+arguments or shared agent configuration. See [local authentication](AUTHENTICATION.md)
+for browser launch tickets, native clients, expiry, and platform support.
 
 The browser owns the workspace. Keep it open; manually edited content is visible
 through MCP. Every MCP query still requires the existing browser approval, and
@@ -272,3 +274,7 @@ and verifies the UI and plugin in the wheel. No marketplace installation or
 publication is needed.
 See the [verification record](../../apps/sqlrooms-cli-ui/evals/evidence/claude-plugin/README.md)
 for tested behavior and outstanding real-Claude authentication requirements.
+
+All CLI listeners require authentication, including localhost callers. Public base
+URLs show a bootstrap recovery screen. See [local authentication](AUTHENTICATION.md)
+for the private native credential file and development proxy configuration.

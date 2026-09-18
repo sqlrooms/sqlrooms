@@ -260,3 +260,10 @@ See [Claude delivery evidence](evidence/claude-plugin/README.md). The supported
 native mechanisms are described in Anthropic's [plugin guide](https://code.claude.com/docs/en/plugins),
 [CLI reference](https://code.claude.com/docs/en/cli-reference), and
 [MCP environment configuration](https://code.claude.com/docs/en/mcp#environment-variable-expansion-in-mcpjson).
+
+Claude evaluation hosts now create an owner-only temporary credential file and
+pass its path as `SQLROOMS_CREDENTIAL_FILE`. The plugin header helper verifies the
+file and target before returning authorization through its dedicated pipe. The
+file is removed when the host is disposed. Codex retains its client-required
+child-only bearer environment handoff. Neither path writes tokens into evidence
+or the shared plugin configuration.
