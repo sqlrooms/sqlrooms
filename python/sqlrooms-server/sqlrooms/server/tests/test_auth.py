@@ -196,3 +196,56 @@ async def test_ws_auth_flow(server_proc_auth):
             if not got_result:
                 print("[QUERY DEBUG]", "\n".join(query_debug))
             assert got_result
+
+
+@pytest.mark.asyncio
+async def test_same_ip_connections_do_not_share_auth_or_close_state(server_proc_auth):
+    url = f"ws://127.0.0.1:{server_proc_auth['port']}"
+    async with aiohttp.ClientSession() as session:
+        async with session.ws_connect(url) as first:
+            await first.send_json({"type": "auth", "token": server_proc_auth["token"]})
+            assert (await first.receive_json())["type"] == "authAck"
+            async with session.ws_connect(url) as second:
+                await second.send_json(
+                    {"type": "json", "sql": "SELECT 1", "queryId": "forbidden"}
+                )
+                assert (await second.receive_json())["error"] == "unauthorized"
+            # Closing the unauthenticated same-IP socket cannot revoke the first.
+            await first.send_json(
+                {
+                    "type": "json",
+                    "sql": "SELECT 42 as answer",
+                    "queryId": "still-authorized",
+                }
+            )
+            result = await first.receive_json()
+            assert result["queryId"] == "still-authorized"
+            assert json.loads(result["data"])[0]["answer"] == 42
+            async with session.ws_connect(url) as replacement:
+                await replacement.send_bytes(b"\x00\x00\x00\x00CRDT")
+                assert (await replacement.receive_json())["error"] == "unauthorized"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"type": "auth", "token": "wrong"},
+        {"type": "crdt-join", "roomId": "forbidden"},
+        {"type": "subscribe", "channel": "forbidden"},
+        {"type": "cancel", "queryId": "forbidden"},
+        b'\x00\x00\x00\x16{"type":"uploadArrow"}payload',
+    ],
+)
+async def test_all_direct_domain_paths_reject_before_dispatch(
+    server_proc_auth, payload
+):
+    async with aiohttp.ClientSession() as session:
+        async with session.ws_connect(
+            f"ws://127.0.0.1:{server_proc_auth['port']}"
+        ) as ws:
+            if isinstance(payload, bytes):
+                await ws.send_bytes(payload)
+            else:
+                await ws.send_json(payload)
+            assert (await ws.receive_json())["error"] == "unauthorized"
