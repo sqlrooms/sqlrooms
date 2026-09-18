@@ -1,3 +1,4 @@
+import {authorizationHeaders} from './browserAuth';
 import {createCliPersistence} from './createCliPersistence';
 import {ArtifactsSliceConfig} from '@sqlrooms/artifacts';
 import {
@@ -1020,6 +1021,7 @@ if (bridgeConfig) {
   const bridge = createHttpDbBridge({
     id: bridgeConfig.id,
     baseUrl: runtimeConfig.apiBaseUrl || '',
+    headers: authorizationHeaders('/api/db'),
   });
   roomStore.getState().db.connectors.registerBridge(bridge);
 }

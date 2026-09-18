@@ -23,3 +23,8 @@ await cp(
   path.join(output, 'skills/sqlrooms'),
   {recursive: true},
 );
+
+await cp(
+  path.join(app, 'claude-plugin/headers.mjs'),
+  path.join(output, 'headers.mjs'),
+);

@@ -1,3 +1,4 @@
+import {authorizedFetch} from './browserAuth';
 import {
   createRoomStorePersistence,
   type PersistenceController,
@@ -182,10 +183,13 @@ export async function fetchMcpStatus(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1_000);
   try {
-    const response = await fetch(`${getApiBaseUrl(config)}/api/mcp/status`, {
-      headers: getApiHeaders(config),
-      signal: controller.signal,
-    });
+    const response = await authorizedFetch(
+      `${getApiBaseUrl(config)}/api/mcp/status`,
+      {
+        headers: getApiHeaders(config),
+        signal: controller.signal,
+      },
+    );
     if (!response.ok) throw new Error(`MCP status failed: ${response.status}`);
     return (await response.json()) as McpRuntimeStatus;
   } finally {
@@ -197,7 +201,7 @@ export async function setMcpEnabled(
   config: RuntimeConfig,
   enabled: boolean,
 ): Promise<McpRuntimeStatus> {
-  const response = await fetch(
+  const response = await authorizedFetch(
     `${getApiBaseUrl(config)}/api/mcp/${enabled ? 'start' : 'stop'}`,
     {method: 'POST', headers: getApiHeaders(config)},
   );
@@ -220,11 +224,14 @@ export async function saveAiSettingsToServer(
     defaultModel?: string;
   },
 ): Promise<void> {
-  const res = await fetch(`${getApiBaseUrl(config)}/api/ai/settings`, {
-    method: 'PUT',
-    headers: getApiHeaders(config),
-    body: JSON.stringify(payload),
-  });
+  const res = await authorizedFetch(
+    `${getApiBaseUrl(config)}/api/ai/settings`,
+    {
+      method: 'PUT',
+      headers: getApiHeaders(config),
+      body: JSON.stringify(payload),
+    },
+  );
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     const msg =
@@ -269,7 +276,7 @@ export async function uploadFileToServer(
   const uploadUrl = `${getApiBaseUrl(config)}/api/upload`;
   const form = new FormData();
   form.append('file', file, file.name);
-  const res = await fetch(uploadUrl, {method: 'POST', body: form});
+  const res = await authorizedFetch(uploadUrl, {method: 'POST', body: form});
   if (!res.ok) {
     throw new Error(`Upload failed: ${res.statusText}`);
   }

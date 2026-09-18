@@ -7,7 +7,7 @@ import {
   Separator,
 } from '@sqlrooms/ui';
 import {Check, Copy, LoaderCircle} from 'lucide-react';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {runtimeConfig} from '../runtimeEnvironment';
 import {
   fetchMcpStatus,
@@ -61,14 +61,6 @@ export function CliMcpStatusControl() {
     const timer = window.setInterval(() => void refresh(), 1_500);
     return () => window.clearInterval(timer);
   }, [refresh]);
-
-  const snippets = useMemo(() => {
-    const url = status?.url ?? initial?.url ?? '';
-    return {
-      Codex: `[mcp_servers.sqlrooms]\nurl = "${url}"`,
-      Claude: `claude mcp add --transport http sqlrooms ${url}`,
-    };
-  }, [initial?.url, status?.url]);
 
   useEffect(
     () => () => {
@@ -156,21 +148,11 @@ export function CliMcpStatusControl() {
           <p className="text-destructive text-xs">{copyError}</p>
         ) : null}
         <Separator />
-        {Object.entries(snippets).map(([client, snippet]) => (
-          <div key={client} className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium">{client}</span>
-              <CopyButton
-                copied={copied === client}
-                label={`Copy ${client} configuration`}
-                onClick={() => void copy(client, snippet)}
-              />
-            </div>
-            <pre className="bg-muted overflow-x-auto rounded-md p-2 text-[11px] whitespace-pre-wrap">
-              {snippet}
-            </pre>
-          </div>
-        ))}
+        <p className="text-muted-foreground text-xs">
+          To connect Claude Code, start SQLRooms with <code>--claude</code>.
+          Other native clients authenticate using the private credential file
+          reported in the launching terminal. Keep that file local.
+        </p>
         <Button
           type="button"
           className="w-full"

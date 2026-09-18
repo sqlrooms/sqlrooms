@@ -93,6 +93,10 @@ export function hasDbPathArg(args) {
 
 /** Build the Python CLI arguments used by the combined CLI development flow. */
 export function getPythonCliDevArgs(args, apiPort, uiPort) {
+  // The launcher opens the trusted Vite origin; all API/socket traffic is proxied.
+  if (!hasOption(args, '--external-url')) {
+    args = ['--external-url', `http://localhost:${uiPort}`, ...args];
+  }
   const hasDbPath = hasDbPathArg(args);
   const apiPortArgs = hasOption(args, '--port')
     ? args

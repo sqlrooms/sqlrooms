@@ -5,7 +5,7 @@ import {waitForCliApi} from './cli-dev-readiness.mjs';
 
 test('CLI API readiness retries until the server responds', async () => {
   let attempts = 0;
-  await waitForCliApi('http://127.0.0.1:4273/api/status', {
+  await waitForCliApi('http://127.0.0.1:4273/healthz', {
     fetchImpl: async () => {
       attempts += 1;
       if (attempts < 3) throw new Error('connect ECONNREFUSED');
@@ -20,7 +20,7 @@ test('CLI API readiness retries until the server responds', async () => {
 
 test('CLI API readiness retries non-success responses', async () => {
   let attempts = 0;
-  await waitForCliApi('http://127.0.0.1:4273/api/status', {
+  await waitForCliApi('http://127.0.0.1:4273/healthz', {
     fetchImpl: async () => {
       attempts += 1;
       return {ok: attempts > 1, status: attempts > 1 ? 200 : 503};
@@ -35,7 +35,7 @@ test('CLI API readiness retries non-success responses', async () => {
 test('CLI API readiness stays aborted when an in-flight request succeeds', async () => {
   const controller = new AbortController();
   let attemptSignal;
-  const readiness = waitForCliApi('http://127.0.0.1:4273/api/status', {
+  const readiness = waitForCliApi('http://127.0.0.1:4273/healthz', {
     fetchImpl: async (_url, options) => {
       attemptSignal = options.signal;
       await new Promise((resolve) => setImmediate(resolve));
