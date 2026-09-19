@@ -314,7 +314,7 @@ SPRITE_HOST="${SPRITE_URL#https://}"
 SPRITE_WS_URL="wss://$SPRITE_HOST/ws/duckdb"
 if [[ "$RUN_PROXY" == "1" ]]; then
   DEPLOY_EXTERNAL_URL="http://localhost:$LOCAL_HTTP_PORT"
-  DEPLOY_EXTERNAL_WS_URL="ws://localhost:$LOCAL_WS_PORT"
+  DEPLOY_EXTERNAL_WS_URL="ws://localhost:$LOCAL_HTTP_PORT/ws/duckdb"
 else
   DEPLOY_EXTERNAL_URL="$SPRITE_URL"
   DEPLOY_EXTERNAL_WS_URL="$SPRITE_WS_URL"

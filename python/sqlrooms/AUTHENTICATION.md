@@ -101,6 +101,15 @@ example `/sqlrooms/`) and strip that prefix upstream. The UI resolves its assets
 bootstrap, API, renewal, and websocket routes within that directory. Use the
 generated launch link, which includes the trailing slash.
 
+`--external-ws-url` may explicitly name that same page's `/ws/duckdb` proxy route.
+Different origins, ports, schemes, or paths are rejected at startup. Omit the flag
+to derive the route from `--external-url`; tunnels must proxy HTTP and WebSockets
+together. Development always enables the Vite WebSocket proxy. Configured default
+ports (`http:80`, `https:443`) are normalized to match browser Host/Origin headers;
+non-default ports remain exact allowlist entries.
+International hostnames must use their ASCII punycode form, and IPv4 addresses
+must use canonical dotted-decimal notation, to avoid changing the launch destination.
+
 The Sprite installer keeps the SQLRooms listener on loopback and configures the
 Sprite HTTP proxy's service port. It polls public `/healthz`; opening the workspace
 still requires a ticket obtained through the private native credential handoff.

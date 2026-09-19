@@ -4,16 +4,58 @@ from __future__ import annotations
 
 import asyncio
 import json
+from ipaddress import IPv4Address, IPv6Address
 import os
 from pathlib import Path
 import stat
 import tempfile
+import re
+from urllib.parse import urlsplit, urlunsplit
 
 from starlette.responses import JSONResponse
 from starlette.websockets import WebSocketDisconnect
 from sqlrooms.server.access import AccessDenied, LocalAccess
 
 NO_STORE = {"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"}
+
+
+def normalize_transport_url(url: str) -> str:
+    """Normalize default ports, requiring unambiguous ASCII/IP authorities."""
+    try:
+        parsed = urlsplit(url)
+        defaults = {"http": 80, "https": 443, "ws": 80, "wss": 443}
+        if (
+            parsed.scheme not in defaults
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError
+        host = parsed.hostname
+        if not host.isascii():
+            raise ValueError
+        if ":" in host:
+            host = f"[{IPv6Address(host).compressed}]"
+        else:
+            last_label = host.rstrip(".").rsplit(".", 1)[-1]
+            if last_label.isdecimal() or re.fullmatch(r"0x[0-9a-f]+", last_label):
+                if str(IPv4Address(host)) != host:
+                    raise ValueError
+        port = parsed.port
+        authority = (
+            f"{host}:{port}"
+            if port is not None and port != defaults[parsed.scheme]
+            else host
+        )
+        return urlunsplit((parsed.scheme, authority, parsed.path, "", ""))
+    except ValueError:
+        raise ValueError(
+            "Invalid transport URL; use an HTTP or WebSocket URL with an ASCII "
+            "hostname (punycode for international names) or canonical IP address, "
+            "without credentials, query, or fragment."
+        ) from None
 
 
 def bearer(headers) -> str:

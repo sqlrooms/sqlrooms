@@ -203,6 +203,7 @@ export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
     throw new Error('SQLRooms configuration requires authorization.');
   // Always use the authenticated page origin, including explicitly mapped dev
   // proxies. Never attach the credential to a URL supplied in workspace data.
+  // The launcher rejects external WS options that don't match this proxy route.
   const wsUrl = webSocketUrl(location.href, instancePath('/ws/duckdb'));
   return {
     ...config,

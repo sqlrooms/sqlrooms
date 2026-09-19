@@ -47,6 +47,7 @@ from .security import (
     bearer,
     NO_STORE,
     authenticate_upstream,
+    normalize_transport_url,
 )
 from .mcp import SqlroomsMcpService
 from .mcp_bridge import McpBridgeBroker
@@ -555,6 +556,26 @@ class SqlroomsHttpServer:
             )
         self.host = host
         self.port = port
+        self.external_url = (
+            normalize_transport_url(external_url).rstrip("/") if external_url else None
+        )
+        if self.external_url and urlsplit(self.external_url).scheme not in {
+            "http",
+            "https",
+        }:
+            raise ValueError("--external-url requires an HTTP or HTTPS URL.")
+        self.external_ws_url = (
+            normalize_transport_url(external_ws_url) if external_ws_url else None
+        )
+        expected_ws_url = _derive_ws_proxy_url(self.external_url or self._ui_url())
+        if self.external_ws_url and self.external_ws_url != normalize_transport_url(
+            expected_ws_url
+        ):
+            raise ValueError(
+                "--external-ws-url must use the page's /ws/duckdb proxy route. "
+                "Split WebSocket endpoints are unsupported with local authentication; "
+                "omit --external-ws-url and proxy HTTP and WebSockets together."
+            )
         if ws_port is None:
             # socketify listens on all interfaces; we pick a free local port for convenience
             # to avoid collisions when multiple dev servers are running.
@@ -610,8 +631,6 @@ class SqlroomsHttpServer:
         )
         self.config_path = config_path
         self.connector_settings = connector_settings or []
-        self.external_url = external_url.rstrip("/") if external_url else None
-        self.external_ws_url = external_ws_url if external_ws_url else None
         self.mcp_port = mcp_port or _pick_free_port(
             "127.0.0.1", 42100, reserved_ports={self.port, self.ws_port}
         )
@@ -636,6 +655,9 @@ class SqlroomsHttpServer:
         origins.update(
             filter(None, os.environ.get("SQLROOMS_ALLOWED_ORIGINS", "").split(","))
         )
+        origins = {
+            normalize_transport_url(origin.strip()).rstrip("/") for origin in origins
+        }
         hosts = {urlsplit(origin).netloc for origin in origins}
         self.security = TransportSecurity(self.access, origins, hosts)
         self.mcp_security = TransportSecurity(

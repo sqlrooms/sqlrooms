@@ -612,7 +612,7 @@ def main(
         None,
         "--external-ws-url",
         envvar="SQLROOMS_EXTERNAL_WS_URL",
-        help="Public DuckDB websocket URL to expose in runtime config, e.g. wss://my-sprite.sprites.dev:4000.",
+        help="Optional page-origin DuckDB proxy URL, e.g. wss://my-sprite.sprites.dev/ws/duckdb. Split endpoints are unsupported; normally derived from --external-url.",
     ),
 ):
     """

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 
 import {
   getForwardedCliArgs,
@@ -7,7 +9,6 @@ import {
   getPythonCliDevArgs,
   hasDbPathArg,
   readOptionValue,
-  shouldProxyCliDevWebSockets,
 } from './cli-dev-args.mjs';
 
 test('the direct root launcher preserves the end-of-options marker', () => {
@@ -51,12 +52,6 @@ test('option parsing stops at the end-of-options marker', () => {
     ),
     null,
   );
-  assert.equal(
-    shouldProxyCliDevWebSockets(['--', '--external-ws-url', 'database.db'], {
-      externalWsUrl: null,
-    }),
-    true,
-  );
 });
 
 test('external URL option values are not treated as database paths', () => {
@@ -80,27 +75,6 @@ test('explicit external URLs still receive a development database path', () => {
   }
 });
 
-test('explicit WebSocket URLs bypass the Vite WebSocket proxy', () => {
-  for (const args of [
-    ['--external-ws-url', 'wss://example.test/ws/duckdb'],
-    ['--external-ws-url=wss://example.test/ws/duckdb'],
-  ]) {
-    assert.equal(
-      shouldProxyCliDevWebSockets(args, {externalWsUrl: null}),
-      false,
-      args.join(' '),
-    );
-  }
-
-  assert.equal(
-    shouldProxyCliDevWebSockets([], {
-      externalWsUrl: 'wss://example.test/ws/duckdb',
-    }),
-    false,
-  );
-  assert.equal(shouldProxyCliDevWebSockets([], {externalWsUrl: null}), true);
-});
-
 test('a dash-prefixed database path after -- is preserved', () => {
   const args = ['--', '-dev.db'];
   const result = getPythonCliDevArgs(args, 4273, 3100);
@@ -108,6 +82,27 @@ test('a dash-prefixed database path after -- is preserved', () => {
   assert.equal(hasDbPathArg(args), true);
   assert.equal(result.includes('--db-path'), false);
   assert.deepEqual(result.slice(-2), args);
+});
+
+test('an explicit WebSocket URL cannot disable the authenticated dev proxy', () => {
+  const output = execFileSync(
+    process.execPath,
+    [
+      fileURLToPath(new URL('./dev.mjs', import.meta.url)),
+      'cli',
+      '--dry',
+      '--external-ws-url=ws://localhost:3100/ws/duckdb',
+    ],
+    {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        SQLROOMS_EXTERNAL_WS_URL: 'ws://localhost:3100/ws/duckdb',
+      },
+    },
+  );
+  assert.match(output, /VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS=true/);
+  assert.match(output, /--external-ws-url=ws:\/\/localhost:3100\/ws\/duckdb/);
 });
 
 test('the default loopback API host remains available to the Vite proxy', () => {

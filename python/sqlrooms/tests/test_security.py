@@ -2,12 +2,17 @@
 
 from concurrent.futures import ThreadPoolExecutor
 import json
+from urllib.parse import urlsplit
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlrooms.server.access import AccessDenied, LocalAccess
 from sqlrooms.web.launcher import SqlroomsHttpServer
-from sqlrooms.web.security import CredentialFile, read_credential_file
+from sqlrooms.web.security import (
+    CredentialFile,
+    read_credential_file,
+    normalize_transport_url,
+)
 
 
 @pytest.fixture
@@ -46,6 +51,124 @@ def page(runtime):
 
 def headers(token):
     return {"Authorization": "Bearer " + token}
+
+
+@pytest.mark.parametrize("host", ["faß.example", "127.1", "0177.0.0.1", "0x7f000001"])
+def test_transport_urls_reject_ambiguous_hosts_instead_of_changing_destination(host):
+    with pytest.raises(ValueError, match="ASCII hostname.*canonical IP"):
+        normalize_transport_url(f"https://{host}:443")
+    assert (
+        normalize_transport_url("https://xn--fa-hia.example:443")
+        == "https://xn--fa-hia.example"
+    )
+
+
+@pytest.mark.parametrize(
+    "configured, origin, ws_url",
+    [
+        (
+            "https://Workspace.Example:443",
+            "https://workspace.example",
+            "wss://workspace.example/ws/duckdb",
+        ),
+        (
+            "http://workspace.example:80",
+            "http://workspace.example",
+            "ws://workspace.example/ws/duckdb",
+        ),
+        (
+            "https://workspace.example:8443",
+            "https://workspace.example:8443",
+            "wss://workspace.example:8443/ws/duckdb",
+        ),
+        ("http://[::1]:80", "http://[::1]", "ws://[::1]/ws/duckdb"),
+    ],
+)
+def test_external_default_ports_match_browser_bootstrap(
+    tmp_path, configured, origin, ws_url
+):
+    runtime = SqlroomsHttpServer(
+        tmp_path / "workspace.db",
+        "127.0.0.1",
+        4173,
+        4174,
+        external_url=configured,
+        external_ws_url=ws_url,
+    )
+    with TestClient(
+        runtime._build_app(),
+        base_url="http://127.0.0.1:4173",
+        headers={"Origin": origin, "Host": urlsplit(origin).netloc},
+    ) as http:
+        assert http.get("/auth.json").status_code == 200
+        session = http.post(
+            "/api/auth/exchange", json={"ticket": runtime.access.ticket()}
+        )
+        assert session.status_code == 200
+        config = http.get("/api/config", headers=headers(session.json()["token"]))
+        assert config.status_code == 200
+        assert config.json()["wsUrl"] == ws_url
+        assert (
+            http.get(
+                "/auth.json", headers={"Origin": "https://workspace.example:9443"}
+            ).status_code
+            == 403
+        )
+        assert (
+            http.get(
+                "/auth.json", headers={"Host": "workspace.example:9443"}
+            ).status_code
+            == 403
+        )
+
+
+def test_explicit_dev_origin_normalizes_default_port(tmp_path, monkeypatch):
+    monkeypatch.setenv("SQLROOMS_ALLOWED_ORIGINS", " https://dev.example:443 ")
+    runtime = SqlroomsHttpServer(tmp_path / "workspace.db", "127.0.0.1", 4173, 4174)
+    with TestClient(runtime._build_app(), base_url="https://dev.example") as http:
+        assert (
+            http.get(
+                "/auth.json", headers={"Origin": "https://dev.example"}
+            ).status_code
+            == 200
+        )
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "wss://other.example/ws/duckdb",
+        "ws://workspace.example/ws/duckdb",
+        "wss://workspace.example:4000/ws/duckdb",
+        "wss://workspace.example/direct",
+    ],
+)
+def test_split_websocket_endpoint_is_rejected_before_startup(tmp_path, endpoint):
+    with pytest.raises(ValueError, match="Split WebSocket endpoints are unsupported"):
+        SqlroomsHttpServer(
+            tmp_path / "workspace.db",
+            "127.0.0.1",
+            4173,
+            4174,
+            external_url="https://workspace.example",
+            external_ws_url=endpoint,
+        )
+    assert not (tmp_path / "sqlrooms_uploads").exists()
+
+
+def test_matching_mounted_websocket_endpoint_accepts_explicit_default_port(tmp_path):
+    runtime = SqlroomsHttpServer(
+        tmp_path / "workspace.db",
+        "127.0.0.1",
+        4173,
+        4174,
+        external_url="https://workspace.example:443/sqlrooms/",
+        external_ws_url="wss://workspace.example:443/sqlrooms/ws/duckdb",
+    )
+    assert (
+        runtime._runtime_config()["wsUrl"]
+        == "wss://workspace.example/sqlrooms/ws/duckdb"
+    )
 
 
 @pytest.mark.parametrize(
