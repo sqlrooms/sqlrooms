@@ -186,7 +186,7 @@ pnpm --filter sqlrooms-cli-app build
 
 This builds the UI into `apps/sqlrooms-cli-ui/dist`.
 
-To copy it into the Python package bundle directory (so the published `sqlrooms` wheel can serve it), run:
+To prepare the Python package assets (the UI bundle and Claude plugin), run:
 
 ```bash
 cd python/sqlrooms
@@ -362,8 +362,9 @@ Manual authoring and browser query approvals remain active.
 
 `skills/sqlrooms` is the canonical guidance source for both external harnesses.
 `build-claude-plugin.mjs` generates the distributable plugin in the Python package
-from those files and `claude-plugin` metadata. The Python package build runs this
-generator after the cached UI build and before creating the wheel. Generated
+from those files and `claude-plugin` metadata. The Python package's `build:ui`
+step runs this generator after the cached UI build, including when CI or deployment
+builds the wheel directly with `uv build`. Generated
 copies are ignored;
 edit the canonical source and rebuild. See the [launcher guide](../../python/sqlrooms/README.md#interactive-claude-code-workspace)
 and [evaluation adapter](evals/EXTERNAL_HARNESS.md#claude-code-adapter).

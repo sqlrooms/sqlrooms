@@ -266,9 +266,10 @@ or artifact/chat slice. Existing saved conversations and settings pass through
 workspace persistence unchanged until embedded mode is used again. This retains
 the existing persistence mechanism; it is not a new durability guarantee.
 
-Source builds generate the plugin from the canonical CLI skill after the cached UI
-build. `pnpm --filter sqlrooms-python build` regenerates the plugin, then packages
-and verifies the UI and plugin in the wheel. No marketplace installation or
-publication is needed.
+`pnpm --filter sqlrooms-python build:ui` prepares both the UI bundle and the plugin
+from the canonical CLI skill. Plugin generation runs after the cached UI build,
+so this step also supports CI and deployment paths that invoke `uv build` directly.
+`pnpm --filter sqlrooms-python build` prepares these assets, then packages and
+verifies them in the wheel. No marketplace installation or publication is needed.
 See the [verification record](../../apps/sqlrooms-cli-ui/evals/evidence/claude-plugin/README.md)
 for tested behavior and outstanding real-Claude authentication requirements.

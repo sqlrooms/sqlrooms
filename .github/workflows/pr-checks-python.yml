@@ -65,7 +65,7 @@ jobs:
       - name: Lint with ruff
         run: uv run ruff check .
 
-      - name: Build CLI UI bundle
+      - name: Prepare CLI UI and Claude plugin
         run: pnpm --filter sqlrooms-python build:ui
         working-directory: .
 
