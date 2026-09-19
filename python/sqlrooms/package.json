@@ -3,8 +3,9 @@
   "version": "0.1.5",
   "private": true,
   "scripts": {
-    "build": "pnpm run build:ui && node ../../apps/sqlrooms-cli-ui/build-claude-plugin.mjs && uv build && pnpm run verify:wheel",
-    "build:ui": "pnpm exec turbo build --filter=sqlrooms-cli-app... && node -e \"const fs=require('fs');const path=require('path');const src=path.resolve('..','..','apps','sqlrooms-cli-ui','dist');const dst=path.resolve('sqlrooms','web','static');fs.rmSync(dst,{recursive:true,force:true});fs.mkdirSync(dst,{recursive:true});fs.cpSync(src,dst,{recursive:true});console.log('Copied UI bundle to',dst);\"",
+    "build": "pnpm run build:ui && uv build && pnpm run verify:wheel",
+    "build:plugin": "node ../../apps/sqlrooms-cli-ui/build-claude-plugin.mjs",
+    "build:ui": "pnpm exec turbo build --filter=sqlrooms-cli-app... && node -e \"const fs=require('fs');const path=require('path');const src=path.resolve('..','..','apps','sqlrooms-cli-ui','dist');const dst=path.resolve('sqlrooms','web','static');fs.rmSync(dst,{recursive:true,force:true});fs.mkdirSync(dst,{recursive:true});fs.cpSync(src,dst,{recursive:true});console.log('Copied UI bundle to',dst);\" && pnpm run build:plugin",
     "check-fix": "uv run ruff check --fix",
     "dev": "node scripts/dev.mjs",
     "dev:sync": "pnpm run dev --experimental --experimental-sync",

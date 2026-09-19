@@ -38,3 +38,19 @@ link is included in this record. Windows ACLs, cloud deployment, managed lifecyc
 Save As cutover, and actual-agent multi-turn behavior remain outside the verified
 local milestone. Session-storage failure/restart/copy and scope rejection use
 regression tests; a separate real-browser duplicate-tab scenario was not run.
+
+## Review follow-up — 2026-09-19
+
+Mounted launch paths now preserve the bootstrap, configuration, renewal, HTTP and
+websocket routes; built assets use relative paths. Database-settings save and
+connection-test actions use the CLI's authenticated transport. The focused browser
+and API suites passed (19 tests), including rejected saves keeping unsaved edits.
+
+The Sprite runner and readiness regressions passed (2 tests) using generated shell
+commands and a disposable local listener. No Sprite was provisioned. The installer
+uses loopback, explicitly configures its HTTP proxy port, and checks `/healthz`.
+
+Reproduced the Python CI packaging entry point after deleting the generated plugin.
+All 41 UI build tasks were cache hits, plugin generation ran afterward, and wheel
+verification passed. Generation now belongs to `build:ui`, covering callers that
+subsequently invoke `uv build` directly.

@@ -96,6 +96,15 @@ wildcard localhost-port exemption. Browser credentials go only to the page origi
 proxy `/auth.json`, `/api`, and `/ws` to the same instance. Cross-origin redirects
 are rejected. Restarting a backend changes the binding even when ports are reused.
 
+Reverse proxies mounted below a path must forward the launch directory (for
+example `/sqlrooms/`) and strip that prefix upstream. The UI resolves its assets,
+bootstrap, API, renewal, and websocket routes within that directory. Use the
+generated launch link, which includes the trailing slash.
+
+The Sprite installer keeps the SQLRooms listener on loopback and configures the
+Sprite HTTP proxy's service port. It polls public `/healthz`; opening the workspace
+still requires a ticket obtained through the private native credential handoff.
+
 `LocalAccess.invalidate()` revokes native, upstream, and page credentials and all
 outstanding tickets. Shutdown invokes it and deletes the native handoff file, even
 on startup failure. A future successful Save As must invalidate the source binding,
