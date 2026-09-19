@@ -42,6 +42,12 @@ The record includes `token`, `binding`, `apiUrl`, `mcpUrl`, and `wsUrl`. Reject 
 owners, permissions, or symlinks. Windows ACL support is not implemented or claimed.
 No raw tokens belong in process arguments or logs.
 
+Browser-only launches on platforms without this private store skip native handoff
+creation and retain the ticket/page authentication flow. Claude sessions, native
+MCP (including enabling it later), and `--no-ui` require the safe store and fail
+explicitly when unavailable. This path is covered by platform-capability tests;
+an actual Windows runtime has not been validated.
+
 Send `Authorization: Bearer <token>` on native HTTP requests. On the direct DuckDB
 websocket send `{"type":"auth","token":"<token>"}` first, and consume `authAck`
 before sending SQL or binary frames. Authentication has a five-second deadline and

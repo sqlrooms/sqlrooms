@@ -54,3 +54,17 @@ Reproduced the Python CI packaging entry point after deleting the generated plug
 All 41 UI build tasks were cache hits, plugin generation ran afterward, and wheel
 verification passed. Generation now belongs to `build:ui`, covering callers that
 subsequently invoke `uv build` directly.
+
+## CRDT, platform, and dependency follow-up
+
+The CRDT connector now authenticates before join/snapshot/update frames, including
+reconnects and already-open sockets. Ten package tests passed, covering rejection,
+timeout, retry exhaustion, URL credential omission, and the no-token flow. The real
+proxy test also passed authenticated joins, snapshots, and binary replication.
+
+Platform-capability tests verified browser ticket bootstrap without a native
+credential store and explicit rejection of native modes. Actual Windows execution
+remains unverified. Server `0.1.3` and CLI wheels built successfully; inspection
+confirmed the CLI dependency rejects server `0.1.2`, and both launcher and access
+modules imported from unpacked wheels with workspace source paths removed. The
+server release must precede the CLI release; no packages were published here.

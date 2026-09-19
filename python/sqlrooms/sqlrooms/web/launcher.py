@@ -48,6 +48,7 @@ from .security import (
     NO_STORE,
     authenticate_upstream,
     normalize_transport_url,
+    supports_private_credentials,
 )
 from .mcp import SqlroomsMcpService
 from .mcp_bridge import McpBridgeBroker
@@ -678,13 +679,21 @@ class SqlroomsHttpServer:
         self, session: Callable[[], Awaitable[int]] | None = None
     ) -> int | None:
         self._assert_ui_available()
-        self.credential_file = CredentialFile(
-            self.access,
-            self._ui_url(),
-            self._mcp_url(),
-            f"ws://127.0.0.1:{self.ws_port}",
-        )
         try:
+            native_required = (
+                session is not None or not self.serve_ui or self.mcp_enabled_default
+            )
+            if native_required and not supports_private_credentials():
+                raise RuntimeError(
+                    "Native integrations require owner-only credential storage; Windows ACL support is not yet available."
+                )
+            if supports_private_credentials():
+                self.credential_file = CredentialFile(
+                    self.access,
+                    self._ui_url(),
+                    self._mcp_url(),
+                    f"ws://127.0.0.1:{self.ws_port}",
+                )
             return await self._serve(session)
         finally:
             self.access.invalidate()
@@ -711,7 +720,8 @@ class SqlroomsHttpServer:
             )
         if self.sync_enabled:
             logger.info("CRDT sync is ENABLED")
-        logger.info("Native credential file: %s", self.credential_file.path)
+        if self.credential_file:
+            logger.info("Native credential file: %s", self.credential_file.path)
         if not self.open_browser and self.serve_ui and sys.stderr.isatty():
             print(
                 "Temporary single-use SQLRooms launch link (valid 2 minutes): "
@@ -772,6 +782,10 @@ class SqlroomsHttpServer:
                 await asyncio.gather(http_task, return_exceptions=True)
 
     async def _start_mcp(self) -> Dict[str, Any]:
+        if not supports_private_credentials():
+            raise RuntimeError(
+                "Native MCP requires owner-only credential storage; Windows ACL support is not yet available."
+            )
         async with self._mcp_lock:
             if self._mcp_task is not None and not self._mcp_task.done():
                 return self._mcp_status()

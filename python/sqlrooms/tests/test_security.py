@@ -505,6 +505,63 @@ async def test_startup_failure_revokes_and_removes_private_file(runtime, monkeyp
 
 
 @pytest.mark.asyncio
+async def test_browser_launch_without_native_store_still_bootstraps(
+    runtime, monkeypatch, caplog
+):
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(
+        "sqlrooms.web.launcher.supports_private_credentials", lambda: False
+    )
+    monkeypatch.setattr(runtime, "_assert_ui_available", lambda: None)
+    monkeypatch.setattr(runtime, "_start_duckdb_backend", lambda: None)
+    monkeypatch.setattr(runtime, "_stop_mcp", AsyncMock())
+    monkeypatch.setattr(runtime.mcp_broker, "close", AsyncMock())
+    runtime.open_browser = False
+
+    class Http:
+        should_exit = False
+
+        async def serve(self):
+            assert runtime.credential_file is None
+            http = client(runtime)
+            assert http.get("/api/config").status_code == 401
+            result = http.post(
+                "/api/auth/exchange", json={"ticket": runtime.access.ticket()}
+            )
+            assert result.status_code == 200
+            response = http.get("/api/config", headers=headers(result.json()["token"]))
+            assert response.status_code == 200
+            assert runtime.session_token not in response.text
+
+    monkeypatch.setattr("sqlrooms.web.launcher.uvicorn.Server", lambda _: Http())
+    await runtime.start()
+    assert runtime.credential_file is None
+    assert runtime.session_token not in caplog.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["claude", "mcp", "no-ui", "mcp-control"])
+async def test_native_modes_without_safe_store_fail_explicitly(
+    runtime, monkeypatch, mode
+):
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(
+        "sqlrooms.web.launcher.supports_private_credentials", lambda: False
+    )
+    monkeypatch.setattr(runtime, "_assert_ui_available", lambda: None)
+    runtime.mcp_enabled_default = mode == "mcp"
+    runtime.serve_ui = mode != "no-ui"
+    with pytest.raises(RuntimeError, match="Windows ACL support is not yet available"):
+        if mode == "mcp-control":
+            await runtime._start_mcp()
+        else:
+            await runtime.start(session=AsyncMock() if mode == "claude" else None)
+    assert runtime.credential_file is None
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "reply", ['{"type":"error"}', "invalid", b"binary", "null", "x" * 4097, None]
 )

@@ -8,6 +8,10 @@ Launch a local SQLRooms DuckDB project for adding data, authoring documents, and
 uvx sqlrooms ./sqlrooms.db
 ```
 
+This CLI requires `sqlrooms-server>=0.1.3` for its shared authentication boundary.
+Release the updated server package before publishing this CLI; source installations
+must install both updated packages together.
+
 What happens:
 
 - Starts the DuckDB websocket backend (from `sqlrooms-server`) on a free local port.

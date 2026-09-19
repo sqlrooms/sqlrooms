@@ -30,7 +30,7 @@ from sqlrooms.server.cache import QueryCache
 from sqlrooms.server.server import server
 root = Path(os.environ["AUTH_TEST_DIRECTORY"])
 http_port, ws_port, mcp_port = json.loads(os.environ["AUTH_TEST_PORTS"])
-runtime = SqlroomsHttpServer(":memory:", "127.0.0.1", http_port, ws_port, mcp_port=mcp_port, serve_ui=False, open_browser=False, mcp_enabled=True)
+runtime = SqlroomsHttpServer(":memory:", "127.0.0.1", http_port, ws_port, mcp_port=mcp_port, serve_ui=False, open_browser=False, mcp_enabled=True, capability_profile="experimental", sync_enabled=True)
 runtime.access.page_ttl = 8
 # Exercise the production server startup while avoiding extension downloads.
 original_init = db_async.init_global_connection
@@ -74,6 +74,53 @@ asyncio.run(runtime.start(ready))
             process.kill()
             process.wait()
         log.close()
+
+
+@pytest.mark.asyncio
+async def test_real_crdt_proxy_authentication_and_binary_sync(live_runtime):
+    import base64
+    from loro import LoroDoc, ExportMode
+
+    ports, record = live_runtime
+    origin = f"http://127.0.0.1:{ports[0]}"
+    async with aiohttp.ClientSession(
+        timeout=aiohttp.ClientTimeout(total=10)
+    ) as session:
+        async with session.post(
+            origin + "/api/auth/ticket",
+            headers={"Authorization": "Bearer " + record["native"]},
+        ) as response:
+            launch_url = (await response.json())["url"]
+        from urllib.parse import urlsplit, parse_qs
+
+        ticket = parse_qs(urlsplit(launch_url).fragment)["sqlrooms-ticket"][0]
+        async with session.post(
+            origin + "/api/auth/exchange", json={"ticket": ticket}
+        ) as response:
+            token = (await response.json())["token"]
+        async with (
+            session.ws_connect(origin + "/ws/duckdb", origin=origin) as first,
+            session.ws_connect(origin + "/ws/duckdb", origin=origin) as second,
+        ):
+            for index, ws in enumerate((first, second)):
+                await ws.send_json({"type": "auth", "token": token})
+                assert await ws.receive_json() == {"type": "authAck"}
+                await ws.send_json(
+                    {"type": "crdt-join", "roomId": "live-crdt", "clientId": str(index)}
+                )
+                assert (await ws.receive_json())["type"] == "crdt-joined"
+                snapshot = await ws.receive_json()
+                assert snapshot["type"] == "crdt-snapshot"
+            doc = LoroDoc()
+            doc.import_(base64.b64decode(snapshot["data"]))
+            doc.get_map("test").insert("key", "authenticated sync")
+            doc.commit()
+            await first.send_bytes(doc.export(ExportMode.Snapshot()))
+            message = await second.receive()
+            assert message.type == aiohttp.WSMsgType.BINARY
+            received = LoroDoc()
+            received.import_(message.data)
+            assert received.get_map("test").get("key").value == "authenticated sync"
 
 
 @pytest.mark.asyncio

@@ -87,11 +87,16 @@ def check_private(path: Path, *, directory: bool = False) -> None:
         )
 
 
+def supports_private_credentials() -> bool:
+    """Whether this platform has a tested owner-only native credential store."""
+    return os.name == "posix"
+
+
 class CredentialFile:
     """Temporary owner-only native handoff; the environment contains only its path."""
 
     def __init__(self, access: LocalAccess, api_url: str, mcp_url: str, ws_url: str):
-        if os.name != "posix":
+        if not supports_private_credentials():
             raise RuntimeError("Windows credential ACL support is not yet verified.")
         self.directory = Path(tempfile.mkdtemp(prefix="sqlrooms-credentials-"))
         check_private(self.directory, directory=True)
