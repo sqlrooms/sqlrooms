@@ -75,6 +75,58 @@ test('explicit external URLs still receive a development database path', () => {
   }
 });
 
+test('development external URL precedence is CLI, environment, then Vite default', () => {
+  const options = {externalUrl: 'https://environment.example/sqlrooms'};
+  for (const args of [
+    ['--external-url', 'https://flag.example'],
+    ['--external-url=https://flag.example'],
+  ]) {
+    assert.equal(
+      readOptionValue(
+        getPythonCliDevArgs(args, 4273, 3100, options),
+        '--external-url',
+      ),
+      'https://flag.example',
+    );
+  }
+  assert.equal(
+    readOptionValue(
+      getPythonCliDevArgs([], 4273, 3100, options),
+      '--external-url',
+    ),
+    null,
+  );
+  for (const externalUrl of ['', null]) {
+    assert.equal(
+      readOptionValue(
+        getPythonCliDevArgs([], 4273, 3100, {externalUrl}),
+        '--external-url',
+      ),
+      'http://localhost:3100',
+    );
+  }
+});
+
+test('the combined dev launcher does not override environment HTTP and WS URLs', () => {
+  const output = execFileSync(
+    process.execPath,
+    [fileURLToPath(new URL('./dev.mjs', import.meta.url)), 'cli', '--dry'],
+    {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        SQLROOMS_EXTERNAL_URL: 'https://environment.example/sqlrooms',
+        SQLROOMS_EXTERNAL_WS_URL:
+          'wss://environment.example/sqlrooms/ws/duckdb',
+      },
+    },
+  );
+  const match = output.match(/SQLROOMS_CLI_DEV_ARGS=(\[.*\]) node/);
+  assert.ok(match, output);
+  assert.equal(readOptionValue(JSON.parse(match[1]), '--external-url'), null);
+  assert.match(output, /VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS=true/);
+});
+
 test('a dash-prefixed database path after -- is preserved', () => {
   const args = ['--', '-dev.db'];
   const result = getPythonCliDevArgs(args, 4273, 3100);

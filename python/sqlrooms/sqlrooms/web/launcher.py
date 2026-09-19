@@ -973,7 +973,8 @@ class SqlroomsHttpServer:
             return None
 
         return RedirectResponse(
-            url=f"/assets/{matches[0].name}",
+            # Resolve beside the requested asset so proxies can strip any mount prefix.
+            url=f"./{matches[0].name}",
             status_code=302,
             headers=NO_STORE_HEADERS,
         )

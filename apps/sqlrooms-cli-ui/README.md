@@ -159,6 +159,10 @@ If you want fixed ports, pass them to the Python server:
 pnpm dev cli -- --port 4274 --ws-port 4002
 ```
 
+For a public proxy, `--external-url` takes precedence over `SQLROOMS_EXTERNAL_URL`.
+The launcher uses the Vite origin only when neither is set. A matching
+`SQLROOMS_EXTERNAL_WS_URL` can be supplied, or omitted to derive the WebSocket route.
+
 ## Dev mode (separate terminals)
 
 Terminal A (Python server):

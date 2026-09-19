@@ -84,9 +84,14 @@ export function hasDbPathArg(args) {
 }
 
 /** Build the Python CLI arguments used by the combined CLI development flow. */
-export function getPythonCliDevArgs(args, apiPort, uiPort) {
-  // The launcher opens the trusted Vite origin; all API/socket traffic is proxied.
-  if (!hasOption(args, '--external-url')) {
+export function getPythonCliDevArgs(
+  args,
+  apiPort,
+  uiPort,
+  {externalUrl = process.env.SQLROOMS_EXTERNAL_URL} = {},
+) {
+  // Leave explicit flags/environment to Typer; otherwise use the trusted Vite origin.
+  if (!hasOption(args, '--external-url') && !externalUrl) {
     args = ['--external-url', `http://localhost:${uiPort}`, ...args];
   }
   const hasDbPath = hasDbPathArg(args);

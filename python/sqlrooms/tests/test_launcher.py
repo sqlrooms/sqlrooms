@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import socket
+from urllib.parse import urljoin, urlsplit
 
 import duckdb
 import pytest
@@ -446,7 +447,8 @@ def test_serves_static_ui_assets_for_head_requests(tmp_path):
     assert response.status_code == 200
 
 
-def test_redirects_stale_vite_entry_assets(tmp_path):
+@pytest.mark.parametrize("mount", ["", "/sqlrooms", "/nested/sqlrooms"])
+def test_redirects_stale_vite_entry_assets(tmp_path, mount):
     ui_dir = tmp_path / "ui"
     assets_dir = ui_dir / "assets"
     assets_dir.mkdir(parents=True)
@@ -468,11 +470,27 @@ def test_redirects_stale_vite_entry_assets(tmp_path):
     css_response = client.get("/assets/index-stale.css", follow_redirects=False)
 
     assert js_response.status_code == 302
-    assert js_response.headers["location"] == "/assets/index-current.js"
     assert js_response.headers["cache-control"] == "no-store"
     assert css_response.status_code == 302
-    assert css_response.headers["location"] == "/assets/index-current.css"
     assert css_response.headers["cache-control"] == "no-store"
+    for extension, response, content in (
+        ("js", js_response, "console.log('ok')"),
+        ("css", css_response, "body{}"),
+    ):
+        # The proxy strips its mount before the request reaches the backend;
+        # the browser resolves Location against the original public asset URL.
+        redirected = urljoin(
+            f"https://workspace.example{mount}/assets/index-stale.{extension}",
+            response.headers["location"],
+        )
+        assert (
+            redirected
+            == f"https://workspace.example{mount}/assets/index-current.{extension}"
+        )
+        forwarded_path = urlsplit(redirected).path.removeprefix(mount)
+        recovered = client.get(forwarded_path)
+        assert recovered.status_code == 200
+        assert recovered.text == content
 
 
 def test_missing_non_entry_asset_returns_404(tmp_path):
