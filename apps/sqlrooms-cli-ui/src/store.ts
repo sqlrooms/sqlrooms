@@ -1,4 +1,8 @@
-import {authorizationHeaders} from './browserAuth';
+import {
+  authorizationHeaders,
+  authorizedFetch,
+  instancePath,
+} from './browserAuth';
 import {createCliPersistence} from './createCliPersistence';
 import {ArtifactsSliceConfig} from '@sqlrooms/artifacts';
 import {
@@ -808,6 +812,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         dashboard: dashboardSlice,
 
         ...createDbSettingsSlice({
+          fetch: (url, init) => authorizedFetch(instancePath(url), init),
           config: {
             connections: (runtimeConfig.dbBridge?.connections ?? []).map(
               (c) => ({

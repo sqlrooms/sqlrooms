@@ -45,6 +45,8 @@ export type DbSettingsSliceState = {
 
 type CreateDbSettingsSliceParams = {
   config?: Partial<DbSettingsSliceConfig>;
+  /** Host transport for settings saves and connection tests; defaults to browser fetch. */
+  fetch?: (url: string, init?: RequestInit) => Promise<Response>;
 };
 
 function createDefaultDbSettingsConfig(
@@ -53,6 +55,7 @@ function createDefaultDbSettingsConfig(
   return DbSettingsSliceConfig.parse(overrides ?? {});
 }
 
+/** Create editable database settings with an optional host-provided HTTP transport. */
 export function createDbSettingsSlice(
   props?: CreateDbSettingsSliceParams,
 ): StateCreator<DbSettingsSliceState> {
@@ -125,11 +128,14 @@ export function createDbSettingsSlice(
         try {
           const connections = (get() as DbSettingsSliceState).dbSettings.config
             .connections;
-          const res = await fetch(`${apiBaseUrl}/api/db/settings`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({connections}),
-          });
+          const res = await (props?.fetch ?? fetch)(
+            `${apiBaseUrl}/api/db/settings`,
+            {
+              method: 'PUT',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({connections}),
+            },
+          );
           if (!res.ok) {
             const body = await res.json().catch(() => ({}));
             const msg =
@@ -159,11 +165,14 @@ export function createDbSettingsSlice(
 
       testConnection: async (engine, config, apiBaseUrl = '') => {
         try {
-          const res = await fetch(`${apiBaseUrl}/api/db/test-connection`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({engine, config}),
-          });
+          const res = await (props?.fetch ?? fetch)(
+            `${apiBaseUrl}/api/db/test-connection`,
+            {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({engine, config}),
+            },
+          );
           const body = (await res.json()) as {ok: boolean; error?: string};
           return body;
         } catch (err) {

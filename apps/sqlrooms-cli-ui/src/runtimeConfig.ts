@@ -1,4 +1,4 @@
-import {authorizedFetch, pageCredential} from './browserAuth';
+import {authorizedFetch, instancePath, pageCredential} from './browserAuth';
 
 /**
  * Startup state for one runtime component reported by the CLI backend.
@@ -193,25 +193,30 @@ async function fetchJsonWithRetry<T>(
 }
 
 /**
- * Fetches `/api/config`, returning an empty runtime config if the request fails.
+ * Fetches the current instance's configuration, failing closed without authorization.
  */
 export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
-  const config = await fetchJsonWithRetry<RuntimeConfig>('/api/config');
+  const config = await fetchJsonWithRetry<RuntimeConfig>(
+    instancePath('/api/config'),
+  );
   if (!config)
     throw new Error('SQLRooms configuration requires authorization.');
   // Always use the authenticated page origin, including explicitly mapped dev
   // proxies. Never attach the credential to a URL supplied in workspace data.
-  const wsUrl = webSocketUrl(location.href, '/ws/duckdb');
+  const wsUrl = webSocketUrl(location.href, instancePath('/ws/duckdb'));
   return {
     ...config,
-    apiBaseUrl: '',
+    apiBaseUrl: instancePath('').replace(/\/$/, ''),
     wsUrl,
     crdtWsUrl: wsUrl,
     wsAuthToken: pageCredential(),
     mcp: config.mcp
       ? {
           ...config.mcp,
-          bridgeUrl: webSocketUrl(location.href, '/ws/mcp-bridge'),
+          bridgeUrl: webSocketUrl(
+            location.href,
+            instancePath('/ws/mcp-bridge'),
+          ),
         }
       : undefined,
   };
@@ -223,5 +228,5 @@ export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
 export async function fetchRuntimeStartupStatus(): Promise<
   RuntimeStartupStatus | undefined
 > {
-  return fetchJson<RuntimeStartupStatus>('/api/status');
+  return fetchJson<RuntimeStartupStatus>(instancePath('/api/status'));
 }

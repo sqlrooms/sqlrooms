@@ -11,6 +11,12 @@ let renewalTimer: ReturnType<typeof setTimeout> | undefined;
 const RECOVERY =
   'SQLRooms authorization is required. Open a fresh launch link from the SQLRooms terminal or authorized local client.';
 
+/** Resolve an instance route under the launch page's directory, including proxy mounts. */
+export function instancePath(path: string): string {
+  return new URL(path.replace(/^\/+/, ''), new URL('.', location.href))
+    .pathname;
+}
+
 function storeSession(value?: BrowserAuthorization) {
   if (!storageKey) return;
   try {
@@ -74,9 +80,12 @@ function scheduleRenewal() {
   renewalTimer = setTimeout(
     async () => {
       try {
-        const response = await authorizedFetch('/api/auth/renew', {
-          method: 'POST',
-        });
+        const response = await authorizedFetch(
+          instancePath('/api/auth/renew'),
+          {
+            method: 'POST',
+          },
+        );
         if (!response.ok) throw new Error(RECOVERY);
         const next: unknown = await response.json();
         if (
@@ -105,7 +114,7 @@ export async function bootstrapAuthorization(): Promise<void> {
   const ticket = params.get('sqlrooms-ticket');
   if (ticket)
     history.replaceState(null, '', location.pathname + location.search);
-  const identityResponse = await fetch('/auth.json', {
+  const identityResponse = await fetch(instancePath('/auth.json'), {
     credentials: 'omit',
     redirect: 'error',
     cache: 'no-store',
@@ -131,7 +140,7 @@ export async function bootstrapAuthorization(): Promise<void> {
   }
 
   if (ticket) {
-    const response = await fetch('/api/auth/exchange', {
+    const response = await fetch(instancePath('/api/auth/exchange'), {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ticket}),
