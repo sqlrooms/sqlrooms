@@ -366,3 +366,28 @@ describe('CLI room capability handlers', () => {
     expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(2);
   });
 });
+
+test('browser metadata matches the distributed canonical contract in every namespace', async () => {
+  const {readFileSync} = await import('node:fs');
+  const {CLI_MCP_CONTRACT_VERSION} = await import('../cliMcpToolContract');
+  const distributed = JSON.parse(
+    readFileSync(
+      new URL(
+        '../../../../python/sqlrooms/sqlrooms/mcp_tool_contract.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
+  expect(distributed.version).toBe(CLI_MCP_CONTRACT_VERSION);
+  for (const metaNamespace of ['__sqlrooms', 'custom_meta']) {
+    const metadata = createCliRoomCapabilities({
+      store: {getState: () => state} as any,
+      metaNamespace,
+    }).map(({execute, ...descriptor}) => {
+      expect(typeof execute).toBe('function');
+      return descriptor;
+    });
+    expect(metadata).toEqual(distributed.tools);
+  }
+});

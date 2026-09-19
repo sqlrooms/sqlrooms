@@ -674,18 +674,33 @@ class SqlroomsHttpServer:
         self._mcp_task: asyncio.Task[None] | None = None
         self._mcp_lock = asyncio.Lock()
         self._mcp_last_error: str | None = None
+        from ..agent.runtime import Runtime
+
+        self.agent_runtime = Runtime(self)
+        self.mcp_broker.agent_runtime = self.agent_runtime
 
     async def start(
         self, session: Callable[[], Awaitable[int]] | None = None
     ) -> int | None:
         self._assert_ui_available()
+        self._reserved_http_socket = None
+        self._reserved_mcp_socket = None
         try:
             native_required = (
-                session is not None or not self.serve_ui or self.mcp_enabled_default
+                session is not None
+                or not self.serve_ui
+                or self.mcp_enabled_default
+                or self.agent_runtime.managed
             )
             if native_required and not supports_private_credentials():
                 raise RuntimeError(
                     "Native integrations require owner-only credential storage; Windows ACL support is not yet available."
+                )
+            if self.agent_runtime.managed:
+                from ..agent.process import reserve_managed_listeners
+
+                self._reserved_http_socket, self._reserved_mcp_socket = (
+                    reserve_managed_listeners(self)
                 )
             if supports_private_credentials():
                 self.credential_file = CredentialFile(
@@ -696,11 +711,18 @@ class SqlroomsHttpServer:
                 )
             return await self._serve(session)
         finally:
+            from ..agent.registry import remove
+
+            if self.credential_file:
+                remove(self.access.binding)
             self.access.invalidate()
             await self._stop_mcp()
             await self.mcp_broker.close()
             if self.credential_file:
                 self.credential_file.close()
+            for sock in (self._reserved_http_socket, self._reserved_mcp_socket):
+                if sock:
+                    sock.close()
 
     async def _serve(
         self, session: Callable[[], Awaitable[int]] | None = None
@@ -751,21 +773,50 @@ class SqlroomsHttpServer:
             loop="asyncio",
         )
         server = uvicorn.Server(config)
+        self._http_server = server
         session_task = None
-        http_task = asyncio.create_task(server.serve())
+        http_task = asyncio.create_task(
+            server.serve(sockets=[self._reserved_http_socket])
+            if self._reserved_http_socket
+            else server.serve()
+        )
+
+        async def register_when_ready():
+            if self.credential_file is None:
+                return
+            for _ in range(1000):
+                if self._duckdb_start_error:
+                    raise RuntimeError(
+                        "Database startup failed; check the database path or existing writer."
+                    )
+                if getattr(server, "started", False) and self._duckdb_ready.is_set():
+                    await self.agent_runtime.publish()
+                    return
+                await asyncio.sleep(0.01)
+            raise RuntimeError("Runtime startup timed out.")
+
+        registration_task = asyncio.create_task(register_when_ready())
         try:
-            if session is None:
-                await http_task
-                return None
-            session_task = asyncio.create_task(session())
-            done, _ = await asyncio.wait(
-                {http_task, session_task}, return_when=asyncio.FIRST_COMPLETED
-            )
-            if session_task in done:
-                return await session_task
-            await http_task
-            return None
+            if session is not None:
+                session_task = asyncio.create_task(session())
+            watched = {http_task, registration_task}
+            if session_task:
+                watched.add(session_task)
+            while watched:
+                done, _ = await asyncio.wait(
+                    watched, return_when=asyncio.FIRST_COMPLETED
+                )
+                if session_task in done:
+                    return await session_task
+                if http_task in done:
+                    await http_task
+                    return None
+                if registration_task in done:
+                    await registration_task
+                    watched.remove(registration_task)
         finally:
+            registration_task.cancel()
+            await asyncio.gather(registration_task, return_exceptions=True)
             if browser_timer:
                 browser_timer.cancel()
             if session_task and not session_task.done():
@@ -808,12 +859,19 @@ class SqlroomsHttpServer:
             server = uvicorn.Server(config)
 
             async def serve_mcp() -> None:
+                reserved = getattr(self, "_reserved_mcp_socket", None)
+                self._reserved_mcp_socket = None
                 try:
-                    await server.serve()
+                    await server.serve(
+                        sockets=[reserved]
+                    ) if reserved else await server.serve()
                 except SystemExit as exc:
                     raise RuntimeError(
                         f"MCP listener failed to start (exit code {exc.code})."
                     ) from exc
+                finally:
+                    if reserved:
+                        reserved.close()
 
             task = asyncio.create_task(serve_mcp(), name="sqlrooms-mcp-server")
             self._mcp_server = server
@@ -1119,6 +1177,7 @@ class SqlroomsHttpServer:
 
     def _build_app(self) -> FastAPI:
         app = FastAPI(title="sqlrooms", version="0.1.0")
+        self.agent_runtime.routes(app)
         app.add_middleware(
             CORSMiddleware,
             allow_origins=list(self.security.origins),
@@ -1153,10 +1212,19 @@ class SqlroomsHttpServer:
                         and request.method == "PUT"
                     ):
                         operation = "config-write"
+                    elif path.startswith("/api/agent/") or path.startswith(
+                        "/api/workspaces"
+                    ):
+                        operation = "read" if request.method == "GET" else "control"
                     elif path in {"/api/mcp/start", "/api/mcp/stop"}:
                         operation = "control"
                     elif request.method not in {"GET", "HEAD", "OPTIONS"}:
                         operation = "query"
+                    if self.agent_runtime.stopping and operation in {
+                        "query",
+                        "config-write",
+                    }:
+                        raise AccessDenied("workspace_closing")
                     request.state.access_operation = operation
                     self.security.authorize(request.headers, operation)
                 response = await call_next(request)
@@ -1666,7 +1734,20 @@ class SqlroomsHttpServer:
         try:
             db_async.init_global_connection(self.duckdb_database, extensions=["httpfs"])
             self._duckdb_start_error = None
-            self._duckdb_ready.set()
+
+            def listening(port):
+                self.ws_port = port
+                if self.credential_file:
+                    from ..agent.storage import atomic_json
+                    from .security import read_credential_file
+
+                    value = read_credential_file(self.credential_file.path)
+                    atomic_json(
+                        self.credential_file.path,
+                        {**value, "wsUrl": f"ws://127.0.0.1:{port}"},
+                    )
+                self._duckdb_ready.set()
+
             cache = QueryCache()
             duckdb_ws_server(
                 cache,
@@ -1686,6 +1767,8 @@ class SqlroomsHttpServer:
                 ),
                 local_only=True,
                 log_startup_message=self.debug,
+                on_listen=listening,
+                listen_attempts=3 if self.agent_runtime.managed else 1,
             )
         except Exception as exc:
             self._duckdb_start_error = exc

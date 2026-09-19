@@ -84,8 +84,9 @@ class SqlroomsMcpService:
         request_id = str(getattr(context, "request_id", "") or "")
         started_at = time.monotonic()
         try:
-            result = await self._request_with_disconnect(
+            result = await self._dispatch(
                 context,
+                params,
                 "tools.call",
                 {
                     "name": params.name,
@@ -130,6 +131,69 @@ class SqlroomsMcpService:
             structured_content=result,
             is_error=is_error,
         )
+
+    async def _dispatch(self, context, params, method, payload):
+        runtime = getattr(self.broker, "agent_runtime", None)
+        if runtime:
+            if runtime.stopping:
+                return {
+                    "ok": False,
+                    "code": "workspace_busy",
+                    "message": "Workspace is closing.",
+                }
+            # Admission and close's idle check run on the same event loop with no
+            # intervening await. Retained operations cover response disconnects.
+            runtime.active_calls += 1
+        try:
+            return await self._dispatch_admitted(context, params, method, payload)
+        finally:
+            if runtime:
+                runtime.active_calls -= 1
+
+    async def _dispatch_admitted(self, context, params, method, payload):
+        from ..agent.storage import WorkspaceError
+        from ..agent.contract import matches_browser
+
+        runtime = getattr(self.broker, "agent_runtime", None)
+        meta = params.meta or {}
+        operation_id = meta.get("sqlrooms/operationId")
+        if runtime and runtime.stopping:
+            return {
+                "ok": False,
+                "code": "workspace_busy",
+                "message": "Workspace is closing.",
+            }
+        if not operation_id or runtime is None:
+            return await self._request_with_disconnect(context, method, payload)
+        caller = getattr(
+            getattr(context.request, "state", None), "sqlrooms_caller", None
+        )
+        if caller is None:
+            return {
+                "ok": False,
+                "code": "unauthorized",
+                "message": "Verified caller required.",
+            }
+        if runtime.stopping:
+            return {
+                "ok": False,
+                "code": "workspace_busy",
+                "message": "Workspace is closing.",
+            }
+
+        async def invoke():
+            if not matches_browser(await self.broker.request("tools.list")):
+                return {
+                    "ok": False,
+                    "code": "incompatible_runtime",
+                    "message": "Reload the browser to use this tool contract.",
+                }
+            return await self.broker.request(method, payload)
+
+        try:
+            return await runtime.operations.run(caller, operation_id, invoke)
+        except WorkspaceError as exc:
+            return exc.result
 
     async def _request_with_disconnect(
         self,

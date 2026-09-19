@@ -183,3 +183,8 @@ Notes:
 ## Publishing
 
 Run the build with `uv build`. Then test publish with `pnpm prerelease`. We publish using tokens so when asked, set the username to `__token__` and then use your token as the password. Alternatively, create a [`.pypirc` file](https://packaging.python.org/en/latest/guides/distributing-packages-using-setuptools/#create-an-account).
+
+Embedded callers of `sqlrooms.server.server.server` may pass `on_listen(port)` to
+observe the actual bound WebSocket port. `listen_attempts` defaults to `1`; a
+larger value permits bounded collision retries using an OS-assigned port. The
+callback runs only after successful binding, before serving requests.

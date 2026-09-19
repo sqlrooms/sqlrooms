@@ -107,4 +107,51 @@ describe('registerBrowserMcpBridge', () => {
     });
     expect(socket.closed).toEqual({code: 1000, reason: 'page disposed'});
   });
+  test('close control awaits persistence and reports failures without dispatching a tool', async () => {
+    const socket = new FakeWebSocket();
+    const runtime = createRuntime();
+    let failFlush!: (error: Error) => void;
+    const onResume = jest.fn();
+    const bridge = registerBrowserMcpBridge(runtime, {
+      url: 'ws://local',
+      token: 'secret',
+      createWebSocket: () => socket,
+      onFlush: () =>
+        new Promise((_resolve, reject) => {
+          failFlush = reject;
+        }),
+      onResume,
+    });
+    socket.emit('open');
+    const request = (requestId: string, method: string) =>
+      socket.emit(
+        'message',
+        JSON.stringify({
+          version: MCP_BRIDGE_PROTOCOL_VERSION,
+          type: 'bridge.request',
+          requestId,
+          method,
+        }),
+      );
+    request('flush', 'workspace.flush');
+    expect(
+      socket.sent
+        .map((value) => JSON.parse(value))
+        .some((value) => value.requestId === 'flush'),
+    ).toBe(false);
+    failFlush(new Error('Disk is full'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(
+      socket.sent
+        .map((value) => JSON.parse(value))
+        .find((value) => value.requestId === 'flush'),
+    ).toMatchObject({
+      type: 'bridge.response',
+      error: {message: 'Disk is full'},
+    });
+    request('resume', 'workspace.resume');
+    expect(onResume).toHaveBeenCalledTimes(1);
+    expect(runtime.callTool).not.toHaveBeenCalled();
+    bridge.dispose();
+  });
 });

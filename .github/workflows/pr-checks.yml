@@ -55,6 +55,11 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      - name: Verify canonical MCP contract
+        run: |
+          pnpm --filter sqlrooms-cli-app mcp:contract:generate
+          git diff --exit-code -- python/sqlrooms/sqlrooms/mcp_tool_contract.json
+
       - name: Build apps
         run: pnpm build:apps
 
