@@ -1,13 +1,14 @@
 # Agent-managed workspaces verification
 
 Implementation baseline: auth PR #926, commit
-`d43f9e3df2e63fa130145dcd8a025b38d3718906`. Local verification was performed on
+`d43f9e3df2e63fa130145dcd8a025b38d3718906`, then rebased and regression-tested
+on `6ffe278f1f275214ed2b4af58e6fda9e2ecc14ae`. Local verification was performed on
 macOS with Python 3.12 and Claude Code 2.1.274. This records the tested scope; it
 is not a claim that the complete product acceptance matrix has passed.
 
 ## Automated checks
 
-- Python CLI and server: 238 tests passed. The regression suites cover the catalog, 200-entry bounded
+- Python CLI and server: 244 tests passed. The regression suites cover the catalog, 200-entry bounded
   listing, failed probes, canonical paths, missing projects, live rediscovery,
   explicit targets, auth scopes, retained outcomes, cancellation before dispatch,
   caller isolation, close/command admission races, startup reservations, actual

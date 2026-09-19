@@ -1,6 +1,6 @@
 # Agent-managed local workspaces
 
-Built on auth PR #926 at `d43f9e3df2e63fa130145dcd8a025b38d3718906`.
+Built on auth PR #926 at `6ffe278f1f275214ed2b4af58e6fda9e2ecc14ae`.
 
 ```sh
 sqlrooms agent setup --client claude-desktop --dry-run
