@@ -21,6 +21,7 @@ def fake_server(ready=False):
         _mcp_status=lambda: status,
         _duckdb_start_error=None,
         session_token="private-session-token",
+        credential_file=SimpleNamespace(path=Path("/private/credential.json")),
         _mcp_url=lambda: "http://127.0.0.1:42100/mcp",
     )
 
@@ -30,8 +31,8 @@ def test_connection_config_contains_only_environment_references():
     # tests/ -> sqlrooms/ -> python/ -> repository
     config = json.loads((plugin / "mcp.json").read_text())
     assert (
-        config["mcpServers"]["sqlrooms"]["headers"]["Authorization"]
-        == "Bearer ${SQLROOMS_MCP_TOKEN}"
+        config["mcpServers"]["sqlrooms"]["headersHelper"]
+        == "${SQLROOMS_MCP_HEADERS_HELPER}"
     )
     args = claude_arguments(plugin)
     assert "--print" not in args
@@ -64,7 +65,8 @@ async def test_session_inherits_terminal_auth_and_model_and_keeps_token_out_of_a
     assert await run_claude_session(fake_server(True), "claude", Path("/plugin")) == 7
     args, kwargs = spawn.call_args
     assert "private-session-token" not in str(args)
-    assert kwargs["env"]["SQLROOMS_MCP_TOKEN"] == "private-session-token"
+    assert kwargs["env"]["SQLROOMS_CREDENTIAL_FILE"] == "/private/credential.json"
+    assert "SQLROOMS_MCP_TOKEN" not in kwargs["env"]
     assert kwargs["env"]["ANTHROPIC_MODEL"] == "users-model"
     assert kwargs["env"]["ANTHROPIC_API_KEY"] == "users-auth"
     assert not any(

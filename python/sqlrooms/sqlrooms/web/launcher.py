@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import errno
-import hmac
 import json
 import logging
 import os
 import re
-import secrets
 import socket
+import sys
 import tempfile
 import threading
 import webbrowser
@@ -41,11 +40,24 @@ from .db_bridge import (
     build_cli_db_bridge_registry,
     build_ephemeral_connector,
 )
+from sqlrooms.server.access import AccessDenied, LocalAccess
+from .security import (
+    CredentialFile,
+    TransportSecurity,
+    bearer,
+    NO_STORE,
+    authenticate_upstream,
+    normalize_transport_url,
+    supports_private_credentials,
+)
 from .mcp import SqlroomsMcpService
 from .mcp_bridge import McpBridgeBroker
 from .ui import BuiltinUiProvider, DirectoryUiProvider, UiProvider
 
 logger = logging.getLogger(__name__)
+# Protocol DEBUG logging prints auth frames; keep it disabled even with --debug.
+transport_logger = logging.getLogger("sqlrooms.authenticated_transport")
+transport_logger.setLevel(logging.WARNING)
 DB_BRIDGE_ID = "sqlrooms-cli-http-bridge"
 UPLOAD_COPY_CHUNK_SIZE = 1024 * 1024
 NO_STORE_HEADERS = {"Cache-Control": "no-store"}
@@ -61,20 +73,34 @@ async def _write_upload_to_path(file: UploadFile, target: Path) -> int:
     return bytes_written
 
 
-async def _relay_duckdb_websockets(client_ws: WebSocket, upstream_ws: Any) -> None:
+async def _relay_duckdb_websockets(
+    client_ws: WebSocket, upstream_ws: Any, security: TransportSecurity, token: str
+) -> None:
     async def client_to_upstream() -> None:
         while True:
             message = await client_ws.receive()
             if message["type"] == "websocket.disconnect":
                 await upstream_ws.close()
                 return
+            security.access.verify(token, "query")
             if message.get("bytes") is not None:
                 await upstream_ws.send(message["bytes"])
             elif message.get("text") is not None:
+                try:
+                    payload = json.loads(message["text"])
+                except ValueError:
+                    payload = None
+                if isinstance(payload, dict) and payload.get("type") == "auth":
+                    # Never forward page credentials into the native boundary.
+                    if payload.get("token") != token:
+                        raise AccessDenied()
+                    await client_ws.send_json({"type": "authAck"})
+                    continue
                 await upstream_ws.send(message["text"])
 
     async def upstream_to_client() -> None:
         async for message in upstream_ws:
+            security.access.verify(token, "query")
             if isinstance(message, bytes):
                 await client_ws.send_bytes(message)
             else:
@@ -84,6 +110,9 @@ async def _relay_duckdb_websockets(client_ws: WebSocket, upstream_ws: Any) -> No
         asyncio.create_task(client_to_upstream()),
         asyncio.create_task(upstream_to_client()),
     }
+    relay_tasks.add(
+        asyncio.create_task(security.watch_socket(client_ws, token, "query"))
+    )
     try:
         done, _ = await asyncio.wait(
             relay_tasks,
@@ -522,8 +551,32 @@ class SqlroomsHttpServer:
             self.duckdb_database = str(self.db_path)
             base_dir = self.db_path.parent
 
+        if host not in {"127.0.0.1", "localhost", "::1"}:
+            raise ValueError(
+                "SQLRooms local authentication requires a loopback bind host."
+            )
         self.host = host
         self.port = port
+        self.external_url = (
+            normalize_transport_url(external_url).rstrip("/") if external_url else None
+        )
+        if self.external_url and urlsplit(self.external_url).scheme not in {
+            "http",
+            "https",
+        }:
+            raise ValueError("--external-url requires an HTTP or HTTPS URL.")
+        self.external_ws_url = (
+            normalize_transport_url(external_ws_url) if external_ws_url else None
+        )
+        expected_ws_url = _derive_ws_proxy_url(self.external_url or self._ui_url())
+        if self.external_ws_url and self.external_ws_url != normalize_transport_url(
+            expected_ws_url
+        ):
+            raise ValueError(
+                "--external-ws-url must use the page's /ws/duckdb proxy route. "
+                "Split WebSocket endpoints are unsupported with local authentication; "
+                "omit --external-ws-url and proxy HTTP and WebSockets together."
+            )
         if ws_port is None:
             # socketify listens on all interfaces; we pick a free local port for convenience
             # to avoid collisions when multiple dev servers are running.
@@ -570,15 +623,15 @@ class SqlroomsHttpServer:
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
         self.meta_namespace = meta_namespace
-        self.session_token = secrets.token_urlsafe(24)
+        self.access = LocalAccess()
+        self.session_token = self.access.native_token
+        self.credential_file = None
         self.db_bridge_registry = build_cli_db_bridge_registry(
             bridge_id=DB_BRIDGE_ID,
             connector_settings=connector_settings,
         )
         self.config_path = config_path
         self.connector_settings = connector_settings or []
-        self.external_url = external_url.rstrip("/") if external_url else None
-        self.external_ws_url = external_ws_url if external_ws_url else None
         self.mcp_port = mcp_port or _pick_free_port(
             "127.0.0.1", 42100, reserved_ports={self.port, self.ws_port}
         )
@@ -593,14 +646,63 @@ class SqlroomsHttpServer:
         self._duckdb_thread: threading.Thread | None = None
         self._duckdb_ready = threading.Event()
         self._duckdb_start_error: BaseException | None = None
-        self.mcp_broker = McpBridgeBroker(self.session_token)
-        self.mcp_service = SqlroomsMcpService(self.mcp_broker)
+        origins = {
+            f"http://{host}:{self.port}" for host in ("127.0.0.1", "localhost", "[::1]")
+        }
+        if self.external_url:
+            parsed = urlsplit(self.external_url)
+            origins.add(f"{parsed.scheme}://{parsed.netloc}")
+        # A dev proxy must be named explicitly, including its exact port.
+        origins.update(
+            filter(None, os.environ.get("SQLROOMS_ALLOWED_ORIGINS", "").split(","))
+        )
+        origins = {
+            normalize_transport_url(origin.strip()).rstrip("/") for origin in origins
+        }
+        hosts = {urlsplit(origin).netloc for origin in origins}
+        self.security = TransportSecurity(self.access, origins, hosts)
+        self.mcp_security = TransportSecurity(
+            self.access,
+            origins,
+            {f"127.0.0.1:{self.mcp_port}", f"localhost:{self.mcp_port}"},
+        )
+        self.mcp_broker = McpBridgeBroker(self.session_token, security=self.security)
+        self.mcp_service = SqlroomsMcpService(
+            self.mcp_broker, security=self.mcp_security
+        )
         self._mcp_server: uvicorn.Server | None = None
         self._mcp_task: asyncio.Task[None] | None = None
         self._mcp_lock = asyncio.Lock()
         self._mcp_last_error: str | None = None
 
     async def start(
+        self, session: Callable[[], Awaitable[int]] | None = None
+    ) -> int | None:
+        self._assert_ui_available()
+        try:
+            native_required = (
+                session is not None or not self.serve_ui or self.mcp_enabled_default
+            )
+            if native_required and not supports_private_credentials():
+                raise RuntimeError(
+                    "Native integrations require owner-only credential storage; Windows ACL support is not yet available."
+                )
+            if supports_private_credentials():
+                self.credential_file = CredentialFile(
+                    self.access,
+                    self._ui_url(),
+                    self._mcp_url(),
+                    f"ws://127.0.0.1:{self.ws_port}",
+                )
+            return await self._serve(session)
+        finally:
+            self.access.invalidate()
+            await self._stop_mcp()
+            await self.mcp_broker.close()
+            if self.credential_file:
+                self.credential_file.close()
+
+    async def _serve(
         self, session: Callable[[], Awaitable[int]] | None = None
     ) -> int | None:
         logger.info("Starting sqlrooms CLI server")
@@ -618,6 +720,14 @@ class SqlroomsHttpServer:
             )
         if self.sync_enabled:
             logger.info("CRDT sync is ENABLED")
+        if self.credential_file:
+            logger.info("Native credential file: %s", self.credential_file.path)
+        if not self.open_browser and self.serve_ui and sys.stderr.isatty():
+            print(
+                "Temporary single-use SQLRooms launch link (valid 2 minutes): "
+                + self._launch_url(),
+                file=sys.stderr,
+            )
         self._start_duckdb_backend()
         if self.mcp_enabled_default:
             await self._start_mcp()
@@ -635,8 +745,8 @@ class SqlroomsHttpServer:
             app,
             host=self.host,
             port=self.port,
-            log_level="debug" if self.debug else "warning",
-            access_log=self.debug,
+            log_level="warning",
+            access_log=False,
             lifespan="off",
             loop="asyncio",
         )
@@ -670,10 +780,12 @@ class SqlroomsHttpServer:
             except asyncio.TimeoutError:
                 http_task.cancel()
                 await asyncio.gather(http_task, return_exceptions=True)
-            await self._stop_mcp()
-            await self.mcp_broker.close()
 
     async def _start_mcp(self) -> Dict[str, Any]:
+        if not supports_private_credentials():
+            raise RuntimeError(
+                "Native MCP requires owner-only credential storage; Windows ACL support is not yet available."
+            )
         async with self._mcp_lock:
             if self._mcp_task is not None and not self._mcp_task.done():
                 return self._mcp_status()
@@ -681,13 +793,15 @@ class SqlroomsHttpServer:
             # The MCP SDK's StreamableHTTPSessionManager is single-use. Build a
             # fresh service whenever the independently controlled listener is
             # started so a stop/start cycle gets a new session manager.
-            self.mcp_service = SqlroomsMcpService(self.mcp_broker)
+            self.mcp_service = SqlroomsMcpService(
+                self.mcp_broker, security=self.mcp_security
+            )
             config = uvicorn.Config(
                 self.mcp_service.app,
                 host="127.0.0.1",
                 port=self.mcp_port,
-                log_level="debug" if self.debug else "warning",
-                access_log=self.debug,
+                log_level="warning",
+                access_log=False,
                 lifespan="on",
                 loop="asyncio",
             )
@@ -766,13 +880,20 @@ class SqlroomsHttpServer:
         }
 
     def _open_browser(self) -> None:
-        url = self._ui_url()
+        url = self._launch_url()
         try:
             webbrowser.open_new_tab(url)
-        except Exception as exc:
-            logger.debug("Failed to open browser: %s", exc)
+        except Exception:
+            logger.debug("Failed to open browser")
         else:
-            logger.info("Opened browser at %s", url)
+            logger.info("Opened authorized SQLRooms browser page")
+
+    def _launch_url(self) -> str:
+        return (
+            (self.external_url or self._ui_url())
+            + "/#sqlrooms-ticket="
+            + self.access.ticket()
+        )
 
     def _public_host(self) -> str:
         return (
@@ -866,7 +987,8 @@ class SqlroomsHttpServer:
             return None
 
         return RedirectResponse(
-            url=f"/assets/{matches[0].name}",
+            # Resolve beside the requested asset so proxies can strip any mount prefix.
+            url=f"./{matches[0].name}",
             status_code=302,
             headers=NO_STORE_HEADERS,
         )
@@ -896,29 +1018,13 @@ class SqlroomsHttpServer:
             self.ws_port,
         )
 
-    def _format_startup_error(self, exc: BaseException) -> Dict[str, str]:
-        details: list[str] = []
-        current: BaseException | None = exc
-        while current is not None:
-            error_type = type(current).__name__
-            message = str(current) or error_type
-            details.append(f"{error_type}: {message}")
-            current = current.__cause__ or current.__context__
-
-        return {
-            "message": str(exc) or type(exc).__name__,
-            "details": "\nCaused by: ".join(details),
-        }
-
     def _runtime_status(self) -> Dict[str, Any]:
         duckdb_status: Dict[str, Any]
         if self._duckdb_start_error is not None:
-            error = self._format_startup_error(self._duckdb_start_error)
             duckdb_status = {
                 "status": "error",
                 "message": "DuckDB websocket backend failed to start",
-                "error": error["message"],
-                "details": error["details"],
+                "error": "Database startup failed",
             }
         elif self._duckdb_ready.is_set():
             duckdb_status = {"status": "ready"}
@@ -943,7 +1049,7 @@ class SqlroomsHttpServer:
         ws_url = self.external_ws_url or derived_ws_url or self._ws_proxy_url()
         return {
             "wsUrl": ws_url,
-            "wsAuthToken": self.session_token,
+            "binding": self.access.binding,
             "apiBaseUrl": self.external_url or "",
             "llmProvider": self.llm_provider,
             "llmModel": self.llm_model,
@@ -957,10 +1063,16 @@ class SqlroomsHttpServer:
             "crdtRoomId": (
                 f"sqlrooms:{self.meta_namespace}:{self.duckdb_database or 'memory'}"
             ),
-            "aiProviders": self.ai_providers,
+            "aiProviders": self.ai_providers
+            if self.execution_mode == "embedded"
+            else {},
             "aiSettings": {
-                "providers": self.ai_providers,
-                "customModels": self.ai_custom_models,
+                "providers": self.ai_providers
+                if self.execution_mode == "embedded"
+                else {},
+                "customModels": self.ai_custom_models
+                if self.execution_mode == "embedded"
+                else [],
                 "modelParameters": self.ai_model_parameters,
             },
             "dbPath": self.duckdb_database,
@@ -980,72 +1092,36 @@ class SqlroomsHttpServer:
             },
         }
 
-    def _is_authorized_request(self, request: Request) -> bool:
-        client_host = (request.client.host if request.client else "") or ""
-        if client_host in {"", "127.0.0.1", "::1", "localhost", "testclient"}:
-            return True
-        auth_header = (request.headers.get("authorization") or "").strip()
-        if auth_header.lower().startswith("bearer "):
-            token = auth_header[7:].strip()
-            if token == self.session_token:
-                return True
-        token_header = (request.headers.get("x-sqlrooms-token") or "").strip()
-        return token_header == self.session_token
-
     def _require_api_auth(self, request: Request):
-        if self._is_authorized_request(request):
-            return None
-        return JSONResponse({"error": "unauthorized"}, status_code=401)
+        # Route middleware has already checked the specific operation. Retained
+        # for direct route consumers; no loopback exception.
+        try:
+            self.security.authorize(
+                request.headers, getattr(request.state, "access_operation", "read")
+            )
+        except AccessDenied as exc:
+            return JSONResponse(
+                {"error": exc.code},
+                status_code=401 if exc.code == "unauthorized" else 403,
+                headers=NO_STORE,
+            )
+        return None
 
     def _require_session_token(self, request: Request):
-        auth_header = (request.headers.get("authorization") or "").strip()
-        bearer_token = (
-            auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else ""
-        )
-        header_token = (request.headers.get("x-sqlrooms-token") or "").strip()
-        expected = self.session_token.encode("utf-8")
-        bearer_matches = hmac.compare_digest(bearer_token.encode("utf-8"), expected)
-        header_matches = hmac.compare_digest(header_token.encode("utf-8"), expected)
-        if bearer_matches or header_matches:
-            return None
-        return JSONResponse({"error": "unauthorized"}, status_code=401)
+        return self._require_api_auth(request)
 
-    async def _authenticate_duckdb_proxy_websocket(self, client_ws: WebSocket) -> bool:
-        await client_ws.accept()
-
-        query_token = (client_ws.query_params.get("token") or "").strip()
-        if query_token == self.session_token:
-            return True
-
-        try:
-            message = await asyncio.wait_for(client_ws.receive_text(), timeout=5)
-            payload = json.loads(message)
-        except Exception:
-            await client_ws.close(code=1008, reason="unauthorized")
-            return False
-
-        token = payload.get("token") if isinstance(payload, dict) else None
-        if (
-            isinstance(payload, dict)
-            and payload.get("type") == "auth"
-            and token == self.session_token
-        ):
+    async def _authenticate_duckdb_proxy_websocket(self, client_ws: WebSocket):
+        result = await self.security.authenticate_socket(client_ws, "query")
+        if result:
             await client_ws.send_json({"type": "authAck"})
-            return True
-
-        await client_ws.send_json({"type": "error", "error": "Unauthorized"})
-        await client_ws.close(code=1008, reason="unauthorized")
-        return False
+            return result[0]
+        return None
 
     def _build_app(self) -> FastAPI:
         app = FastAPI(title="sqlrooms", version="0.1.0")
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=[
-                f"http://localhost:{self.port}",
-                f"http://127.0.0.1:{self.port}",
-                f"http://{self._public_host()}:{self.port}",
-            ],
+            allow_origins=list(self.security.origins),
             allow_credentials=False,
             allow_methods=["GET", "POST", "PUT", "OPTIONS"],
             allow_headers=["Authorization", "Content-Type", "X-SQLRooms-Token"],
@@ -1053,12 +1129,81 @@ class SqlroomsHttpServer:
 
         @app.middleware("http")
         async def add_cross_origin_isolation_headers(request: Request, call_next):
-            response = await call_next(request)
+            path = request.url.path
+            try:
+                self.security.check_headers(request.headers)
+                if request.method == "OPTIONS" and request.headers.get(
+                    "access-control-request-method"
+                ):
+                    pass  # CORS handles allowed preflights after Host/Origin validation.
+                elif path in {"/api/config", "/config.json"}:
+                    self.security.authorize(request.headers, "page-config")
+                elif (
+                    path.startswith("/api/")
+                    and path != "/api/auth/exchange"
+                    or path == "/status.json"
+                ):
+                    operation = "read"
+                    if path == "/api/auth/renew":
+                        operation = "renew"
+                    elif path == "/api/auth/ticket":
+                        operation = "bootstrap"
+                    elif (
+                        path in {"/api/ai/settings", "/api/db/settings"}
+                        and request.method == "PUT"
+                    ):
+                        operation = "config-write"
+                    elif path in {"/api/mcp/start", "/api/mcp/stop"}:
+                        operation = "control"
+                    elif request.method not in {"GET", "HEAD", "OPTIONS"}:
+                        operation = "query"
+                    request.state.access_operation = operation
+                    self.security.authorize(request.headers, operation)
+                response = await call_next(request)
+            except AccessDenied as exc:
+                response = JSONResponse(
+                    {"error": exc.code},
+                    status_code=401 if exc.code == "unauthorized" else 403,
+                )
+            response.headers.update(NO_STORE)
             # WebContainer requires cross-origin isolation to transfer SharedArrayBuffer.
             response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
             response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
             response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
             return response
+
+        @app.get("/auth.json")
+        async def identity():
+            return {"binding": self.access.binding}
+
+        @app.get("/healthz")
+        async def health():
+            return {"status": "ok"}
+
+        @app.post("/api/auth/exchange")
+        async def exchange(request: Request):
+            # Bound the unauthenticated body before JSON decoding.
+            data = bytearray()
+            async for chunk in request.stream():
+                data.extend(chunk)
+                if len(data) > 4096:
+                    raise AccessDenied()
+            try:
+                payload = json.loads(data)
+                ticket = payload.get("ticket")
+                if not isinstance(ticket, str):
+                    raise AccessDenied()
+                return self.access.redeem(ticket)
+            except (ValueError, AttributeError):
+                raise AccessDenied()
+
+        @app.post("/api/auth/renew")
+        async def renew(request: Request):
+            return self.access.renew(bearer(request.headers))
+
+        @app.post("/api/auth/ticket")
+        async def ticket():
+            return {"url": self._launch_url()}
 
         @app.get("/api/config")
         async def get_config():
@@ -1070,7 +1215,8 @@ class SqlroomsHttpServer:
 
         @app.websocket("/ws/duckdb")
         async def duckdb_websocket_proxy(client_ws: WebSocket):
-            if not await self._authenticate_duckdb_proxy_websocket(client_ws):
+            token = await self._authenticate_duckdb_proxy_websocket(client_ws)
+            if not token:
                 return
 
             try:
@@ -1084,8 +1230,12 @@ class SqlroomsHttpServer:
                 async with websockets.connect(
                     upstream_url,
                     max_size=None,
+                    logger=transport_logger,
                 ) as upstream_ws:
-                    await _relay_duckdb_websockets(client_ws, upstream_ws)
+                    await authenticate_upstream(upstream_ws, self.access.upstream_token)
+                    await _relay_duckdb_websockets(
+                        client_ws, upstream_ws, self.security, token
+                    )
             except WebSocketDisconnect:
                 return
             except OSError as exc:
@@ -1107,7 +1257,7 @@ class SqlroomsHttpServer:
                     return
                 raise
             except Exception:
-                logger.exception("DuckDB websocket proxy failed")
+                logger.error("DuckDB websocket proxy failed")
                 try:
                     await client_ws.close(code=1011)
                 except Exception:
@@ -1181,11 +1331,9 @@ class SqlroomsHttpServer:
                 )
             try:
                 _write_db_connectors_to_toml(self.config_path, connections)
-            except Exception as exc:
-                logger.error(
-                    "Failed to write db settings to %s: %s", self.config_path, exc
-                )
-                return JSONResponse({"error": str(exc)}, status_code=500)
+            except Exception:
+                logger.error("Failed to write db settings to %s", self.config_path)
+                return JSONResponse({"error": "Operation failed"}, status_code=500)
             return {"ok": True, "configPath": str(self.config_path)}
 
         @app.put("/api/ai/settings")
@@ -1204,11 +1352,9 @@ class SqlroomsHttpServer:
                 _write_ai_settings_to_toml(self.config_path, payload)
             except ValueError as exc:
                 return JSONResponse({"error": str(exc)}, status_code=400)
-            except Exception as exc:
-                logger.error(
-                    "Failed to write AI settings to %s: %s", self.config_path, exc
-                )
-                return JSONResponse({"error": str(exc)}, status_code=500)
+            except Exception:
+                logger.error("Failed to write AI settings to %s", self.config_path)
+                return JSONResponse({"error": "Operation failed"}, status_code=500)
 
             settings = payload.get("settings")
             if isinstance(settings, dict):
@@ -1262,10 +1408,10 @@ class SqlroomsHttpServer:
                     "ok": False,
                     "error": "Provide either engine+config or connectionId",
                 }
-            except UnknownBridgeConnectionError as exc:
-                return {"ok": False, "error": str(exc)}
-            except Exception as exc:
-                return {"ok": False, "error": str(exc)}
+            except UnknownBridgeConnectionError:
+                return {"ok": False, "error": "Operation failed"}
+            except Exception:
+                return {"ok": False, "error": "Operation failed"}
 
         @app.post("/api/db/list-catalog")
         async def list_catalog(payload: Dict[str, Any], request: Request):
@@ -1282,10 +1428,20 @@ class SqlroomsHttpServer:
                 }
             try:
                 return self.db_bridge_registry.list_catalog(connection_id)
-            except UnknownBridgeConnectionError as exc:
-                return {"databases": [], "schemas": [], "tables": [], "error": str(exc)}
-            except Exception as exc:
-                return {"databases": [], "schemas": [], "tables": [], "error": str(exc)}
+            except UnknownBridgeConnectionError:
+                return {
+                    "databases": [],
+                    "schemas": [],
+                    "tables": [],
+                    "error": "Operation failed",
+                }
+            except Exception:
+                return {
+                    "databases": [],
+                    "schemas": [],
+                    "tables": [],
+                    "error": "Operation failed",
+                }
 
         @app.post("/api/db/execute-query")
         async def execute_query(payload: Dict[str, Any], request: Request):
@@ -1312,10 +1468,10 @@ class SqlroomsHttpServer:
                     sql=sql,
                     query_type=query_type,
                 )
-            except UnknownBridgeConnectionError as exc:
-                return JSONResponse({"error": str(exc)}, status_code=404)
-            except Exception as exc:
-                return JSONResponse({"error": str(exc)}, status_code=500)
+            except UnknownBridgeConnectionError:
+                return JSONResponse({"error": "Operation failed"}, status_code=404)
+            except Exception:
+                return JSONResponse({"error": "Operation failed"}, status_code=500)
 
         @app.post("/api/db/fetch-arrow")
         async def fetch_arrow(payload: Dict[str, Any], request: Request):
@@ -1339,10 +1495,10 @@ class SqlroomsHttpServer:
                     content=arrow_bytes,
                     media_type="application/vnd.apache.arrow.stream",
                 )
-            except UnknownBridgeConnectionError as exc:
-                return JSONResponse({"error": str(exc)}, status_code=404)
-            except Exception as exc:
-                return JSONResponse({"error": str(exc)}, status_code=500)
+            except UnknownBridgeConnectionError:
+                return JSONResponse({"error": "Operation failed"}, status_code=404)
+            except Exception:
+                return JSONResponse({"error": "Operation failed"}, status_code=500)
 
         @app.post("/api/db/fetch-arrow-stream")
         async def fetch_arrow_stream(payload: Dict[str, Any], request: Request):
@@ -1378,13 +1534,13 @@ class SqlroomsHttpServer:
                             "batch", query_id=query_id, payload=batch
                         )
                     yield _encode_stream_frame("end", query_id=query_id)
-                except UnknownBridgeConnectionError as exc:
+                except UnknownBridgeConnectionError:
                     yield _encode_stream_frame(
-                        "error", query_id=query_id, error=str(exc)
+                        "error", query_id=query_id, error="Database operation failed"
                     )
-                except Exception as exc:
+                except Exception:
                     yield _encode_stream_frame(
-                        "error", query_id=query_id, error=str(exc)
+                        "error", query_id=query_id, error="Database operation failed"
                     )
 
             return StreamingResponse(_stream(), media_type="application/octet-stream")
@@ -1450,8 +1606,8 @@ class SqlroomsHttpServer:
 
             try:
                 data = await db_async.run_db_task(_run)
-            except Exception as exc:
-                return JSONResponse({"error": str(exc)}, status_code=400)
+            except Exception:
+                return JSONResponse({"error": "Operation failed"}, status_code=400)
             return data
 
         if self.serve_ui and self.static_dir.exists():
@@ -1515,7 +1671,13 @@ class SqlroomsHttpServer:
             duckdb_ws_server(
                 cache,
                 self.ws_port,
-                auth_token=None,
+                auth_token=self.access.upstream_token,
+                access_verifier=self.access.verify,
+                allowed_origins=set(),
+                allowed_hosts={
+                    f"127.0.0.1:{self.ws_port}",
+                    f"localhost:{self.ws_port}",
+                },
                 sync_enabled=self.sync_enabled,
                 meta_db_path=self.meta_db,
                 meta_namespace=self.meta_namespace,
@@ -1528,6 +1690,6 @@ class SqlroomsHttpServer:
         except Exception as exc:
             self._duckdb_start_error = exc
             self._duckdb_ready.set()
-            logger.exception("DuckDB websocket backend failed to start")
+            logger.error("DuckDB websocket backend failed to start")
         finally:
             signal.signal = original_signal  # type: ignore

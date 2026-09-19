@@ -35,8 +35,10 @@ uv run --project python/sqlrooms sqlrooms \
   /tmp/sqlrooms-smoke.duckdb
 ```
 
-Open the UI URL printed in the terminal. It should be
-`http://127.0.0.1:3000` or the next free port.
+Open the temporary single-use launch link printed in the interactive terminal.
+A bare base URL requires a fresh launch link. See the
+[authentication contract](../../python/sqlrooms/AUTHENTICATION.md) for session
+renewal, native handoff, and explicit development origin mapping.
 
 The bare CLI command works only after installing the CLI somewhere on your
 `PATH`:
@@ -156,6 +158,10 @@ If you want fixed ports, pass them to the Python server:
 ```bash
 pnpm dev cli -- --port 4274 --ws-port 4002
 ```
+
+For a public proxy, `--external-url` takes precedence over `SQLROOMS_EXTERNAL_URL`.
+The launcher uses the Vite origin only when neither is set. A matching
+`SQLROOMS_EXTERNAL_WS_URL` can be supplied, or omitted to derive the WebSocket route.
 
 ## Dev mode (separate terminals)
 

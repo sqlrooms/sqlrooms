@@ -1,3 +1,6 @@
+import {mkdtemp, writeFile, rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
 import {randomBytes} from 'node:crypto';
 import {createServer} from 'node:http';
 import {Server} from '@modelcontextprotocol/sdk/server/index.js';
@@ -19,6 +22,9 @@ export async function startEvalMcpHost(
   const http = createServer(async (request, response) => {
     if (
       request.url !== '/mcp' ||
+      request.headers.origin !== undefined ||
+      request.headers.host !==
+        `127.0.0.1:${(http.address() as import('node:net').AddressInfo).port}` ||
       request.headers.authorization !== `Bearer ${token}`
     ) {
       response.writeHead(403).end();
@@ -89,13 +95,26 @@ export async function startEvalMcpHost(
   const address = http.address();
   if (!address || typeof address === 'string')
     throw new Error('Missing MCP address.');
+  if (process.platform === 'win32')
+    throw new Error('Private credential ACLs are not yet verified on Windows.');
+  const credentialDirectory = await mkdtemp(
+    path.join(tmpdir(), 'sqlrooms-eval-auth-'),
+  );
+  const credentialFile = path.join(credentialDirectory, 'credential.json');
+  await writeFile(
+    credentialFile,
+    JSON.stringify({token, mcpUrl: `http://127.0.0.1:${address.port}/mcp`}),
+    {mode: 0o600},
+  );
   let disposed = false;
   return {
     url: `http://127.0.0.1:${address.port}/mcp`,
     token,
+    credentialFile,
     async dispose() {
       if (disposed) return;
       disposed = true;
+      await rm(credentialDirectory, {recursive: true, force: true});
       runtime.dispose();
       await Promise.allSettled([...sessions].map((server) => server.close()));
       http.closeAllConnections();

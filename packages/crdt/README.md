@@ -74,6 +74,12 @@ const {roomStore, useRoomStore} = createRoomStore(
 
 See `examples/sync` for an end-to-end demonstration with the Python sync server.
 
+When `createWebSocketSyncConnector` receives a `token`, it sends an initial
+`{type: 'auth', token}` frame and waits for `authAck` before joining or sending
+snapshots/updates. The token is never added to the URL. Servers must acknowledge
+within five seconds; rejection or timeout closes the socket and uses the normal
+reconnect policy. Without a token, the connector retains its direct join behavior.
+
 ### Testing & debugging
 
 - Mirror emits `tags` metadata; we tag store-origin writes as `from-store` to avoid loops. Log `mirror.subscribe` in your app if you need deeper inspection.

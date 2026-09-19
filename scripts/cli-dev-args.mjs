@@ -25,14 +25,6 @@ export function hasOption(args, name) {
   return readOptionValue(args, name) !== null;
 }
 
-/** Return whether Vite should proxy CLI WebSocket connections. */
-export function shouldProxyCliDevWebSockets(
-  args,
-  {externalWsUrl = process.env.SQLROOMS_EXTERNAL_WS_URL} = {},
-) {
-  return !hasOption(args, '--external-ws-url') && !externalWsUrl;
-}
-
 /** Convert a wildcard bind host into a host clients can connect to. */
 export function publicHost(host) {
   return host === '0.0.0.0' || host === '::' ? 'localhost' : host;
@@ -92,7 +84,16 @@ export function hasDbPathArg(args) {
 }
 
 /** Build the Python CLI arguments used by the combined CLI development flow. */
-export function getPythonCliDevArgs(args, apiPort, uiPort) {
+export function getPythonCliDevArgs(
+  args,
+  apiPort,
+  uiPort,
+  {externalUrl = process.env.SQLROOMS_EXTERNAL_URL} = {},
+) {
+  // Leave explicit flags/environment to Typer; otherwise use the trusted Vite origin.
+  if (!hasOption(args, '--external-url') && !externalUrl) {
+    args = ['--external-url', `http://localhost:${uiPort}`, ...args];
+  }
   const hasDbPath = hasDbPathArg(args);
   const apiPortArgs = hasOption(args, '--port')
     ? args

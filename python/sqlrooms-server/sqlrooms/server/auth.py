@@ -1,118 +1,115 @@
+"""Connection-local authentication, shared by every DuckDB message path."""
+
+import hmac
+import time
 from socketify import OpCode
+from .access import AccessDenied
 
 
 class AuthManager:
-    """Bearer auth helper for HTTP and WebSocket paths.
-
-    - If token is None/empty: auth is disabled.
-    - For HTTP, use check_http(req) -> bool.
-    - For WS, use:
-        - on_open(ws)
-        - is_authed(ws) -> bool
-        - handle_ws_message(ws, msg) -> bool
-          Returns True if the message was handled (auth or unauthorized),
-          False if the message should proceed to normal processing.
-    - on_close(ws) for cleanup.
-    """
-
-    def __init__(self, token: str | None):
+    def __init__(self, token: str | None, verifier=None):
         self.token = token or None
-        self._ws_authed: set[str] = set()
+        self.verifier = verifier
+        self._tokens: dict[int, str] = {}
+        self._opened: dict[int, float] = {}
 
-    # ---------- shared ----------
     def _enabled(self) -> bool:
-        return bool(self.token)
+        return bool(self.token or self.verifier)
 
-    def _key(self, ws) -> str:
-        try:
-            addr = ws.get_remote_address()
-            if addr is not None:
-                return str(addr)
-        except Exception:
-            pass
-        return f"id:{id(ws)}"
+    def _key(self, ws) -> int:
+        # socketify may create multiple Python wrappers for a connection. Neither
+        # wrapper identity nor remote IP is a connection identity.
+        return int(ws.get_user_data())
 
-    # ---------- HTTP ----------
+    def _verify(self, token: str) -> bool:
+        if self.verifier:
+            try:
+                self.verifier(token, "query")
+                return True
+            except AccessDenied:
+                return False
+        return bool(
+            self.token and hmac.compare_digest(token.encode(), self.token.encode())
+        )
+
     def check_http(self, req) -> bool:
         if not self._enabled():
             return True
-        try:
-            header = req.get_header("authorization") or req.get_header("Authorization")
-        except Exception:
-            header = None
-        if not header:
-            return False
-        value = str(header).strip()
-        if value.lower().startswith("bearer "):
-            value = value[7:].strip()
-        return value == self.token
+        value = req.get_header("authorization") or ""
+        return value.lower().startswith("bearer ") and self._verify(value[7:])
 
-    # ---------- WS ----------
     def on_open(self, ws) -> None:
-        # no buffering policy; start unauthenticated
-        if not self._enabled():
-            # no-op when disabled
-            return
+        self._opened[self._key(ws)] = time.monotonic()
 
     def is_authed(self, ws) -> bool:
+        return self.is_connection_authed(self._key(ws))
+
+    def is_connection_authed(self, key: int) -> bool:
+        if key not in self._opened:
+            return False
         if not self._enabled():
             return True
-        return self._key(ws) in self._ws_authed
+        token = self._tokens.get(key)
+        return token is not None and self._verify(token)
+
+    def reject(self, ws):
+        ws.send({"type": "error", "error": "unauthorized"}, OpCode.TEXT)
+        ws.end(1008, "unauthorized")
+
+    def check_lifetime(self, ws) -> bool:
+        key = self._key(ws)
+        if key not in self._opened:
+            return False
+        if self._enabled() and (
+            (key in self._tokens and not self.is_authed(ws))
+            or (key not in self._tokens and time.monotonic() - self._opened[key] >= 5)
+        ):
+            self.reject(ws)
+            return False
+        return True
 
     def handle_ws_message(self, ws, message: dict) -> bool:
-        """Handle auth-related WS messages.
-
-        Returns True if message was consumed (auth/unauthorized response sent),
-        otherwise False to let normal processing continue.
-        """
-        # Disabled: ack auth messages for compatibility; let others pass
-        if not self._enabled():
-            if isinstance(message, dict) and message.get("type") == "auth":
-                try:
-                    ws.send({"type": "authAck"}, OpCode.TEXT)
-                except Exception:
-                    pass
-                return True
-            return False
-
-        # Enabled: must be authed or send auth
-        if not self.is_authed(ws):
-            if isinstance(message, dict) and message.get("type") == "auth":
-                token = str(message.get("token") or "").strip()
-                if token == self.token:
-                    self._ws_authed.add(self._key(ws))
-                    try:
-                        ws.send({"type": "authAck"}, OpCode.TEXT)
-                    except Exception:
-                        pass
-                    return True
-                else:
-                    try:
-                        ws.send({"type": "error", "error": "unauthorized"}, OpCode.TEXT)
-                    except Exception:
-                        pass
-                    return True
+        if isinstance(message, dict) and message.get("type") == "auth":
+            token = message.get("token")
+            if not self._enabled() or (isinstance(token, str) and self._verify(token)):
+                self._tokens[self._key(ws)] = token or ""
+                ws.send({"type": "authAck"}, OpCode.TEXT)
             else:
-                # strict: no buffering, inform client
-                try:
-                    ws.send({"type": "error", "error": "unauthorized"}, OpCode.TEXT)
-                except Exception:
-                    pass
-                return True
-        else:
-            # Already authed: repeat auth gets ack, others continue
-            if isinstance(message, dict) and message.get("type") == "auth":
-                try:
-                    ws.send({"type": "authAck"}, OpCode.TEXT)
-                except Exception:
-                    pass
-                return True
-            return False
+                self.reject(ws)
+            return True
+        if not self.is_authed(ws):
+            self.reject(ws)
+            return True
+        return False
 
     def on_close(self, ws) -> None:
-        if not self._enabled():
-            return
-        try:
-            self._ws_authed.discard(self._key(ws))
-        except Exception:
-            pass
+        key = self._key(ws)
+        self._tokens.pop(key, None)
+        self._opened.pop(key, None)
+
+
+class AuthorizedSocket:
+    """Guard native socket operations after awaits against close/expiry/revocation.
+
+    socketify wrappers retain native pointers after close. Domain handlers must
+    never dereference those pointers after authorization or connection lifetime
+    ends. The predicate consults server-owned state, not the native wrapper.
+    """
+
+    def __init__(self, ws, connection_id: int, is_live):
+        self._ws = ws
+        self._connection_id = connection_id
+        self._is_live = is_live
+
+    def get_user_data(self):
+        return self._connection_id
+
+    def send(self, *args, **kwargs):
+        if self._is_live():
+            return self._ws.send(*args, **kwargs)
+        return False
+
+    def subscribe(self, *args, **kwargs):
+        if self._is_live():
+            return self._ws.subscribe(*args, **kwargs)
+        return False

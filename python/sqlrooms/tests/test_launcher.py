@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import socket
+from urllib.parse import urljoin, urlsplit
 
 import duckdb
 import pytest
@@ -21,6 +22,18 @@ from pathlib import Path
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
+def authorized_client(server, app=None):
+    page = server.access.redeem(server.access.ticket())
+    return TestClient(
+        app or server._build_app(),
+        base_url=server._ui_url(),
+        headers={
+            "Host": server._host_for_url(server._ui_host()) + ":" + str(server.port),
+            "Authorization": "Bearer " + page["token"],
+        },
+    )
+
+
 @pytest.fixture
 def server(tmp_path):
     db_path = tmp_path / "test.db"
@@ -35,7 +48,7 @@ def server(tmp_path):
 
 def test_api_config(server):
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.get("/api/config")
 
     assert response.status_code == 200
@@ -51,7 +64,7 @@ def test_api_config(server):
     assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"
     assert data["dbBridge"]["connections"] == []
     assert data["dbBridge"]["diagnostics"] == []
-    assert "wsAuthToken" in data
+    assert "wsAuthToken" not in data
     assert data["mcp"]["enabled"] is False
     assert data["mcp"]["url"].startswith("http://127.0.0.1:")
     assert data["mcp"]["url"].endswith("/mcp")
@@ -84,7 +97,7 @@ def test_auto_ws_port_reserves_explicit_mcp_port(tmp_path, monkeypatch):
 
 
 def test_mcp_lifecycle_status_requires_session_token(server):
-    client = TestClient(server._build_app())
+    client = TestClient(server._build_app(), base_url=server._ui_url())
 
     assert client.get("/api/mcp/status").status_code == 401
     response = client.get(
@@ -96,8 +109,8 @@ def test_mcp_lifecycle_status_requires_session_token(server):
     assert response.json()["status"] == "off"
 
 
-def test_mcp_status_accepts_valid_header_when_bearer_is_invalid(server):
-    client = TestClient(server._build_app())
+def test_mcp_status_rejects_invalid_bearer_even_with_other_header(server):
+    client = TestClient(server._build_app(), base_url=server._ui_url())
 
     response = client.get(
         "/api/mcp/status",
@@ -107,7 +120,7 @@ def test_mcp_status_accepts_valid_header_when_bearer_is_invalid(server):
         },
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -156,7 +169,7 @@ def test_api_config_uses_same_origin_ws_proxy(tmp_path):
         open_browser=False,
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.get("/api/config")
 
     assert response.status_code == 200
@@ -165,7 +178,7 @@ def test_api_config_uses_same_origin_ws_proxy(tmp_path):
 
 
 def test_duckdb_websocket_proxy_requires_auth(server):
-    client = TestClient(server._build_app())
+    client = authorized_client(server)
 
     with pytest.raises(WebSocketDisconnect) as exc_info:
         with client.websocket_connect("/ws/duckdb") as ws:
@@ -176,7 +189,7 @@ def test_duckdb_websocket_proxy_requires_auth(server):
 
 def test_duckdb_websocket_proxy_accepts_first_message_auth(server, caplog):
     caplog.set_level(logging.WARNING, logger="sqlrooms.web.launcher")
-    client = TestClient(server._build_app())
+    client = authorized_client(server)
 
     with client.websocket_connect("/ws/duckdb") as ws:
         ws.send_json({"type": "auth", "token": server.session_token})
@@ -191,7 +204,7 @@ def test_duckdb_websocket_proxy_accepts_first_message_auth(server, caplog):
 
 
 @pytest.mark.asyncio
-async def test_duckdb_websocket_relay_cleans_up_on_cancellation():
+async def test_duckdb_websocket_relay_cleans_up_on_cancellation(server):
     class BlockingClientWebSocket:
         def __init__(self):
             self.started = asyncio.Event()
@@ -223,7 +236,11 @@ async def test_duckdb_websocket_relay_cleans_up_on_cancellation():
 
     client_ws = BlockingClientWebSocket()
     upstream_ws = BlockingUpstreamWebSocket()
-    relay = asyncio.create_task(_relay_duckdb_websockets(client_ws, upstream_ws))
+    relay = asyncio.create_task(
+        _relay_duckdb_websockets(
+            client_ws, upstream_ws, server.security, server.session_token
+        )
+    )
     await asyncio.gather(client_ws.started.wait(), upstream_ws.started.wait())
 
     relay.cancel()
@@ -235,7 +252,7 @@ async def test_duckdb_websocket_relay_cleans_up_on_cancellation():
 
 
 def test_mcp_browser_bridge_requires_auth(server):
-    client = TestClient(server._build_app())
+    client = authorized_client(server)
 
     with pytest.raises(WebSocketDisconnect) as exc_info:
         with client.websocket_connect("/ws/mcp-bridge") as ws:
@@ -249,11 +266,11 @@ def test_mcp_browser_bridge_requires_auth(server):
             )
             ws.receive_json()
 
-    assert exc_info.value.code == 4401
+    assert exc_info.value.code == 1008
 
 
 def test_mcp_browser_bridge_holds_single_ready_lease(server):
-    client = TestClient(server._build_app())
+    client = authorized_client(server)
 
     with client.websocket_connect("/ws/mcp-bridge") as first:
         first.send_json(
@@ -261,7 +278,7 @@ def test_mcp_browser_bridge_holds_single_ready_lease(server):
                 "version": 1,
                 "type": "bridge.authenticate",
                 "pageId": "page-a",
-                "token": server.session_token,
+                "token": client.headers["Authorization"][7:],
             }
         )
         assert first.receive_json()["type"] == "bridge.authenticated"
@@ -273,7 +290,7 @@ def test_mcp_browser_bridge_holds_single_ready_lease(server):
                     "version": 1,
                     "type": "bridge.authenticate",
                     "pageId": "page-b",
-                    "token": server.session_token,
+                    "token": client.headers["Authorization"][7:],
                 }
             )
             assert second.receive_json()["code"] == "bridge_lease_held"
@@ -283,7 +300,7 @@ def test_mcp_browser_bridge_holds_single_ready_lease(server):
 
 
 def test_mcp_browser_bridge_ignores_malformed_json_after_auth(server):
-    client = TestClient(server._build_app())
+    client = authorized_client(server)
 
     with client.websocket_connect("/ws/mcp-bridge") as first:
         first.send_json(
@@ -291,7 +308,7 @@ def test_mcp_browser_bridge_ignores_malformed_json_after_auth(server):
                 "version": 1,
                 "type": "bridge.authenticate",
                 "pageId": "page-a",
-                "token": server.session_token,
+                "token": client.headers["Authorization"][7:],
             }
         )
         assert first.receive_json()["type"] == "bridge.authenticated"
@@ -304,7 +321,7 @@ def test_mcp_browser_bridge_ignores_malformed_json_after_auth(server):
                     "version": 1,
                     "type": "bridge.authenticate",
                     "pageId": "page-b",
-                    "token": server.session_token,
+                    "token": client.headers["Authorization"][7:],
                 }
             )
             assert second.receive_json()["code"] == "bridge_lease_held"
@@ -322,16 +339,11 @@ def test_ui_url_wraps_ipv6_host(tmp_path):
     assert server._ui_url() == "http://[::1]:4173"
 
 
-def test_ws_url_wraps_ipv6_host(tmp_path):
-    server = SqlroomsHttpServer(
-        db_path=tmp_path / "test.db",
-        host="2001:db8::1",
-        port=4173,
-        ws_port=48174,
-        open_browser=False,
-    )
-
-    assert server._ws_url() == "ws://[2001:db8::1]:48174"
+def test_server_rejects_non_loopback_bind(tmp_path):
+    with pytest.raises(ValueError, match="loopback"):
+        SqlroomsHttpServer(
+            db_path=tmp_path / "test.db", host="2001:db8::1", port=4173, ws_port=48174
+        )
 
 
 def test_startup_fails_when_configured_ui_bundle_is_missing(tmp_path):
@@ -361,7 +373,7 @@ def test_serves_ui_index_without_browser_cache(tmp_path):
         open_browser=False,
         ui_dir=str(ui_dir),
     )
-    client = TestClient(server._build_app())
+    client = authorized_client(server)
 
     response = client.get("/")
 
@@ -382,7 +394,7 @@ def test_serves_ui_index_for_head_requests(tmp_path):
         open_browser=False,
         ui_dir=str(ui_dir),
     )
-    client = TestClient(server._build_app())
+    client = authorized_client(server)
 
     response = client.head("/")
 
@@ -405,7 +417,7 @@ def test_serves_static_ui_assets(tmp_path):
         open_browser=False,
         ui_dir=str(ui_dir),
     )
-    client = TestClient(server._build_app())
+    client = authorized_client(server)
 
     response = client.get("/assets/index-current.js")
 
@@ -428,14 +440,15 @@ def test_serves_static_ui_assets_for_head_requests(tmp_path):
         open_browser=False,
         ui_dir=str(ui_dir),
     )
-    client = TestClient(server._build_app())
+    client = authorized_client(server)
 
     response = client.head("/assets/index-current.js")
 
     assert response.status_code == 200
 
 
-def test_redirects_stale_vite_entry_assets(tmp_path):
+@pytest.mark.parametrize("mount", ["", "/sqlrooms", "/nested/sqlrooms"])
+def test_redirects_stale_vite_entry_assets(tmp_path, mount):
     ui_dir = tmp_path / "ui"
     assets_dir = ui_dir / "assets"
     assets_dir.mkdir(parents=True)
@@ -451,17 +464,33 @@ def test_redirects_stale_vite_entry_assets(tmp_path):
         open_browser=False,
         ui_dir=str(ui_dir),
     )
-    client = TestClient(server._build_app())
+    client = authorized_client(server)
 
     js_response = client.get("/assets/index-stale.js", follow_redirects=False)
     css_response = client.get("/assets/index-stale.css", follow_redirects=False)
 
     assert js_response.status_code == 302
-    assert js_response.headers["location"] == "/assets/index-current.js"
     assert js_response.headers["cache-control"] == "no-store"
     assert css_response.status_code == 302
-    assert css_response.headers["location"] == "/assets/index-current.css"
     assert css_response.headers["cache-control"] == "no-store"
+    for extension, response, content in (
+        ("js", js_response, "console.log('ok')"),
+        ("css", css_response, "body{}"),
+    ):
+        # The proxy strips its mount before the request reaches the backend;
+        # the browser resolves Location against the original public asset URL.
+        redirected = urljoin(
+            f"https://workspace.example{mount}/assets/index-stale.{extension}",
+            response.headers["location"],
+        )
+        assert (
+            redirected
+            == f"https://workspace.example{mount}/assets/index-current.{extension}"
+        )
+        forwarded_path = urlsplit(redirected).path.removeprefix(mount)
+        recovered = client.get(forwarded_path)
+        assert recovered.status_code == 200
+        assert recovered.text == content
 
 
 def test_missing_non_entry_asset_returns_404(tmp_path):
@@ -478,7 +507,7 @@ def test_missing_non_entry_asset_returns_404(tmp_path):
         open_browser=False,
         ui_dir=str(ui_dir),
     )
-    client = TestClient(server._build_app())
+    client = authorized_client(server)
 
     response = client.get("/assets/not-built.js")
 
@@ -498,7 +527,7 @@ def test_unknown_api_paths_do_not_fall_back_to_spa(tmp_path):
         open_browser=False,
         ui_dir=str(ui_dir),
     )
-    client = TestClient(server._build_app())
+    client = authorized_client(server)
 
     response = client.get("/api/not-a-route")
 
@@ -516,7 +545,7 @@ def test_api_config_with_experimental_enabled(tmp_path):
         experimental_enabled=True,
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.get("/api/config")
 
     assert response.status_code == 200
@@ -533,7 +562,7 @@ def test_api_config_with_named_capability_profile(tmp_path):
         open_browser=False,
         capability_profile="experimental",
     )
-    response = TestClient(server._build_app()).get("/api/config")
+    response = authorized_client(server).get("/api/config")
 
     assert response.status_code == 200
     assert response.json()["capabilityProfile"] == "experimental"
@@ -549,7 +578,7 @@ def test_api_config_with_document_charts_maps_profile(tmp_path):
         open_browser=False,
         capability_profile="document-charts-maps",
     )
-    response = TestClient(server._build_app()).get("/api/config")
+    response = authorized_client(server).get("/api/config")
 
     assert response.status_code == 200
     assert response.json()["capabilityProfile"] == "document-charts-maps"
@@ -694,7 +723,7 @@ def test_duckdb_backend_start_failure_is_propagated(server, monkeypatch):
     server._start_duckdb_backend()
 
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.get("/api/status")
 
     assert response.status_code == 200
@@ -703,8 +732,8 @@ def test_duckdb_backend_start_failure_is_propagated(server, monkeypatch):
     duckdb_status = data["components"]["duckdbWebSocket"]
     assert duckdb_status["status"] == "error"
     assert duckdb_status["message"] == "DuckDB websocket backend failed to start"
-    assert duckdb_status["error"] == "duckdb lock held"
-    assert "RuntimeError: duckdb lock held" in duckdb_status["details"]
+    assert duckdb_status["error"] == "Database startup failed"
+    assert "details" not in duckdb_status
 
 
 def test_duckdb_backend_slow_start_remains_starting(server, monkeypatch):
@@ -746,7 +775,7 @@ def test_api_config_with_external_urls(tmp_path):
     db_path = tmp_path / "test.db"
     server = SqlroomsHttpServer(
         db_path=db_path,
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=8080,
         ws_port=4000,
         open_browser=False,
@@ -754,7 +783,7 @@ def test_api_config_with_external_urls(tmp_path):
         external_ws_url="wss://demo.sprites.dev/ws/duckdb",
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.get("/api/config")
 
     assert response.status_code == 200
@@ -767,14 +796,14 @@ def test_api_config_derives_ws_url_from_external_url(tmp_path):
     db_path = tmp_path / "test.db"
     server = SqlroomsHttpServer(
         db_path=db_path,
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=8080,
         ws_port=4000,
         open_browser=False,
         external_url="https://demo.sprites.dev/",
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.get("/api/config")
 
     assert response.status_code == 200
@@ -787,14 +816,14 @@ def test_api_config_derives_proxy_ws_url_from_local_external_url(tmp_path):
     db_path = tmp_path / "test.db"
     server = SqlroomsHttpServer(
         db_path=db_path,
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=8080,
         ws_port=4000,
         open_browser=False,
         external_url="http://localhost:4173",
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.get("/api/config")
 
     assert response.status_code == 200
@@ -822,7 +851,7 @@ def test_api_config_with_ai_provider_metadata(tmp_path):
         },
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.get("/api/config")
 
     assert response.status_code == 200
@@ -845,7 +874,7 @@ def test_api_config_with_ai_devtools_flag(tmp_path):
         ai_devtools=True,
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.get("/api/config")
 
     assert response.status_code == 200
@@ -857,7 +886,7 @@ def test_api_upload(server, tmp_path):
     file_content = b"test content"
     files = {"file": ("test.txt", file_content)}
 
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.post("/api/upload", files=files)
 
     assert response.status_code == 200
@@ -869,7 +898,7 @@ def test_api_upload(server, tmp_path):
 
 def test_api_upload_sanitizes_filename_to_upload_dir(server, tmp_path):
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
 
     response = client.post(
         "/api/upload",
@@ -886,7 +915,7 @@ def test_cars_fixture_upload_imports_from_project_uploads_dir(server, tmp_path):
     app = server._build_app()
     fixture = FIXTURES_DIR / "cars.csv"
 
-    client = TestClient(app)
+    client = authorized_client(server, app)
     with fixture.open("rb") as file:
         response = client.post(
             "/api/upload",
@@ -912,7 +941,7 @@ def test_cars_fixture_upload_imports_from_project_uploads_dir(server, tmp_path):
 
 def test_project_query_blocks_internal_metadata_namespace(server):
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
 
     response = client.post(
         "/api/project/query",
@@ -930,7 +959,7 @@ def test_api_upload_allows_files_larger_than_previous_cap(server, tmp_path):
     with open(source, "wb") as f:
         f.truncate(source_size)
 
-    client = TestClient(app)
+    client = authorized_client(server, app)
     with open(source, "rb") as f:
         response = client.post(
             "/api/upload",
@@ -977,7 +1006,7 @@ def test_no_ui_keeps_api_but_does_not_mount_static_ui(tmp_path):
         serve_ui=False,
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
 
     assert client.get("/api/config").status_code == 200
     assert client.get("/").status_code == 404
@@ -996,7 +1025,7 @@ def test_api_config_with_postgres_connector(tmp_path):
         ],
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.get("/api/config")
 
     assert response.status_code == 200
@@ -1041,7 +1070,7 @@ def test_api_config_with_snowflake_connector_metadata(tmp_path):
         ],
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.get("/api/config")
 
     assert response.status_code == 200
@@ -1093,7 +1122,7 @@ def test_api_config_with_multiple_same_engine_connectors(tmp_path):
         ],
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.get("/api/config")
 
     assert response.status_code == 200
@@ -1103,7 +1132,7 @@ def test_api_config_with_multiple_same_engine_connectors(tmp_path):
 
 def test_api_test_connection_adhoc_unsupported_engine(server):
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.post(
         "/api/db/test-connection",
         json={"engine": "mysql", "config": {"host": "localhost"}},
@@ -1111,12 +1140,12 @@ def test_api_test_connection_adhoc_unsupported_engine(server):
     assert response.status_code == 200
     data = response.json()
     assert data["ok"] is False
-    assert "Unsupported engine" in data["error"]
+    assert data["error"] == "Operation failed"
 
 
 def test_api_test_connection_adhoc_missing_driver(server):
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.post(
         "/api/db/test-connection",
         json={
@@ -1132,7 +1161,7 @@ def test_api_test_connection_adhoc_missing_driver(server):
 
 def test_api_test_connection_missing_params(server):
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.post("/api/db/test-connection", json={})
     assert response.status_code == 200
     data = response.json()
@@ -1159,7 +1188,7 @@ def test_api_config_redacts_secret_fields(tmp_path):
         ],
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
     response = client.get("/api/config")
 
     assert response.status_code == 200
@@ -1288,7 +1317,7 @@ def test_api_put_ai_settings_writes_config(tmp_path):
         config_path=config_path,
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
 
     response = client.put(
         "/api/ai/settings",
@@ -1341,7 +1370,7 @@ def test_api_put_ai_settings_rejects_fractional_max_steps(tmp_path):
         config_path=config_path,
     )
     app = server._build_app()
-    client = TestClient(app)
+    client = authorized_client(server, app)
 
     response = client.put(
         "/api/ai/settings",
@@ -1363,7 +1392,7 @@ def test_api_put_ai_settings_rejects_fractional_max_steps(tmp_path):
     assert server.llm_provider is None
 
 
-def test_api_auth_allows_loopback_without_token(server):
+def test_api_auth_rejects_loopback_without_token(server):
     request = Request(
         {
             "type": "http",
@@ -1375,7 +1404,7 @@ def test_api_auth_allows_loopback_without_token(server):
             "scheme": "http",
         }
     )
-    assert server._is_authorized_request(request) is True
+    assert server._require_api_auth(request) is not None
 
 
 def test_api_auth_requires_token_for_non_loopback(server):
@@ -1390,4 +1419,4 @@ def test_api_auth_requires_token_for_non_loopback(server):
             "scheme": "http",
         }
     )
-    assert server._is_authorized_request(request) is False
+    assert server._require_api_auth(request) is not None
