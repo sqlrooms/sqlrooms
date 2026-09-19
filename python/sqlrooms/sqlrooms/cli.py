@@ -13,6 +13,7 @@ from typing import Any
 
 import duckdb
 import typer
+from .agent.cli import agent_app
 
 from .web.db_bridge import (
     SUPPORTED_ENGINES,
@@ -27,7 +28,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+class SqlroomsGroup(typer.core.TyperGroup):
+    def parse_args(self, ctx, args):
+        if args and args[0] in self.commands:
+            args = ["", *args]
+        return super().parse_args(ctx, args)
+
+
 app = typer.Typer(
+    cls=SqlroomsGroup,
     add_completion=False,
     pretty_exceptions_enable=False,
     invoke_without_command=True,
@@ -488,6 +498,7 @@ def export_project(
 
 @app.callback(invoke_without_command=True)
 def main(
+    ctx: typer.Context,
     show_version: bool = typer.Option(
         False,
         "--version",
@@ -570,6 +581,7 @@ def main(
     claude: bool = typer.Option(
         False,
         "--claude",
+        "--claude-code",
         help="Open or create a database in an AI-free browser workspace and launch interactive Claude Code.",
     ),
     execution_mode: str = typer.Option(
@@ -623,7 +635,16 @@ def main(
     - Boots a DuckDB websocket server (sqlrooms-server).
     - Serves the document UI with persisted state stored in DuckDB.
     """
+    if ctx.invoked_subcommand:
+        return
     _configure_logging(debug=debug)
+    if os.environ.get("SQLROOMS_MANAGED_LOG"):
+        from logging.handlers import RotatingFileHandler
+
+        handler = RotatingFileHandler(
+            os.environ["SQLROOMS_MANAGED_LOG"], maxBytes=1024 * 1024, backupCount=2
+        )
+        logging.getLogger().handlers = [handler]
 
     if legacy_sync:
         typer.echo(
@@ -760,3 +781,6 @@ def main(
         raise typer.Exit(code=1) from exc
     except KeyboardInterrupt:
         sys.stderr.write("\nShutting down...\n")
+
+
+app.add_typer(agent_app, name="agent")

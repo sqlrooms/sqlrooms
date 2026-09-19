@@ -283,3 +283,12 @@ for tested behavior and outstanding real-Claude authentication requirements.
 All CLI listeners require authentication, including localhost callers. Public base
 URLs show a bootstrap recovery screen. See [local authentication](AUTHENTICATION.md)
 for the private native credential file and development proxy configuration.
+
+## Agent-managed workspaces
+
+Run `sqlrooms agent setup --client claude-desktop` or `--client claude-code` to
+preview one-time integration. The stable `sqlrooms agent connect` MCP adapter can
+list saved projects, create named persistent workspaces, reuse live browsers, and
+reopen by saved workspace ID. `sqlrooms agent status` reports redacted diagnostics.
+See [agent-managed workspaces](AGENT_WORKSPACES.md) for setup, profiles, explicit
+instance routing, recovery, lifecycle, and current verification limitations.
