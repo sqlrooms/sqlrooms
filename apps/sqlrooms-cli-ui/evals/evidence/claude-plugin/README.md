@@ -106,6 +106,18 @@ verification passed. Every bundled plugin file also matched its canonical
 source byte-for-byte. Local logs are in `review-2026-09-18/` under the evidence
 directory above. No model calls were needed for this packaging verification.
 
+## CI packaging follow-up — 2026-09-19
+
+Python CI failed wheel verification because its `build:ui` followed by
+`uv build --all` bypassed the plugin generation added to the full `build` script.
+The previous local verification covered only that full script. Plugin generation
+now belongs to `build:ui`, after Turbo, so CI, deployment and the full package
+build share the same asset preparation. Verified CI's exact preparation, workspace
+build and wheel-verification commands from missing generated assets, then repeated
+with all 41 Turbo tasks cached. Both wheels passed verification; Python workspace
+tests passed (155 tests). The failed CI log
+and local checks are retained under `ci-2026-09-19/` in the local evidence directory.
+
 ## Outstanding acceptance
 
 Claude authentication remains unavailable. The two real scenarios and a real
