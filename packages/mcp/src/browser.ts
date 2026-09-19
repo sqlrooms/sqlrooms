@@ -28,6 +28,10 @@ export type RegisterBrowserMcpBridgeOptions = {
   heartbeatMs?: number;
   reconnectMs?: number;
   createWebSocket?: (url: string) => WebSocketLike;
+  /** Host-defined final persistence flush, independent of the tool contract. */
+  onFlush?: () => Promise<unknown>;
+  /** Releases a failed host close attempt so the page can be edited again. */
+  onResume?: () => void;
   onStatusChange?: (
     status: 'connecting' | 'ready' | 'disconnected' | 'error',
     error?: string,
@@ -127,14 +131,18 @@ export function registerBrowserMcpBridge(
     controllers.set(message.requestId, controller);
     try {
       const result =
-        message.method === 'tools.list'
-          ? runtime.listTools()
-          : await callRuntime(
-              runtime,
-              message.params,
-              message.requestId,
-              controller.signal,
-            );
+        message.method === 'workspace.resume'
+          ? (options.onResume?.(), {ok: true})
+          : message.method === 'workspace.flush'
+            ? await options.onFlush?.()
+            : message.method === 'tools.list'
+              ? runtime.listTools()
+              : await callRuntime(
+                  runtime,
+                  message.params,
+                  message.requestId,
+                  controller.signal,
+                );
       sendTo(target, {
         version: MCP_BRIDGE_PROTOCOL_VERSION,
         type: 'bridge.response',

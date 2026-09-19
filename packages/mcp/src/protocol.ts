@@ -54,7 +54,12 @@ export const BrowserBridgeServerMessage = z.discriminatedUnion('type', [
   BridgeBase.extend({
     type: z.literal('bridge.request'),
     requestId: z.string().min(1).max(256),
-    method: z.enum(['tools.list', 'tools.call']),
+    method: z.enum([
+      'tools.list',
+      'tools.call',
+      'workspace.flush',
+      'workspace.resume',
+    ]),
     params: z.unknown().optional(),
   }),
   BridgeBase.extend({

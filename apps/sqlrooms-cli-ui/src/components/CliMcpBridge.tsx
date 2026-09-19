@@ -5,7 +5,7 @@ import {
   cancelAllMcpQueryApprovals,
   requestMcpQueryApproval,
 } from '../mcpQueryApproval';
-import {roomStore} from '../store';
+import {roomStore, uiStatePersistenceController} from '../store';
 import {runtimeConfig} from '../runtimeEnvironment';
 import {useRoomStore} from '../roomStoreHooks';
 
@@ -59,6 +59,26 @@ export function CliMcpBridge() {
     const bridge = registerBrowserMcpBridge(runtime, {
       url: runtimeConfig.mcp.bridgeUrl,
       token,
+      onFlush: async () => {
+        const root = document.getElementById('root');
+        if (root) root.inert = true;
+        try {
+          await runtime.drain();
+          await uiStatePersistenceController.flush('managed-close');
+          const state = uiStatePersistenceController.getState();
+          if (state.error || state.dirty || state.saving) {
+            throw new Error('Workspace changes could not be saved.');
+          }
+          return {ok: true, lastSavedAt: state.lastSavedAt};
+        } catch (error) {
+          if (root) root.inert = false;
+          throw error;
+        }
+      },
+      onResume: () => {
+        const root = document.getElementById('root');
+        if (root) root.inert = false;
+      },
     });
     return () => {
       cancelAllMcpQueryApprovals();
