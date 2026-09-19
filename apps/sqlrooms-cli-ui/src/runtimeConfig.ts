@@ -26,6 +26,8 @@ export type RuntimeStartupStatus = {
 };
 
 export type RuntimeConfig = {
+  /** Chooses model execution ownership independently of capability profile. */
+  executionMode?: 'embedded' | 'external';
   wsUrl?: string;
   wsAuthToken?: string;
   apiBaseUrl?: string;

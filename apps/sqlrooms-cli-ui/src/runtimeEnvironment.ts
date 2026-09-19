@@ -23,3 +23,6 @@ export const cliCapabilityProfile = resolveCliCapabilityProfile({
 
 /** @deprecated Prefer cliCapabilityProfile. */
 export const experimentalEnabled = cliCapabilityProfile.name === 'experimental';
+
+/** External runtimes never compose SQLRooms-owned AI. */
+export const embeddedAiEnabled = runtimeConfig.executionMode !== 'external';

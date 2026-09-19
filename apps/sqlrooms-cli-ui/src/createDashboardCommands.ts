@@ -122,7 +122,7 @@ function createArtifactCommand(
       }
       state.artifacts.setCurrentArtifact(artifactId);
       if (shouldCreateInitialArtifactChat(context)) {
-        state.artifactAi.createArtifactScopedSession();
+        state.artifactAi?.createArtifactScopedSession();
       }
       return {
         success: true,
@@ -166,7 +166,7 @@ function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
       );
       state.artifacts.setCurrentArtifact(artifactId);
       if (shouldCreateInitialArtifactChat(context)) {
-        state.artifactAi.createArtifactScopedSession();
+        state.artifactAi?.createArtifactScopedSession();
       }
       return {
         success: true,

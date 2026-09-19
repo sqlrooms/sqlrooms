@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "sqlrooms": {
+      "type": "http",
+      "url": "${SQLROOMS_MCP_URL}",
+      "headers": {"Authorization": "Bearer ${SQLROOMS_MCP_TOKEN}"}
+    }
+  }
+}

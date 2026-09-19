@@ -1,3 +1,4 @@
+import {embeddedAiEnabled} from './runtimeEnvironment';
 import {createArtifactPanelDefinition} from '@sqlrooms/artifacts';
 import {
   CreateLayoutSliceProps,
@@ -35,6 +36,7 @@ export const createLayout = ({
         maxSize: 600,
         collapsible: true,
         collapsedSize: 0,
+        collapsed: !embeddedAiEnabled,
       },
       {
         type: 'tabs',
@@ -49,7 +51,7 @@ export const createLayout = ({
   panels: {
     assistant: {
       component: AssistantPanel,
-      title: 'AI Assistant',
+      title: embeddedAiEnabled ? 'AI Assistant' : 'External assistant',
       icon: SparklesIcon,
     },
     workspace: {

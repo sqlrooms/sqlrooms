@@ -2,7 +2,7 @@
 name: sqlrooms
 description: Create and edit SQLRooms documents, charts, and maps through a connected SQLRooms MCP workspace. Use for workspace authoring, not repository code changes.
 metadata:
-  version: '4'
+  version: '5'
 ---
 
 Use the SQLRooms MCP tools to operate the live workspace. SQLRooms owns data and

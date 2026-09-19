@@ -1,7 +1,7 @@
 export type FinalizeCreatedCliArtifactOptions = {
   artifactId: string;
   currentSessionId?: string;
-  addSessionArtifactLink: (sessionId: string, artifactId: string) => void;
+  addSessionArtifactLink?: (sessionId: string, artifactId: string) => void;
   selectArtifact: (artifactId: string) => void;
 };
 
@@ -13,7 +13,7 @@ export function finalizeCreatedCliArtifact({
   selectArtifact,
 }: FinalizeCreatedCliArtifactOptions): void {
   if (currentSessionId) {
-    addSessionArtifactLink(currentSessionId, artifactId);
+    addSessionArtifactLink?.(currentSessionId, artifactId);
   }
   selectArtifact(artifactId);
 }
