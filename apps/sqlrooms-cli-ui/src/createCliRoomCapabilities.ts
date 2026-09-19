@@ -1,3 +1,8 @@
+import {
+  CLI_MCP_TOOLS,
+  DEFAULT_QUERY_ROWS,
+  MAX_QUERY_ROWS,
+} from './cliMcpToolContract';
 import type {RoomCapability, RoomCapabilityContext} from '@sqlrooms/mcp';
 import {
   arrowTableToJson,
@@ -15,8 +20,6 @@ import {likePatternToRegex} from './mcpCapabilityUtils';
 import type {StoreApi} from 'zustand';
 import type {RoomShellSliceState} from '@sqlrooms/room-shell';
 
-const DEFAULT_QUERY_ROWS = 200;
-const MAX_QUERY_ROWS = 1_000;
 const MAX_LISTED_TABLES = 1_000;
 const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms';
 const MCP_EXCLUDED_COMMAND_IDS = new Set([
@@ -54,25 +57,7 @@ export function createCliRoomCapabilities({
 
   function createQueryCapability(metaNamespace: string): RoomCapability {
     return {
-      name: 'query',
-      title: 'Query the room database',
-      description:
-        'Run one user-approved SQL SELECT query against the live room and return bounded JSON rows. SELECT validation is not a host sandbox.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          sql: {type: 'string', minLength: 1},
-          maxRows: {
-            type: 'integer',
-            minimum: 1,
-            maximum: MAX_QUERY_ROWS,
-            default: DEFAULT_QUERY_ROWS,
-          },
-        },
-        required: ['sql'],
-        additionalProperties: false,
-      },
-      annotations: {untrustedContentHint: true},
+      ...CLI_MCP_TOOLS.query,
       execute: async (rawInput, context) => {
         const input = rawInput as {sql: string; maxRows?: number};
         const sql = input.sql.trim();
@@ -202,21 +187,7 @@ export function createCliRoomCapabilities({
 
   function createListTablesCapability(metaNamespace: string): RoomCapability {
     return {
-      name: 'list_tables',
-      title: 'List room tables',
-      description:
-        'List visible tables and views with canonical table IDs for follow-up calls.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          database: {type: 'string'},
-          schema: {type: 'string'},
-          pattern: {type: 'string', maxLength: 200},
-          includeViews: {type: 'boolean', default: true},
-        },
-        additionalProperties: false,
-      },
-      annotations: {readOnlyHint: true, untrustedContentHint: true},
+      ...CLI_MCP_TOOLS.list_tables,
       execute: async (rawInput) => {
         const input = rawInput as {
           database?: string;
@@ -271,17 +242,7 @@ export function createCliRoomCapabilities({
     metaNamespace: string,
   ): RoomCapability {
     return {
-      name: 'read_table_schema',
-      title: 'Read a table schema',
-      description:
-        'Read column metadata and the optional CREATE statement for one visible table or view.',
-      inputSchema: {
-        type: 'object',
-        properties: {tableId: {type: 'string', minLength: 1}},
-        required: ['tableId'],
-        additionalProperties: false,
-      },
-      annotations: {readOnlyHint: true, untrustedContentHint: true},
+      ...CLI_MCP_TOOLS.read_table_schema,
       execute: async (rawInput) => {
         const {tableId} = rawInput as {tableId: string};
         const visibleTables = await refreshVisibleTables(metaNamespace);
@@ -347,19 +308,7 @@ export function createCliRoomCapabilities({
 
   function createSearchCommandsCapability(): RoomCapability {
     return {
-      name: 'search_commands',
-      title: 'Search room commands',
-      description:
-        'Search the live command registry by intent, then inspect a selected command with get_command.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          query: {type: 'string', default: ''},
-          limit: {type: 'integer', minimum: 1, maximum: 50, default: 10},
-        },
-        additionalProperties: false,
-      },
-      annotations: {readOnlyHint: true},
+      ...CLI_MCP_TOOLS.search_commands,
       execute: (rawInput, context) => {
         const input = rawInput as {query?: string; limit?: number};
         const query = input.query?.trim().toLowerCase() ?? '';
@@ -393,17 +342,7 @@ export function createCliRoomCapabilities({
 
   function createGetCommandCapability(): RoomCapability {
     return {
-      name: 'get_command',
-      title: 'Inspect a room command',
-      description:
-        'Get the current portable schema, availability, and risk metadata for one command.',
-      inputSchema: {
-        type: 'object',
-        properties: {commandId: {type: 'string', minLength: 1}},
-        required: ['commandId'],
-        additionalProperties: false,
-      },
-      annotations: {readOnlyHint: true},
+      ...CLI_MCP_TOOLS.get_command,
       execute: (rawInput, context) => {
         const {commandId} = rawInput as {commandId: string};
         const command = listMcpCommands(context, true).find(
@@ -422,20 +361,7 @@ export function createCliRoomCapabilities({
 
   function createExecuteCommandCapability(): RoomCapability {
     return {
-      name: 'execute_command',
-      title: 'Execute a room command',
-      description:
-        'Execute one enabled command against the live room. High-risk and confirmation-gated commands are denied in this release.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          commandId: {type: 'string', minLength: 1},
-          input: {},
-        },
-        required: ['commandId'],
-        additionalProperties: false,
-      },
-      annotations: {destructiveHint: true},
+      ...CLI_MCP_TOOLS.execute_command,
       execute: async (rawInput, context) => {
         const {commandId, input} = rawInput as {
           commandId: string;
