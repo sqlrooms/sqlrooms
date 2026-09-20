@@ -7,7 +7,8 @@ from .storage import managed_root
 
 
 class Discovery:
-    def __init__(self):
+    def __init__(self, settings=None):
+        self.settings = settings
         self.guard = threading.Lock()
         self.pending = None
         self.paths = []
@@ -27,7 +28,9 @@ class Discovery:
     def _scan(self):
         paths = []
         try:
-            root = managed_root().resolve()
+            root = (
+                self.settings.managed_root() if self.settings else managed_root()
+            ).resolve()
             if root.is_dir():
                 for index, child in enumerate(root.iterdir()):
                     if index >= 1000:

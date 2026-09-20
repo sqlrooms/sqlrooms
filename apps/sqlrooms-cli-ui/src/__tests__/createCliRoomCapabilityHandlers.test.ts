@@ -81,6 +81,7 @@ const state = {
 };
 
 jest.unstable_mockModule('@sqlrooms/duckdb', () => ({
+  loadSchemaCatalog: jest.fn(async () => []),
   parseQualifiedSqlIdentifier: (table: string) => ({table}),
   arrowTableToJson: (result: {rows: unknown[]}) => [...result.rows],
   getTableDisplayName: (table: {table: string}) => table.table,
@@ -98,7 +99,7 @@ jest.unstable_mockModule('@sqlrooms/duckdb', () => ({
     ),
   }),
 }));
-jest.unstable_mockModule('@sqlrooms/room-shell', () => ({
+jest.unstable_mockModule('@sqlrooms/room-store', () => ({
   invokeCommandWithPolicy,
 }));
 
@@ -326,6 +327,80 @@ describe('CLI room capability handlers', () => {
       code: 'command_not_found',
     });
     expect(invokeCommandWithPolicy).not.toHaveBeenCalled();
+  });
+
+  test('keeps late commands outside an application owner filter undiscoverable and uncallable', async () => {
+    const capabilities = createCliRoomCapabilities({
+      store: {getState: () => state} as any,
+      commandFilter: (command) => command.owner === 'roomie',
+    });
+    const call = (name: string, input: unknown) =>
+      capabilities
+        .find((entry) => entry.name === name)!
+        .execute(input, {surface: 'mcp-http'});
+    const document = {
+      ...commandDescriptor('block-document.create'),
+      owner: 'roomie',
+    };
+    listCommands.mockReturnValueOnce([document]);
+    expect(await call('search_commands', {})).toMatchObject({
+      ok: true,
+      data: {commands: [{id: document.id}]},
+    });
+
+    // A dashboard renderer can register layout commands after MCP starts.
+    const late = {
+      ...commandDescriptor('layout.add-panel'),
+      owner: '@sqlrooms/layout/panels',
+    };
+    listCommands.mockReturnValueOnce([document, late]);
+    expect(await call('search_commands', {})).toMatchObject({
+      ok: true,
+      data: {commands: [{id: document.id}]},
+    });
+    listCommands.mockReturnValueOnce([document, late]);
+    expect(await call('get_command', {commandId: late.id})).toMatchObject({
+      ok: false,
+      code: 'command_not_found',
+    });
+    listCommands.mockReturnValueOnce([document, late]);
+    expect(await call('execute_command', {commandId: late.id})).toMatchObject({
+      ok: false,
+      code: 'command_not_found',
+    });
+    expect(invokeCommandWithPolicy).not.toHaveBeenCalled();
+  });
+
+  test('preserves the full SQLRooms command catalog when no application filter is supplied', async () => {
+    const late = {
+      ...commandDescriptor('layout.add-panel'),
+      owner: '@sqlrooms/layout/panels',
+    };
+    listCommands.mockReturnValueOnce([late]);
+    expect(
+      await capability('search_commands').execute({}, {surface: 'mcp-http'}),
+    ).toMatchObject({ok: true, data: {commands: [{id: late.id}]}});
+    listCommands.mockReturnValueOnce([late]);
+    expect(
+      await capability('get_command').execute(
+        {commandId: late.id},
+        {surface: 'mcp-http'},
+      ),
+    ).toMatchObject({ok: true, data: {command: {id: late.id}}});
+    listCommands.mockReturnValueOnce([late]);
+    expect(
+      await capability('execute_command').execute(
+        {commandId: late.id},
+        {surface: 'mcp-http'},
+      ),
+    ).toMatchObject({ok: true});
+    expect(invokeCommandWithPolicy).toHaveBeenCalledWith(
+      expect.anything(),
+      late.id,
+      undefined,
+      expect.anything(),
+      {confirmed: false},
+    );
   });
 
   test('keeps the command queue occupied until an aborted invocation settles', async () => {

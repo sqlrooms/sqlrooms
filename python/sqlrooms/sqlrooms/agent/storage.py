@@ -41,10 +41,10 @@ def private_dir(path: Path) -> Path:
 
 
 @contextmanager
-def lock(name: str, *, timeout: float = 10):
+def lock(name: str, *, timeout: float = 10, settings=None):
     import fcntl
 
-    directory = private_dir(home() / "locks")
+    directory = private_dir((settings.home() if settings else home()) / "locks")
     path = directory / (hashlib.sha256(name.encode()).hexdigest() + ".lock")
     fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     try:

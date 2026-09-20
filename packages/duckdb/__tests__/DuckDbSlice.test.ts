@@ -4,6 +4,7 @@ import {
   createDuckDbSlice,
   defaultLoadSchemaCatalogFilter,
   DuckDbSliceState,
+  type CreateDuckDbSliceProps,
 } from '../src/DuckDbSlice';
 import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
@@ -19,14 +20,16 @@ type TestStoreState = BaseRoomStoreState & DuckDbSliceState;
 /**
  * Creates a test store with DuckDbSlice using a real Node.js DuckDB connector.
  */
-function createTestStore() {
+function createTestStore(
+  options: Omit<CreateDuckDbSliceProps, 'connector'> = {},
+) {
   const connector = createNodeDuckDbConnector({
     dbPath: ':memory:',
   });
 
   return createStore<TestStoreState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
-    ...createDuckDbSlice({connector})(...args),
+    ...createDuckDbSlice({connector, ...options})(...args),
   }));
 }
 
@@ -508,6 +511,50 @@ describe('DuckDbSlice', () => {
   });
 
   describe('refreshTableSchemas', () => {
+    it('filters selectable tables using metadata while retaining an independent catalog', async () => {
+      const filtered = createTestStore({
+        loadTableSchemasFilter: (name, metadata) =>
+          metadata?.isView === false && name.database === name.defaultDatabase,
+        loadSchemaCatalogFilter: () => true,
+      });
+      try {
+        await filtered.getState().db.initialize();
+        const connector = await filtered.getState().db.getConnector();
+        await connector.query(
+          'CREATE TABLE physical_rows AS SELECT 1 AS value',
+        );
+        await connector.query(
+          'CREATE VIEW inspected_view AS SELECT * FROM physical_rows',
+        );
+        await connector.query("ATTACH ':memory:' AS external_catalog");
+        await connector.query(
+          'CREATE TABLE external_catalog.main.attached_rows (value INT)',
+        );
+        const tables = await filtered.getState().db.refreshTableSchemas();
+        expect(tables.map((table) => table.table.table)).toContain(
+          'physical_rows',
+        );
+        expect(tables.map((table) => table.table.table)).not.toContain(
+          'inspected_view',
+        );
+        expect(tables.map((table) => table.table.table)).not.toContain(
+          'attached_rows',
+        );
+        expect(JSON.stringify(filtered.getState().db.schemaTrees)).toContain(
+          'inspected_view',
+        );
+        const loaded = await filtered.getState().db.loadTableSchemas();
+        expect(loaded.map((table) => table.table.table)).toContain(
+          'physical_rows',
+        );
+        expect(loaded.map((table) => table.table.table)).not.toContain(
+          'inspected_view',
+        );
+      } finally {
+        await filtered.getState().db.destroy();
+      }
+    });
+
     it('should issue a single catalog metadata query per refresh', async () => {
       const connector = createNodeDuckDbConnector({dbPath: ':memory:'});
       const querySql: string[] = [];

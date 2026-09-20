@@ -12,7 +12,7 @@ TOOL_HASH = hashlib.sha256(
 CONTROL_VERSION = 2
 
 
-def matches_browser(tools):
+def matches_browser(tools, *, contract=None):
     return isinstance(tools, list) and sorted(
         tools, key=lambda t: t.get("name", "")
-    ) == sorted(CONTRACT["tools"], key=lambda t: t["name"])
+    ) == sorted((contract or CONTRACT)["tools"], key=lambda t: t["name"])

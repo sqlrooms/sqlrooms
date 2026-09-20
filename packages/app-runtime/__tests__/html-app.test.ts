@@ -139,6 +139,52 @@ describe('html-app helpers', () => {
     );
   });
 
+  it('rejects a host-denied SELECT before executing or reading its source', async () => {
+    const getState = createQueryState();
+    const request = {sql: "select * from read_csv('/private/data.csv')"};
+    const authorizeQuery = jest.fn(async () => {
+      throw new Error('Source denied');
+    });
+    await expect(
+      executeReadonlyQuery({
+        request,
+        getState,
+        timeoutMs: 100,
+        maxRows: 10,
+        authorizeQuery,
+      }),
+    ).rejects.toThrow('Source denied');
+    expect(authorizeQuery).toHaveBeenCalledWith(request);
+    expect(getState().db.connectors.runQuery).not.toHaveBeenCalled();
+  });
+
+  it('waits for asynchronous host admission before starting the query', async () => {
+    const getState = createQueryState({rows: [{value: 1}]});
+    let approve!: () => void;
+    const admission = new Promise<void>((resolve) => {
+      approve = resolve;
+    });
+    let signalStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      signalStarted = resolve;
+    });
+    const result = executeReadonlyQuery({
+      request: {sql: 'select 1 as value'},
+      getState,
+      timeoutMs: 100,
+      maxRows: 10,
+      authorizeQuery: () => {
+        signalStarted();
+        return admission;
+      },
+    });
+    await started;
+    expect(getState().db.connectors.runQuery).not.toHaveBeenCalled();
+    approve();
+    expect((await result).rows).toEqual([{value: 1}]);
+    expect(getState().db.connectors.runQuery).toHaveBeenCalledTimes(1);
+  });
+
   it('normalizes query rows for browser app consumers', async () => {
     const getState = createQueryState({
       rows: [

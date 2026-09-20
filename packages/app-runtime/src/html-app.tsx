@@ -231,6 +231,8 @@ export type HtmlAppBlockProps<
   headerActions?: ReactNode;
   queryTimeoutMs?: number;
   maxRows?: number;
+  /** Host policy run after SELECT parsing and before execution; throw to deny. */
+  authorizeQuery?: (request: QueryRequest) => void | Promise<void>;
 };
 
 const DEFAULT_QUERY_TIMEOUT_MS = 15_000;
@@ -666,6 +668,7 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   headerActions,
   queryTimeoutMs = DEFAULT_QUERY_TIMEOUT_MS,
   maxRows = DEFAULT_MAX_ROWS,
+  authorizeQuery,
 }) => {
   const resolvedAppId = appId ?? blockId;
   const roomStore = useRoomStoreApi();
@@ -766,6 +769,7 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
             getState,
             timeoutMs: queryTimeoutMs,
             maxRows,
+            authorizeQuery,
           }),
       },
       onDiagnostic: (diagnostic) => {
@@ -781,6 +785,7 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
     };
   }, [
     addDiagnostic,
+    authorizeQuery,
     grantedCapabilities,
     hasApp,
     isPreviewing,
@@ -1011,16 +1016,20 @@ export function createHtmlAppSrcDoc(app: CreateHtmlAppSrcDocOptions): string {
   return `${prelude}\n${bundledHtml}`;
 }
 
+/** Parse and bound an iframe query, applying an optional host policy before execution. */
 export async function executeReadonlyQuery({
   request,
   getState,
   timeoutMs,
   maxRows,
+  authorizeQuery,
 }: {
   request: QueryRequest;
   getState: () => HtmlAppRuntimeSliceState & HtmlAppRuntimeQueryState;
   timeoutMs: number;
   maxRows: number;
+  /** Reject unapproved sources or await host approval before executing the query. */
+  authorizeQuery?: (request: QueryRequest) => void | Promise<void>;
 }): Promise<QueryResult> {
   const state = getState();
   const runQuery = state.db?.connectors?.runQuery;
@@ -1034,6 +1043,7 @@ export async function executeReadonlyQuery({
   if (parsed.error) {
     throw new Error('Only read-only SELECT statements are allowed.');
   }
+  await authorizeQuery?.(request);
 
   const limit = Math.min(request.maxRows ?? maxRows, maxRows);
   const controller = new AbortController();

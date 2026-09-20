@@ -26,18 +26,22 @@ def process_marker(pid: int) -> str | None:
         return None
 
 
-def publish(record: dict):
+def publish(record: dict, *, settings=None):
     atomic_json(
-        private_dir(home() / "runtime") / (record["instanceId"] + ".json"), record
+        private_dir((settings.home() if settings else home()) / "runtime")
+        / (record["instanceId"] + ".json"),
+        record,
     )
 
 
-def remove(instance_id: str):
-    (home() / "runtime" / (instance_id + ".json")).unlink(missing_ok=True)
+def remove(instance_id: str, *, settings=None):
+    (
+        (settings.home() if settings else home()) / "runtime" / (instance_id + ".json")
+    ).unlink(missing_ok=True)
 
 
-def records() -> list[dict]:
-    directory = private_dir(home() / "runtime")
+def records(*, settings=None) -> list[dict]:
+    directory = private_dir((settings.home() if settings else home()) / "runtime")
     result = []
     for index, path in enumerate(directory.glob("*.json")):
         if index >= 1000:
@@ -109,7 +113,7 @@ def request(record: dict, path: str, *, payload=None, token=None, timeout=2):
         ) from None
 
 
-def verify(record: dict, *, tools=False, control=False) -> dict:
+def verify(record: dict, *, tools=False, control=False, settings=None) -> dict:
     value = request(record, "/api/agent/identity")
     if (
         value.get("instanceId") != record["instanceId"]
@@ -119,10 +123,15 @@ def verify(record: dict, *, tools=False, control=False) -> dict:
             "stale_target",
             "This endpoint now belongs to a different workspace binding.",
         )
+    product = settings.product if settings else "sqlrooms"
+    if value.get("application", "sqlrooms") != product:
+        raise WorkspaceError(
+            "wrong_application", "This instance belongs to another application."
+        )
     value["verified"] = True
-    value["toolCompatible"] = (
-        value.get("toolVersion") == TOOL_VERSION and value.get("toolHash") == TOOL_HASH
-    )
+    value["toolCompatible"] = value.get("toolVersion") == (
+        settings.contract["version"] if settings else TOOL_VERSION
+    ) and value.get("toolHash") == (settings.tool_hash if settings else TOOL_HASH)
     value["controlCompatible"] = value.get("controlVersion") == CONTROL_VERSION
     if (
         tools
@@ -140,6 +149,7 @@ def verify(record: dict, *, tools=False, control=False) -> dict:
 
 def public_record(record: dict) -> dict:
     keys = (
+        "application",
         "instanceId",
         "workspaceId",
         "databasePath",

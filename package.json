@@ -51,6 +51,8 @@
     "publish-dry-run": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dry-run",
     "publish-prerelease": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dist-tag next --pre-dist-tag next --throttle --throttle-size=1 --throttle-delay=1",
     "publish-release": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --throttle --throttle-size=1 --throttle-delay=1",
+    "roomie:build": "pnpm --filter roomie-python build",
+    "roomie:publish:dry": "node scripts/publish-sqlrooms-cli.mjs publish --target roomie --dry-run",
     "setup-trusted-publishing": "node scripts/setup-trusted-publishing.mjs",
     "sort-package-json": "sort-package-json package.json 'packages/*/package.json' 'examples/*/package.json' 'apps/*/package.json'",
     "sort-package-json:check": "sort-package-json --check package.json 'packages/*/package.json' 'examples/*/package.json' 'apps/*/package.json'",

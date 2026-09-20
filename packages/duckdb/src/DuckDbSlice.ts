@@ -373,7 +373,9 @@ type QualifiedTableNameInput = Pick<
 export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
   /**
-   * Optional table visibility filter.
+   * Optional selectable-table filter for `db.tables` and `loadTableSchemas`.
+   * Receives catalog metadata, including `isView`, as its second argument.
+   * An independent catalog filter may retain entries in `db.schemaTrees`.
    * Defaults to {@link createDefaultLoadTableSchemasFilter}.
    */
   loadTableSchemasFilter?: LoadTableSchemasFilterFunction | null;
@@ -399,10 +401,10 @@ export function createDuckDbSlice({
     loadSchemaCatalogFilter ??
     (loadTableSchemasFilter === null
       ? null
-      : (((entry) => {
+      : (((entry, metadata) => {
           if (entry.type === 'table') {
             return loadTableSchemasFilter
-              ? loadTableSchemasFilter(entry.table)
+              ? loadTableSchemasFilter(entry.table, metadata)
               : true;
           }
           return defaultLoadSchemaCatalogFilter(entry);
@@ -900,7 +902,13 @@ export function createDuckDbSlice({
                   });
                 } while (pendingSchemaRefresh);
 
-                const newTables = schemasWithTables.flatMap((s) => s.tables);
+                const newTables = schemasWithTables
+                  .flatMap((s) => s.tables)
+                  .filter((table) =>
+                    loadTableSchemasFilter
+                      ? loadTableSchemasFilter(table.table, table)
+                      : true,
+                  );
                 const currentTables = get().db.tables;
                 const currentSchemaTrees = get().db.schemaTrees;
                 const newSchemaTrees = createDbSchemaTrees(schemasWithTables);

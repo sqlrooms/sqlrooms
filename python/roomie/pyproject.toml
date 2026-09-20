@@ -1,0 +1,36 @@
+[project]
+name = "roomie"
+dynamic = ["version"]
+description = "Local DuckDB documents with external AI through MCP"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{name = "SQLRooms Contributors"}]
+dependencies = ["sqlrooms>=0.1.6,<0.2"]
+classifiers = ["Programming Language :: Python :: 3", "Operating System :: POSIX"]
+
+[project.scripts]
+roomie = "roomie.cli:main"
+
+[project.urls]
+repository = "https://github.com/sqlrooms/sqlrooms"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "package.json"
+pattern = '"version": "(?P<version>.+?)"'
+
+[tool.hatch.build.targets.wheel]
+packages = ["roomie"]
+
+[tool.hatch.build]
+artifacts = ["roomie/static/**", "roomie/claude_plugin/**", "roomie/build.json", "roomie/NOTICE", "roomie/THIRD_PARTY_NOTICES.txt"]
+
+[tool.hatch.build.targets.sdist]
+include = ["README.md", "LICENSE", "package.json", "pyproject.toml", "roomie"]
+
+[dependency-groups]
+dev = ["pytest>=9.0.3", "pytest-asyncio", "ruff", "httpx"]

@@ -1,7 +1,7 @@
 import {readFile, writeFile} from 'node:fs/promises';
 import {transformWithEsbuild} from 'vite';
 const source = await readFile(
-  new URL('./src/cliMcpToolContract.ts', import.meta.url),
+  new URL('../../packages/mcp/src/localMcpToolContract.ts', import.meta.url),
   'utf8',
 );
 const {code} = await transformWithEsbuild(source, 'cliMcpToolContract.ts', {
@@ -17,8 +17,8 @@ await writeFile(
   ),
   JSON.stringify(
     {
-      version: contract.CLI_MCP_CONTRACT_VERSION,
-      tools: Object.values(contract.CLI_MCP_TOOLS),
+      version: contract.LOCAL_MCP_CONTRACT_VERSION,
+      tools: Object.values(contract.LOCAL_MCP_TOOLS),
     },
     null,
     2,

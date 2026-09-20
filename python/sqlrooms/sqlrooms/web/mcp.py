@@ -19,11 +19,14 @@ logger = logging.getLogger(__name__)
 class SqlroomsMcpService:
     """Official MCP SDK adapter for the live browser capability catalog."""
 
-    def __init__(self, broker: McpBridgeBroker, *, security: TransportSecurity):
+    def __init__(
+        self, broker: McpBridgeBroker, *, security: TransportSecurity, name="SQLRooms"
+    ):
+        self.name = name
         self.broker = broker
         self.enabled = False
         self.server = Server(
-            "SQLRooms",
+            name,
             on_list_tools=self._list_tools,
             on_call_tool=self._call_tool,
         )
@@ -128,7 +131,7 @@ class SqlroomsMcpService:
             result = {
                 "ok": False,
                 "code": "invalid_bridge_result",
-                "message": "The SQLRooms page returned an invalid result.",
+                "message": f"The {self.name} page returned an invalid result.",
             }
         is_error = result.get("ok") is not True
         logger.debug(
@@ -199,7 +202,10 @@ class SqlroomsMcpService:
             }
 
         async def invoke():
-            if not matches_browser(await self.broker.request("tools.list")):
+            if not matches_browser(
+                await self.broker.request("tools.list"),
+                contract=runtime.settings.contract,
+            ):
                 return {
                     "ok": False,
                     "code": "incompatible_runtime",

@@ -15,6 +15,8 @@ from mcp.server.stdio import stdio_server
 
 from .contract import CONTRACT
 from .manager import Manager
+from .catalog import Catalog
+from .settings import ApplicationSettings
 from . import registry
 from .storage import WorkspaceError
 
@@ -82,9 +84,14 @@ LIFECYCLE_TOOLS = [
 ]
 
 
-def tools():
+def tools(settings=None):
     result = copy.deepcopy(LIFECYCLE_TOOLS)
-    for shared in CONTRACT["tools"]:
+    if settings and not settings.profiles:
+        result[1]["inputSchema"]["properties"].pop("profile")
+        result[1]["description"] = (
+            "Open one workspaceId, explicit path, or create request. Returns instanceId for every live call; keep the owning browser open."
+        )
+    for shared in (settings.contract if settings else CONTRACT)["tools"]:
         item = copy.deepcopy(shared)
         item["inputSchema"]["properties"]["instanceId"] = STRING
         item["inputSchema"].setdefault("required", []).append("instanceId")
@@ -101,31 +108,34 @@ def result(value):
 
 
 class Connector:
-    def __init__(self):
-        self.manager = Manager()
+    def __init__(self, *, settings: ApplicationSettings | None = None):
+        self.settings = settings or ApplicationSettings()
+        self.manager = Manager(Catalog(self.settings))
         self.sessions = {}
         self.server = Server(
-            "SQLRooms",
-            instructions="Use list_workspaces and open_workspace before live tools. Carry the returned instanceId on every call. The owning browser must remain open; database writes and external or unverified reads require per-request browser approval. Discover commands before promising profile-specific functionality. Never replay a mutation after timeout or cancellation.",
+            self.settings.name,
+            instructions="Use list_workspaces and open_workspace before live tools. Carry the returned instanceId on every call. The owning browser must remain open; database writes and external or unverified reads require per-request browser approval. Discover commands before promising functionality. Never replay a mutation after timeout or cancellation.",
             on_list_tools=self.list_tools,
             on_call_tool=self.call_tool,
         )
 
     async def list_tools(self, context, params):
         return types.ListToolsResult(
-            tools=[types.Tool.model_validate(t) for t in tools()]
+            tools=[types.Tool.model_validate(t) for t in tools(self.settings)]
         )
 
     async def call_tool(self, context, params):
         try:
             import jsonschema
 
-            definition = next((t for t in tools() if t["name"] == params.name), None)
+            definition = next(
+                (t for t in tools(self.settings) if t["name"] == params.name), None
+            )
             if definition is None:
                 raise WorkspaceError("unknown_tool", "Unknown SQLRooms tool.")
             arguments = params.arguments or {}
             if params.name in {
-                tool["name"] for tool in CONTRACT["tools"]
+                tool["name"] for tool in self.settings.contract["tools"]
             } and not arguments.get("instanceId"):
                 raise WorkspaceError(
                     "missing_target",
@@ -211,7 +221,7 @@ class Connector:
                                 types.PROTOCOL_VERSION_META_KEY: types.LATEST_PROTOCOL_VERSION,
                                 types.CLIENT_CAPABILITIES_META_KEY: {},
                                 types.CLIENT_INFO_META_KEY: {
-                                    "name": "SQLRooms connector",
+                                    "name": self.settings.name + " connector",
                                     "version": "1",
                                 },
                             },

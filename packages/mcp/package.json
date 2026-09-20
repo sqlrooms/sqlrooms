@@ -22,6 +22,14 @@
     "./protocol": {
       "types": "./dist/protocol.d.ts",
       "import": "./dist/protocol.js"
+    },
+    "./browser-auth": {
+      "types": "./dist/browser-auth.d.ts",
+      "import": "./dist/browser-auth.js"
+    },
+    "./room": {
+      "types": "./dist/room.d.ts",
+      "import": "./dist/room.js"
     }
   },
   "main": "dist/index.js",
@@ -40,13 +48,20 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
     "ajv": "^8.17.1",
-    "zod": "^4.1.8"
+    "zod": "^4.1.8",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@jest/globals": "^30.3.0",
     "@types/jest": "^30.0.0",
     "jest": "^30.3.0",
     "ts-jest": "^29.4.4"
+  },
+  "peerDependencies": {
+    "react": ">=18"
   }
 }
