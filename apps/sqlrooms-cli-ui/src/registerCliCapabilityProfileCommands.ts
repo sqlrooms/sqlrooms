@@ -9,6 +9,11 @@ import {
   registerCommandsForOwner,
   unregisterCommandsForOwner,
 } from '@sqlrooms/room-shell';
+import {
+  createCliDataCommands,
+  CLI_DATA_COMMAND_OWNER,
+  type CliLocalFileResolver,
+} from './createCliDataCommands';
 import type {StoreApi} from 'zustand';
 import {
   CLI_BLOCK_DOCUMENT_COMMAND_OWNER,
@@ -53,7 +58,18 @@ export function registerCliCapabilityProfileCommands(
   store: StoreApi<RoomState>,
   profile: CliCapabilityProfile,
   artifactTypes: RoomState['artifacts']['artifactTypes'],
+  dataOptions: {
+    metaNamespace?: string;
+    resolveLocalFile?: CliLocalFileResolver;
+  } = {},
 ): void {
+  // CLI data is materialized in DuckDB, not reloaded as browser URL sources.
+  store.getState().commands.unregisterCommand('room.add-url-data-source');
+  registerCommandsForOwner(
+    store,
+    CLI_DATA_COMMAND_OWNER,
+    createCliDataCommands(dataOptions),
+  );
   registerCommandsForOwner(
     store,
     DASHBOARD_COMMAND_OWNER,
@@ -118,6 +134,7 @@ export function registerCliCapabilityProfileCommands(
 export function unregisterCliCapabilityProfileCommands(
   store: StoreApi<RoomState>,
 ): void {
+  unregisterCommandsForOwner(store, CLI_DATA_COMMAND_OWNER);
   unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
   unregisterCommandsForOwner(store, MOSAIC_DASHBOARD_COMMAND_OWNER);
   unregisterCommandsForOwner(store, MARKDOWN_DOCUMENT_COMMAND_OWNER);

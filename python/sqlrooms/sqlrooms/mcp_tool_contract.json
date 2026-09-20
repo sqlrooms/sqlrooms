@@ -1,10 +1,10 @@
 {
-  "version": 1,
+  "version": 2,
   "tools": [
     {
       "name": "query",
       "title": "Query the room database",
-      "description": "Run one user-approved SQL SELECT query against the live room and return bounded JSON rows. SELECT validation is not a host sandbox.",
+      "description": "Run one bounded SQL SELECT. Ordinary workspace-table reads need no prompt; external or unverified reads require browser approval. SELECT validation is not a host sandbox.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -127,7 +127,7 @@
     {
       "name": "execute_command",
       "title": "Execute a room command",
-      "description": "Execute one enabled command against the live room. High-risk and confirmation-gated commands are denied in this release.",
+      "description": "Execute one enabled command. Database writes require per-request browser approval. Other high-risk and confirmation-gated commands remain denied.",
       "inputSchema": {
         "type": "object",
         "properties": {

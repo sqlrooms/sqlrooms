@@ -2,7 +2,7 @@
 name: sqlrooms
 description: Create and edit SQLRooms documents, charts, and maps through a connected SQLRooms MCP workspace. Use for workspace authoring, not repository code changes.
 metadata:
-  version: '6'
+  version: '7'
 ---
 
 Use the SQLRooms MCP tools to operate the live workspace. SQLRooms owns data and
@@ -29,6 +29,31 @@ must not close shared workspaces. Forget removes history only, not files.
 Foreground `--claude` and direct MCP connections omit lifecycle tools and routing
 fields: continue using their already connected browser, with the same approval and
 command validation rules. Do not invent `instanceId` arguments for direct tools.
+
+For a CLI workspace, load a local CSV, Parquet, or JSON file with the registered
+`db.import-file` command. Inspect its schema, then call `execute_command` with
+`commandId: "db.import-file"` and `input: {path: "~/Data/cars.csv", tableName:
+"cars"}` (plus the lifecycle `instanceId` when applicable). Paths are resolved on
+the SQLRooms server, including `~`; do not convert them to `file://` URLs.
+The user approves this write in the browser. Success means a materialized table
+exists in the workspace database; the result includes its identity, row count,
+and columns. Verify with `list_tables` and a bounded query. Never claim success
+from registration or a pending operation. Files with glob characters (`* ? [ ]`)
+in their paths must be renamed before import.
+
+Use `db.create-table-from-query` to materialize one SELECT as a table, or to
+create a view when explicitly requested. Tables copy data into the database;
+views over files remain dependent on those files. Both commands preserve existing
+tables by default. Set `replace: true` only when replacement is requested.
+Writes require a fresh browser approval, even when replacement is explicit.
+`room.add-url-data-source` is absent from CLI workspaces. To import a remote
+resource, use an approved `db.create-table-from-query` with a DuckDB reader;
+never register a browser-managed URL source or edit the database out of band.
+
+The `query` tool accepts one SELECT, not DDL. Ordinary reads of verified workspace
+tables do not prompt. File/URL readers, views, attached databases, macros, and
+queries the host cannot verify need per-request browser approval. A denied or
+cancelled request is not permission to try a different route.
 
 1. Discover tables with `list_tables` and inspect the chosen canonical table ID
    with `read_table_schema`. Bare names may be ambiguous. Use qualified references.

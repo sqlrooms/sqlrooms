@@ -20,16 +20,35 @@ import {likePatternToRegex} from './mcpCapabilityUtils';
 import type {StoreApi} from 'zustand';
 import type {RoomShellSliceState} from '@sqlrooms/room-shell';
 
+import {
+  assertCliDestination,
+  inspectCliSelect,
+  needsCliReadApproval,
+  CliSqlError,
+} from './cliSqlPolicy';
+
 const MAX_LISTED_TABLES = 1_000;
 const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms';
 const MCP_EXCLUDED_COMMAND_IDS = new Set([
-  'db.create-table-from-query',
+  'room.add-url-data-source',
   'room.add-sql-data-source',
   'sql-editor.run-current-query',
   'sql-editor.run-query',
 ]);
 
+/** One exact, non-reusable host approval for a SQL read or database write. */
+export type CliOperationApproval = {
+  kind: 'external-read' | 'write';
+  sql: string;
+  commandId?: string;
+  maxRows?: number;
+};
+
 type CreateCliRoomCapabilitiesOptions = {
+  approveOperation?: (
+    operation: CliOperationApproval,
+    context: RoomCapabilityContext,
+  ) => Promise<'allow' | 'deny' | 'cancelled' | 'expired'>;
   store: StoreApi<RoomShellSliceState>;
   metaNamespace?: string;
   /** Projects discovery metadata for the host; does not replace authorization. */
@@ -44,6 +63,7 @@ export function createCliRoomCapabilities({
   metaNamespace = '__sqlrooms',
   describeCommand,
   trackPendingOperation,
+  approveOperation,
 }: CreateCliRoomCapabilitiesOptions): RoomCapability[] {
   let commandInvocationQueue = Promise.resolve();
   return [
@@ -66,39 +86,17 @@ export function createCliRoomCapabilities({
           Math.max(1, Math.floor(input.maxRows ?? DEFAULT_QUERY_ROWS)),
         );
         const state = roomStore.getState();
-        const parsed = await state.db.sqlSelectToJson(sql);
-        const parseError = parsed.error ? parsed.error_message : undefined;
-        if (
-          parsed.error ||
-          parsed.statements.length !== 1 ||
-          parsed.statements[0]?.node.type !== 'SELECT_NODE'
-        ) {
-          return {
-            ok: false,
-            code: 'query_not_readonly',
-            message: parseError || 'Only one SELECT statement is allowed.',
-          };
-        }
-        const namespaceReference = findInternalNamespaceReference(
-          parsed.statements,
-          metaNamespace,
-        );
-        if (namespaceReference === 'internal') {
-          return {
-            ok: false,
-            code: 'query_internal_namespace',
-            message: `Access to internal schema ${metaNamespace} is denied.`,
-          };
-        }
-        if (namespaceReference === 'dynamic') {
-          return {
-            ok: false,
-            code: 'query_dynamic_table_reference',
-            message:
-              'Dynamic query and table references are not allowed over MCP.',
-          };
-        }
         try {
+          const parsed = await inspectCliSelect(state.db, sql, metaNamespace);
+          if (await needsCliReadApproval(state.db, parsed)) {
+            const denied = await requireApproval(
+              {kind: 'external-read', sql, maxRows},
+              context,
+            );
+            if (denied) return denied;
+          }
+          if (context.signal?.aborted)
+            return {ok: false, code: 'cancelled', message: 'Query cancelled.'};
           const connector = await state.db.getConnector();
           const boundedSql = sql.replace(/;+\s*$/, '');
           const result = await connector.query(
@@ -120,7 +118,12 @@ export function createCliRoomCapabilities({
         } catch (error) {
           return {
             ok: false,
-            code: context.signal?.aborted ? 'cancelled' : 'query_failed',
+            code:
+              error instanceof CliSqlError
+                ? error.code
+                : context.signal?.aborted
+                  ? 'cancelled'
+                  : 'query_failed',
             message: error instanceof Error ? error.message : 'Query failed.',
             retryable: Boolean(context.signal?.aborted),
           };
@@ -129,60 +132,27 @@ export function createCliRoomCapabilities({
     };
   }
 
-  function findInternalNamespaceReference(
-    statements: unknown[],
-    namespace: string,
-  ): 'internal' | 'dynamic' | undefined {
-    const normalizedNamespace = namespace.toLowerCase();
-    let result: 'internal' | 'dynamic' | undefined;
-
-    const visit = (value: unknown): void => {
-      if (
-        result === 'internal' ||
-        value === null ||
-        typeof value !== 'object'
-      ) {
-        return;
-      }
-      if (Array.isArray(value)) {
-        for (const entry of value) visit(entry);
-        return;
-      }
-
-      const node = value as Record<string, unknown>;
-      if (node.type === 'BASE_TABLE') {
-        const identifiers = [node.catalog_name, node.schema_name];
-        if (
-          identifiers.some(
-            (identifier) =>
-              typeof identifier === 'string' &&
-              identifier.toLowerCase() === normalizedNamespace,
-          )
-        ) {
-          result = 'internal';
-          return;
-        }
-      }
-      if (node.type === 'TABLE_FUNCTION') {
-        const tableFunction = node.function;
-        if (tableFunction && typeof tableFunction === 'object') {
-          const functionName = (tableFunction as Record<string, unknown>)
-            .function_name;
-          if (
-            typeof functionName === 'string' &&
-            (functionName.toLowerCase() === 'query' ||
-              functionName.toLowerCase() === 'query_table')
-          ) {
-            result = 'dynamic';
-          }
-        }
-      }
-
-      for (const child of Object.values(node)) visit(child);
+  async function requireApproval(
+    operation: CliOperationApproval,
+    context: RoomCapabilityContext,
+  ) {
+    const decision = context.signal?.aborted
+      ? 'cancelled'
+      : await approveOperation?.(operation, context);
+    if (decision === 'allow' && !context.signal?.aborted) return undefined;
+    return {
+      ok: false,
+      code:
+        decision === 'cancelled' || context.signal?.aborted
+          ? 'cancelled'
+          : 'permission_denied',
+      message:
+        decision === 'expired'
+          ? 'Approval expired.'
+          : decision === undefined
+            ? 'This operation requires approval from the owning browser.'
+            : 'The operation was not approved.',
     };
-
-    visit(statements);
-    return result;
   }
 
   function createListTablesCapability(metaNamespace: string): RoomCapability {
@@ -379,8 +349,51 @@ export function createCliRoomCapabilities({
         }
         const result = await enqueueCommandInvocation(
           commandId,
-          () =>
-            invokeCommandWithPolicy(
+          async () => {
+            const databaseWrite =
+              (commandId.startsWith('db.') && !command.readOnly) ||
+              commandId === 'room.remove-data-source';
+            let confirmed = false;
+            if (databaseWrite) {
+              const tableName = (input as {tableName?: unknown} | undefined)
+                ?.tableName;
+              if (typeof tableName === 'string') {
+                try {
+                  assertCliDestination(
+                    roomStore.getState().db,
+                    tableName,
+                    metaNamespace,
+                  );
+                } catch (error) {
+                  return {
+                    success: false,
+                    commandId,
+                    code:
+                      error instanceof CliSqlError
+                        ? error.code
+                        : 'invalid_table',
+                    error: String(error),
+                  };
+                }
+              }
+              const denied = await requireApproval(
+                {
+                  kind: 'write',
+                  commandId,
+                  sql: JSON.stringify(input ?? {}, null, 2),
+                },
+                context,
+              );
+              if (denied)
+                return {
+                  success: false,
+                  commandId,
+                  code: denied.code,
+                  error: denied.message,
+                };
+              confirmed = true;
+            }
+            return invokeCommandWithPolicy(
               roomStore,
               commandId,
               input,
@@ -395,8 +408,9 @@ export function createCliRoomCapabilities({
                 },
                 signal: context.signal,
               },
-              {confirmed: false},
-            ),
+              {confirmed},
+            );
+          },
           context.signal,
         );
         if (result.success) {

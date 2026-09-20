@@ -78,8 +78,10 @@ workspace tools, even with no running server. No tool-list refresh is necessary.
   managed projects and live instances remain discoverable.
 - `query`, `list_tables`, `read_table_schema`, `search_commands`, `get_command`, and
   `execute_command` all require `instanceId` at the connector. The canonical
-  browser schemas and policies remain intact. Queries still require browser
-  approval; commands still use the live registry's validation and restrictions.
+  browser schemas and policies remain intact. Verified reads of workspace tables
+  run without a prompt. External or unverified SELECTs and database-writing
+  commands need a separate browser approval for each request. Commands use the
+  live registry's validation and restrictions.
 
 New create requests default to `document-charts-maps`, which excludes dashboards.
 Use `default` when creating a dashboard workspace. A closed saved workspace uses
@@ -94,6 +96,46 @@ embedded + MCP and external + MCP are reusable after authentication and readines
 External mode alone does not enable MCP. `:memory:` is explicitly temporary and
 has no saved catalog entry. Managed servers survive connector exit. Closing the
 owning browser makes tools unavailable, and a second live tab cannot steal its lease.
+
+## Importing data
+
+CLI workspaces own materialized tables in their DuckDB file. The web project's
+`room.add-url-data-source` command is removed from the CLI registry on every
+surface. Use `get_command` then `execute_command` with:
+
+```json
+{
+  "commandId": "db.import-file",
+  "input": {
+    "path": "~/Data/Pivot/cars-auto-mpg.csv",
+    "tableName": "cars_auto_mpg"
+  }
+}
+```
+
+Include `instanceId` for connector calls. The authenticated host resolves the
+local path, expands `~`, validates a readable regular file, and infers CSV,
+Parquet, or JSON (including JSONL/NDJSON); `format` can override inference.
+Paths containing DuckDB glob characters (`* ? [ ]`) are rejected. The browser
+asks for write approval before resolving or reading the file. The command waits
+for table creation and schema refresh, then returns table identity, row count,
+and columns. Future reads use the materialized table, not the source file.
+
+`db.create-table-from-query` is also exposed: it accepts one SELECT and preserves
+existing tables unless `replace: true` is explicit. Both commands default to
+persistent tables. An explicit view or temporary table is supported only by
+`db.create-table-from-query`; a file-backed view is not self-contained. Internal
+SQLRooms destinations and direct internal reads are blocked. Database writes,
+including table deletion, always need a per-request browser approval over MCP.
+Other high-risk commands retain their normal restrictions.
+
+The `query` tool stays SELECT-only. Authenticated constant expressions and
+verified reads of physical workspace tables can run without prompting. AST
+inspection avoids binding queries to classify them: file scans, URLs, views,
+attached catalogs, unknown functions, and ambiguous references require approval.
+Function metadata is checked to detect macros shadowing built-ins. The policy is
+conservative: unresolved CTE aliases may also prompt. This is a convenience policy,
+not a sandbox for arbitrary approved SQL.
 
 ## Cancellation and compatibility
 

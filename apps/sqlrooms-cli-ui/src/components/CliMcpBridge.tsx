@@ -22,38 +22,18 @@ export function CliMcpBridge() {
     const runtime = createCliCapabilityRuntime({
       store: roomStore,
       metaNamespace: runtimeConfig.metaNamespace,
-      policy: {
-        authorize: async ({capability, input, context}) => {
-          if (capability.name !== 'query') return {allowed: true};
-          const query = input as {sql: string; maxRows?: number};
-          const state = roomStore.getState();
-          const decision = await requestMcpQueryApproval({
-            clientName: context.clientInfo?.name || 'Unknown MCP client',
-            clientVersion: context.clientInfo?.version,
-            roomTitle: state.room.config.title,
-            database: state.db.currentDatabase || 'main',
-            databasePath: runtimeConfig.dbPath || ':memory:',
-            sql: query.sql,
-            maxRows: query.maxRows ?? 200,
-            signal: context.signal,
-          });
-          if (decision === 'allow') return {allowed: true};
-          return {
-            allowed: false,
-            result: {
-              ok: false,
-              code:
-                decision === 'cancelled' ? 'cancelled' : 'permission_denied',
-              message:
-                decision === 'expired'
-                  ? 'Query approval expired.'
-                  : decision === 'cancelled'
-                    ? 'Query approval was cancelled.'
-                    : 'The user denied this query.',
-              ...(decision === 'cancelled' ? {retryable: true} : {}),
-            },
-          };
-        },
+      policy: {authorize: () => ({allowed: true})},
+      approveOperation: async (operation, context) => {
+        const state = roomStore.getState();
+        return requestMcpQueryApproval({
+          ...operation,
+          clientName: context.clientInfo?.name || 'Unknown MCP client',
+          clientVersion: context.clientInfo?.version,
+          roomTitle: state.room.config.title,
+          database: state.db.currentDatabase || 'main',
+          databasePath: runtimeConfig.dbPath || ':memory:',
+          signal: context.signal,
+        });
       },
     });
     const bridge = registerBrowserMcpBridge(runtime, {

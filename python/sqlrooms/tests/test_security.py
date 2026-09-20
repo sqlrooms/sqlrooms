@@ -695,3 +695,49 @@ def test_expired_page_config_is_rejected_on_both_aliases(runtime):
         response = client(runtime).get(alias, headers=headers(credential["token"]))
         assert response.status_code == 401
         assert "SENTINEL" not in response.text
+
+
+def test_local_file_resolution_authentication_and_path_validation(
+    runtime, tmp_path, monkeypatch
+):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    source = tmp_path / "car's.csv"
+    source.write_text("name,mpg\nA,24\n")
+    with client(runtime) as http:
+        assert (
+            http.post("/api/local-file", json={"path": "~/car's.csv"}).status_code
+            == 401
+        )
+        auth = headers(page(runtime)["token"])
+        response = http.post(
+            "/api/local-file", json={"path": "~/car's.csv"}, headers=auth
+        )
+        assert response.status_code == 200
+        assert response.json() == {"path": str(source.resolve()), "format": "csv"}
+        for payload in [
+            {"path": "~/missing.csv"},
+            {"path": str(tmp_path)},
+            {"path": "file://" + str(source)},
+            {"path": str(source), "format": []},
+            {"path": str(source), "format": ["csv"]},
+            {"path": str(source), "tableName": "extra"},
+        ]:
+            assert (
+                http.post("/api/local-file", json=payload, headers=auth).status_code
+                == 400
+            )
+        glob_source = tmp_path / "sales[1].csv"
+        glob_source.write_text("value\n123\n")
+        assert (
+            http.post(
+                "/api/local-file", json={"path": str(glob_source)}, headers=auth
+            ).status_code
+            == 400
+        )
+        runtime.agent_runtime.stopping = True
+        assert (
+            http.post(
+                "/api/local-file", json={"path": str(source)}, headers=auth
+            ).status_code
+            == 403
+        )

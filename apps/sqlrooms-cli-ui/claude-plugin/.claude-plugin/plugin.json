@@ -1,6 +1,6 @@
 {
   "name": "sqlrooms",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Inspect and edit a live SQLRooms workspace through MCP.",
   "author": {"name": "SQLRooms Contributors"}
 }

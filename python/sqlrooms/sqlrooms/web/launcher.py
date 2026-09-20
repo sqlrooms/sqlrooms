@@ -1443,6 +1443,11 @@ class SqlroomsHttpServer:
                 self.llm_model = default_model
             return {"ok": True, "configPath": str(self.config_path)}
 
+        from .local_file import resolve_local_file
+
+        # The existing API middleware requires a verified query-capable caller.
+        app.add_api_route("/api/local-file", resolve_local_file, methods=["POST"])
+
         @app.post("/api/upload")
         async def upload_file(request: Request, file: UploadFile = File(...)):
             unauthorized = self._require_api_auth(request)

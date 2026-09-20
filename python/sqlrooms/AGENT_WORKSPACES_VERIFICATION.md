@@ -6,6 +6,30 @@ on `6ffe278f1f275214ed2b4af58e6fda9e2ecc14ae`. Local verification was performed 
 macOS with Python 3.12 and Claude Code 2.1.274. This records the tested scope; it
 is not a claim that the complete product acceptance matrix has passed.
 
+## CLI file import and SQL approvals follow-up
+
+Added `db.import-file`, removed `room.add-url-data-source` from the CLI registry,
+and exposed approval-gated `db.create-table-from-query`. Both creation commands
+preserve existing tables by default. Verified reads of workspace tables no longer
+prompt; external or unverified reads and database writes require per-request
+browser approval. This supersedes the original all-query approval behavior below.
+
+- 246 Python CLI/server tests passed, including authenticated host path resolution,
+  home expansion, invalid sources, shutdown admission, and bounded stalled-file workers.
+- 40 CLI UI suites, 218 tests, plus 24 Node tests passed. Real DuckDB coverage includes
+  CSV/JSON/Parquet imports, row counts and columns, reopening persisted data,
+  replacement denial, cancellation, qualified identifiers, temporary tables,
+  hidden schemas, glob rejection, macros, window functions, attached catalogs,
+  and internal-table access through unqualified references.
+- A built browser connected to a disposable server imported a synthetic two-row
+  CSV after its write approval dialog. The table appeared in the sidebar; the MCP
+  result returned canonical identity, `rowCount: 2`, and column metadata. An
+  authenticated aggregate SELECT returned count 2 and average 28 without a prompt.
+- The first browser run exposed a server transport difference: CREATE TABLE does
+  not return its affected-row count. The command now explicitly counts the created
+  relation; a rebuilt-browser import verified that fix. No model calls or real
+  user datasets were used for this follow-up.
+
 ## Automated checks
 
 - Python CLI and server: 244 tests passed. The regression suites cover the catalog, 200-entry bounded

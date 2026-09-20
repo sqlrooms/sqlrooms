@@ -106,7 +106,7 @@ class Connector:
         self.sessions = {}
         self.server = Server(
             "SQLRooms",
-            instructions="Use list_workspaces and open_workspace before live tools. Carry the returned instanceId on every call. The owning browser must remain open; query approval is per request. Discover commands before promising profile-specific functionality. Never replay a mutation after timeout or cancellation.",
+            instructions="Use list_workspaces and open_workspace before live tools. Carry the returned instanceId on every call. The owning browser must remain open; database writes and external or unverified reads require per-request browser approval. Discover commands before promising profile-specific functionality. Never replay a mutation after timeout or cancellation.",
             on_list_tools=self.list_tools,
             on_call_tool=self.call_tool,
         )

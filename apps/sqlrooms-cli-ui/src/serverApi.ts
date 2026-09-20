@@ -283,3 +283,24 @@ export async function uploadFileToServer(
   const data = (await res.json()) as {path: string};
   return validateServerPath(data.path);
 }
+
+/** Resolve a file on the DuckDB server; never turn a local path into a browser URL. */
+export async function resolveLocalFile(
+  input: {path: string; format?: 'csv' | 'parquet' | 'json'},
+  config: RuntimeConfig,
+  signal?: AbortSignal,
+): Promise<{path: string; format: 'csv' | 'parquet' | 'json'}> {
+  const response = await authorizedFetch(
+    `${getApiBaseUrl(config)}/api/local-file`,
+    {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(input),
+      signal,
+    },
+  );
+  const result = await response.json();
+  if (!response.ok)
+    throw new Error(result.message || 'Cannot resolve local file.');
+  return result;
+}

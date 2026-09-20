@@ -256,8 +256,13 @@ arguments or shared agent configuration. See [local authentication](AUTHENTICATI
 for browser launch tickets, native clients, expiry, and platform support.
 
 The browser owns the workspace. Keep it open; manually edited content is visible
-through MCP. Every MCP query still requires the existing browser approval, and
-commands retain their existing validation. Disconnects fail pending operations;
+through MCP. Verified reads of workspace tables run without a prompt. External or unverified
+SELECTs and database-writing commands require per-request browser approval.
+Use `db.import-file` to materialize local CSV/Parquet/JSON files and
+`db.create-table-from-query` for derived tables; both preserve existing tables
+unless replacement is explicit. The CLI does not expose `room.add-url-data-source`.
+See [data import and approvals](AGENT_WORKSPACES.md#importing-data).
+Commands retain their existing validation. Disconnects fail pending operations;
 the launcher reports disconnect/reconnect without replaying edits. On Claude
 exit or cancellation, the launcher stops the HTTP/MCP listeners and reaps its
 Claude child. It does not close browser windows or terminate unrelated sessions.

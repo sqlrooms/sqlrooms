@@ -1,7 +1,7 @@
 import type {RoomCapability} from '@sqlrooms/mcp';
 
 /** Version of the static shared browser/connector tool contract. */
-export const CLI_MCP_CONTRACT_VERSION = 1;
+export const CLI_MCP_CONTRACT_VERSION = 2;
 /** Default bounded query result size. */
 export const DEFAULT_QUERY_ROWS = 200;
 /** Maximum bounded query result size. */
@@ -12,7 +12,7 @@ export const CLI_MCP_TOOLS = {
     name: 'query',
     title: 'Query the room database',
     description:
-      'Run one user-approved SQL SELECT query against the live room and return bounded JSON rows. SELECT validation is not a host sandbox.',
+      'Run one bounded SQL SELECT. Ordinary workspace-table reads need no prompt; external or unverified reads require browser approval. SELECT validation is not a host sandbox.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -91,7 +91,7 @@ export const CLI_MCP_TOOLS = {
     name: 'execute_command',
     title: 'Execute a room command',
     description:
-      'Execute one enabled command against the live room. High-risk and confirmation-gated commands are denied in this release.',
+      'Execute one enabled command. Database writes require per-request browser approval. Other high-risk and confirmation-gated commands remain denied.',
     inputSchema: {
       type: 'object',
       properties: {

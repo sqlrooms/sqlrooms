@@ -81,6 +81,7 @@ const state = {
 };
 
 jest.unstable_mockModule('@sqlrooms/duckdb', () => ({
+  parseQualifiedSqlIdentifier: (table: string) => ({table}),
   arrowTableToJson: (result: {rows: unknown[]}) => [...result.rows],
   getTableDisplayName: (table: {table: string}) => table.table,
   getTableIdentity: (table: {
@@ -263,10 +264,10 @@ describe('CLI room capability handlers', () => {
     );
   });
 
-  test('does not expose or execute SQL-bearing commands over MCP', async () => {
+  test('does not expose or execute asynchronous SQL data-source commands over MCP', async () => {
     state.commands.listCommands.mockReturnValueOnce([
       {
-        id: 'db.create-table-from-query',
+        id: 'room.add-sql-data-source',
         owner: 'test',
         name: 'Create table from query',
         enabled: true,
@@ -297,7 +298,7 @@ describe('CLI room capability handlers', () => {
       {surface: 'mcp-http'},
     );
     const execution = await capability('execute_command').execute(
-      {commandId: 'db.create-table-from-query', input: {query: 'SELECT 1'}},
+      {commandId: 'room.add-sql-data-source', input: {query: 'SELECT 1'}},
       {surface: 'mcp-http'},
     );
 

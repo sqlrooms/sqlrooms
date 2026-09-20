@@ -2,6 +2,7 @@ import {createArtifactsSlice} from '@sqlrooms/artifacts';
 import {createDeckMapsSlice} from '@sqlrooms/deck';
 import {createBlockDocumentsSlice} from '@sqlrooms/documents';
 import {createRoomShellSlice} from '@sqlrooms/room-shell';
+import type {CliLocalFileResolver} from './createCliDataCommands';
 import type {StateCreator} from 'zustand';
 import type {CliCapabilityProfile} from './profiles';
 import {
@@ -37,6 +38,8 @@ export function createCliDomainSlice(options: {
   profile: CliCapabilityProfile;
   artifactTypes: RoomState['artifacts']['artifactTypes'];
   shell: Parameters<typeof createRoomShellSlice>[0];
+  metaNamespace?: string;
+  resolveLocalFile?: CliLocalFileResolver;
 }): StateCreator<RoomState, [], [], CliDomainState> {
   return (set, get, store) => ({
     ...createRoomShellSlice(options.shell)(set, get, store),
@@ -69,6 +72,7 @@ export function createCliDomainSlice(options: {
           store,
           options.profile,
           options.artifactTypes,
+          options,
         ),
       destroy: async () => unregisterCliCapabilityProfileCommands(store),
     },
