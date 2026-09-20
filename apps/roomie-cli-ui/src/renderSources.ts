@@ -8,7 +8,7 @@ import {
   type BlockDocumentNode,
   type BlockDocumentBlock,
 } from '@sqlrooms/documents';
-import type {RoomState} from './store';
+import type {RoomState} from './RoomState';
 
 /** Limit selectors to materialized local relations while retaining separate catalog metadata. */
 export function isRoomieRenderTable(

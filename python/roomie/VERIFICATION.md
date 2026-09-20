@@ -40,6 +40,8 @@ schema catalog can retain metadata for inspection.
 | Ruff on Roomie and the changed shared agent/bootstrap modules                    | Passed                                                                |
 | `pnpm roomie:publish:dry`                                                        | Passed; no upload                                                     |
 | `uvx twine check` on wheel and sdist                                             | Passed                                                                |
+| `pnpm test --concurrency=1`                                                      | 35 tasks passed (26 reused successful results)                        |
+| `pnpm knip` and circular dependency check (including Roomie)                     | Passed                                                                |
 
 The Python checks cover separate catalogs/registries, application identity,
 removed flags, page/native credential purposes, Host/Origin checks, one-use
@@ -140,11 +142,15 @@ assets. Roomie has no CRDT initialization; the installation is not CRDT-free.
   Publishing must be verified separately. No package was uploaded.
 - Python >=3.10/POSIX is declared; only Python 3.12/macOS arm64 was exercised here.
   Other supported combinations need release CI. Windows ACL support is not claimed.
-- Full repository `pnpm build` stops at a MapLibre `LayerSpecification` type
+- Full repository `pnpm build` and `pnpm typecheck` stop at a MapLibre `LayerSpecification` type
   mismatch in the unmodified `packages/deck/src/protomapsStyles.ts`. Full SQLRooms
   app typechecking also reports missing workspace declarations after that graph
   stops. Its direct Vite production build and all 220 Jest tests passed. Roomie's
-  complete dependency graph and typecheck passed.
+  complete dependency graph and typecheck passed. The root typecheck completed
+  54 tasks before the Deck failure. The pre-push hook therefore cannot complete;
+  its remaining checks were run separately. The initial highly parallel test run
+  hit timeouts; rerunning with `--concurrency=1` passed all 35 test tasks after
+  fixing an authorization test fixture to refresh its expiry for each test.
 
 Stages 1–3 and the development/artifact work in stage 4 are implemented and
 verified within the limits above. Public installation/release readiness remains

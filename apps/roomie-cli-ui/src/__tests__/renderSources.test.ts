@@ -6,7 +6,7 @@ import {
   isRoomieRenderTable,
   validateWorkspaceRenderSources,
 } from '../renderSources';
-import type {RoomState} from '../store';
+import type {RoomState} from '../RoomState';
 
 function database() {
   const tables = [

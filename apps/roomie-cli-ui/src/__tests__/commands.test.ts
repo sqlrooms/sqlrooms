@@ -7,7 +7,7 @@ import type {RoomCommandExecutionContext} from '@sqlrooms/room-store';
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {createRoomieCommands} from '../commands';
 import {TableSettings, TableExplorersConfig} from '../model';
-import type {RoomState} from '../store';
+import type {RoomState} from '../RoomState';
 
 function setup(documents: Record<string, BlockDocumentBlock[]> = {}) {
   const tables = TableExplorersConfig.parse({});

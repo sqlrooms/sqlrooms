@@ -7,31 +7,19 @@ import {
 import {
   createRoomShellSlice,
   createDuckDbPersistStorage,
-  type RoomShellSliceState,
 } from '@sqlrooms/room-shell';
-import {
-  createArtifactsSlice,
-  type ArtifactsSliceState,
-} from '@sqlrooms/artifacts';
-import {
-  createBlockDocumentsSlice,
-  type BlockDocumentsSliceState,
-} from '@sqlrooms/documents';
-import {
-  createHtmlAppRuntimeSlice,
-  type HtmlAppRuntimeSliceState,
-} from '@sqlrooms/app-runtime';
+import {createArtifactsSlice} from '@sqlrooms/artifacts';
+import {createBlockDocumentsSlice} from '@sqlrooms/documents';
+import {createHtmlAppRuntimeSlice} from '@sqlrooms/app-runtime';
 import {
   createMosaicSlice,
   createDashboardFeatureSlices,
   createDefaultChartTypes,
   createDefaultMosaicDashboardPanelRenderers,
   defaultAddPanelActions,
-  type MosaicSliceState,
-  type MosaicDashboardFeatureSlicesState,
 } from '@sqlrooms/mosaic';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
-import type {z} from 'zod';
+import type {RoomState} from './RoomState';
 import {pageCredential, authorizedFetch} from './auth';
 import {config} from './config';
 import {sliceSchemas, Workspace, TableSettings} from './model';
@@ -42,18 +30,6 @@ import {
   validateWorkspaceRenderSources,
 } from './renderSources';
 
-/** Roomie's minimal persisted domain; no AI, provider, or CRDT slices. */
-export type RoomState = RoomShellSliceState &
-  ArtifactsSliceState &
-  BlockDocumentsSliceState &
-  HtmlAppRuntimeSliceState &
-  MosaicSliceState &
-  MosaicDashboardFeatureSlicesState & {
-    tableExplorers: {
-      config: {byId: Record<string, z.infer<typeof TableSettings>>};
-      update: (id: string, settings: z.infer<typeof TableSettings>) => void;
-    };
-  };
 export const connector = createWebSocketDuckDbConnector({
   wsUrl: config.wsUrl,
   authToken: pageCredential(),

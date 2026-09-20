@@ -21,7 +21,7 @@ import {
   validateChart,
   validateDocumentNode,
 } from './model';
-import type {RoomState} from './store';
+import type {RoomState} from './RoomState';
 import {validateTableFilters} from './tableSelection';
 import {
   validateBlockRenderSources,
