@@ -23,8 +23,7 @@ def runtime(tmp_path):
         tmp_path / "workspace.duckdb",
         "127.0.0.1",
         4173,
-        4174,
-        mcp_port=4175,
+        None,
         open_browser=False,
         config_path=config,
         ai_providers={
@@ -91,7 +90,7 @@ def test_external_default_ports_match_browser_bootstrap(
         tmp_path / "workspace.db",
         "127.0.0.1",
         4173,
-        4174,
+        None,
         external_url=configured,
         external_ws_url=ws_url,
     )
@@ -124,7 +123,7 @@ def test_external_default_ports_match_browser_bootstrap(
 
 def test_explicit_dev_origin_normalizes_default_port(tmp_path, monkeypatch):
     monkeypatch.setenv("SQLROOMS_ALLOWED_ORIGINS", " https://dev.example:443 ")
-    runtime = SqlroomsHttpServer(tmp_path / "workspace.db", "127.0.0.1", 4173, 4174)
+    runtime = SqlroomsHttpServer(tmp_path / "workspace.db", "127.0.0.1", 4173, None)
     with TestClient(runtime._build_app(), base_url="https://dev.example") as http:
         assert (
             http.get(
@@ -149,7 +148,7 @@ def test_split_websocket_endpoint_is_rejected_before_startup(tmp_path, endpoint)
             tmp_path / "workspace.db",
             "127.0.0.1",
             4173,
-            4174,
+            None,
             external_url="https://workspace.example",
             external_ws_url=endpoint,
         )
@@ -161,7 +160,7 @@ def test_matching_mounted_websocket_endpoint_accepts_explicit_default_port(tmp_p
         tmp_path / "workspace.db",
         "127.0.0.1",
         4173,
-        4174,
+        None,
         external_url="https://workspace.example:443/sqlrooms/",
         external_ws_url="wss://workspace.example:443/sqlrooms/ws/duckdb",
     )
@@ -204,7 +203,6 @@ def test_only_current_page_can_load_embedded_provider_credentials(runtime, path)
     limited = runtime.access.issue("query", frozenset({"query", "read"}))
     for token in (
         runtime.session_token,
-        runtime.access.upstream_token,
         limited,
         foreign,
     ):
@@ -514,7 +512,6 @@ async def test_browser_launch_without_native_store_still_bootstraps(
         "sqlrooms.web.launcher.supports_private_credentials", lambda: False
     )
     monkeypatch.setattr(runtime, "_assert_ui_available", lambda: None)
-    monkeypatch.setattr(runtime, "_start_duckdb_backend", lambda: None)
     monkeypatch.setattr(runtime, "_stop_mcp", AsyncMock())
     monkeypatch.setattr(runtime.mcp_broker, "close", AsyncMock())
     runtime.open_browser = False
@@ -559,84 +556,6 @@ async def test_native_modes_without_safe_store_fail_explicitly(
         else:
             await runtime.start(session=AsyncMock() if mode == "claude" else None)
     assert runtime.credential_file is None
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "reply", ['{"type":"error"}', "invalid", b"binary", "null", "x" * 4097, None]
-)
-async def test_upstream_rejection_and_timeout_are_not_relayed(reply):
-    import asyncio
-    from sqlrooms.web.security import authenticate_upstream
-
-    class Upstream:
-        sent = []
-
-        async def send(self, frame):
-            self.sent.append(json.loads(frame))
-
-        async def recv(self):
-            if reply is None:
-                await asyncio.Event().wait()
-            return reply
-
-    upstream = Upstream()
-    with pytest.raises((AccessDenied, asyncio.TimeoutError)):
-        await authenticate_upstream(upstream, "upstream-only", timeout=0.01)
-    assert upstream.sent[-1] == {"type": "auth", "token": "upstream-only"}
-
-
-@pytest.mark.asyncio
-async def test_proxy_consumes_repeated_page_auth_without_forwarding(runtime):
-    import asyncio
-    from sqlrooms.web.launcher import _relay_duckdb_websockets
-
-    credential = page(runtime)
-    query = json.dumps({"type": "json", "sql": "SELECT 1"})
-
-    class Browser:
-        ack = []
-        frames = iter(
-            [
-                {
-                    "type": "websocket.receive",
-                    "text": json.dumps({"type": "auth", "token": credential["token"]}),
-                },
-                {"type": "websocket.receive", "text": query},
-                {"type": "websocket.receive", "bytes": b"arrow"},
-                {"type": "websocket.disconnect"},
-            ]
-        )
-
-        async def receive(self):
-            return next(self.frames)
-
-        async def send_json(self, value):
-            self.ack.append(value)
-
-    class Upstream:
-        frames = []
-        closed = False
-
-        async def send(self, value):
-            self.frames.append(value)
-
-        async def close(self):
-            self.closed = True
-
-        def __aiter__(self):
-            return self
-
-        async def __anext__(self):
-            await asyncio.Event().wait()
-
-    browser, upstream = Browser(), Upstream()
-    await _relay_duckdb_websockets(
-        browser, upstream, runtime.security, credential["token"]
-    )
-    assert upstream.frames == [query, b"arrow"]
-    assert browser.ack == [{"type": "authAck"}]
-    assert upstream.closed
 
 
 @pytest.mark.parametrize(

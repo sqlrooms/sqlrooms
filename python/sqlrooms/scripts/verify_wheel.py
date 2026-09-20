@@ -25,6 +25,24 @@ def _verify_wheel(path: Path) -> None:
     with ZipFile(path) as wheel:
         names = set(wheel.namelist())
 
+    for module in ("runtime.py", "app.py", "transport.py", "protocol.py", "access.py"):
+        if f"sqlrooms/server/{module}" not in names:
+            raise RuntimeError(f"{path} is missing consolidated runtime {module}")
+    with ZipFile(path) as wheel:
+        metadata = wheel.read(
+            next(name for name in names if name.endswith(".dist-info/METADATA"))
+        ).decode()
+        entries = wheel.read(
+            next(name for name in names if name.endswith(".dist-info/entry_points.txt"))
+        ).decode()
+        if (
+            "Requires-Dist: sqlrooms-server" in metadata
+            or "Requires-Dist: socketify" in metadata
+        ):
+            raise RuntimeError(f"{path} still depends on the standalone runtime")
+        if "sqlrooms-server" in entries or "sqlrooms-duckdb-server" in entries:
+            raise RuntimeError(f"{path} contains stale console aliases")
+
     if (
         "sqlrooms/mcp_tool_contract.json" not in names
         or "sqlrooms/__main__.py" not in names

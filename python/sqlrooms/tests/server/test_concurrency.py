@@ -1,17 +1,13 @@
+from .conftest import authenticated_socket
 import asyncio
 import json
-import os
-import tempfile
 import time
-import subprocess
-import sys
-import socket
 
 import aiohttp
 import pytest
 
 
-async def send_query(session, port, query, query_id):
+async def send_query(session, port, token, query, query_id):
     start_time = time.time()
     qid = f"q_{query_id}_{int(start_time * 1000)}"
     payload = {
@@ -20,7 +16,7 @@ async def send_query(session, port, query, query_id):
         "queryId": qid,
     }
     try:
-        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+        async with authenticated_socket(session, port, token) as ws:
             await ws.send_str(json.dumps(payload))
             while True:
                 msg = await ws.receive()
@@ -68,65 +64,10 @@ async def send_query(session, port, query, query_id):
         return elapsed, False
 
 
-@pytest.fixture(scope="module")
-def server_proc():
-    port = 30012
-    out = tempfile.NamedTemporaryFile(delete=False)
-    err = tempfile.NamedTemporaryFile(delete=False)
-    proc = subprocess.Popen(
-        [sys.executable, "-m", "sqlrooms.server", "--port", str(port)],
-        stdout=out,
-        stderr=err,
-    )
-    started = False
-    deadline = time.time() + 12.0
-    while time.time() < deadline:
-        if proc.poll() is not None:
-            break
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.2):
-                started = True
-                break
-        except OSError:
-            time.sleep(0.1)
-    if not started:
-        try:
-            proc.terminate()
-        except Exception:
-            pass
-        try:
-            with open(out.name, "r") as fo:
-                print("STDOUT:", fo.read())
-            with open(err.name, "r") as fe:
-                print("STDERR:", fe.read())
-        except Exception:
-            pass
-        pytest.fail("Server failed to start listening on port")
-    yield {
-        "proc": proc,
-        "port": port,
-    }
-    try:
-        proc.terminate()
-        proc.wait(timeout=5)
-    except Exception:
-        try:
-            proc.kill()
-        except Exception:
-            pass
-    try:
-        os.unlink(out.name)
-    except Exception:
-        pass
-    try:
-        os.unlink(err.name)
-    except Exception:
-        pass
-
-
 @pytest.mark.asyncio
 async def test_concurrency(server_proc):
     port = server_proc["port"]
+    token = server_proc["token"]
     queries = [
         "SELECT COUNT(*) FROM generate_series(1, 1000000)",
         "SELECT SUM(x) FROM generate_series(1, 1000000) as t(x)",
@@ -136,7 +77,9 @@ async def test_concurrency(server_proc):
     ]
     async with aiohttp.ClientSession() as session:
         start_time = time.time()
-        tasks = [send_query(session, port, q, i + 1) for i, q in enumerate(queries)]
+        tasks = [
+            send_query(session, port, token, q, i + 1) for i, q in enumerate(queries)
+        ]
         results = await asyncio.gather(*tasks)
         total_time = (time.time() - start_time) * 1000
         response_times = [r[0] for r in results]
@@ -151,10 +94,11 @@ async def test_concurrency(server_proc):
 @pytest.mark.asyncio
 async def test_concurrent_writes(server_proc):
     port = server_proc["port"]
+    token = server_proc["token"]
     table = "t_concurrent"
     async with aiohttp.ClientSession() as session:
         # Setup table
-        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+        async with authenticated_socket(session, port, token) as ws:
             for sql in [
                 f"DROP TABLE IF EXISTS {table}",
                 f"CREATE TABLE {table}(x INT)",
@@ -182,7 +126,7 @@ async def test_concurrent_writes(server_proc):
         async def do_insert(a: int, b: int, idx: int):
             qid = f"ins_{idx}_{int(time.time() * 1000)}"
             sql = f"INSERT INTO {table} SELECT x FROM generate_series({a}, {b}) AS t(x)"
-            async with session.ws_connect(f"ws://localhost:{port}") as ws2:
+            async with authenticated_socket(session, port, token) as ws2:
                 await ws2.send_str(
                     json.dumps({"type": "exec", "sql": sql, "queryId": qid})
                 )
@@ -215,7 +159,7 @@ async def test_concurrent_writes(server_proc):
         # Verify row count
         qid = f"chk_{int(time.time() * 1000)}"
         sql = f"SELECT COUNT(*) AS n FROM {table}"
-        async with session.ws_connect(f"ws://localhost:{port}") as ws3:
+        async with authenticated_socket(session, port, token) as ws3:
             await ws3.send_str(json.dumps({"type": "json", "sql": sql, "queryId": qid}))
             for _ in range(200):
                 msg = await ws3.receive()
@@ -250,12 +194,13 @@ async def test_concurrent_ctas_long_ops(server_proc):
       - server returns "ok" for exec messages and the results are visible
     """
     port = server_proc["port"]
+    token = server_proc["token"]
     tables = [f"t_ctas_{i}" for i in range(5)]
     ranges = [(1, 50000), (1, 60000), (1, 70000), (1, 80000), (1, 90000)]
 
     async with aiohttp.ClientSession() as session:
         # Drop pre-existing tables if present
-        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+        async with authenticated_socket(session, port, token) as ws:
             for t in tables:
                 qid = f"drop_{t}_{int(time.time() * 1000)}"
                 await ws.send_str(
@@ -283,7 +228,7 @@ async def test_concurrent_ctas_long_ops(server_proc):
         async def do_ctas(t: str, a: int, b: int):
             qid = f"ctas_{t}_{int(time.time() * 1000)}"
             sql = f"CREATE TABLE {t} AS SELECT x FROM generate_series({a}, {b}) AS t(x)"
-            async with session.ws_connect(f"ws://localhost:{port}") as ws2:
+            async with authenticated_socket(session, port, token) as ws2:
                 await ws2.send_str(
                     json.dumps({"type": "exec", "sql": sql, "queryId": qid})
                 )
@@ -306,7 +251,7 @@ async def test_concurrent_ctas_long_ops(server_proc):
         assert all(results)
 
         # Verify each table has expected number of rows
-        async with session.ws_connect(f"ws://localhost:{port}") as ws3:
+        async with authenticated_socket(session, port, token) as ws3:
             for t, (a, b) in zip(tables, ranges):
                 qid = f"count_{t}_{int(time.time() * 1000)}"
                 await ws3.send_str(
@@ -344,10 +289,11 @@ async def test_mixed_workload(server_proc):
     without starving reads or causing catalog conflicts.
     """
     port = server_proc["port"]
+    token = server_proc["token"]
     table = "t_mixed"
     async with aiohttp.ClientSession() as session:
         # Prepare base table
-        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+        async with authenticated_socket(session, port, token) as ws:
             for sql in [
                 f"DROP TABLE IF EXISTS {table}",
                 f"CREATE TABLE {table}(x INT)",
@@ -374,7 +320,7 @@ async def test_mixed_workload(server_proc):
         async def read_sum(idx: int):
             qid = f"read_{idx}_{int(time.time() * 1000)}"
             sql = f"SELECT SUM(x) AS s FROM {table}"
-            async with session.ws_connect(f"ws://localhost:{port}") as ws1:
+            async with authenticated_socket(session, port, token) as ws1:
                 await ws1.send_str(
                     json.dumps({"type": "json", "sql": sql, "queryId": qid})
                 )
@@ -393,7 +339,7 @@ async def test_mixed_workload(server_proc):
         async def insert_range(a: int, b: int, idx: int):
             qid = f"ins_m_{idx}_{int(time.time() * 1000)}"
             sql = f"INSERT INTO {table} SELECT x FROM generate_series({a},{b}) AS t(x)"
-            async with session.ws_connect(f"ws://localhost:{port}") as ws2:
+            async with authenticated_socket(session, port, token) as ws2:
                 await ws2.send_str(
                     json.dumps({"type": "exec", "sql": sql, "queryId": qid})
                 )
@@ -414,7 +360,7 @@ async def test_mixed_workload(server_proc):
             sql = (
                 f"CREATE TABLE {tname} AS SELECT x FROM generate_series(1, {n}) AS t(x)"
             )
-            async with session.ws_connect(f"ws://localhost:{port}") as ws3:
+            async with authenticated_socket(session, port, token) as ws3:
                 await ws3.send_str(
                     json.dumps({"type": "exec", "sql": sql, "queryId": qid})
                 )
@@ -452,11 +398,12 @@ async def test_update_vs_alter_with_retry(server_proc):
       - all rows had 'v' incremented to 1 by UPDATE
     """
     port = server_proc["port"]
+    token = server_proc["token"]
     table = "t_conflict"
     timeout = aiohttp.ClientTimeout(total=3)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         # Setup table with some rows
-        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+        async with authenticated_socket(session, port, token) as ws:
             cmds = [
                 f"DROP TABLE IF EXISTS {table}",
                 f"CREATE TABLE {table}(x INT, v INT)",
@@ -488,7 +435,7 @@ async def test_update_vs_alter_with_retry(server_proc):
                 f"UPDATE {table} SET v = v + 1 "
                 f"WHERE x IN (SELECT x FROM generate_series(1, 30000) WHERE x <= 10000)"
             )
-            async with session.ws_connect(f"ws://localhost:{port}") as ws1:
+            async with authenticated_socket(session, port, token) as ws1:
                 await ws1.send_str(
                     json.dumps({"type": "exec", "sql": sql, "queryId": qid})
                 )
@@ -511,7 +458,7 @@ async def test_update_vs_alter_with_retry(server_proc):
         async def do_alter():
             qid = f"alt_{int(time.time() * 1000)}"
             sql = f"ALTER TABLE {table} ADD COLUMN z INT"
-            async with session.ws_connect(f"ws://localhost:{port}") as ws2:
+            async with authenticated_socket(session, port, token) as ws2:
                 await ws2.send_str(
                     json.dumps({"type": "exec", "sql": sql, "queryId": qid})
                 )
@@ -545,7 +492,7 @@ async def test_update_vs_alter_with_retry(server_proc):
         # Verify schema includes added column 'z'
         qid = f"schema_{int(time.time() * 1000)}"
         sql = f"SELECT name FROM pragma_table_info('{table}')"
-        async with session.ws_connect(f"ws://localhost:{port}") as ws4:
+        async with authenticated_socket(session, port, token) as ws4:
             await ws4.send_str(json.dumps({"type": "json", "sql": sql, "queryId": qid}))
             for _ in range(100):
                 try:
@@ -569,7 +516,7 @@ async def test_update_vs_alter_with_retry(server_proc):
         # Verify all rows have v == 1
         qid2 = f"chk_v_{int(time.time() * 1000)}"
         sql2 = f"SELECT COUNT(*) AS c FROM {table} WHERE v = 1"
-        async with session.ws_connect(f"ws://localhost:{port}") as ws5:
+        async with authenticated_socket(session, port, token) as ws5:
             await ws5.send_str(
                 json.dumps({"type": "json", "sql": sql2, "queryId": qid2})
             )
@@ -603,11 +550,12 @@ async def test_multiple_concurrent_alters_with_retry(server_proc):
     The server should handle all operations successfully with retries.
     """
     port = server_proc["port"]
+    token = server_proc["token"]
     table = "t_multi_alter"
     timeout = aiohttp.ClientTimeout(total=10)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         # Setup base table
-        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+        async with authenticated_socket(session, port, token) as ws:
             cmds = [
                 f"DROP TABLE IF EXISTS {table}",
                 f"CREATE TABLE {table}(x INT)",
@@ -636,7 +584,7 @@ async def test_multiple_concurrent_alters_with_retry(server_proc):
         async def add_column(col_name: str, idx: int):
             qid = f"alt_{col_name}_{int(time.time() * 1000)}"
             sql = f"ALTER TABLE {table} ADD COLUMN {col_name} INT DEFAULT {idx}"
-            async with session.ws_connect(f"ws://localhost:{port}") as ws2:
+            async with authenticated_socket(session, port, token) as ws2:
                 await ws2.send_str(
                     json.dumps({"type": "exec", "sql": sql, "queryId": qid})
                 )
@@ -667,7 +615,7 @@ async def test_multiple_concurrent_alters_with_retry(server_proc):
         # Verify all columns were added
         qid = f"schema_{int(time.time() * 1000)}"
         sql = f"SELECT name FROM pragma_table_info('{table}')"
-        async with session.ws_connect(f"ws://localhost:{port}") as ws3:
+        async with authenticated_socket(session, port, token) as ws3:
             await ws3.send_str(json.dumps({"type": "json", "sql": sql, "queryId": qid}))
             for _ in range(100):
                 try:
@@ -697,11 +645,12 @@ async def test_concurrent_updates_same_table(server_proc):
     This tests that the retry mechanism handles write-write conflicts.
     """
     port = server_proc["port"]
+    token = server_proc["token"]
     table = "t_concurrent_update"
     timeout = aiohttp.ClientTimeout(total=10)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         # Setup table with distinct ranges
-        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+        async with authenticated_socket(session, port, token) as ws:
             cmds = [
                 f"DROP TABLE IF EXISTS {table}",
                 f"CREATE TABLE {table}(id INT, val INT)",
@@ -732,7 +681,7 @@ async def test_concurrent_updates_same_table(server_proc):
             sql = (
                 f"UPDATE {table} SET val = {new_val} WHERE id >= {start} AND id < {end}"
             )
-            async with session.ws_connect(f"ws://localhost:{port}") as ws2:
+            async with authenticated_socket(session, port, token) as ws2:
                 await ws2.send_str(
                     json.dumps({"type": "exec", "sql": sql, "queryId": qid})
                 )
@@ -768,7 +717,7 @@ async def test_concurrent_updates_same_table(server_proc):
         # Verify all rows were updated
         qid = f"verify_{int(time.time() * 1000)}"
         sql = f"SELECT SUM(val) as total FROM {table}"
-        async with session.ws_connect(f"ws://localhost:{port}") as ws3:
+        async with authenticated_socket(session, port, token) as ws3:
             await ws3.send_str(json.dumps({"type": "json", "sql": sql, "queryId": qid}))
             for _ in range(100):
                 try:

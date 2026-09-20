@@ -1,3 +1,4 @@
+import {databaseUrl, pageToken} from './auth';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
@@ -78,8 +79,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       // Base room slice
       ...createRoomShellSlice({
         connector: createWebSocketDuckDbConnector({
-          authToken: 'secret123',
-          wsUrl: 'ws://localhost:4000',
+          authToken: pageToken,
+          wsUrl: databaseUrl.href,
           subscribeChannels: ['table:earthquakes'],
           onNotification: (payload) => {
             console.log('Notification from server:', payload);

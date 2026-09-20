@@ -19,8 +19,7 @@ def server(tmp_path, monkeypatch):
         str(tmp_path / "workspace.duckdb"),
         "127.0.0.1",
         43000,
-        43001,
-        mcp_port=43002,
+        None,
         open_browser=False,
     )
     runtime.agent_runtime.workspace = runtime.agent_runtime.catalog.register(
@@ -198,3 +197,89 @@ def test_browser_open_rejects_stopping_runtime(server):
     with TestClient(server._build_app(), base_url="http://127.0.0.1:43000") as client:
         response = client.post("/api/agent/browser", headers=headers(server), json={})
         assert response.json()["code"] == "workspace_busy"
+
+
+@pytest.mark.parametrize("resource", ["sync", "checkpoint"])
+def test_managed_persistence_failure_can_retry_without_false_success(
+    server, monkeypatch, resource
+):
+    from unittest.mock import AsyncMock
+
+    server.agent_runtime.managed = True
+    browser = AsyncMock(return_value={"ok": True})
+    monkeypatch.setattr(server.mcp_broker, "request", browser)
+    app = server._build_app()
+    with TestClient(app, base_url=server._ui_url()) as client:
+        resources = app.state.resources
+        if resource == "sync":
+            resources.sync = SimpleNamespace(
+                close=AsyncMock(side_effect=[OSError("disk full"), None, None])
+            )
+        else:
+            original = resources.runtime.close
+            calls = 0
+
+            async def close():
+                nonlocal calls
+                calls += 1
+                if calls == 1:
+                    raise OSError("checkpoint failed")
+                await original()
+
+            monkeypatch.setattr(resources.runtime, "close", close)
+        failed = client.post("/api/agent/close", headers=headers(server)).json()
+        assert failed["code"] == "persistence_failed"
+        assert not server._http_server.should_exit
+        assert server.agent_runtime.stopping and server.agent_runtime.close_failed
+        saved = client.post("/api/agent/close", headers=headers(server)).json()
+        assert saved["ok"] is True
+        assert resources.runtime.closed
+        browser.assert_awaited_once_with("workspace.flush", timeout=15)
+
+
+@pytest.mark.asyncio
+async def test_cancelled_managed_close_can_retry_persistence(server, monkeypatch):
+    import httpx
+
+    server.agent_runtime.managed = True
+
+    async def browser_request(method, **kwargs):
+        assert method == "workspace.flush"
+        return {"ok": True}
+
+    monkeypatch.setattr(server.mcp_broker, "request", browser_request)
+    app = server._build_app()
+    resources = app.state.resources
+    await resources.start()
+    entered = asyncio.Event()
+    original_close = resources.close
+    calls = 0
+
+    async def interrupted_close():
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            entered.set()
+            await asyncio.Event().wait()
+        else:
+            await original_close()
+
+    monkeypatch.setattr(resources, "close", interrupted_close)
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url=server._ui_url()
+        ) as client:
+            pending = asyncio.create_task(
+                client.post("/api/agent/close", headers=headers(server))
+            )
+            await asyncio.wait_for(entered.wait(), 2)
+            pending.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await pending
+            assert server.agent_runtime.close_failed
+            assert not server._http_server.should_exit
+            result = await client.post("/api/agent/close", headers=headers(server))
+            assert result.json()["ok"] is True
+            assert resources.runtime.closed
+    finally:
+        await original_close()

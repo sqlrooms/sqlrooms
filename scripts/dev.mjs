@@ -155,17 +155,14 @@ function parsePortOption(args, name) {
 async function getCliDevPorts(args) {
   const {host, proxyHost} = getCliDevHosts(args);
   const explicitApiPort = parsePortOption(args, '--port');
-  const explicitWsPort = parsePortOption(args, '--ws-port');
   const reservedPorts = new Set(
-    [CLI_DEV_UI_DEFAULT_PORT, explicitWsPort].filter(
-      (port) => typeof port === 'number',
-    ),
+    [CLI_DEV_UI_DEFAULT_PORT].filter((port) => typeof port === 'number'),
   );
   const apiPort =
     explicitApiPort ??
     (await findAvailablePort(CLI_DEV_API_DEFAULT_PORT, host, reservedPorts));
   const uiReservedPorts = new Set(
-    [apiPort, explicitWsPort].filter((port) => typeof port === 'number'),
+    [apiPort].filter((port) => typeof port === 'number'),
   );
   const uiPort = await findAvailablePort(
     CLI_DEV_UI_DEFAULT_PORT,

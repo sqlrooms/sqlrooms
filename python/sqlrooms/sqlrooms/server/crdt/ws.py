@@ -4,21 +4,18 @@ import base64
 import logging
 from typing import Any, Dict, Optional
 
-from socketify import OpCode
+from ..protocol import OpCode
 
 from loro import ExportMode  # type: ignore
 
-from .state import CrdtState
+from .state import CrdtState, run_sync_work
 
 
 class CrdtWs:
     """
-    CRDT WebSocket handlers for sqlrooms-server.
+    CRDT handlers using the authenticated connection delivery interface.
 
-    Notes:
-    - Do not depend on Python `ws` object identity being stable across callbacks.
-      Use socketify user_data (conn_id) as the stable identifier for a connection.
-    - Guard all Loro access (export/import) with the per-room lock.
+    Guard all Loro access (export/import) with the per-room lock.
     """
 
     def __init__(
@@ -37,29 +34,32 @@ class CrdtWs:
         self._empty_snapshot_len = empty_snapshot_len
         self._save_debounce_ms = save_debounce_ms
         self._log = logger or logging.getLogger(__name__)
-        self._conn_state: Dict[int, Dict[str, Optional[str]]] = {}
+        self._conn_state: Dict[str, Dict[str, Optional[str]]] = {}
 
-    def register_conn(self, conn_id: int) -> None:
+    def register_conn(self, conn_id: str) -> None:
         self._conn_state.setdefault(conn_id, {"room_id": None, "client_id": None})
 
-    def unregister_conn(self, conn_id: int) -> None:
+    def unregister_conn(self, conn_id: str) -> None:
         self._conn_state.pop(conn_id, None)
 
-    def set_conn_room(self, conn_id: int, room_id: str) -> None:
+    def set_conn_room(self, conn_id: str, room_id: str) -> None:
         self.register_conn(conn_id)
         self._conn_state[conn_id]["room_id"] = room_id
 
-    def set_conn_client_id(self, conn_id: int, client_id: str | None) -> None:
+    def set_conn_client_id(self, conn_id: str, client_id: str | None) -> None:
         self.register_conn(conn_id)
         self._conn_state[conn_id]["client_id"] = client_id
 
-    def get_room_id(self, conn_id: int) -> Optional[str]:
+    def get_room_id(self, conn_id: str) -> Optional[str]:
         return self._conn_state.get(conn_id, {}).get("room_id")
 
-    def get_client_id(self, conn_id: int) -> Optional[str]:
+    def get_client_id(self, conn_id: str) -> Optional[str]:
         return self._conn_state.get(conn_id, {}).get("client_id")
 
-    async def handle_join(self, ws, *, conn_id: int, room_id: str) -> None:
+    async def handle_join(self, ws, *, conn_id: str, room_id: str) -> None:
+        old_room = self.get_room_id(conn_id)
+        if old_room and old_room != room_id:
+            ws.unsubscribe(old_room)
         self.set_conn_room(conn_id, room_id)
         client_id = self.get_client_id(conn_id)
         self._log.info(
@@ -72,7 +72,7 @@ class CrdtWs:
 
         # Export snapshot under lock to avoid races with concurrent imports/exports.
         async with room.lock:
-            snapshot = room.doc.export(ExportMode.Snapshot())
+            snapshot = await run_sync_work(room.doc.export, ExportMode.Snapshot())
         self._log.debug(f"sending snapshot to {room_id}: {len(snapshot)} bytes")
         ws.send(
             {
@@ -83,7 +83,7 @@ class CrdtWs:
             OpCode.TEXT,
         )
 
-    async def handle_binary_update(self, ws, *, conn_id: int, payload: bytes) -> None:
+    async def handle_binary_update(self, ws, *, conn_id: str, payload: bytes) -> None:
         room_id = self.get_room_id(conn_id)
         self._log.debug(
             f"_crdt_update called with payload len: {len(payload)} bytes (ws id: {id(ws)}, conn_id: {conn_id}, client_id: {self.get_client_id(conn_id)})"
@@ -97,7 +97,8 @@ class CrdtWs:
 
         room = await self._state.ensure_loaded(room_id)
         async with room.lock:
-            room.doc.import_(payload)
+            room.dirty = True
+            await run_sync_work(room.doc.import_, payload)
             update = payload
             await self._state.schedule_save(room_id, delay_ms=self._save_debounce_ms)
         self._log.debug(f"scheduled snapshot save for {room_id}")
@@ -128,7 +129,7 @@ class CrdtWs:
             if self._empty_snapshot_len is None:
                 ws.send({"type": "error", "error": "snapshot rejected"}, OpCode.TEXT)
                 return
-            current = room.doc.export(ExportMode.Snapshot())
+            current = await run_sync_work(room.doc.export, ExportMode.Snapshot())
             if len(current) > self._empty_snapshot_len + 64:
                 ws.send(
                     {
@@ -138,14 +139,15 @@ class CrdtWs:
                     OpCode.TEXT,
                 )
                 return
-            room.doc.import_(payload)
+            room.dirty = True
+            await run_sync_work(room.doc.import_, payload)
             await self._state.schedule_save(room_id, delay_ms=self._save_debounce_ms)
             update = payload
 
         self._app.publish(room_id, update, OpCode.BINARY)
         ws.send({"type": "crdt-snapshot-ack", "roomId": room_id}, OpCode.TEXT)
 
-    async def maybe_handle_json(self, ws, *, conn_id: int, message: dict) -> bool:
+    async def maybe_handle_json(self, ws, *, conn_id: str, message: dict) -> bool:
         # Join: { type: 'crdt-join', roomId, clientId? }
         if message.get("type") == "crdt-join":
             room_id = str(message.get("roomId") or "").strip()

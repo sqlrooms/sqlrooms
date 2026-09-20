@@ -1,70 +1,21 @@
-# Python workspace (uv)
+# SQLRooms Python workspace
 
-This repo’s Python packages live under `python/` and are managed as a **uv workspace**.
+Use `uv` from `python/`. The maintained distributions are `sqlrooms` (CLI, UI,
+ASGI DuckDB runtime and agent connector) and the independent `sqlrooms-rag`.
+The standalone `sqlrooms-server` distribution is retired from source/builds.
 
-## Workspace root
-
-The workspace is defined in `python/pyproject.toml`:
-
-- Workspace members:
-  - `python/sqlrooms` (dist: `sqlrooms`)
-  - `python/sqlrooms-server` (dist: `sqlrooms-server`)
-
-Because `sqlrooms` and `sqlrooms-server` share the `sqlrooms.*` namespace (PEP 420), **you should use uv from within the workspace** so it resolves local members correctly.
-
-## Setup
-
-From `python/`:
-
-```bash
-cd python
-uv sync
+```sh
+uv sync --package sqlrooms
+uv run --package sqlrooms sqlrooms ./workspace.duckdb
+uv run --package sqlrooms sqlrooms server --db-path ./workspace.duckdb --port 4000
+uv run --package sqlrooms pytest sqlrooms/tests
 ```
 
-Or from a member directory:
+Build bundled assets from the repository root with
+`pnpm --filter sqlrooms-python build:ui`, then `uv build --package sqlrooms`
+from this directory. Version and publication commands have one runtime artifact
+owner (`pnpm cli:version`, `pnpm cli:publish:dry`). Publication requires a separate
+explicit release operation. `sqlrooms-rag` remains independently versioned.
 
-```bash
-cd python/sqlrooms
-uv sync
-```
-
-## Running the CLI (default UI)
-
-```bash
-cd python/sqlrooms
-uv run sqlrooms :memory:
-```
-
-## Running the server-only backend
-
-```bash
-cd python/sqlrooms-server
-uv run sqlrooms-server --db-path :memory: --port 4000
-```
-
-## How local member resolution works
-
-When a workspace member depends on another member (e.g. `sqlrooms` depends on `sqlrooms-server`), uv needs an explicit mapping in the depending package’s `pyproject.toml`:
-
-```toml
-[tool.uv.sources]
-sqlrooms-server = { workspace = true }
-```
-
-If you see an error like:
-
-> `sqlrooms-server` is included as a workspace member, but is missing an entry in `tool.uv.sources`
-
-add the mapping above to the package that declares the dependency.
-
-## UI bundle in `sqlrooms`
-
-The Python server serves a bundled static UI from:
-
-- `python/sqlrooms/sqlrooms/web/static/`
-
-Build it from the repo root:
-
-```bash
-pnpm --filter sqlrooms-cli-app build
-```
+See [runtime documentation](sqlrooms/README.md),
+[migration](sqlrooms/MIGRATION.md) and [authentication](sqlrooms/AUTHENTICATION.md).

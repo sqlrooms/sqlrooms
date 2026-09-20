@@ -83,8 +83,11 @@ Rerun setup and restart Claude Code to update an existing installation.
 
 `SQLROOMS_HOME` overrides catalog/runtime storage. `SQLROOMS_WORKSPACES_DIR`
 overrides only managed project storage. Existing TOML configuration locations
-remain unchanged. Release the CLI together with the matching `sqlrooms-server` build: managed
-startup uses its listener-readiness callback. This implementation requires POSIX permissions and lifecycle
+remain unchanged. One `sqlrooms` distribution owns the runtime. Managed startup
+reserves one listener and publishes only after the shared ASGI lifespan is ready.
+Control contract version 2 publishes MCP at the API origin’s `/mcp`; restart old
+workspaces and regenerate managed client configuration after upgrading. Customized
+client entries are preserved, never automatically rewritten. This implementation requires POSIX permissions and lifecycle
 semantics; Windows support is not claimed.
 
 ## Static tool surface

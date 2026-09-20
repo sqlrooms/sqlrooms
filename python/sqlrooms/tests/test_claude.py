@@ -19,7 +19,7 @@ def fake_server(ready=False):
     }
     return SimpleNamespace(
         _mcp_status=lambda: status,
-        _duckdb_start_error=None,
+        runtime=SimpleNamespace(closing=False),
         session_token="private-session-token",
         credential_file=SimpleNamespace(path=Path("/private/credential.json")),
         _mcp_url=lambda: "http://127.0.0.1:42100/mcp",
@@ -47,7 +47,7 @@ async def test_readiness_waits_for_browser_and_fails_on_timeout_or_backend_error
     server = fake_server()
     with pytest.raises(RuntimeError, match="Timed out"):
         await wait_for_workspace(server, timeout=0.01)
-    server._duckdb_start_error = RuntimeError("broken")
+    server.runtime.closing = True
     with pytest.raises(RuntimeError, match="database failed"):
         await wait_for_workspace(server)
     await wait_for_workspace(fake_server(True))
@@ -218,17 +218,21 @@ async def test_runtime_stops_owned_listeners_when_session_or_http_exits(
         db_path=":memory:",
         host="127.0.0.1",
         port=0,
-        ws_port=0,
+        ws_port=None,
         serve_ui=False,
         open_browser=False,
     )
-    monkeypatch.setattr(runtime, "_start_duckdb_backend", lambda: None)
     stop = AsyncMock()
     close = AsyncMock()
     monkeypatch.setattr(runtime, "_stop_mcp", stop)
     monkeypatch.setattr(runtime.mcp_broker, "close", close)
 
+    runtime.runtime.connection = object()
+    runtime.runtime._started = True
+    monkeypatch.setattr(runtime.agent_runtime, "publish", AsyncMock())
+
     class Http:
+        started = True
         should_exit = False
 
         async def serve(self):
@@ -260,7 +264,7 @@ async def test_runtime_stops_owned_listeners_when_session_or_http_exits(
     elif failure == "http_error":
         with pytest.raises(RuntimeError, match="HTTP startup failed"):
             await runtime.start(session=session)
-        assert cancelled
+        assert cancelled  # The fake reports started before its simulated failure.
     elif failure == "cancel":
         # Without a Claude session, parent cancellation also cancels HTTP.
         task = asyncio.create_task(runtime.start())

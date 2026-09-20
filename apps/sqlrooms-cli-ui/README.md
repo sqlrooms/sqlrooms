@@ -97,21 +97,16 @@ Open the printed UI URL, drag in the CSV fixture listed above, create a
 document/chart/dashboard, then restart against the same `/tmp/sqlrooms-smoke.duckdb` and
 confirm the imported data and workspace state come back.
 
-1. Choose the package target:
-   - `sqlrooms` for the CLI package and bundled UI.
-   - `sqlrooms-server` for the DuckDB websocket server package.
-   - `all` when both packages should be released in dependency order.
-2. Version the selected package or packages explicitly:
+1. Use `sqlrooms` for the consolidated CLI, UI, and native runtime. The old
+   `sqlrooms-server` distribution is retired; see the [migration guide](../../python/sqlrooms/MIGRATION.md).
+2. Version the package explicitly:
 
    ```bash
    pnpm cli:version --target sqlrooms --bump patch
-   pnpm cli:version --target sqlrooms-server --set 0.2.0
-   pnpm cli:version --target all --bump minor
    ```
 
-   Hatch reads package versions from each package's `package.json`. When
-   `sqlrooms-server` is versioned, the workflow also updates the
-   `sqlrooms-server>=...` dependency floor in `python/sqlrooms/pyproject.toml`.
+   Hatch reads the version from `python/sqlrooms/package.json`. `--target all`
+   is an equivalent spelling for the single maintained release target.
 
 3. Format the Python CLI packages before running publish checks:
 
@@ -136,8 +131,7 @@ confirm the imported data and workspace state come back.
    ```
 
    Publishing runs validation, builds the package, then uploads the built
-   distributions with Twine. Use `--target all` only when both packages are part
-   of the release.
+   distributions with Twine. `--target all` selects the same consolidated package.
 
 ## Dev mode (UI + Python server together)
 
@@ -156,7 +150,7 @@ This starts:
 If you want fixed ports, pass them to the Python server:
 
 ```bash
-pnpm dev cli -- --port 4274 --ws-port 4002
+pnpm dev cli -- --port 4274
 ```
 
 For a public proxy, `--external-url` takes precedence over `SQLROOMS_EXTERNAL_URL`.

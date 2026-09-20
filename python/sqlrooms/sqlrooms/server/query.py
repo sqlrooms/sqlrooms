@@ -3,7 +3,6 @@ import random
 from hashlib import sha256
 from functools import partial
 from typing import Optional
-from . import db_async
 import pyarrow as pa
 import time
 
@@ -111,11 +110,11 @@ def get_json(con, sql):
     return result.to_json(orient="records")
 
 
-async def run_duckdb(cache, query, query_id: Optional[str] = None):
+async def run_duckdb(runtime, cache, query, query_id: Optional[str] = None):
     """
-    Run a DuckDB command asynchronously via db_async.run_db_task, returning a structured result.
+    Run a DuckDB command asynchronously via runtime.run_db_task, returning a structured result.
 
-    The actual DB work runs in a thread, using a per-task cursor. Cancellation is handled by db_async.
+    The actual DB work runs in a thread, using a per-task cursor. Cancellation is handled by the runtime.
     """
     logger.debug(
         f"Executing DuckDB query:\n{query['sql'][:256]}{'...' if len(query['sql']) > 256 else ''}"
@@ -169,4 +168,4 @@ async def run_duckdb(cache, query, query_id: Optional[str] = None):
                     )
                 raise
 
-    return await db_async.run_db_task(_execute_with_cursor, query_id=query_id)
+    return await runtime.run_db_task(_execute_with_cursor, query_id=query_id)

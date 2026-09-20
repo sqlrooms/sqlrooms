@@ -1,77 +1,16 @@
+from .conftest import authenticated_socket
 import json
-import os
-import tempfile
-import time
-import subprocess
-import sys
-import socket
 
 import aiohttp
 import pytest
 
 
-@pytest.fixture(scope="module")
-def server_proc():
-    port = 30011
-    out = tempfile.NamedTemporaryFile(delete=False)
-    err = tempfile.NamedTemporaryFile(delete=False)
-    proc = subprocess.Popen(
-        [sys.executable, "-m", "sqlrooms.server", "--port", str(port)],
-        stdout=out,
-        stderr=err,
-    )
-    # Wait until port is accepting connections or timeout
-    started = False
-    deadline = time.time() + 12.0
-    while time.time() < deadline:
-        if proc.poll() is not None:
-            break
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.2):
-                started = True
-                break
-        except OSError:
-            time.sleep(0.1)
-    if not started:
-        try:
-            proc.terminate()
-        except Exception:
-            pass
-        try:
-            with open(out.name, "r") as fo:
-                print("STDOUT:", fo.read())
-            with open(err.name, "r") as fe:
-                print("STDERR:", fe.read())
-        except Exception:
-            pass
-        pytest.fail("Server failed to start listening on port")
-    yield {
-        "proc": proc,
-        "port": port,
-    }
-    try:
-        proc.terminate()
-        proc.wait(timeout=5)
-    except Exception:
-        try:
-            proc.kill()
-        except Exception:
-            pass
-    try:
-        os.unlink(out.name)
-    except Exception:
-        pass
-    try:
-        os.unlink(err.name)
-    except Exception:
-        pass
-
-
 @pytest.mark.asyncio
 async def test_ws_query_and_correlation(server_proc):
     port = server_proc["port"]
+    token = server_proc["token"]
     async with aiohttp.ClientSession() as session:
-        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+        async with authenticated_socket(session, port, token) as ws:
             qid = "q1"
             await ws.send_str(
                 json.dumps(
@@ -96,8 +35,9 @@ async def test_ws_query_and_correlation(server_proc):
 @pytest.mark.asyncio
 async def test_ws_cancel(server_proc):
     port = server_proc["port"]
+    token = server_proc["token"]
     async with aiohttp.ClientSession() as session:
-        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+        async with authenticated_socket(session, port, token) as ws:
             qid = "long_q"
             # Start a long-running query
             await ws.send_str(
@@ -142,8 +82,9 @@ async def test_ws_cancel(server_proc):
 @pytest.mark.asyncio
 async def test_ws_subscribe_notify(server_proc):
     port = server_proc["port"]
+    token = server_proc["token"]
     async with aiohttp.ClientSession() as session:
-        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+        async with authenticated_socket(session, port, token) as ws:
             await ws.send_str(
                 json.dumps({"type": "subscribe", "channel": "table:orders"})
             )

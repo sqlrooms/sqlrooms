@@ -84,21 +84,10 @@ def _configure_logging(*, debug: bool) -> None:
 def _resolve_http_port(
     host: str,
     port: int | None,
-    ws_port: int | None = None,
-    mcp_port: int | None = None,
 ) -> int:
     if port is not None:
         return port
-    reserved_ports = {
-        reserved_port
-        for reserved_port in (ws_port, mcp_port)
-        if reserved_port is not None
-    }
-    selected_port = _pick_free_port(
-        host,
-        DEFAULT_HTTP_PORT,
-        reserved_ports=reserved_ports or None,
-    )
+    selected_port = _pick_free_port(host, DEFAULT_HTTP_PORT)
     if selected_port != DEFAULT_HTTP_PORT:
         logger.info(
             "Port %s is in use, using HTTP port %s instead",
@@ -526,7 +515,7 @@ def main(
     ws_port: int | None = typer.Option(
         None,
         "--ws-port",
-        help="WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.",
+        help="Removed: use --port for the shared listener.",
     ),
     config: str | None = typer.Option(
         None,
@@ -592,12 +581,12 @@ def main(
     mcp: bool = typer.Option(
         False,
         "--mcp",
-        help="Start the loopback-only MCP server for the live SQLRooms room.",
+        help="Enable the authenticated MCP endpoint on the shared HTTP listener.",
     ),
     mcp_port: int | None = typer.Option(
         None,
         "--mcp-port",
-        help="Loopback MCP HTTP port. If omitted, port 42100 or the next free port is used.",
+        help="Removed: use --port for the shared listener.",
     ),
     debug: bool = typer.Option(
         False,
@@ -632,7 +621,7 @@ def main(
 
     Example: sqlrooms ./my-project.duckdb
 
-    - Boots a DuckDB websocket server (sqlrooms-server).
+    - Serves HTTP, DuckDB WebSockets and optional MCP on one port.
     - Serves the document UI with persisted state stored in DuckDB.
     """
     if ctx.invoked_subcommand:
@@ -722,13 +711,13 @@ def main(
         config_path if config_path else (None if no_config else DEFAULT_CONFIG_PATH)
     )
 
-    if mcp_port is not None and not 1 <= mcp_port <= 65535:
-        typer.echo("--mcp-port must be between 1 and 65535.", err=True)
+    if ws_port is not None or mcp_port is not None:
+        typer.echo(
+            "--ws-port and --mcp-port were removed. Use --port; DuckDB is at /ws/duckdb and MCP at /mcp. Restart and reconfigure older clients.",
+            err=True,
+        )
         raise typer.Exit(code=1)
-    selected_port = _resolve_http_port(host, port, ws_port, mcp_port)
-    if mcp_port is not None and mcp_port in {selected_port, ws_port}:
-        typer.echo("--mcp-port must differ from --port and --ws-port.", err=True)
-        raise typer.Exit(code=1)
+    selected_port = _resolve_http_port(host, port)
     selected_api_key = (
         str(ai_providers.get(llm_provider or "", {}).get("apiKey") or "")
         if llm_provider
@@ -784,3 +773,28 @@ def main(
 
 
 app.add_typer(agent_app, name="agent")
+
+
+@app.command(
+    "server",
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)
+def server_command(
+    ctx: typer.Context,
+    db_path: str = typer.Option(
+        ..., "--db-path", "-d", help="DuckDB database path or :memory:."
+    ),
+    port: int | None = typer.Option(
+        None, "--port", help="Shared HTTP, WebSocket and MCP port."
+    ),
+):
+    """Run the same workspace runtime without UI assets or browser launch.
+
+    Additional launcher options (including --mcp, --host and --meta-db) are
+    forwarded to the normal launcher. Use `sqlrooms --help` for that full list.
+    A database literally named server can be opened as ./server.
+    """
+    args = ["--db-path", db_path, "--no-ui", "--no-open-browser"]
+    if port is not None:
+        args += ["--port", str(port)]
+    typer.main.get_command(app).main(args=[*args, *ctx.args], standalone_mode=False)

@@ -41,7 +41,7 @@ Reference:
 - [DuckDB: Iceberg in the Browser](https://duckdb.org/2025/12/16/iceberg-in-the-browser)
 - [MotherDuck example](/examples#motherduck-cloud-query-editor)
 
-## 3) Collaborative shared rooms with `sqlrooms-server` (coming soon)
+## 3) Collaborative shared rooms with `sqlrooms server` (coming soon)
 
 Use server-backed sessions when many users need to see and edit the same analytical workspace in near real time.
 
@@ -58,7 +58,7 @@ A common deployment pattern is session-per-room on demand (for example, containe
 Examples and references:
 
 - [Sync example](https://github.com/sqlrooms/examples/tree/main/sync)
-- [`sqlrooms-server` README](https://github.com/sqlrooms/sqlrooms/tree/main/python/sqlrooms-server)
+- [`sqlrooms server` README](https://github.com/sqlrooms/sqlrooms/tree/main/python/sqlrooms)
 - [Build your own data warehouse with DuckDB, DBT, and Modal](https://modal.com/docs/examples/dbt_duckdb)
 
 ## Backend platform options for Scenarios 2 and 3
@@ -107,7 +107,7 @@ Examples and references:
 SQLRooms can be packaged as a desktop app using Electron or Tauri.
 
 - **How it works:** A desktop shell hosts the SQLRooms web app.
-- **Runtime options:** In-app DuckDB WASM, or native DuckDB via a local backend such as `sqlrooms-server`.
+- **Runtime options:** In-app DuckDB WASM, or native DuckDB via a local backend such as `sqlrooms server`.
 - **Data storage:** Local filesystem/embedded database, optionally with remote sources.
 - **Alternative persistence:** MotherDuck can back desktop deployments that need cloud-synced datasets across devices instead of only local files.
 - **App state storage:** Local files and browser-like storage inside the desktop shell.

@@ -15,11 +15,10 @@ uv sync
 
 ## Packages
 
-| Package           | Purpose                                    |
-| ----------------- | ------------------------------------------ |
-| `sqlrooms`        | Interactive CLI powered by DuckDB          |
-| `sqlrooms-server` | HTTP server exposing DuckDB over WebSocket |
-| `sqlrooms-rag`    | RAG pipeline for document-grounded queries |
+| Package        | Purpose                                    |
+| -------------- | ------------------------------------------ |
+| `sqlrooms`     | CLI, UI and unified ASGI DuckDB runtime    |
+| `sqlrooms-rag` | RAG pipeline for document-grounded queries |
 
 ## Running Packages
 
@@ -29,6 +28,6 @@ cd python/sqlrooms
 uv run sqlrooms :memory:
 
 # Server
-cd python/sqlrooms-server
-uv run sqlrooms-server --db-path :memory: --port 4000
+cd python/sqlrooms
+uv run sqlrooms server --db-path :memory: --port 4000
 ```
