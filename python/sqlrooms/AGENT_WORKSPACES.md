@@ -10,10 +10,10 @@ sqlrooms agent status
 sqlrooms agent connect
 ```
 
-Setup previews the exact client entry and guidance actions. `--yes` applies only
+Setup previews the exact client entry, guidance actions, and tool permission changes. `--yes` applies only
 the explicitly selected client; it installs no optional runtime or other software.
 `--uninstall` removes only an unchanged SQLRooms-managed entry and its managed Code
-plugin. Customized entries fail with a conflict; unrelated configuration is kept.
+plugin and the permission entries it added. Customized entries fail with a conflict; unrelated configuration is kept.
 A database literally named `agent` needs an explicit path: `sqlrooms ./agent`.
 
 Desktop setup writes the local MCP Developer configuration with the selected
@@ -31,6 +31,39 @@ marketplace, alongside the stable global MCP entry. It refuses duplicate loose
 or differently sourced SQLRooms guidance. The foreground `sqlrooms file.duckdb
 --claude` (`--claude-code`) flow still uses its session-scoped HTTP connection and
 plugin, with no model override. Setup does not launch Claude or a workspace.
+
+## Claude Code tool permissions
+
+Interactive Code setup offers **Trust SQLRooms tools** (recommended). It adds
+explicit `mcp__sqlrooms__<tool>` allow entries for the currently shipped tools to
+`~/.claude/settings.json`. No wildcard or global permission mode is installed.
+The MCP connection remains in `~/.claude.json`; `CLAUDE_CONFIG_DIR` redirects
+both files to the selected Claude configuration directory.
+
+Trust allows workspace discovery, creation, opening, closing, relocation and
+catalog forgetting, plus document edits and the exposed query/command tools.
+SQLRooms continues to enforce browser approval for database writes and external
+or unverified reads. Existing Claude ask/deny entries and organization policies
+remain effective, so they may still cause prompts or block calls. This option
+applies to Claude Code, not Claude Desktop.
+
+```sh
+# Preview exact additions and removals without changing files:
+sqlrooms agent setup --client claude-code --dry-run
+# Explicitly accept the recommended trust option:
+sqlrooms agent setup --client claude-code --trust-tools --yes
+# Keep the connection and guidance, but remove only setup-owned allow entries:
+sqlrooms agent setup --client claude-code --no-trust-tools --yes
+```
+
+`--yes` uses the recommended trust option unless `--no-trust-tools` is supplied.
+Setup preserves unrelated settings, user-owned allow entries, and existing
+restrictions. Repeat setup does not duplicate or adopt pre-existing permissions.
+An ownership record lets uninstall remove only the unchanged entries SQLRooms
+added. Interrupted permission writes are recoverable; conflicting edits are
+preserved and reported instead of guessed. Switching configuration directories
+while grants are owned requires uninstalling setup in the previous directory first.
+Rerun setup and restart Claude Code to update an existing installation.
 
 ## Data and identities
 

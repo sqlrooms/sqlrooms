@@ -6,6 +6,21 @@ on `6ffe278f1f275214ed2b4af58e6fda9e2ecc14ae`. Local verification was performed 
 macOS with Python 3.12 and Claude Code 2.1.274. This records the tested scope; it
 is not a claim that the complete product acceptance matrix has passed.
 
+## Claude Code setup trust follow-up
+
+- 264 Python CLI/server tests passed, including 17 setup-permission tests. Coverage
+  includes exact tool discovery, dry-run without writes, interactive and automated
+  opt-out, repeated setup, preserved ask/deny and pre-existing allow entries,
+  malformed settings, plugin-written settings, missing MCP entries at uninstall,
+  interrupted grants, conflicting edits, and custom Claude configuration directories.
+- Real Claude Code setup, repeat setup, opt-out, and uninstall succeeded using
+  disposable `CLAUDE_CONFIG_DIR` and `SQLROOMS_HOME` directories. Setup allowed all
+  11 known tools and owned only 10 additions because one allow entry pre-existed.
+  Opt-out and uninstall preserved that user entry and the original ask/deny lists.
+  The actual client confirmed its overridden MCP file is `<CLAUDE_CONFIG_DIR>/.claude.json`.
+- Existing user client settings were not changed. These were configuration checks,
+  with no model request, API charge, or claim of a new model acceptance run.
+
 ## CLI file import and SQL approvals follow-up
 
 Added `db.import-file`, removed `room.add-url-data-source` from the CLI registry,

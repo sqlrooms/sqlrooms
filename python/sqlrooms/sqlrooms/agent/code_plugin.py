@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -74,7 +75,12 @@ def prepare_files(source: Path):
 
 
 def install(source: Path):
-    if (Path.home() / ".claude/skills/sqlrooms").exists():
+    if (
+        Path(
+            os.environ.get("CLAUDE_CONFIG_DIR") or str(Path.home() / ".claude")
+        ).expanduser()
+        / "skills/sqlrooms"
+    ).exists():
         raise WorkspaceError(
             "guidance_conflict",
             "A loose SQLRooms skill already exists. Remove or move it explicitly before installing the native plugin.",

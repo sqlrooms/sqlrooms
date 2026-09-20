@@ -2,20 +2,36 @@
 
 from __future__ import annotations
 
-import json
+import os
 from pathlib import Path
 import shutil
 import sys
 import zipfile
 
 from .storage import WorkspaceError, atomic_json, home, lock
+from .permissions import (
+    apply_permissions,
+    permission_change,
+    permissions_preview,
+    read_object,
+    recover_permissions,
+    write_client_json,
+)
 
 
 def configuration():
     return {"command": sys.executable, "args": ["-m", "sqlrooms", "agent", "connect"]}
 
 
-def setup_plan(client: str, *, uninstall=False):
+def manifest_path(client: str):
+    # Preview must not create the SQLRooms home or client directories.
+    root = Path(
+        os.environ.get("SQLROOMS_HOME", str(Path.home() / ".sqlrooms"))
+    ).expanduser()
+    return root / ("setup-" + client + ".json")
+
+
+def setup_plan(client: str, *, uninstall=False, trust_tools=True):
     if client not in {"claude-desktop", "claude-code"}:
         raise WorkspaceError("invalid_client", "Choose claude-desktop or claude-code.")
     if client == "claude-desktop" and sys.platform != "darwin":
@@ -28,7 +44,12 @@ def setup_plan(client: str, *, uninstall=False):
         if client == "claude-desktop"
         else ".claude.json"
     )
-    return {
+    if client == "claude-code" and os.environ.get("CLAUDE_CONFIG_DIR"):
+        path = (
+            Path(os.environ["CLAUDE_CONFIG_DIR"]).expanduser().resolve()
+            / ".claude.json"
+        )
+    plan = {
         "client": client,
         "configurationPath": str(path),
         "entry": {"sqlrooms": configuration()},
@@ -61,6 +82,13 @@ def setup_plan(client: str, *, uninstall=False):
         else [],
     }
 
+    if client == "claude-code":
+        plan["toolPermissions"] = permissions_preview(
+            recover_permissions(read_object(manifest_path(client))),
+            trust=trust_tools and not uninstall,
+        )
+    return plan
+
 
 def apply_setup(plan):
     if plan["client"] == "claude-code" and not shutil.which("claude"):
@@ -69,21 +97,22 @@ def apply_setup(plan):
             "Install Claude Code explicitly before setup; no software was installed.",
         )
     path = Path(plan["configurationPath"])
-    manifest_path = home() / ("setup-" + plan["client"] + ".json")
+    ownership_path = manifest_path(plan["client"])
+    plugin = Path(__file__).resolve().parents[1] / "claude_plugin"
+    skill = plugin / "skills/sqlrooms"
+    uninstalling = plan["action"] == "uninstall"
+    permission_plan = (
+        plan.get("toolPermissions") if plan["client"] == "claude-code" else None
+    )
     with lock("setup:" + str(path)):
-        try:
-            current = json.loads(path.read_text()) if path.exists() else {}
-            previous = (
-                json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
-            )
-            servers = current.setdefault("mcpServers", {})
-            if not isinstance(servers, dict):
-                raise ValueError()
-        except (ValueError, TypeError, AttributeError):
+        current = read_object(path)
+        previous = recover_permissions(read_object(ownership_path))
+        servers = current.setdefault("mcpServers", {})
+        if not isinstance(servers, dict):
             raise WorkspaceError(
                 "configuration_invalid",
-                "Client configuration is malformed; it has been preserved.",
-            ) from None
+                "Client MCP configuration is malformed; preserved.",
+            )
         existing = servers.get("sqlrooms")
         desired = configuration()
         if (
@@ -95,50 +124,47 @@ def apply_setup(plan):
                 "configuration_conflict",
                 "The sqlrooms MCP entry is user-owned or customized; it has been preserved.",
             )
-        if plan["action"] == "uninstall":
-            if existing is not None and existing == previous.get("entry"):
-                del servers["sqlrooms"]
-            else:
-                return {"ok": True, "message": "No unchanged managed entry to remove."}
-        else:
-            servers["sqlrooms"] = desired
-        # Client folders are not SQLRooms credential storage; preserve their
-        # permissions and atomically replace only the JSON file.
-        import os
-        import tempfile
-
-        path.parent.mkdir(parents=True, exist_ok=True)
-        fd, temporary = tempfile.mkstemp(dir=path.parent)
-        try:
-            with os.fdopen(fd, "w") as stream:
-                json.dump(current, stream, indent=2)
-                stream.write("\n")
-            os.replace(temporary, path)
-        finally:
-            Path(temporary).unlink(missing_ok=True)
-        if plan["action"] == "uninstall":
+        # Validate permission settings before changing MCP configuration or plugins.
+        if permission_plan:
+            permission_change(
+                Path(permission_plan["settingsPath"]),
+                previous,
+                permission_plan["allow"],
+            )
+        if uninstalling:
             if plan["client"] == "claude-code" and previous.get("nativePlugin"):
                 from .code_plugin import uninstall
 
                 uninstall()
-            manifest_path.unlink(missing_ok=True)
+            if permission_plan:
+                apply_permissions(permission_plan, previous, ownership_path)
+            if existing is not None and existing == previous.get("entry"):
+                del servers["sqlrooms"]
+                write_client_json(path, current)
+            ownership_path.unlink(missing_ok=True)
             return {
                 "ok": True,
-                "message": "Removed only the managed MCP entry. Remove uploaded guidance through the client's Skills UI.",
+                "message": "Removed only SQLRooms-managed configuration and permission entries. Remove uploaded Desktop guidance through the client's Skills UI.",
             }
-        atomic_json(manifest_path, {**previous, "entry": desired})
-    plugin = Path(__file__).resolve().parents[1] / "claude_plugin"
-    skill = plugin / "skills/sqlrooms"
-    if not (skill / "SKILL.md").is_file():
-        raise WorkspaceError(
-            "guidance_missing",
-            "Connector configured, but packaged guidance is missing. Reinstall the complete SQLRooms wheel.",
-        )
-    if plan["client"] == "claude-code":
-        from .code_plugin import install
+        if not (skill / "SKILL.md").is_file():
+            raise WorkspaceError(
+                "guidance_missing",
+                "Packaged guidance is missing. Reinstall the complete SQLRooms wheel.",
+            )
+        servers["sqlrooms"] = desired
+        write_client_json(path, current)
+        previous = {**previous, "entry": desired}
+        atomic_json(ownership_path, previous)
+        if plan["client"] == "claude-code":
+            from .code_plugin import install
 
-        plugin_id = install(plugin)
-        atomic_json(manifest_path, {"entry": desired, "nativePlugin": plugin_id})
+            plugin_id = install(plugin)
+            previous = {**previous, "nativePlugin": plugin_id}
+            atomic_json(ownership_path, previous)
+        # Native plugin installation also writes settings.json. Merge the latest
+        # contents now, preserving its changes and previously owned grant entries.
+        if permission_plan:
+            previous = apply_permissions(permission_plan, previous, ownership_path)
     archive = home() / "sqlrooms-skill.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as output:
         for file in sorted(skill.rglob("*")):
@@ -150,5 +176,6 @@ def apply_setup(plan):
         "guidanceArchive": str(archive),
         "guidance": plan["guidance"],
         "codeCommand": ["claude"],
+        **({"toolPermissions": permission_plan} if permission_plan else {}),
         "message": "Configuration is current. Restart the selected client; native guidance loading still requires the indicated client step.",
     }

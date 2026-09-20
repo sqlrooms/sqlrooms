@@ -295,5 +295,10 @@ Run `sqlrooms agent setup --client claude-desktop` or `--client claude-code` to
 preview one-time integration. The stable `sqlrooms agent connect` MCP adapter can
 list saved projects, create named persistent workspaces, reuse live browsers, and
 reopen by saved workspace ID. `sqlrooms agent status` reports redacted diagnostics.
+Claude Code setup offers a recommended trust option for the known SQLRooms MCP
+tools, avoiding duplicate Claude prompts while retaining SQLRooms browser approvals.
+Use `--no-trust-tools` to opt out; existing user permissions and restrictions are
+preserved. See [tool permissions](AGENT_WORKSPACES.md#claude-code-tool-permissions).
+
 See [agent-managed workspaces](AGENT_WORKSPACES.md) for setup, profiles, explicit
 instance routing, recovery, lifecycle, and current verification limitations.
