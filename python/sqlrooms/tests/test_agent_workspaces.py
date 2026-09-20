@@ -325,6 +325,7 @@ def test_setup_preserves_custom_settings_and_only_uninstalls_owned_entry(
 ):
     from sqlrooms.agent.setup import apply_setup, configuration
 
+    monkeypatch.setattr("sqlrooms.agent.setup.shutil.which", lambda _: "/test/claude")
     monkeypatch.setattr(
         "sqlrooms.agent.code_plugin.install", lambda source: "sqlrooms@sqlrooms-local"
     )
@@ -351,6 +352,28 @@ def test_setup_preserves_custom_settings_and_only_uninstalls_owned_entry(
     with pytest.raises(WorkspaceError):
         apply_setup(plan)
     assert json.loads(config.read_text()) == value
+
+
+def test_setup_without_claude_preserves_configuration(tmp_path, monkeypatch):
+    from sqlrooms.agent.setup import apply_setup
+
+    monkeypatch.setattr("sqlrooms.agent.setup.shutil.which", lambda _: None)
+    config = tmp_path / "claude.json"
+    original = '{"theme":"dark","mcpServers":{"other":{"command":"other"}}}'
+    config.write_text(original)
+
+    with pytest.raises(WorkspaceError) as exc:
+        apply_setup(
+            {
+                "client": "claude-code",
+                "configurationPath": str(config),
+                "action": "install",
+                "guidance": "test",
+            }
+        )
+
+    assert exc.value.result["code"] == "client_missing"
+    assert config.read_text() == original
 
 
 def test_pending_start_prevents_duplicate_launch(monkeypatch):
