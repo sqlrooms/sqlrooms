@@ -146,6 +146,12 @@ This starts:
 - the Python API server on `http://127.0.0.1:4273` with `--experimental` and without serving static UI, or the next free port
 - the Vite UI on `http://localhost:3100`, or the next free port, proxying `/api`, `/config.json`, and `/ws` to the selected Python API port
 - a per-session dev database named after the selected UI port, for example `sqlrooms-3100.db`
+- an authorized browser tab, opened after Vite is ready using a single-use launch ticket
+
+Use the temporary launch link printed in the terminal when opening another tab.
+The bare Vite URL cannot authorize a new browser session. Pass `--no-open-browser`
+to print the interactive-terminal link without opening a tab. Restarting the
+backend requires a fresh link; reloads retain the current page credential.
 
 If you want fixed ports, pass them to the Python server:
 

@@ -380,7 +380,7 @@ if (target === 'cli') {
   if (!exiting) {
     startProcess(
       'sqlrooms CLI UI dev server',
-      ['--host', '--port', String(uiPort)],
+      ['--host', '--port', String(uiPort), '--strictPort'],
       {
         command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
         cwd: path.resolve('apps/sqlrooms-cli-ui'),
@@ -390,6 +390,35 @@ if (target === 'cli') {
         },
       },
     );
+    try {
+      await waitForCliApi(`http://localhost:${uiPort}/`, {
+        signal: cliStartupController.signal,
+      });
+      startProcess(
+        'authorized SQLRooms dev launch',
+        [
+          'run',
+          'python',
+          'scripts/open_dev.py',
+          `http://${proxyHost}:${apiPort}`,
+          ...(cliArgs.includes('--no-open-browser')
+            ? ['--no-open-browser']
+            : []),
+        ],
+        {
+          command: 'uv',
+          cwd: path.resolve('python/sqlrooms'),
+          allowCleanExit: true,
+        },
+      );
+    } catch (error) {
+      if (!exiting) {
+        exiting = true;
+        stopChildren();
+        console.error('SQLRooms CLI UI failed to become ready.', error);
+        process.exit(1);
+      }
+    }
   }
 } else {
   startProcess(
