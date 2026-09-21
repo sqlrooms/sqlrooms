@@ -1,4 +1,6 @@
 import {Selection, clausePoint} from '@uwdata/mosaic-core';
+import {Field, Int64, Schema, Table, vectorFromArray} from 'apache-arrow';
+import {createMosaicTableFromArrowTable} from '../src/tableInterop';
 import {DataTableExplorerCountClient} from '../src/data-table-explorer/DataTableExplorerCountClient';
 import {DataTableExplorerPageClient} from '../src/data-table-explorer/DataTableExplorerPageClient';
 import {DataTableExplorerUnsupportedSummaryClient} from '../src/data-table-explorer/DataTableExplorerUnsupportedSummaryClient';
@@ -38,6 +40,33 @@ describe('dataTableExplorer query clients', () => {
 
     expect(latest.isLoading).toBe(true);
     expect(latest.pageTable).toBe(previousPageTable);
+  });
+
+  it('converts Mosaic page results so Int64 values outside the safe integer range stay exact', () => {
+    const unsafe = 610625465232654335n;
+    const arrowTable = new Table(new Schema([new Field('id', new Int64())]), {
+      id: vectorFromArray([unsafe], new Int64()),
+    });
+    const mosaicTable = createMosaicTableFromArrowTable(arrowTable);
+
+    expect(() => mosaicTable.getChild('id')?.get(0)).toThrow(
+      /BigInt exceeds integer number representation/,
+    );
+
+    let latest: any;
+    const client = new DataTableExplorerPageClient({
+      columns: ['id'],
+      onStateChange: (state) => {
+        latest = state;
+      },
+      pagination: {pageIndex: 0, pageSize: 10},
+      sorting: [],
+      tableName: 'issues',
+    });
+
+    client.queryResult(mosaicTable);
+
+    expect(latest.pageTable.getChild('id')?.get(0)).toBe(unsafe);
   });
 
   it('applies the active selection predicate in the filtered count query', () => {

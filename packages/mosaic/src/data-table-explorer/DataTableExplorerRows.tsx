@@ -1,4 +1,8 @@
-import {ArrowCellValue, isNumericArrowType} from '@sqlrooms/data-table';
+import {
+  ArrowCellValue,
+  getArrowVectorValue,
+  isNumericArrowType,
+} from '@sqlrooms/data-table';
 import {cn, TableBody, TableCell, TableRow} from '@sqlrooms/ui';
 import * as arrow from 'apache-arrow';
 import {memo} from 'react';
@@ -114,7 +118,7 @@ const DataRow = memo(function DataRow({
       </TableCell>
       {columns.map((column) => {
         const vector = pageTable.getChild(column.name) as arrow.Vector | null;
-        const value = vector?.get(rowIndex);
+        const value = getArrowVectorValue(vector, rowIndex);
         return (
           <TableCell
             key={column.name}

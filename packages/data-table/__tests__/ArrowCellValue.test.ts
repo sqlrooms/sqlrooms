@@ -30,4 +30,11 @@ describe('valueToString', () => {
 
     expect(valueToString(type, 45_000_000_000n)).toBe('12:30:00');
   });
+
+  it('formats 64-bit integers outside the safe integer range as exact decimals', () => {
+    const type = new arrow.Int64();
+    const value = 610625465232654335n;
+
+    expect(valueToString(type, value)).toBe('610625465232654335');
+  });
 });

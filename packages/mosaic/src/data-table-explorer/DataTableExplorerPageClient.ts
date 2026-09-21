@@ -11,6 +11,20 @@ import {
   buildDataTableExplorerPageQuery,
 } from './utils';
 import {getMosaicSqlTableReference} from '../mosaicTableReference';
+import {toArrowClientResult} from '../tableInterop';
+
+function toExplorerPageTable(data: unknown): Table | undefined {
+  if (data == null) {
+    return undefined;
+  }
+
+  try {
+    return toArrowClientResult(data);
+  } catch {
+    // Query clients in tests pass table-like stubs that are not Arrow/Flechette.
+    return data as Table;
+  }
+}
 
 export type DataTableExplorerPageState = {
   datasetId?: string;
@@ -83,7 +97,7 @@ export class DataTableExplorerPageClient extends MosaicClient {
 
   override queryResult(data: unknown): this {
     this.error = undefined;
-    this.pageTable = data as Table;
+    this.pageTable = toExplorerPageTable(data);
     this.onStateChange({
       datasetId: this.datasetId,
       isLoading: false,

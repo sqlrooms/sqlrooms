@@ -10,6 +10,7 @@ export {
   isNumericArrowType,
   valueToString,
 } from './ArrowCellValue';
+export {getArrowVectorValue, type ArrowVectorLike} from './getArrowVectorValue';
 export {
   DataTableArrowPaginated,
   type DataTableArrowPaginatedProps,

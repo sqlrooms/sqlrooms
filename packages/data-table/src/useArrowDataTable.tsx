@@ -10,6 +10,7 @@ import {
   MAX_VALUE_LENGTH,
   isNumericArrowType,
 } from './ArrowCellValue';
+import {getArrowVectorValue} from './getArrowVectorValue';
 
 const columnHelper = createColumnHelper();
 
@@ -71,25 +72,28 @@ export default function useArrowDataTable(
     const columns: ColumnDef<any, any>[] = [];
     for (const field of table.schema.fields) {
       columns.push(
-        columnHelper.accessor((_row, i) => table.getChild(field.name)?.get(i), {
-          cell: (info) => {
-            const value = info.getValue();
-            return (
-              <ArrowCellValue
-                fieldName={field.name}
-                fontSizeClass={fontSizeClass}
-                formatValue={formatValue}
-                type={field.type}
-                value={value}
-              />
-            );
+        columnHelper.accessor(
+          (_row, i) => getArrowVectorValue(table.getChild(field.name), i),
+          {
+            cell: (info) => {
+              const value = info.getValue();
+              return (
+                <ArrowCellValue
+                  fieldName={field.name}
+                  fontSizeClass={fontSizeClass}
+                  formatValue={formatValue}
+                  type={field.type}
+                  value={value}
+                />
+              );
+            },
+            header: shorten(field.name, MAX_VALUE_LENGTH),
+            meta: {
+              type: field.type,
+              isNumeric: isNumericArrowType(field.type),
+            },
           },
-          header: shorten(field.name, MAX_VALUE_LENGTH),
-          meta: {
-            type: field.type,
-            isNumeric: isNumericArrowType(field.type),
-          },
-        }),
+        ),
       );
     }
     return columns;
