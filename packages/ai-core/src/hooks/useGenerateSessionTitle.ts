@@ -122,6 +122,8 @@ export function getSessionUserMessageText(session: ChatSessionSchema) {
 function buildDefaultTitlePrompt(userMessages: string[]) {
   return `Based on the following user messages from a conversation, generate a concise, descriptive title of 50 characters or fewer that summarizes the main topic.
 
+Write the title as a bare noun phrase, ideally 2-5 words. Drop leading filler: framing words ("Analysis of", "Overview of", "Report on", "Question about"), output kinds ("Map of", "Chart of"), and articles ("A", "The"). Write "San Francisco roads", not "Map of roads in San Francisco".
+
 User messages:
 ${userMessages.join('\n')}
 
@@ -166,7 +168,9 @@ export async function generateSessionTitle({
   });
   const generatedTitle = await sendPrompt(prompt, {
     systemInstructions:
-      'You generate concise, descriptive conversation titles. Return only the title text, nothing else.',
+      'You generate concise, descriptive conversation titles as bare noun ' +
+      'phrases, with no leading filler such as "Map of", "Analysis of", or ' +
+      '"The". Return only the title text, nothing else.',
     useTools: false,
     ...promptOptions,
   });
