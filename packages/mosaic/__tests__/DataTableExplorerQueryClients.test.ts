@@ -24,7 +24,9 @@ describe('dataTableExplorer query clients', () => {
 
   it('keeps the previous page table while a new row query is pending', () => {
     let latest: any;
-    const previousPageTable = {numRows: 10};
+    const previousPageTable = new Table({
+      id: vectorFromArray([1, 2, 3]),
+    });
     const client = new DataTableExplorerPageClient({
       columns: ['id'],
       onStateChange: (state) => {
@@ -40,6 +42,26 @@ describe('dataTableExplorer query clients', () => {
 
     expect(latest.isLoading).toBe(true);
     expect(latest.pageTable).toBe(previousPageTable);
+  });
+
+  it('reports page-result conversion failures without publishing the original value', () => {
+    let latest: any;
+    const client = new DataTableExplorerPageClient({
+      columns: ['id'],
+      onStateChange: (state) => {
+        latest = state;
+      },
+      pagination: {pageIndex: 0, pageSize: 10},
+      sorting: [],
+      tableName: 'issues',
+    });
+
+    client.queryResult({not: 'a table'});
+
+    expect(latest.error).toBeInstanceOf(Error);
+    expect(latest.error.message).toMatch(/Mosaic table result/);
+    expect(latest.pageTable).toBeUndefined();
+    expect(latest.isLoading).toBe(false);
   });
 
   it('converts Mosaic page results so Int64 values outside the safe integer range stay exact', () => {
