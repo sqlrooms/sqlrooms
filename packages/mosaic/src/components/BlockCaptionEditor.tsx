@@ -27,7 +27,10 @@ export const BlockCaptionEditor: FC<BlockCaptionEditorProps> = ({
 }) => {
   return (
     <EditableText
-      className={cn('h-8 min-w-0 flex-1 text-sm font-medium', className)}
+      className={cn(
+        'h-8 min-w-0 flex-1 border-0 text-sm font-medium shadow-none focus:border-transparent focus:ring-0',
+        className,
+      )}
       value={value ?? ''}
       placeholder={placeholder}
       isReadOnly={isReadOnly}
