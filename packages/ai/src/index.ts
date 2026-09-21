@@ -133,6 +133,7 @@ export {createAiSlice, useStoreWithAi} from '@sqlrooms/ai-core';
 export type {AiSliceState} from '@sqlrooms/ai-core';
 export {useScrollToBottom} from '@sqlrooms/ai-core';
 export {
+  AI_GENERATION_FAILED_TEXT,
   cleanGeneratedSessionTitle,
   generateSessionTitle,
   getSessionUserMessageText,

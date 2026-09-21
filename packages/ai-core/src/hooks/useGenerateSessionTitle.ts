@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef} from 'react';
 import type {ChatSessionSchema} from '@sqlrooms/ai-config';
 import {useStoreWithAi, type AiSliceState} from '../AiSlice';
+import {AI_GENERATION_FAILED_TEXT} from '../constants';
 
 type SessionMessagePart =
   ChatSessionSchema['uiMessages'][number]['parts'][number];
@@ -49,7 +50,12 @@ export type GenerateSessionTitleResult =
       title: string;
     }
   | {
-      status: 'empty' | 'custom-title' | 'unchanged' | 'blank-generated-title';
+      status:
+        | 'empty'
+        | 'custom-title'
+        | 'unchanged'
+        | 'blank-generated-title'
+        | 'generation-failed';
       title?: string;
     };
 
@@ -170,6 +176,13 @@ export async function generateSessionTitle({
     useTools: false,
     ...promptOptions,
   });
+  // A failed generation must not become the session name: leaving the session
+  // on its default ("Chat", "Chat 2", ...) is the sensible fallback, and keeps
+  // it eligible for a retry on the next message.
+  if (generatedTitle.trim() === AI_GENERATION_FAILED_TEXT) {
+    return {status: 'generation-failed'};
+  }
+
   const title = cleanGeneratedSessionTitle(generatedTitle, maxTitleLength);
 
   if (!title) {

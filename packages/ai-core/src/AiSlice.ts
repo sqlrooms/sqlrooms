@@ -37,6 +37,7 @@ import {
   writeToolTimingsToMetadata,
 } from './chatTransport';
 import {
+  AI_GENERATION_FAILED_TEXT,
   ANALYSIS_CANCELLED,
   SESSION_DELETED,
   TOOL_CALL_CANCELLED,
@@ -1899,7 +1900,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               throw new ToolAbortError(TOOL_CALL_CANCELLED);
             }
             console.error('Error generating text:', error);
-            return 'error: can not generate response';
+            return AI_GENERATION_FAILED_TEXT;
           }
         },
 

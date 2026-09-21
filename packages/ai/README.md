@@ -247,6 +247,13 @@ and `BlockAiPromptPopoverProps`.
 
 `generateSessionTitle` turns a session's early user messages into a concise title
 via `ai.sendPrompt`, cleans the model output, and renames the session.
+If the model call fails, `ai.sendPrompt` resolves with the placeholder
+`AI_GENERATION_FAILED_TEXT` instead of throwing. `generateSessionTitle`
+recognises it, returns `{status: 'generation-failed'}` and leaves the session on
+its default name (`Chat`, `Chat 2`, ...) rather than renaming the chat to the
+error text, so the next user message can try again. Any other caller that
+renders `sendPrompt` output should compare against that exported constant.
+
 `useGenerateSessionTitle` wraps that helper for React surfaces that should watch
 the current session and trigger title generation after new user messages. Apps
 can keep product-specific policy outside the shared package by passing options
