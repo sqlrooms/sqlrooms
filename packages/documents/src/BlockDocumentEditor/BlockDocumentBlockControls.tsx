@@ -1667,7 +1667,10 @@ export const BlockDocumentBlockControls: FC<
         <div
           ref={controlsRef}
           className="pointer-events-none absolute z-20 flex -translate-y-1/2 flex-row items-center gap-0.5"
-          style={{top: activeBlock.top, left: BLOCK_DOCUMENT_CONTROLS_LEFT_INSET}}
+          style={{
+            top: activeBlock.top,
+            left: BLOCK_DOCUMENT_CONTROLS_LEFT_INSET,
+          }}
         >
           <TooltipProvider>
             {renderAddButton()}
