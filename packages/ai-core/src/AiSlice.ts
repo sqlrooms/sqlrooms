@@ -37,6 +37,7 @@ import {
   writeToolTimingsToMetadata,
 } from './chatTransport';
 import {
+  AI_GENERATION_FAILED_TEXT,
   ANALYSIS_CANCELLED,
   SESSION_DELETED,
   TOOL_CALL_CANCELLED,
@@ -185,6 +186,12 @@ export type AiSliceState = {
         contextSources?: string[];
         contextMetrics?: Record<string, number>;
         sessionId?: string;
+        /**
+         * Called when the model call fails, before the placeholder response is
+         * returned. Lets a caller tell a failure apart from a response that
+         * merely happens to equal the placeholder text.
+         */
+        onError?: (error: unknown) => void;
       },
     ) => Promise<string>;
     startAnalysis: (
@@ -1764,6 +1771,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             contextMetrics?: Record<string, number>;
             sessionId?: string;
             abortSignal?: AbortSignal;
+            /**
+             * Called when the model call fails, before the placeholder is
+             * returned. Lets a caller distinguish a failure from a response
+             * that merely happens to equal {@link AI_GENERATION_FAILED_TEXT}.
+             */
+            onError?: (error: unknown) => void;
           } = {},
         ) => {
           // One-shot generateText path with explicit abort lifecycle management
@@ -1783,6 +1796,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             ],
             contextMetrics,
             sessionId,
+            onError,
           } = options;
 
           if (abortSignal?.aborted) {
@@ -1899,7 +1913,17 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               throw new ToolAbortError(TOOL_CALL_CANCELLED);
             }
             console.error('Error generating text:', error);
-            return 'error: can not generate response';
+            // A caller's callback must not be able to turn the documented
+            // placeholder response into a rejection.
+            try {
+              onError?.(error);
+            } catch (callbackError) {
+              console.error(
+                'sendPrompt onError callback threw:',
+                callbackError,
+              );
+            }
+            return AI_GENERATION_FAILED_TEXT;
           }
         },
 

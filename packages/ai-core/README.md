@@ -821,6 +821,28 @@ user messages. The hook handles debouncing and duplicate-generation guards.
 Apps can pass `enabled`, `isDefaultSessionName`, and `getPromptOptions` to keep
 app-specific readiness checks and model choices outside the shared package.
 
+`ai.sendPrompt` reports a failed model call by resolving with a placeholder
+string rather than throwing, so a caller that treats the response as content
+cannot tell it apart from a real answer. Pass `onError` in its options to
+observe the failure itself:
+
+```ts
+let failed = false;
+const text = await sendPrompt(prompt, {onError: () => (failed = true)});
+```
+
+`generateSessionTitle` does exactly this and, instead of using the failed
+response as a name, renames the session to `Untitled Chat` and returns
+`{status: 'generation-failed'}`. That name is matched by
+`isDefaultGeneratedSessionName`, so the next user message can still replace it
+with a real title — a transient model failure costs the chat nothing
+permanent. Pass `existingSessionNames` to number repeats (`Untitled Chat 1`,
+...) so two failures do not produce the same name.
+
+Judging failure from `onError` rather than from the response text means a
+conversation that legitimately produces the placeholder wording as its title is
+still renamed normally.
+
 ## Local Agent Chat
 
 Use `Chat.LocalAgentRoot` when a transient surface should be driven by a

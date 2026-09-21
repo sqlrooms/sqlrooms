@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useMemo, useRef} from 'react';
 import type {ChatSessionSchema} from '@sqlrooms/ai-config';
+import {generateUniqueName} from '@sqlrooms/utils';
 import {useStoreWithAi, type AiSliceState} from '../AiSlice';
 
 type SessionMessagePart =
@@ -41,15 +42,38 @@ export type GenerateSessionTitleArgs = GenerateSessionTitleOptions & {
   session: ChatSessionSchema;
   sendPrompt: AiSliceState['ai']['sendPrompt'];
   renameSession: AiSliceState['ai']['renameSession'];
+  /**
+   * Names of the other sessions, used to number the fallback name so two
+   * failures do not both produce "Untitled Chat". Omit to skip numbering.
+   */
+  existingSessionNames?: string[];
 };
 
+/**
+ * Outcome of one title-generation attempt.
+ *
+ * - `renamed` — a title was generated and applied.
+ * - `empty` — the session has no user messages to summarise yet.
+ * - `custom-title` — the session already has a name the user chose, so it is
+ *   left alone.
+ * - `unchanged` — the generated title matched the current name.
+ * - `blank-generated-title` — the model returned nothing usable.
+ * - `generation-failed` — the model call itself failed. The session is renamed
+ *   to `Untitled Chat` rather than to the error text, and stays eligible for
+ *   another attempt on the next user message. `title` carries the fallback.
+ */
 export type GenerateSessionTitleResult =
   | {
       status: 'renamed';
       title: string;
     }
   | {
-      status: 'empty' | 'custom-title' | 'unchanged' | 'blank-generated-title';
+      status:
+        | 'empty'
+        | 'custom-title'
+        | 'unchanged'
+        | 'blank-generated-title'
+        | 'generation-failed';
       title?: string;
     };
 
@@ -61,15 +85,30 @@ export type UseGenerateSessionTitleOptions = GenerateSessionTitleOptions & {
   enabled?: boolean;
   /** Delay after a new user message before generating a title. */
   delayMs?: number;
-  /** Observe failures without breaking the chat UI. */
+  /**
+   * Observe unexpected errors without breaking the chat UI. A failed model
+   * call is not one of these: it resolves to the `Untitled Chat` fallback
+   * instead of throwing. Pass `onError` through `getPromptOptions` to see
+   * those.
+   */
   onError?: (error: unknown) => void;
 };
+
+/**
+ * Name given to a session whose title generation failed. Deliberately matched
+ * by {@link DEFAULT_SESSION_NAME_PATTERNS} so the next user message can still
+ * replace it with a real title.
+ */
+export const UNTITLED_SESSION_NAME = 'Untitled Chat';
 
 const DEFAULT_SESSION_NAME_PATTERNS = [
   // New sessions are named via generateUniqueName('Chat', names, ' '),
   // producing "Chat", "Chat 1", "Chat 2", ...
   /^Chat$/,
   /^Chat \d+$/,
+  // The title-generation fallback, likewise numbered when it repeats.
+  /^Untitled Chat$/,
+  /^Untitled Chat \d+$/,
   /^Untitled$/,
   /^Default Session$/,
   /^Session /,
@@ -146,6 +185,7 @@ export async function generateSessionTitle({
   isDefaultSessionName = isDefaultGeneratedSessionName,
   buildPrompt,
   getPromptOptions,
+  existingSessionNames,
 }: GenerateSessionTitleArgs): Promise<GenerateSessionTitleResult> {
   if (!isDefaultSessionName(session.name)) {
     return {status: 'custom-title', title: session.name};
@@ -164,12 +204,37 @@ export async function generateSessionTitle({
     session,
     userMessages: messagesForPrompt,
   });
+  // `sendPrompt` reports failure by resolving with a placeholder rather than
+  // throwing, so the failure is observed through `onError` instead of by
+  // comparing the response text — a conversation *about* that wording could
+  // otherwise have its own title mistaken for a failure.
+  let generationFailed = false;
   const generatedTitle = await sendPrompt(prompt, {
     systemInstructions:
       'You generate concise, descriptive conversation titles. Return only the title text, nothing else.',
     useTools: false,
     ...promptOptions,
+    onError: (error) => {
+      generationFailed = true;
+      promptOptions?.onError?.(error);
+    },
   });
+  // A failed generation must not become the session name. Fall back to
+  // "Untitled Chat", which reads as untitled rather than as a brand-new chat,
+  // and which `isDefaultSessionName` still matches so the next user message
+  // can replace it with a real title.
+  if (generationFailed) {
+    const fallbackTitle = generateUniqueName(
+      UNTITLED_SESSION_NAME,
+      existingSessionNames ?? [],
+      ' ',
+    );
+    if (session.name !== fallbackTitle) {
+      renameSession(session.id, fallbackTitle);
+    }
+    return {status: 'generation-failed', title: fallbackTitle};
+  }
+
   const title = cleanGeneratedSessionTitle(generatedTitle, maxTitleLength);
 
   if (!title) {
@@ -202,6 +267,14 @@ export function useGenerateSessionTitle({
   const uiMessagesLength = currentSession?.uiMessages?.length ?? 0;
   const renameSession = useStoreWithAi((s) => s.ai.renameSession);
   const sendPrompt = useStoreWithAi((s) => s.ai.sendPrompt);
+
+  // Held in a ref rather than read directly, so that session activity
+  // elsewhere does not change `generateTitle`'s identity — see the note at
+  // its `existingSessionNames` argument.
+  const sessionsRef = useRef(sessions);
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
 
   const lastUserMessageCountRef = useRef(0);
   const isGeneratingRef = useRef(false);
@@ -238,6 +311,13 @@ export function useGenerateSessionTitle({
         isDefaultSessionName,
         buildPrompt,
         getPromptOptions,
+        // Read through a ref: putting `sessions` in this callback's deps
+        // would give it a new identity whenever any session changes, and the
+        // debounce effect below depends on the callback, so its pending
+        // timer would be cleared and re-armed by unrelated session activity.
+        existingSessionNames: sessionsRef.current
+          .filter((session) => session.id !== currentSession.id)
+          .map((session) => session.name),
       });
       if (result.title) {
         lastGeneratedTitleRef.current = result.title;
