@@ -235,7 +235,9 @@ export function DeckMapBlockRenderer({
             variant={isSettingsShown ? 'secondary' : 'ghost'}
             size="icon"
             className="h-6 w-6"
-            aria-label={isSettingsShown ? 'Close settings' : 'Open settings'}
+            aria-label={
+              isSettingsShown ? 'Close map settings' : 'Open map settings'
+            }
             onClick={() =>
               isSettingsShown
                 ? requestCloseSettingsPanel()
