@@ -23,7 +23,12 @@ function toExplorerPageTable(data: unknown): Table | undefined {
     return undefined;
   }
 
-  return toArrowClientResult(data);
+  try {
+    return toArrowClientResult(data);
+  } catch (error) {
+    const cause = error instanceof Error ? error : new Error(String(error));
+    throw new Error('Could not read the data table page.', {cause});
+  }
 }
 
 export type DataTableExplorerPageState = {

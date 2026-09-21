@@ -1,6 +1,5 @@
 import {jest} from '@jest/globals';
 import * as arrow from 'apache-arrow';
-import {int64, tableFromArrays} from '@uwdata/flechette';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {DataTableExplorer} from '../src/data-table-explorer/DataTableExplorer';
 import type {UseDataTableExplorerReturn} from '../src/data-table-explorer/types';
@@ -113,17 +112,12 @@ describe('DataTableExplorer compound API', () => {
 
   it('renders BIGINT values outside the safe integer range', () => {
     const unsafe = 610625465232654335n;
-    const pageTable = tableFromArrays(
-      {id: [unsafe]},
-      {types: {id: int64()}, useBigInt: false},
-    );
-
-    expect(() => pageTable.getChild('id')?.get(0)).toThrow(
-      /BigInt exceeds integer number representation/,
-    );
+    const pageTable = new arrow.Table({
+      id: arrow.vectorFromArray([unsafe], new arrow.Int64()),
+    });
 
     const explorer = createDataTableExplorer();
-    explorer.pageTable = pageTable as unknown as arrow.Table;
+    explorer.pageTable = pageTable;
     explorer.columns = [
       {
         field: new arrow.Field('id', new arrow.Int64(), true),

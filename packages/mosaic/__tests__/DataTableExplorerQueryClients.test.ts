@@ -59,7 +59,7 @@ describe('dataTableExplorer query clients', () => {
     client.queryResult({not: 'a table'});
 
     expect(latest.error).toBeInstanceOf(Error);
-    expect(latest.error.message).toMatch(/Mosaic table result/);
+    expect(latest.error.message).toBe('Could not read the data table page.');
     expect(latest.pageTable).toBeUndefined();
     expect(latest.isLoading).toBe(false);
   });
