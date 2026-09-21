@@ -1,10 +1,13 @@
 import {jest} from '@jest/globals';
 import type {ChatSessionSchema} from '@sqlrooms/ai-config';
 import type {LanguageModel} from 'ai';
-import {createStore} from 'zustand';
-import {createAiSlice, type AiSliceState} from '../src/AiSlice';
+import {createSessionTestStore} from './support/sessionStore';
 import {AI_GENERATION_FAILED_TEXT} from '../src/constants';
-import {generateSessionTitle} from '../src/hooks/useGenerateSessionTitle';
+import {
+  generateSessionTitle,
+  isDefaultGeneratedSessionName,
+  UNTITLED_SESSION_NAME,
+} from '../src/hooks/useGenerateSessionTitle';
 
 type SendPromptOptions = {onError?: (error: unknown) => void};
 
@@ -37,15 +40,11 @@ function storeWithFailingModel() {
     },
   } as unknown as LanguageModel;
 
-  return createStore<AiSliceState>((set, get, api) =>
-    createAiSlice({
-      tools: {},
-      getInstructions: () => 'test instructions',
-      defaultProvider: 'openai',
-      defaultModel: 'shared-model',
-      getCustomModel: () => failingModel,
-    })(set, get, api),
-  );
+  return createSessionTestStore({
+    defaultProvider: 'openai',
+    defaultModel: 'shared-model',
+    getCustomModel: () => failingModel,
+  });
 }
 
 describe('generateSessionTitle', () => {
@@ -67,8 +66,14 @@ describe('generateSessionTitle', () => {
       renameSession,
     });
 
-    expect(result).toEqual({status: 'generation-failed'});
-    expect(renameSession).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      status: 'generation-failed',
+      title: UNTITLED_SESSION_NAME,
+    });
+    expect(renameSession).toHaveBeenCalledWith(
+      'session-1',
+      UNTITLED_SESSION_NAME,
+    );
   });
 
   it('still renames when the model returns a real title', async () => {
@@ -126,9 +131,14 @@ describe('generateSessionTitle', () => {
       renameSession,
     });
 
-    expect(result).toEqual({status: 'generation-failed'});
-    expect(renameSession).not.toHaveBeenCalled();
-    expect(session.name).toBe('Chat');
+    expect(result).toEqual({
+      status: 'generation-failed',
+      title: UNTITLED_SESSION_NAME,
+    });
+    expect(renameSession).toHaveBeenCalledWith(
+      'session-1',
+      UNTITLED_SESSION_NAME,
+    );
   });
 
   it('survives a caller onError callback that throws', async () => {
@@ -149,7 +159,35 @@ describe('generateSessionTitle', () => {
       }),
     });
 
-    expect(result).toEqual({status: 'generation-failed'});
-    expect(renameSession).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      status: 'generation-failed',
+      title: UNTITLED_SESSION_NAME,
+    });
+  });
+
+  it('numbers the fallback so two failures do not share a name', async () => {
+    const store = storeWithFailingModel();
+    const renameSession = jest.fn();
+
+    const result = await generateSessionTitle({
+      session: sessionWithPrompt('how many places are in Paris?'),
+      sendPrompt: store.getState().ai.sendPrompt,
+      renameSession,
+      existingSessionNames: [UNTITLED_SESSION_NAME],
+    });
+
+    expect(result).toEqual({
+      status: 'generation-failed',
+      title: 'Untitled Chat 1',
+    });
+    expect(renameSession).toHaveBeenCalledWith('session-1', 'Untitled Chat 1');
+  });
+
+  it('leaves the fallback name eligible for a later retry', async () => {
+    // The whole point of the fallback: a transient failure must not cost the
+    // chat its chance at a real title on the next message.
+    expect(isDefaultGeneratedSessionName(UNTITLED_SESSION_NAME)).toBe(true);
+    expect(isDefaultGeneratedSessionName('Untitled Chat 1')).toBe(true);
+    expect(isDefaultGeneratedSessionName('Places in Paris')).toBe(false);
   });
 });

@@ -831,12 +831,17 @@ let failed = false;
 const text = await sendPrompt(prompt, {onError: () => (failed = true)});
 ```
 
-`generateSessionTitle` does exactly this and returns
-`{status: 'generation-failed'}` instead of renaming, leaving the session on its
-default name (`Chat`, `Chat 2`, ...) rather than the error text, and eligible
-for another attempt on the next user message. Judging failure from `onError`
-rather than from the response text means a conversation that legitimately
-produces the placeholder wording as its title is still renamed normally.
+`generateSessionTitle` does exactly this and, instead of using the failed
+response as a name, renames the session to `Untitled Chat` and returns
+`{status: 'generation-failed'}`. That name is matched by
+`isDefaultGeneratedSessionName`, so the next user message can still replace it
+with a real title — a transient model failure costs the chat nothing
+permanent. Pass `existingSessionNames` to number repeats (`Untitled Chat 1`,
+...) so two failures do not produce the same name.
+
+Judging failure from `onError` rather than from the response text means a
+conversation that legitimately produces the placeholder wording as its title is
+still renamed normally.
 
 ## Local Agent Chat
 

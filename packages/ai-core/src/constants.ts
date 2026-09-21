@@ -7,10 +7,10 @@ export const SESSION_DELETED = 'Analysis cancelled - session was deleted';
 export const ANALYSIS_CANCELLED = 'Analysis cancelled';
 
 /**
- * What {@link AiSliceState.ai.sendPrompt} resolves with when the underlying
- * model call fails. It reports failure by value rather than by throwing, so a
- * caller that renders the response as content or as a name has to recognise
- * this string — otherwise the placeholder is indistinguishable from a real
- * answer. Compare against this constant rather than the literal.
+ * What `ai.sendPrompt` resolves with when the underlying model call fails. It
+ * reports failure by value rather than by throwing, which is why `sendPrompt`
+ * also takes an `onError` callback: callers should detect failure through that
+ * rather than by comparing against this text, which is internal to the package
+ * and free to change.
  */
 export const AI_GENERATION_FAILED_TEXT = 'error: can not generate response';
