@@ -78,5 +78,10 @@ jobs:
       - name: Verify isolated runtime and sdist installs
         run: python sqlrooms/scripts/verify_distribution.py dist/sqlrooms-*.whl dist/sqlrooms-*.tar.gz
 
+      - name: Install Roomie for paired checkout tests
+        # Roomie requires an unreleased sqlrooms version and is intentionally
+        # outside the uv workspace. Test it against the installed checkout.
+        run: uv pip install --python .venv/bin/python --no-deps --editable roomie
+
       - name: Run tests
-        run: uv run pytest
+        run: uv run --no-sync pytest
