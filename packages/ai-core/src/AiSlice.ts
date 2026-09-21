@@ -1913,7 +1913,16 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               throw new ToolAbortError(TOOL_CALL_CANCELLED);
             }
             console.error('Error generating text:', error);
-            onError?.(error);
+            // A caller's callback must not be able to turn the documented
+            // placeholder response into a rejection.
+            try {
+              onError?.(error);
+            } catch (callbackError) {
+              console.error(
+                'sendPrompt onError callback threw:',
+                callbackError,
+              );
+            }
             return AI_GENERATION_FAILED_TEXT;
           }
         },

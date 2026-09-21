@@ -22,6 +22,32 @@ function sessionWithPrompt(text: string): ChatSessionSchema {
   } as unknown as ChatSessionSchema;
 }
 
+/** A store whose model always fails, to drive `sendPrompt`'s real error path. */
+function storeWithFailingModel() {
+  const failingModel = {
+    specificationVersion: 'v3',
+    provider: 'stub',
+    modelId: 'stub-model',
+    supportedUrls: {},
+    doGenerate: async () => {
+      throw new Error('model is down');
+    },
+    doStream: async () => {
+      throw new Error('doStream is not used by generateText');
+    },
+  } as unknown as LanguageModel;
+
+  return createStore<AiSliceState>((set, get, api) =>
+    createAiSlice({
+      tools: {},
+      getInstructions: () => 'test instructions',
+      defaultProvider: 'openai',
+      defaultModel: 'shared-model',
+      getCustomModel: () => failingModel,
+    })(set, get, api),
+  );
+}
+
 describe('generateSessionTitle', () => {
   it('keeps the default name when generation fails', async () => {
     const renameSession = jest.fn();
@@ -89,28 +115,7 @@ describe('generateSessionTitle', () => {
     // End-to-end rather than mocked: drives the actual `sendPrompt`, so the
     // guard stays coupled to the value the slice really returns. A mock that
     // resolves the constant on its own would pass even if the two diverged.
-    const failingModel = {
-      specificationVersion: 'v3',
-      provider: 'stub',
-      modelId: 'stub-model',
-      supportedUrls: {},
-      doGenerate: async () => {
-        throw new Error('model is down');
-      },
-      doStream: async () => {
-        throw new Error('doStream is not used by generateText');
-      },
-    } as unknown as LanguageModel;
-
-    const store = createStore<AiSliceState>((set, get, api) =>
-      createAiSlice({
-        tools: {},
-        getInstructions: () => 'test instructions',
-        defaultProvider: 'openai',
-        defaultModel: 'shared-model',
-        getCustomModel: () => failingModel,
-      })(set, get, api),
-    );
+    const store = storeWithFailingModel();
 
     const session = sessionWithPrompt('how many places are in Paris?');
     const renameSession = jest.fn();
@@ -124,5 +129,27 @@ describe('generateSessionTitle', () => {
     expect(result).toEqual({status: 'generation-failed'});
     expect(renameSession).not.toHaveBeenCalled();
     expect(session.name).toBe('Chat');
+  });
+
+  it('survives a caller onError callback that throws', async () => {
+    // `sendPrompt` documents that it resolves with a placeholder instead of
+    // throwing. A host callback must not be able to break that contract and
+    // turn the failure into a rejection.
+    const store = storeWithFailingModel();
+    const renameSession = jest.fn();
+
+    const result = await generateSessionTitle({
+      session: sessionWithPrompt('how many places are in Paris?'),
+      sendPrompt: store.getState().ai.sendPrompt,
+      renameSession,
+      getPromptOptions: () => ({
+        onError: () => {
+          throw new Error('host callback blew up');
+        },
+      }),
+    });
+
+    expect(result).toEqual({status: 'generation-failed'});
+    expect(renameSession).not.toHaveBeenCalled();
   });
 });
