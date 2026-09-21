@@ -1,7 +1,6 @@
 import {useCallback, useEffect, useMemo, useRef} from 'react';
 import type {ChatSessionSchema} from '@sqlrooms/ai-config';
 import {useStoreWithAi, type AiSliceState} from '../AiSlice';
-import {AI_GENERATION_FAILED_TEXT} from '../constants';
 
 type SessionMessagePart =
   ChatSessionSchema['uiMessages'][number]['parts'][number];
@@ -44,6 +43,19 @@ export type GenerateSessionTitleArgs = GenerateSessionTitleOptions & {
   renameSession: AiSliceState['ai']['renameSession'];
 };
 
+/**
+ * Outcome of one title-generation attempt.
+ *
+ * - `renamed` — a title was generated and applied.
+ * - `empty` — the session has no user messages to summarise yet.
+ * - `custom-title` — the session already has a name the user chose, so it is
+ *   left alone.
+ * - `unchanged` — the generated title matched the current name.
+ * - `blank-generated-title` — the model returned nothing usable.
+ * - `generation-failed` — the model call itself failed. The session keeps its
+ *   default name (`Chat`, `Chat 2`, ...) rather than being renamed to error
+ *   text, and stays eligible for another attempt on the next user message.
+ */
 export type GenerateSessionTitleResult =
   | {
       status: 'renamed';
@@ -170,16 +182,25 @@ export async function generateSessionTitle({
     session,
     userMessages: messagesForPrompt,
   });
+  // `sendPrompt` reports failure by resolving with a placeholder rather than
+  // throwing, so the failure is observed through `onError` instead of by
+  // comparing the response text — a conversation *about* that wording could
+  // otherwise have its own title mistaken for a failure.
+  let generationFailed = false;
   const generatedTitle = await sendPrompt(prompt, {
     systemInstructions:
       'You generate concise, descriptive conversation titles. Return only the title text, nothing else.',
     useTools: false,
     ...promptOptions,
+    onError: (error) => {
+      generationFailed = true;
+      promptOptions?.onError?.(error);
+    },
   });
   // A failed generation must not become the session name: leaving the session
   // on its default ("Chat", "Chat 2", ...) is the sensible fallback, and keeps
   // it eligible for a retry on the next message.
-  if (generatedTitle.trim() === AI_GENERATION_FAILED_TEXT) {
+  if (generationFailed) {
     return {status: 'generation-failed'};
   }
 

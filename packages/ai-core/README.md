@@ -821,16 +821,22 @@ user messages. The hook handles debouncing and duplicate-generation guards.
 Apps can pass `enabled`, `isDefaultSessionName`, and `getPromptOptions` to keep
 app-specific readiness checks and model choices outside the shared package.
 
-`ai.sendPrompt` reports a failed model call by resolving with the placeholder
-string `AI_GENERATION_FAILED_TEXT` rather than throwing, so a caller that treats
-the response as content cannot tell it apart from a real answer. When
-`generateSessionTitle` sees exactly that placeholder it returns
-`{status: 'generation-failed'}` and leaves the session on its default name
-(`Chat`, `Chat 2`, ...) instead of renaming the chat to the error text. The
-session stays eligible for another attempt on the next user message. Callers
-handling `GenerateSessionTitleResult` should expect this status, and any other
-caller that renders `sendPrompt` output as a name should compare against the
-exported constant.
+`ai.sendPrompt` reports a failed model call by resolving with a placeholder
+string rather than throwing, so a caller that treats the response as content
+cannot tell it apart from a real answer. Pass `onError` in its options to
+observe the failure itself:
+
+```ts
+let failed = false;
+const text = await sendPrompt(prompt, {onError: () => (failed = true)});
+```
+
+`generateSessionTitle` does exactly this and returns
+`{status: 'generation-failed'}` instead of renaming, leaving the session on its
+default name (`Chat`, `Chat 2`, ...) rather than the error text, and eligible
+for another attempt on the next user message. Judging failure from `onError`
+rather than from the response text means a conversation that legitimately
+produces the placeholder wording as its title is still renamed normally.
 
 ## Local Agent Chat
 

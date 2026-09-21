@@ -6,6 +6,8 @@ import {createAiSlice, type AiSliceState} from '../src/AiSlice';
 import {AI_GENERATION_FAILED_TEXT} from '../src/constants';
 import {generateSessionTitle} from '../src/hooks/useGenerateSessionTitle';
 
+type SendPromptOptions = {onError?: (error: unknown) => void};
+
 function sessionWithPrompt(text: string): ChatSessionSchema {
   return {
     id: 'session-1',
@@ -23,9 +25,15 @@ function sessionWithPrompt(text: string): ChatSessionSchema {
 describe('generateSessionTitle', () => {
   it('keeps the default name when generation fails', async () => {
     const renameSession = jest.fn();
-    // `sendPrompt` reports failure by resolving with a placeholder rather
-    // than throwing, so nothing upstream can catch it.
-    const sendPrompt = jest.fn().mockResolvedValue(AI_GENERATION_FAILED_TEXT);
+    // `sendPrompt` reports failure by resolving with a placeholder and
+    // invoking `onError`, rather than throwing.
+    const sendPrompt = (async (
+      _prompt: string,
+      options?: SendPromptOptions,
+    ) => {
+      options?.onError?.(new Error('model is down'));
+      return AI_GENERATION_FAILED_TEXT;
+    }) as unknown as Parameters<typeof generateSessionTitle>[0]['sendPrompt'];
 
     const result = await generateSessionTitle({
       session: sessionWithPrompt('how many places are in Paris?'),
@@ -51,21 +59,30 @@ describe('generateSessionTitle', () => {
     expect(renameSession).toHaveBeenCalledWith('session-1', 'Places in Paris');
   });
 
-  it('renames when the placeholder is only part of a longer answer', async () => {
-    // Only an exact match is a failure report; a title that happens to quote
-    // the phrase is still a title.
+  it('renames even when a successful response equals the failure placeholder', async () => {
+    // A conversation about that wording can legitimately produce it as a
+    // title. Failure is judged by `onError`, not by the response text, so
+    // this is a real title and must be applied.
     const renameSession = jest.fn();
-    const sendPrompt = jest
-      .fn()
-      .mockResolvedValue('Why error: can not generate response appears');
+    const sendPrompt = (async () =>
+      AI_GENERATION_FAILED_TEXT) as unknown as Parameters<
+      typeof generateSessionTitle
+    >[0]['sendPrompt'];
 
     const result = await generateSessionTitle({
-      session: sessionWithPrompt('debugging the assistant'),
+      session: sessionWithPrompt('why does the assistant show this error?'),
       sendPrompt,
       renameSession,
     });
 
-    expect(result.status).toBe('renamed');
+    expect(result).toEqual({
+      status: 'renamed',
+      title: AI_GENERATION_FAILED_TEXT,
+    });
+    expect(renameSession).toHaveBeenCalledWith(
+      'session-1',
+      AI_GENERATION_FAILED_TEXT,
+    );
   });
 
   it('keeps the default name when the real sendPrompt hits a failing model', async () => {

@@ -43,7 +43,6 @@ export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
 export {useElapsedTime} from './hooks/useElapsedTime';
 export {useRelativeTime} from './hooks/useRelativeTime';
-export {AI_GENERATION_FAILED_TEXT} from './constants';
 export {
   cleanGeneratedSessionTitle,
   generateSessionTitle,
