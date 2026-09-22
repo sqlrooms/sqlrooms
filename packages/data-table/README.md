@@ -83,6 +83,8 @@ function ArrowTable({arrowTable}: {arrowTable: Table}) {
 }
 ```
 
+64-bit integer columns (`BIGINT`, Arrow `Int64`/`Uint64`) are displayed as exact decimals, including values outside JavaScript's safe integer range.
+
 ## Advanced Features
 
 - **Custom Cell Rendering**: Define custom renderers for specific cell types
