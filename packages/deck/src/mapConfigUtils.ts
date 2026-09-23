@@ -1,5 +1,6 @@
 import {
   getRawSqlTableReference,
+  getUnqualifiedSqlIdentifier,
   makeQualifiedTableName,
   quoteParsedRawSqlTableReference,
   type DataTable,
@@ -10,6 +11,7 @@ import {
   isDeckMapTableDatasetSource,
   type DeckMapDashboardPanelConfig,
   type DeckMapConfig,
+  type DeckMapFitToDataConfig,
 } from './mapConfig';
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
 import type {GeometryEncodingHint} from './prepare/types';
@@ -379,9 +381,162 @@ function isDeckMapH3HexagonAccessor(value: unknown) {
   return typeof value === 'string' && /^@@=[A-Za-z_][\w]*$/.test(value.trim());
 }
 
+/** Retargets layer bindings and generated layer ids at a renamed dataset. */
+function renameDeckMapLayerDataset(
+  layers: unknown[],
+  from: string,
+  to: string,
+) {
+  return layers.map((layer) => {
+    if (!isDeckMapConfigRecord(layer)) return layer;
+    const binding = isDeckMapConfigRecord(layer._sqlroomsBinding)
+      ? layer._sqlroomsBinding
+      : undefined;
+    const next = {...layer};
+    let changed = false;
+    if (binding?.dataset === from) {
+      next._sqlroomsBinding = {...binding, dataset: to};
+      changed = true;
+    }
+    // Generated layer ids are the dataset id, and the settings layer picker
+    // labels layers by id — keep it in step so it stops naming the old table.
+    if (layer.id === from) {
+      next.id = to;
+      changed = true;
+    }
+    return changed ? next : layer;
+  });
+}
+
+/** Renames a dataset in a spec record, re-serializing a stored JSON spec. */
+function renameDeckMapSpecDataset(
+  spec: DeckMapConfig['spec'],
+  from: string,
+  to: string,
+): DeckMapConfig['spec'] | undefined {
+  const parsed = parseDeckMapSpecRecord(spec);
+  if (!parsed) return undefined;
+  const next = Array.isArray(parsed.layers)
+    ? {...parsed, layers: renameDeckMapLayerDataset(parsed.layers, from, to)}
+    : parsed;
+  return (
+    typeof spec === 'string' ? JSON.stringify(next) : next
+  ) as DeckMapConfig['spec'];
+}
+
+/**
+ * Rewrites every reference to a dataset id: the `datasets` key, layer bindings
+ * and generated layer ids, `fitToData`, and `interaction`.
+ *
+ * Returns the config unchanged when the rename cannot be applied in full —
+ * renaming the dataset without its bindings would detach the layers from
+ * their data.
+ */
+function renameDeckMapDataset(
+  config: DeckMapConfig,
+  from: string,
+  to: string,
+): DeckMapConfig {
+  if (from === to || !config.datasets?.[from] || config.datasets[to]) {
+    return config;
+  }
+  const spec = renameDeckMapSpecDataset(config.spec, from, to);
+  if (spec === undefined) return config;
+
+  return {
+    ...config,
+    spec,
+    datasets: Object.fromEntries(
+      Object.entries(config.datasets).map(([id, dataset]) => [
+        id === from ? to : id,
+        dataset,
+      ]),
+    ),
+    ...(config.fitToData?.dataset === from
+      ? {fitToData: {...config.fitToData, dataset: to}}
+      : {}),
+    ...(config.interaction?.dataset === from
+      ? {interaction: {...config.interaction, dataset: to}}
+      : {}),
+  };
+}
+
+/**
+ * Resolves the dataset rename implied by a table pick.
+ *
+ * Dataset ids are seeded from the table name at creation and otherwise kept
+ * stable so retained layer bindings stay valid, which leaves a map that
+ * switched tables labelled — in the datasets key, the layer id and binding, and
+ * `fitToData` — after a table it no longer reads. Picking a table in settings is
+ * an explicit statement about what the map reads, so a single-dataset map
+ * re-ids to follow it. A deliberately authored id is not preserved; only AI and
+ * code can set one, the picker gives no way to keep it, and matching the visible
+ * source beats a name that silently drifts.
+ *
+ * Multi-dataset maps are left alone: the ids there distinguish datasets from
+ * each other, so a table name is not a meaningful identity for one of them.
+ */
+function resolveDeckMapDatasetRename(
+  config: DeckMapConfig,
+  table: DataTable,
+): {from: string; to: string} | undefined {
+  const datasetIds = Object.keys(config.datasets ?? {});
+  if (datasetIds.length !== 1) return undefined;
+  const from = datasetIds[0]!;
+  const to = getUnqualifiedSqlIdentifier(table.tableName) ?? table.tableName;
+  return to && to !== from ? {from, to} : undefined;
+}
+
+/** Strips generated-geometry fit columns so a cleared transform cannot break fitting. */
+function clearDeckMapGeneratedFit(
+  fitToData: DeckMapFitToDataConfig | undefined,
+  datasetId: string,
+): DeckMapFitToDataConfig | undefined {
+  if (!fitToData || fitToData.dataset !== datasetId) return fitToData;
+  const next = {...fitToData};
+  delete next.longitudeColumn;
+  delete next.latitudeColumn;
+  delete next.geometryColumn;
+  delete next.geometryColumns;
+  delete next.h3Column;
+  return next;
+}
+
+/** Drops a dataset's generated geometry column from layer bindings. */
+function clearDeckMapGeometryColumnBindings(
+  config: DeckMapConfig,
+  datasetId: string,
+  geometryColumn: string | undefined,
+): DeckMapConfig {
+  if (!geometryColumn || !isRecord(config.spec)) return config;
+  const layers = config.spec.layers;
+  if (!Array.isArray(layers)) return config;
+
+  let changed = false;
+  const nextLayers = layers.map((layer) => {
+    if (!isRecord(layer) || !isRecord(layer._sqlroomsBinding)) return layer;
+    const binding = layer._sqlroomsBinding;
+    if (
+      binding.dataset !== datasetId ||
+      binding.geometryColumn !== geometryColumn
+    ) {
+      return layer;
+    }
+    changed = true;
+    const nextBinding = {...binding};
+    delete nextBinding.geometryColumn;
+    return {...layer, _sqlroomsBinding: nextBinding};
+  });
+
+  return changed
+    ? {...config, spec: {...config.spec, layers: nextLayers}}
+    : config;
+}
+
 function retargetDeckMapDatasetTableName(
   config: DeckMapConfig,
   table: DataTable,
+  options?: {dropUnusableTransform?: boolean},
 ): DeckMapConfig {
   const datasetIds = Object.keys(config.datasets ?? {});
   if (datasetIds.length !== 1) return config;
@@ -392,21 +547,45 @@ function retargetDeckMapDatasetTableName(
   }
 
   const tableName = quoteDeckMapSqlTableReference(table.table);
-  if (dataset.source.tableName === tableName) return config;
+  const dropTransform =
+    options?.dropUnusableTransform === true &&
+    Boolean(dataset.source.transformSql?.trim()) &&
+    !deckMapDatasetRequiresPreservedTransform(config, datasetId);
 
-  return {
+  if (dataset.source.tableName === tableName && !dropTransform) return config;
+
+  const source = {...dataset.source, tableName};
+  const nextDataset = {...dataset, source};
+  if (dropTransform) {
+    delete source.transformSql;
+    delete nextDataset.geometryColumn;
+    delete nextDataset.geometryEncodingHint;
+  }
+
+  const retargeted: DeckMapConfig = {
     ...config,
     datasets: {
       ...config.datasets,
-      [datasetId]: {
-        ...dataset,
-        source: {
-          ...dataset.source,
-          tableName,
-        },
-      },
+      [datasetId]: nextDataset,
     },
+    ...(dropTransform
+      ? {
+          fitToData: clearDeckMapGeneratedFit(config.fitToData, datasetId),
+          // The brush reads the same absent coordinate columns as the transform.
+          ...(config.interaction?.dataset === datasetId
+            ? {interaction: undefined}
+            : {}),
+        }
+      : {}),
   };
+
+  return dropTransform
+    ? clearDeckMapGeometryColumnBindings(
+        retargeted,
+        datasetId,
+        dataset.geometryColumn,
+      )
+    : retargeted;
 }
 
 function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
@@ -960,6 +1139,16 @@ export function regenerateMapConfigForTable(
 /**
  * Applies a document map table pick: regenerate geospatial config when
  * possible, otherwise retarget the single table-backed dataset.
+ *
+ * Reaching the retarget path means the table exposes no coordinate or geometry
+ * columns, so a generated point transform can never bind against it and would
+ * leave the dataset unreadable — even its schema fails to describe, which hides
+ * the settings pickers needed to repair the map. Such a transform is dropped
+ * unless a retained arc/H3/trips layer still depends on the columns it produces;
+ * those keep it so switching away and back restores a working map.
+ *
+ * A table-derived dataset id follows the pick so the spec stops naming the old
+ * table; see {@link resolveDeckMapDatasetRename}.
  */
 export function applyDeckMapTableSelection(
   config: DeckMapConfig,
@@ -967,15 +1156,21 @@ export function applyDeckMapTableSelection(
   longitudeColumn?: string,
   latitudeColumn?: string,
 ): DeckMapConfig {
+  const rename = resolveDeckMapDatasetRename(config, table);
   const regenerated = regenerateMapConfigForTable(
     {config},
     table,
     longitudeColumn,
     latitudeColumn,
   );
-  if (regenerated !== config) {
-    return regenerated as DeckMapConfig;
-  }
+  const retargeted =
+    regenerated !== config
+      ? (regenerated as DeckMapConfig)
+      : retargetDeckMapDatasetTableName(config, table, {
+          dropUnusableTransform: true,
+        });
 
-  return retargetDeckMapDatasetTableName(config, table);
+  return rename
+    ? renameDeckMapDataset(retargeted, rename.from, rename.to)
+    : retargeted;
 }

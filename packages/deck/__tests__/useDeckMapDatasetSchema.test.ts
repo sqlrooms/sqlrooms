@@ -113,6 +113,50 @@ describe('Deck map dataset schema helpers', () => {
     ]);
   });
 
+  it('falls back to source columns when output inspection fails', () => {
+    const schema = resolveDeckMapDatasetSchema({
+      sourceColumns: [
+        {name: 'h3', type: 'VARCHAR'},
+        {name: 'count_population', type: 'DOUBLE'},
+      ],
+      outputColumns: [],
+      classifyGeneratedColumns: true,
+      inspectionFailed: true,
+    });
+
+    expect(schema.outputColumns.map((column) => column.name)).toEqual([
+      'h3',
+      'count_population',
+    ]);
+    expect(schema.dataOutputColumns.map((column) => column.name)).toEqual([
+      'h3',
+      'count_population',
+    ]);
+    expect(schema.generatedOutputColumns).toEqual([]);
+  });
+
+  it('keeps inspected output columns when a failure reported some', () => {
+    const schema = resolveDeckMapDatasetSchema({
+      sourceColumns: [{name: 'lon', type: 'DOUBLE'}],
+      outputColumns: [{name: '__sqlrooms_geom', type: 'BLOB'}],
+      classifyGeneratedColumns: true,
+      inspectionFailed: true,
+    });
+
+    expect(schema.outputColumns.map((column) => column.name)).toEqual([
+      '__sqlrooms_geom',
+    ]);
+  });
+
+  it('reports no output columns when inspection succeeded with none', () => {
+    expect(
+      resolveDeckMapDatasetSchema({
+        sourceColumns: [{name: 'lon', type: 'DOUBLE'}],
+        outputColumns: [],
+      }).outputColumns,
+    ).toEqual([]);
+  });
+
   it('normalizes inspected Arrow schema types to selector-compatible types', () => {
     expect(arrowTypeToDuckDbColumnType(new arrow.Float64())).toBe('DOUBLE');
     expect(arrowTypeToDuckDbColumnType(new arrow.Float32())).toBe('DOUBLE');

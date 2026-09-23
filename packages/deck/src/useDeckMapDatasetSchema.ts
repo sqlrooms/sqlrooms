@@ -63,12 +63,25 @@ export function createDeckMapDatasetOutputSchemaSql(
   ].join('\n');
 }
 
-/** Splits inspected output columns into generated map helpers and data fields. */
+/**
+ * Splits inspected output columns into generated map helpers and data fields.
+ *
+ * Set `inspectionFailed` when the output-schema query errored. A transform that
+ * no longer binds — e.g. a point transform retargeted at a table without its
+ * coordinate columns — would otherwise resolve to no output columns at all,
+ * which hides the settings column pickers needed to repair the map. The raw
+ * source columns stand in so the map stays recoverable.
+ */
 export function resolveDeckMapDatasetSchema(options: {
   sourceColumns: TableColumn[];
   outputColumns: TableColumn[];
   classifyGeneratedColumns?: boolean;
+  inspectionFailed?: boolean;
 }): DeckMapResolvedDatasetSchema {
+  const outputColumns =
+    options.inspectionFailed === true && options.outputColumns.length === 0
+      ? options.sourceColumns
+      : options.outputColumns;
   const sourceColumnNames = new Set(
     options.sourceColumns.map((column) => column.name),
   );
@@ -76,16 +89,14 @@ export function resolveDeckMapDatasetSchema(options: {
     options.classifyGeneratedColumns === true &&
     isDeckMapGeneratedColumn(column.name) &&
     !sourceColumnNames.has(column.name);
-  const generatedOutputColumns = options.outputColumns.filter(
-    isGeneratedOutputColumn,
-  );
-  const dataOutputColumns = options.outputColumns.filter(
+  const generatedOutputColumns = outputColumns.filter(isGeneratedOutputColumn);
+  const dataOutputColumns = outputColumns.filter(
     (column) => !isGeneratedOutputColumn(column),
   );
 
   return {
     sourceColumns: options.sourceColumns,
-    outputColumns: options.outputColumns,
+    outputColumns,
     generatedOutputColumns,
     dataOutputColumns,
   };
@@ -197,14 +208,16 @@ export function useDeckMapDatasetSchema(options: {
     state.outputColumns,
   ]);
 
+  const inspectionFailed = isCurrentInspectedSource && Boolean(state.error);
   const resolved = useMemo(
     () =>
       resolveDeckMapDatasetSchema({
         sourceColumns: options.sourceColumns,
         outputColumns,
         classifyGeneratedColumns: hasTableTransformSql(options.source),
+        inspectionFailed,
       }),
-    [options.source, options.sourceColumns, outputColumns],
+    [inspectionFailed, options.source, options.sourceColumns, outputColumns],
   );
 
   return {
