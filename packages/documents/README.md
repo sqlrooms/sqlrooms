@@ -553,6 +553,34 @@ Standalone chart blocks are best for one chart with local context. Dashboard
 stateful blocks are best for coordinated multi-panel views, richer dashboard
 layout, or when dashboard AI tools are the natural authoring path.
 
+## Block headers
+
+`BlockHeader` is the shared chrome for a block's title bar. Chart, map, table
+and dashboard blocks all render through it, so their headings stay identical
+instead of drifting apart. Pair it with `BlockCaptionEditor`, which carries the
+shared caption typography and swallows commits that leave the caption
+unchanged — so merely clicking into a caption never dirties the document.
+
+```tsx
+import {BlockCaptionEditor, BlockHeader} from '@sqlrooms/documents';
+
+function MyBlockHeader({caption, onCaptionChange, readOnly}) {
+  return (
+    <BlockHeader actions={<SettingsButton />}>
+      <BlockCaptionEditor
+        value={caption ?? ''}
+        placeholder="Block caption"
+        isReadOnly={readOnly}
+        onChange={(value) => onCaptionChange(value || undefined)}
+      />
+    </BlockHeader>
+  );
+}
+```
+
+Pass `actionsClassName` when a block's actions need different spacing from the
+default icon-button gap.
+
 ## Commands
 
 `createMarkdownDocumentCommands()` registers AI- and palette-friendly commands for
