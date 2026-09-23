@@ -11,6 +11,37 @@ import {resolveDeckMapStyle} from '../src/basemap';
 
 jest.unstable_mockModule('@sqlrooms/documents', () => ({
   useBlockSettingsStore: () => undefined,
+  BlockCaptionEditor: () => null,
+  // Stub the shared searchable selector with a native <select> so the test
+  // can drive table selection through the same DataTable-based onChange the
+  // real component exposes.
+  DataTableSelectorEmptyState: ({
+    tables,
+    onChange,
+  }: {
+    tables: Array<{tableName: string; table: {table: string}}>;
+    onChange?: (table: {table: {table: string}}) => void;
+  }) => (
+    <select
+      onChange={(event) => {
+        const selected = tables.find(
+          (candidate) =>
+            getTableIdentity(candidate.table) === event.target.value,
+        );
+        if (selected) onChange?.(selected);
+      }}
+    >
+      <option value="">Select a table</option>
+      {tables.map((candidate) => (
+        <option
+          key={getTableIdentity(candidate.table)}
+          value={getTableIdentity(candidate.table)}
+        >
+          {candidate.tableName}
+        </option>
+      ))}
+    </select>
+  ),
 }));
 jest.unstable_mockModule('../src/DeckMapSurface', () => ({
   DeckMapSurface: () => null,
