@@ -1,4 +1,4 @@
-import {FC} from 'react';
+import type {FC} from 'react';
 import {cn, EditableText} from '@sqlrooms/ui';
 
 export type BlockCaptionEditorProps = {
@@ -18,7 +18,9 @@ export type BlockCaptionEditorProps = {
  * @param className - Optional CSS class name
  * @param placeholder - Placeholder text when empty
  * @param isReadOnly - Whether the caption is editable
- * @param onChange - Callback when caption changes
+ * @param onChange - Callback when the caption changes. Not called when a
+ *   commit leaves the caption unchanged, so merely focusing and leaving the
+ *   field never dirties the surrounding document.
  */
 export const BlockCaptionEditor: FC<BlockCaptionEditorProps> = ({
   value,
