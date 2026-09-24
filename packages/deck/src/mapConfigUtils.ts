@@ -1,6 +1,5 @@
 import {
   getRawSqlTableReference,
-  getUnqualifiedSqlIdentifier,
   makeQualifiedTableName,
   quoteParsedRawSqlTableReference,
   type DataTable,
@@ -499,7 +498,9 @@ function resolveDeckMapDatasetRename(
   const datasetIds = Object.keys(config.datasets ?? {});
   if (datasetIds.length !== 1) return undefined;
   const from = datasetIds[0]!;
-  const to = getUnqualifiedSqlIdentifier(table.tableName) ?? table.tableName;
+  // The structured segment is the literal catalog name; parsing the flat
+  // `tableName` would split a table literally named `events.2026` on its dot.
+  const to = table.table.table || table.tableName;
   return to && to !== from ? {from, to} : undefined;
 }
 
@@ -518,8 +519,60 @@ function clearDeckMapGeneratedFit(
   return next;
 }
 
+/** Geometry accessors that can name a column directly as `@@=column`. */
+const DECK_MAP_GEOMETRY_ACCESSOR_PROPS = [
+  'getPosition',
+  'getPath',
+  'getPolygon',
+] as const;
+
 /**
- * Drops a dataset's generated geometry column from layer bindings.
+ * Drops every reference to a dataset's dropped geometry column from a layer.
+ *
+ * Both routes to the column are cleared: `_sqlroomsBinding.geometryColumn` and
+ * a simple `@@=column` geometry accessor, which the runtime falls back to when
+ * the binding is absent. Leaving either behind makes the layer request a column
+ * the retargeted table does not have.
+ */
+function clearDeckMapLayerGeometryColumn(
+  layer: Record<string, unknown>,
+  geometryColumn: string,
+): Record<string, unknown> | undefined {
+  const binding = isRecord(layer._sqlroomsBinding)
+    ? layer._sqlroomsBinding
+    : undefined;
+  const next = {...layer};
+  let changed = false;
+
+  const boundGeometryKeys = (
+    ['geometryColumn', 'sourceGeometryColumn', 'targetGeometryColumn'] as const
+  ).filter((key) => binding?.[key] === geometryColumn);
+  if (binding && boundGeometryKeys.length > 0) {
+    const nextBinding = {...binding};
+    for (const key of boundGeometryKeys) delete nextBinding[key];
+    next._sqlroomsBinding = nextBinding;
+    changed = true;
+  }
+  for (const prop of DECK_MAP_GEOMETRY_ACCESSOR_PROPS) {
+    const accessor = layer[prop];
+    if (
+      typeof accessor === 'string' &&
+      accessor.trim() === `@@=${geometryColumn}`
+    ) {
+      delete next[prop];
+      changed = true;
+    }
+  }
+
+  return changed ? next : undefined;
+}
+
+/**
+ * Drops a dataset's generated geometry column from its layers.
+ *
+ * Targets layers with {@link deckMapLayerTargetsDataset} rather than an exact
+ * `binding.dataset` match, because that key is optional and the runtime
+ * resolves a layer without it to the sole dataset.
  *
  * Handles a spec stored as serialized JSON: leaving a string spec untouched
  * would keep layers requesting a geometry column that no longer exists on the
@@ -534,21 +587,20 @@ function clearDeckMapGeometryColumnBindings(
   const parsed = parseDeckMapSpecRecord(config.spec);
   const layers = parsed?.layers;
   if (!parsed || !Array.isArray(layers)) return config;
+  const datasetIds = Object.keys(config.datasets ?? {});
 
   let changed = false;
   const nextLayers = layers.map((layer) => {
-    if (!isRecord(layer) || !isRecord(layer._sqlroomsBinding)) return layer;
-    const binding = layer._sqlroomsBinding;
     if (
-      binding.dataset !== datasetId ||
-      binding.geometryColumn !== geometryColumn
+      !isRecord(layer) ||
+      !deckMapLayerTargetsDataset({layer, datasetId, datasetIds})
     ) {
       return layer;
     }
+    const nextLayer = clearDeckMapLayerGeometryColumn(layer, geometryColumn);
+    if (!nextLayer) return layer;
     changed = true;
-    const nextBinding = {...binding};
-    delete nextBinding.geometryColumn;
-    return {...layer, _sqlroomsBinding: nextBinding};
+    return nextLayer;
   });
 
   if (!changed) return config;
@@ -607,10 +659,10 @@ function parseGeneratedDeckMapPointTransform(
 /**
  * Points a map's single table-backed dataset at another table.
  *
- * With `dropUnusableTransform`, a generated point transform that cannot bind to
- * the picked table is removed along with the state derived from it. Authored
- * transforms are always kept — the caller cannot tell whether they would bind,
- * and discarding one would destroy work that only the author can reproduce.
+ * With `dropUnusableTransform`, the generated point transform is removed along
+ * with every reference to the column it produced. Authored transforms are
+ * always kept — the caller cannot tell whether they would bind, and discarding
+ * one would destroy work that only the author can reproduce.
  */
 function retargetDeckMapDatasetTableName(
   config: DeckMapConfig,
@@ -626,9 +678,15 @@ function retargetDeckMapDatasetTableName(
   }
 
   const tableName = quoteDeckMapSqlTableReference(table.table);
+  // No `deckMapDatasetRequiresPreservedTransform` gate here: that answers
+  // whether a regenerated dataset could reconstruct a layer's columns, which is
+  // a different question. The canonical point transform produces exactly one
+  // column — its geometry alias — and its lon/lat inputs are absent from the
+  // picked table, so it can never bind and every reference to it is cleared
+  // below. Gating on the layer type instead preserved it for, say, an H3 layer
+  // whose hexagon column comes from the source table, leaving the map broken.
   const generatedTransform =
-    options?.dropUnusableTransform === true &&
-    !deckMapDatasetRequiresPreservedTransform(config, datasetId)
+    options?.dropUnusableTransform === true
       ? parseGeneratedDeckMapPointTransform(dataset.source.transformSql)
       : undefined;
   const dropTransform = generatedTransform !== undefined;
