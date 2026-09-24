@@ -66,11 +66,16 @@ export function createDeckMapDatasetOutputSchemaSql(
 /**
  * Splits inspected output columns into generated map helpers and data fields.
  *
- * Set `inspectionFailed` when the output-schema query errored. A transform that
- * no longer binds — e.g. a point transform retargeted at a table without its
- * coordinate columns — would otherwise resolve to no output columns at all,
- * which hides the settings column pickers needed to repair the map. The raw
- * source columns stand in so the map stays recoverable.
+ * Set `inspectionFailed` when the output-schema query errored *and* the source
+ * columns are that dataset's own schema. A transform that no longer binds —
+ * e.g. a point transform retargeted at a table without its coordinate columns —
+ * would otherwise resolve to no output columns at all, which hides the settings
+ * column pickers needed to repair the map. The raw source columns stand in so
+ * the map stays recoverable.
+ *
+ * Callers must not set it for a pinned-SQL dataset: its output is the query's
+ * projection, which the source columns need not resemble, so standing them in
+ * would offer bindings the repaired query still does not return.
  */
 export function resolveDeckMapDatasetSchema(options: {
   sourceColumns: TableColumn[];
@@ -208,7 +213,13 @@ export function useDeckMapDatasetSchema(options: {
     state.outputColumns,
   ]);
 
-  const inspectionFailed = isCurrentInspectedSource && Boolean(state.error);
+  // Only a table-backed transform's failure can stand in the raw table schema:
+  // callers derive `sourceColumns` from the dataset's table, which bears no
+  // relation to a pinned SQL query's projection.
+  const inspectionFailed =
+    isCurrentInspectedSource &&
+    Boolean(state.error) &&
+    hasTableTransformSql(options.source);
   const resolved = useMemo(
     () =>
       resolveDeckMapDatasetSchema({

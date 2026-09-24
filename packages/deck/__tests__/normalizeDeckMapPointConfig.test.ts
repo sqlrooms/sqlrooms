@@ -1080,6 +1080,87 @@ describe('applyDeckMapTableSelection', () => {
     });
   });
 
+  it('drops a generated transform stored with a trailing semicolon', () => {
+    const config = createPointMapConfig();
+    const stored = {
+      ...config,
+      datasets: {
+        points: {
+          ...config.datasets.points,
+          source: {
+            ...config.datasets.points.source,
+            transformSql: `  ${config.datasets.points.source.transformSql} ; `,
+          },
+        },
+      },
+    };
+
+    expect(
+      applyDeckMapTableSelection(stored, h3CellsTable).datasets.h3_cells
+        ?.source,
+    ).toEqual({tableName: '"main"."h3_cells"'});
+  });
+
+  it('clears a generated binding when the dataset omits geometryColumn', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {
+              dataset: 'points',
+              geometryColumn: '__sqlrooms_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        points: {
+          source: {
+            tableName: '"main"."taxes"',
+            transformSql: createDeckMapPointTransformSql({
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              geometryColumn: '__sqlrooms_geom',
+            }),
+          },
+        },
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, h3CellsTable);
+
+    expect(next.datasets.h3_cells?.source).toEqual({
+      tableName: '"main"."h3_cells"',
+    });
+    expect(next.spec.layers[0]._sqlroomsBinding).toEqual({dataset: 'h3_cells'});
+  });
+
+  it('re-ids a sqlQuery map once regeneration gives it a table source', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'pinned',
+            _sqlroomsBinding: {dataset: 'pinned'},
+          },
+        ],
+      },
+      datasets: {
+        pinned: {source: {sqlQuery: 'SELECT * FROM archived_places'}},
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, placesGeoTable);
+
+    expect(next.datasets.places?.source).toMatchObject({
+      tableName: '"main"."places"',
+    });
+    expect(next.datasets.places?.source).not.toHaveProperty('sqlQuery');
+    expect(Object.keys(next.datasets)).toEqual(['places']);
+  });
+
   it('leaves a sqlQuery-backed map alone when the pick changes nothing', () => {
     const config = {
       spec: {

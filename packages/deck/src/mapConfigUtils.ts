@@ -13,7 +13,10 @@ import {
   type DeckMapConfig,
   type DeckMapFitToDataConfig,
 } from './mapConfig';
-import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
+import {
+  DECK_TABLE_DATASET_SOURCE_RELATION,
+  normalizeDeckTableTransformSql,
+} from './datasets/tableDatasetSql';
 import type {GeometryEncodingHint} from './prepare/types';
 import {getDefaultDeckMapStyle} from './mapStyles';
 
@@ -569,26 +572,36 @@ const GENERATED_POINT_TRANSFORM_HEAD = new RegExp(
 );
 
 /**
- * True only for the exact SQL {@link createDeckMapPointTransformSql} emits.
+ * Recognizes the exact SQL {@link createDeckMapPointTransformSql} emits and
+ * returns the geometry column it generates, or `undefined` for anything else.
  *
  * The three identifiers are read back out of the candidate and the canonical
  * SQL is regenerated from them, so an authored transform is never mistaken for
  * a generated one — not even hand-written `ST_AsWKB(ST_Point(...))` over
  * columns this module cannot auto-detect, such as `easting`/`northing`.
+ *
+ * The candidate is normalized the way the dataset compiler normalizes it, so a
+ * stored transform that differs only in trailing whitespace or semicolons —
+ * which executes identically — is still recognized.
  */
-function isGeneratedDeckMapPointTransform(transformSql: string | undefined) {
-  const match = transformSql?.match(GENERATED_POINT_TRANSFORM_HEAD);
-  if (!match) return false;
+function parseGeneratedDeckMapPointTransform(
+  transformSql: string | undefined,
+): {geometryColumn: string} | undefined {
+  if (!transformSql) return undefined;
+  const normalized = normalizeDeckTableTransformSql(transformSql);
+  const match = normalized.match(GENERATED_POINT_TRANSFORM_HEAD);
+  if (!match) return undefined;
   const [, longitude, latitude, geometry] = match;
-  if (!longitude || !latitude || !geometry) return false;
-  return (
-    transformSql ===
+  if (!longitude || !latitude || !geometry) return undefined;
+  const geometryColumn = unquoteDeckMapSqlIdentifier(geometry);
+  return normalized ===
     createDeckMapPointTransformSql({
       longitudeColumn: unquoteDeckMapSqlIdentifier(longitude),
       latitudeColumn: unquoteDeckMapSqlIdentifier(latitude),
-      geometryColumn: unquoteDeckMapSqlIdentifier(geometry),
+      geometryColumn,
     })
-  );
+    ? {geometryColumn}
+    : undefined;
 }
 
 /**
@@ -613,10 +626,12 @@ function retargetDeckMapDatasetTableName(
   }
 
   const tableName = quoteDeckMapSqlTableReference(table.table);
-  const dropTransform =
+  const generatedTransform =
     options?.dropUnusableTransform === true &&
-    isGeneratedDeckMapPointTransform(dataset.source.transformSql) &&
-    !deckMapDatasetRequiresPreservedTransform(config, datasetId);
+    !deckMapDatasetRequiresPreservedTransform(config, datasetId)
+      ? parseGeneratedDeckMapPointTransform(dataset.source.transformSql)
+      : undefined;
+  const dropTransform = generatedTransform !== undefined;
 
   if (dataset.source.tableName === tableName && !dropTransform) return config;
 
@@ -645,11 +660,13 @@ function retargetDeckMapDatasetTableName(
       : {}),
   };
 
-  return dropTransform
+  // `geometryColumn` is optional on the dataset, so fall back to the alias the
+  // transform itself generates — otherwise the layer keeps requesting it.
+  return generatedTransform
     ? clearDeckMapGeometryColumnBindings(
         retargeted,
         datasetId,
-        dataset.geometryColumn,
+        dataset.geometryColumn ?? generatedTransform.geometryColumn,
       )
     : retargeted;
 }

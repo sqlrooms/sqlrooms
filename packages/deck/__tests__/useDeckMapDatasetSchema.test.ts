@@ -157,6 +157,18 @@ describe('Deck map dataset schema helpers', () => {
     ).toEqual([]);
   });
 
+  // A pinned-SQL dataset's output is the query's projection, so the hook
+  // withholds the flag rather than offering unrelated table columns.
+  it('withholds the source-column fallback when the caller opts out', () => {
+    expect(
+      resolveDeckMapDatasetSchema({
+        sourceColumns: [{name: 'lon', type: 'DOUBLE'}],
+        outputColumns: [],
+        inspectionFailed: false,
+      }).outputColumns,
+    ).toEqual([]);
+  });
+
   it('normalizes inspected Arrow schema types to selector-compatible types', () => {
     expect(arrowTypeToDuckDbColumnType(new arrow.Float64())).toBe('DOUBLE');
     expect(arrowTypeToDuckDbColumnType(new arrow.Float32())).toBe('DOUBLE');
