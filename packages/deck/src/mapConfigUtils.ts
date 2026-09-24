@@ -17,6 +17,10 @@ import {
   normalizeDeckTableTransformSql,
 } from './datasets/tableDatasetSql';
 import type {GeometryEncodingHint} from './prepare/types';
+import {
+  DECK_MAP_GEOMETRY_ACCESSOR_PROPS,
+  DECK_MAP_GEOMETRY_CONFIG_KEYS,
+} from './json/layerCompatibility';
 import {getDefaultDeckMapStyle} from './mapStyles';
 
 const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
@@ -504,27 +508,37 @@ function resolveDeckMapDatasetRename(
   return to && to !== from ? {from, to} : undefined;
 }
 
-/** Strips generated-geometry fit columns so a cleared transform cannot break fitting. */
+/**
+ * Strips the fit fields a dropped point transform fed, so fitting cannot query
+ * columns that no longer exist.
+ *
+ * Only the transform's own inputs and outputs go: its coordinate columns and
+ * the geometry column it produced. `h3Column` and any unrelated geometry column
+ * stay, because the transform never produced them and a source-backed H3 fit
+ * remains valid. `resolveDeckMapFitToData` cannot re-infer them from a spec
+ * stored as a string, so deleting them here would leave fitting to fall back to
+ * conventional `Longitude`/`Latitude` names and fail.
+ */
 function clearDeckMapGeneratedFit(
   fitToData: DeckMapFitToDataConfig | undefined,
   datasetId: string,
+  geometryColumn: string,
 ): DeckMapFitToDataConfig | undefined {
   if (!fitToData || fitToData.dataset !== datasetId) return fitToData;
   const next = {...fitToData};
   delete next.longitudeColumn;
   delete next.latitudeColumn;
-  delete next.geometryColumn;
-  delete next.geometryColumns;
-  delete next.h3Column;
+  if (next.geometryColumn === geometryColumn) delete next.geometryColumn;
+  const geometryColumns = next.geometryColumns?.filter(
+    (column) => column !== geometryColumn,
+  );
+  if (geometryColumns?.length) {
+    next.geometryColumns = geometryColumns;
+  } else {
+    delete next.geometryColumns;
+  }
   return next;
 }
-
-/** Geometry accessors that can name a column directly as `@@=column`. */
-const DECK_MAP_GEOMETRY_ACCESSOR_PROPS = [
-  'getPosition',
-  'getPath',
-  'getPolygon',
-] as const;
 
 /**
  * Drops every reference to a dataset's dropped geometry column from a layer.
@@ -544,9 +558,9 @@ function clearDeckMapLayerGeometryColumn(
   const next = {...layer};
   let changed = false;
 
-  const boundGeometryKeys = (
-    ['geometryColumn', 'sourceGeometryColumn', 'targetGeometryColumn'] as const
-  ).filter((key) => binding?.[key] === geometryColumn);
+  const boundGeometryKeys = DECK_MAP_GEOMETRY_CONFIG_KEYS.filter(
+    (key) => binding?.[key] === geometryColumn,
+  );
   if (binding && boundGeometryKeys.length > 0) {
     const nextBinding = {...binding};
     for (const key of boundGeometryKeys) delete nextBinding[key];
@@ -638,21 +652,22 @@ const GENERATED_POINT_TRANSFORM_HEAD = new RegExp(
  */
 function parseGeneratedDeckMapPointTransform(
   transformSql: string | undefined,
-): {geometryColumn: string} | undefined {
+):
+  | {geometryColumn: string; longitudeColumn: string; latitudeColumn: string}
+  | undefined {
   if (!transformSql) return undefined;
   const normalized = normalizeDeckTableTransformSql(transformSql);
   const match = normalized.match(GENERATED_POINT_TRANSFORM_HEAD);
   if (!match) return undefined;
   const [, longitude, latitude, geometry] = match;
   if (!longitude || !latitude || !geometry) return undefined;
-  const geometryColumn = unquoteDeckMapSqlIdentifier(geometry);
-  return normalized ===
-    createDeckMapPointTransformSql({
-      longitudeColumn: unquoteDeckMapSqlIdentifier(longitude),
-      latitudeColumn: unquoteDeckMapSqlIdentifier(latitude),
-      geometryColumn,
-    })
-    ? {geometryColumn}
+  const columns = {
+    longitudeColumn: unquoteDeckMapSqlIdentifier(longitude),
+    latitudeColumn: unquoteDeckMapSqlIdentifier(latitude),
+    geometryColumn: unquoteDeckMapSqlIdentifier(geometry),
+  };
+  return normalized === createDeckMapPointTransformSql(columns)
+    ? columns
     : undefined;
 }
 
@@ -678,16 +693,27 @@ function retargetDeckMapDatasetTableName(
   }
 
   const tableName = quoteDeckMapSqlTableReference(table.table);
-  // No `deckMapDatasetRequiresPreservedTransform` gate here: that answers
-  // whether a regenerated dataset could reconstruct a layer's columns, which is
-  // a different question. The canonical point transform produces exactly one
-  // column — its geometry alias — and its lon/lat inputs are absent from the
-  // picked table, so it can never bind and every reference to it is cleared
-  // below. Gating on the layer type instead preserved it for, say, an H3 layer
-  // whose hexagon column comes from the source table, leaving the map broken.
-  const generatedTransform =
+  // Reaching here only means the picked table has no *conventionally named*
+  // coordinate columns, which is what regeneration detects — the transform's
+  // own inputs may still be present, e.g. `pickup_lon`/`pickup_lat`. So check
+  // the columns rather than assuming, and drop only a transform that cannot
+  // bind. There is deliberately no `deckMapDatasetRequiresPreservedTransform`
+  // gate: that answers whether a regenerated dataset could reconstruct a
+  // layer's columns, a different question, and gating on it preserved an
+  // unusable transform for, say, an H3 layer whose hexagon column is
+  // source-backed.
+  const candidate =
     options?.dropUnusableTransform === true
       ? parseGeneratedDeckMapPointTransform(dataset.source.transformSql)
+      : undefined;
+  const tableColumnNames = new Set(table.columns.map((column) => column.name));
+  const generatedTransform =
+    candidate &&
+    !(
+      tableColumnNames.has(candidate.longitudeColumn) &&
+      tableColumnNames.has(candidate.latitudeColumn)
+    )
+      ? candidate
       : undefined;
   const dropTransform = generatedTransform !== undefined;
 
@@ -701,15 +727,25 @@ function retargetDeckMapDatasetTableName(
     delete nextDataset.geometryEncodingHint;
   }
 
+  // `geometryColumn` is optional on the dataset, so fall back to the alias the
+  // transform itself generates — otherwise references to it survive.
+  const droppedGeometryColumn = generatedTransform
+    ? (dataset.geometryColumn ?? generatedTransform.geometryColumn)
+    : undefined;
+
   const retargeted: DeckMapConfig = {
     ...config,
     datasets: {
       ...config.datasets,
       [datasetId]: nextDataset,
     },
-    ...(dropTransform
+    ...(droppedGeometryColumn
       ? {
-          fitToData: clearDeckMapGeneratedFit(config.fitToData, datasetId),
+          fitToData: clearDeckMapGeneratedFit(
+            config.fitToData,
+            datasetId,
+            droppedGeometryColumn,
+          ),
           // The brush reads the same absent coordinate columns as the transform.
           ...(config.interaction?.dataset === datasetId
             ? {interaction: undefined}
@@ -718,13 +754,11 @@ function retargetDeckMapDatasetTableName(
       : {}),
   };
 
-  // `geometryColumn` is optional on the dataset, so fall back to the alias the
-  // transform itself generates — otherwise the layer keeps requesting it.
-  return generatedTransform
+  return droppedGeometryColumn
     ? clearDeckMapGeometryColumnBindings(
         retargeted,
         datasetId,
-        dataset.geometryColumn ?? generatedTransform.geometryColumn,
+        droppedGeometryColumn,
       )
     : retargeted;
 }
