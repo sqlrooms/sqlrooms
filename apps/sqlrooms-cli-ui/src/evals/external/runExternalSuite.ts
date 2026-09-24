@@ -3,6 +3,8 @@ import {createHash} from 'node:crypto';
 import {cp, mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {fileURLToPath} from 'node:url';
+import {claudeArguments} from './claudeHarness';
+import {readClaudeOutput} from './claudeOutput';
 import {readCodexOutput} from './codexOutput';
 import {findOtherCodexSkills} from './codexSkills';
 import path from 'node:path';
@@ -41,6 +43,8 @@ const json = (value: unknown) =>
 export async function runExternalSuite(options: {
   outputDir: string;
   skillDir: string;
+  /** Defaults to the existing Codex runner. */
+  harness?: 'codex' | 'claude';
   model?: string;
   /** codex uses existing harness auth; openrouter uses OPENROUTER_API_KEY. */
   modelProvider?: string;
@@ -56,11 +60,16 @@ export async function runExternalSuite(options: {
   // Exclusive creation prevents overwriting a previous failed attempt.
   await mkdir(options.outputDir, {recursive: false});
   const started = new Date();
-  const modelProvider = options.modelProvider ?? 'codex';
-  let model = options.model ?? 'gpt-5.5';
+  const harness = options.harness ?? 'codex';
+  const modelProvider =
+    harness === 'claude' ? 'claude' : (options.modelProvider ?? 'codex');
+  let model =
+    harness === 'claude'
+      ? (process.env.SQLROOMS_CLAUDE_EVAL_MODEL ?? '')
+      : (options.model ?? 'gpt-5.5');
   const manifest: Record<string, unknown> = {
     startedAt: started.toISOString(),
-    harness: 'codex',
+    harness,
     model,
     modelProvider,
     policy: EXTERNAL_EVAL_POLICY,
@@ -74,7 +83,11 @@ export async function runExternalSuite(options: {
   let version: string;
   let disabledSkills: string[];
   try {
-    if (modelProvider !== 'codex' && modelProvider !== 'openrouter')
+    if (
+      harness === 'codex' &&
+      modelProvider !== 'codex' &&
+      modelProvider !== 'openrouter'
+    )
       throw new Error(`Unsupported SQLROOMS_EVAL_PROVIDER: ${modelProvider}`);
     if (modelProvider === 'openrouter') {
       loadLocalEvalEnvironment();
@@ -84,14 +97,26 @@ export async function runExternalSuite(options: {
         throw new Error('Missing OPENROUTER_API_KEY for the external harness.');
     }
     model = model.trim();
-    if (!model) throw new Error('SQLROOMS_EVAL_MODEL must be non-empty.');
+    if (!model && harness === 'codex')
+      throw new Error('SQLROOMS_EVAL_MODEL must be non-empty.');
     manifest.model = model;
-    version = execFileSync('codex', ['--version'], {
+    version = execFileSync(harness, ['--version'], {
       encoding: 'utf8',
       timeout: 10_000,
     }).trim();
     manifest.harnessVersion = version;
-    disabledSkills = await findOtherCodexSkills();
+    if (harness === 'claude') {
+      manifest.plugin = JSON.parse(
+        await readFile(
+          path.resolve(
+            options.skillDir,
+            '../../claude-plugin/.claude-plugin/plugin.json',
+          ),
+          'utf8',
+        ),
+      );
+    }
+    disabledSkills = harness === 'codex' ? await findOtherCodexSkills() : [];
     manifest.disabledSkillPaths = disabledSkills;
     manifest.executionBundleSha256 = createHash('sha256')
       .update(await readFile(fileURLToPath(import.meta.url)))
@@ -124,7 +149,7 @@ export async function runExternalSuite(options: {
     ];
     manifest.skill = {
       name: 'sqlrooms',
-      version: 4,
+      version: 5,
       files: Object.fromEntries(
         await Promise.all(
           skillFiles.map(async (file) => [
@@ -165,7 +190,10 @@ export async function runExternalSuite(options: {
       finalState: JsonObject = {};
     let finalAnswer = '';
     let processResult: HarnessResult | undefined;
-    let harnessOutput: ReturnType<typeof readCodexOutput> | undefined;
+    let harnessOutput:
+      | ReturnType<typeof readCodexOutput>
+      | ReturnType<typeof readClaudeOutput>
+      | undefined;
     let cwd: string | undefined;
     let workspace: ReturnType<typeof createCliHeadlessWorkspace> | undefined;
     let host: Awaited<ReturnType<typeof startEvalMcpHost>> | undefined;
@@ -182,9 +210,20 @@ export async function runExternalSuite(options: {
     try {
       cwd = await mkdtemp(path.join(tmpdir(), 'sqlrooms-external-'));
       options.onResource?.({kind: 'workspace', value: cwd, active: true});
-      await cp(options.skillDir, path.join(cwd, '.agents/skills/sqlrooms'), {
-        recursive: true,
-      });
+      if (harness === 'claude') {
+        await cp(
+          path.resolve(options.skillDir, '../../claude-plugin'),
+          path.join(cwd, 'plugin'),
+          {recursive: true},
+        );
+        await cp(options.skillDir, path.join(cwd, 'plugin/skills/sqlrooms'), {
+          recursive: true,
+        });
+      } else {
+        await cp(options.skillDir, path.join(cwd, '.agents/skills/sqlrooms'), {
+          recursive: true,
+        });
+      }
       workspace = createCliHeadlessWorkspace();
       await workspace.initialize();
       const mode = fixtureWorkspaceMode(scenario);
@@ -250,67 +289,114 @@ export async function runExternalSuite(options: {
         path.join(cwd, 'AGENTS.md'),
         `Use the installed SQLRooms skill to operate the SQLRooms MCP workspace. For this auditable run, explicitly read .agents/skills/sqlrooms/SKILL.md from disk even if native skill invocation already supplied its body, then read its focused references before authoring. The host is an isolated disposable fixture. Use MCP for all workspace reads and writes. Do not read repository source, evaluation evidence, or other user files. Rendering and capture are unavailable. Policy: ${JSON.stringify(EXTERNAL_EVAL_POLICY)}\n`,
       );
-      invocation = codexArguments({
-        cwd,
-        url: host.url,
-        model,
-        modelProvider: modelProvider === 'openrouter' ? 'openrouter' : 'codex',
-        prompt: scenario.turns[0]!.input,
-        disabledSkills,
-      });
+      invocation =
+        harness === 'claude'
+          ? claudeArguments({
+              pluginDir: path.join(cwd, 'plugin'),
+              model: model || undefined,
+              prompt: scenario.turns[0]!.input,
+            })
+          : codexArguments({
+              cwd,
+              url: host.url,
+              model,
+              modelProvider:
+                modelProvider === 'openrouter' ? 'openrouter' : 'codex',
+              prompt: scenario.turns[0]!.input,
+              disabledSkills,
+            });
       processResult = await runHarnessProcess({
-        command: 'codex',
+        command: harness,
         args: invocation,
         cwd,
-        env: {
-          PATH: process.env.PATH,
-          HOME: process.env.HOME,
-          CODEX_HOME: process.env.CODEX_HOME,
-          TMPDIR: process.env.TMPDIR,
-          ...(modelProvider === 'openrouter'
-            ? {OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY}
-            : {}),
-          SQLROOMS_EVAL_MCP_TOKEN: host.token,
-        },
+        env:
+          harness === 'claude'
+            ? {
+                ...process.env,
+                SQLROOMS_MCP_URL: host.url,
+                SQLROOMS_MCP_TOKEN: host.token,
+              }
+            : {
+                PATH: process.env.PATH,
+                HOME: process.env.HOME,
+                CODEX_HOME: process.env.CODEX_HOME,
+                TMPDIR: process.env.TMPDIR,
+                ...(modelProvider === 'openrouter'
+                  ? {OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY}
+                  : {}),
+                SQLROOMS_EVAL_MCP_TOKEN: host.token,
+              },
         timeoutMs: options.timeoutMs ?? 240_000,
         signal: options.signal,
         onProcess: (pid, active) =>
           options.onResource?.({kind: 'harness', value: pid, active}),
         evidencePrefix: path.join(options.outputDir, scenario.id),
       });
-      harnessOutput = readCodexOutput(processResult.stdout);
-      finalAnswer = harnessOutput.finalAnswer;
-      if (
-        !harnessOutput.skillReads.some((read) =>
-          read.output.includes(skillContents.trim()),
-        )
-      ) {
-        recordError(
-          new Error('Successful native SQLRooms skill read was not observed.'),
-          'guidance',
-        );
-      }
+      const stopped =
+        processResult.cancelled ||
+        processResult.timedOut ||
+        processResult.outputLimited;
       if (processResult.cancelled)
         recordError(new Error('Harness cancelled.'), 'cancelled');
       else if (processResult.timedOut)
         recordError(new Error('Harness deadline exceeded.'), 'timeout');
       else if (processResult.outputLimited)
         recordError(new Error('Harness output limit exceeded.'), 'harness');
-      else if (
-        processResult.exitCode !== 0 ||
-        harnessOutput.failed ||
-        !harnessOutput.completed
-      ) {
-        const authentication =
-          /unauthori[sz]ed|authentication|not logged in|login required|401/i.test(
-            processResult.stdout + processResult.stderr,
+      try {
+        harnessOutput =
+          harness === 'claude'
+            ? readClaudeOutput(processResult.stdout)
+            : readCodexOutput(processResult.stdout);
+      } catch (error) {
+        // A stopped harness can leave a truncated JSONL line.
+        recordError(error, 'harness');
+      }
+      if (harnessOutput) {
+        finalAnswer = harnessOutput.finalAnswer;
+        if (
+          !stopped &&
+          (processResult.exitCode !== 0 ||
+            harnessOutput.failed ||
+            !harnessOutput.completed)
+        ) {
+          const authentication =
+            /unauthori[sz]ed|authenticat|not logged in|login required|401/i.test(
+              processResult.stdout + processResult.stderr,
+            );
+          recordError(
+            new Error(
+              `Harness failed (exit ${processResult.exitCode}); see raw output.`,
+            ),
+            authentication ? 'authentication' : 'harness',
           );
-        recordError(
-          new Error(
-            `Harness failed (exit ${processResult.exitCode}); see raw output.`,
-          ),
-          authentication ? 'authentication' : 'harness',
-        );
+        }
+        if (
+          ('skillInvoked' in harnessOutput && !harnessOutput.skillInvoked) ||
+          !harnessOutput.skillReads.some((read) =>
+            read.output.includes(skillContents.trim()),
+          )
+        ) {
+          recordError(
+            new Error(
+              'Successful native SQLRooms skill read was not observed.',
+            ),
+            'guidance',
+          );
+        }
+        if (
+          harness === 'claude' &&
+          !['documents.md', 'charts.md', 'maps.md'].every((name) =>
+            harnessOutput!.skillReads.some(
+              (read) =>
+                read.command.endsWith('/references/' + name) &&
+                read.output.length > 100,
+            ),
+          )
+        )
+          recordError(
+            new Error('Successful focused reference reads were not observed.'),
+            'guidance',
+          );
       }
       if (
         !protocol.includes('tools/list') ||
@@ -382,17 +468,20 @@ export async function runExternalSuite(options: {
       runId: `${scenario.id}-${startedAt.getTime()}`,
       scenario: {id: scenario.id, version: scenario.version, repetition: 0},
       target: {
-        type: 'cli-external-codex',
+        type: `cli-external-${harness}`,
         profileName: 'document-charts-maps',
         profileVersion: workspace?.profile.version ?? 1,
       },
       repository: manifest.repository,
       model: {
         provider:
-          modelProvider === 'openrouter' ? 'openrouter' : 'codex-harness',
-        modelId: model,
-        settings: {reasoningEffort: 'medium'},
-        observedModelId: null,
+          modelProvider === 'openrouter' ? 'openrouter' : `${harness}-harness`,
+        modelId: model || 'harness-default',
+        settings: harness === 'codex' ? {reasoningEffort: 'medium'} : {},
+        observedModelId:
+          harnessOutput && 'observedModelId' in harnessOutput
+            ? harnessOutput.observedModelId
+            : null,
       },
       timing: {
         startedAt: startedAt.toISOString(),
@@ -433,7 +522,9 @@ export async function runExternalSuite(options: {
         mcpRequests: protocol,
         sqlroomsModelCalls: 0,
         skillLoading:
-          'Native .agents/skills discovery and explicit $sqlrooms invocation; raw harness output retained.',
+          harness === 'claude'
+            ? 'Native --plugin-dir and Skill invocation; successful guidance/reference reads required.'
+            : 'Native .agents/skills discovery and explicit $sqlrooms invocation; raw harness output retained.',
         cleanupCompleted: !errors.some(
           (error) => error.metadata?.kind === 'cleanup',
         ),

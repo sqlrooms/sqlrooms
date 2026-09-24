@@ -26,6 +26,8 @@ try {
       await import('./external-dist/runExternalSuite.mjs');
     const results = await runExternalSuite({
       outputDir,
+      harness:
+        process.env.SQLROOMS_EVAL_HARNESS === 'claude' ? 'claude' : 'codex',
       skillDir: path.resolve(directory, '../skills/sqlrooms'),
       model: process.env.SQLROOMS_EVAL_MODEL,
       modelProvider: process.env.SQLROOMS_EVAL_PROVIDER,

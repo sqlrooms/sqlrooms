@@ -186,7 +186,7 @@ pnpm --filter sqlrooms-cli-app build
 
 This builds the UI into `apps/sqlrooms-cli-ui/dist`.
 
-To copy it into the Python package bundle directory (so the published `sqlrooms` wheel can serve it), run:
+To prepare the Python package assets (the UI bundle and Claude plugin), run:
 
 ```bash
 cd python/sqlrooms
@@ -347,4 +347,24 @@ the browser retains its optional current-document read behavior.
 
 See [external harness evaluation](evals/EXTERNAL_HARNESS.md) for the Codex/MCP run
 command, isolated fixture policy, evidence, and fidelity limits. This does not
-enable browser external mode or change production AI/persistence behavior.
+change production AI/persistence behavior; browser external mode is a separate
+launcher option described below.
+
+### External Claude execution
+
+The Python launcher supports `sqlrooms --claude --profile document-charts-maps
+./my-project.duckdb` (opening or creating the database). It serves this browser app in `executionMode: "external"`,
+waits for the production MCP bridge, and attaches a native Claude Code terminal
+session. Capability profiles remain independent of execution mode. AI slices,
+model tools, chat actions and AI-settings autosave are absent in external mode;
+dormant saved conversations/settings round-trip through existing persistence.
+Manual authoring and browser query approvals remain active.
+
+`skills/sqlrooms` is the canonical guidance source for both external harnesses.
+`build-claude-plugin.mjs` generates the distributable plugin in the Python package
+from those files and `claude-plugin` metadata. The Python package's `build:ui`
+step runs this generator after the cached UI build, including when CI or deployment
+builds the wheel directly with `uv build`. Generated
+copies are ignored;
+edit the canonical source and rebuild. See the [launcher guide](../../python/sqlrooms/README.md#interactive-claude-code-workspace)
+and [evaluation adapter](evals/EXTERNAL_HARNESS.md#claude-code-adapter).

@@ -1,3 +1,4 @@
+import {embeddedAiEnabled} from '../../runtimeEnvironment';
 import {
   Tabs,
   TabsContent,
@@ -14,6 +15,7 @@ export function CliWorkspaceSidebarTabs() {
   const {state} = useSidebar();
 
   if (state !== 'expanded') return null;
+  if (!embeddedAiEnabled) return <CliArtifactsSidebarSection />;
 
   return (
     <Tabs

@@ -13,7 +13,7 @@ import tempfile
 import threading
 import webbrowser
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Callable, Awaitable
 from urllib.parse import urlsplit, urlunsplit
 
 import uvicorn
@@ -506,6 +506,7 @@ class SqlroomsHttpServer:
         external_url: str | None = None,
         external_ws_url: str | None = None,
         ai_devtools: bool = False,
+        execution_mode: str = "embedded",
         mcp_enabled: bool = False,
         mcp_port: int | None = None,
         debug: bool = False,
@@ -563,6 +564,7 @@ class SqlroomsHttpServer:
             raise ValueError("sync_enabled requires capability_profile 'experimental'.")
         self.experimental_enabled = self.capability_profile == "experimental"
         self.ai_devtools = bool(ai_devtools)
+        self.execution_mode = execution_mode
         self.mcp_enabled_default = bool(mcp_enabled)
         self.debug = bool(debug)
         self.sync_enabled = bool(sync_enabled)
@@ -598,7 +600,9 @@ class SqlroomsHttpServer:
         self._mcp_lock = asyncio.Lock()
         self._mcp_last_error: str | None = None
 
-    async def start(self) -> None:
+    async def start(
+        self, session: Callable[[], Awaitable[int]] | None = None
+    ) -> int | None:
         logger.info("Starting sqlrooms CLI server")
         self._assert_ui_available()
         if self.meta_db:
@@ -619,8 +623,10 @@ class SqlroomsHttpServer:
             await self._start_mcp()
         app = self._build_app()
 
+        browser_timer = None
         if self.open_browser and self.serve_ui:
-            threading.Timer(1.0, self._open_browser).start()
+            browser_timer = threading.Timer(1.0, self._open_browser)
+            browser_timer.start()
 
         logger.info("SQLRooms UI URL: %s", self._ui_url())
         logger.info("DuckDB websocket URL: %s", self._ws_url())
@@ -635,9 +641,35 @@ class SqlroomsHttpServer:
             loop="asyncio",
         )
         server = uvicorn.Server(config)
+        session_task = None
+        http_task = asyncio.create_task(server.serve())
         try:
-            await server.serve()
+            if session is None:
+                await http_task
+                return None
+            session_task = asyncio.create_task(session())
+            done, _ = await asyncio.wait(
+                {http_task, session_task}, return_when=asyncio.FIRST_COMPLETED
+            )
+            if session_task in done:
+                return await session_task
+            await http_task
+            return None
         finally:
+            if browser_timer:
+                browser_timer.cancel()
+            if session_task and not session_task.done():
+                session_task.cancel()
+                await asyncio.gather(session_task, return_exceptions=True)
+            server.should_exit = True
+            try:
+                await asyncio.wait_for(
+                    asyncio.shield(asyncio.gather(http_task, return_exceptions=True)),
+                    timeout=5,
+                )
+            except asyncio.TimeoutError:
+                http_task.cancel()
+                await asyncio.gather(http_task, return_exceptions=True)
             await self._stop_mcp()
             await self.mcp_broker.close()
 
@@ -917,6 +949,7 @@ class SqlroomsHttpServer:
             "llmModel": self.llm_model,
             "configWritable": self.config_path is not None,
             "capabilityProfile": self.capability_profile,
+            "executionMode": self.execution_mode,
             "experimentalEnabled": self.experimental_enabled,
             "aiDevtools": self.ai_devtools,
             "syncEnabled": self.sync_enabled,

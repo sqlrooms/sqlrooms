@@ -73,3 +73,24 @@ it('initializes, authors, snapshots and disposes without any AI slice or configu
   await workspace.dispose();
   await expect(workspace.initialize()).rejects.toThrow('disposed');
 });
+
+it('creates documents through manual UI commands without inventing a chat session', async () => {
+  const workspace = createCliHeadlessWorkspace();
+  try {
+    await workspace.initialize();
+    const result = await workspace.store
+      .getState()
+      .commands.invokeCommand(
+        'block-document.create-artifact',
+        {title: 'Manually created'},
+        {surface: 'api'},
+      );
+    expect(result.success).toBe(true);
+    expect(workspace.store.getState()).not.toHaveProperty('artifactAi');
+    expect(
+      snapshotCliEvalState(workspace.store.getState()).documents,
+    ).toHaveLength(1);
+  } finally {
+    await workspace.dispose();
+  }
+});

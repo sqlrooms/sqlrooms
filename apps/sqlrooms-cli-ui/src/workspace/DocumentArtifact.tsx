@@ -1,3 +1,4 @@
+import {embeddedAiEnabled} from '../runtimeEnvironment';
 import {
   createAskAiBlockHeaderAction,
   type AskAiBlockHeaderActionRenderContext,
@@ -144,7 +145,7 @@ const DOCUMENT_STATEFUL_BLOCK_RENDERERS = {
 function getEnabledDocumentAiBlockTypes(
   profile: CliCapabilityProfile,
 ): Set<string> {
-  return new Set<string>(profile.blocks.aiContext);
+  return new Set<string>(embeddedAiEnabled ? profile.blocks.aiContext : []);
 }
 
 function createStartBlockScopedChatActions(
@@ -233,29 +234,31 @@ export const DocumentArtifact: RoomPanelComponent = ({panelId, meta}) => {
 
   const renderBlockHeaderActions = useMemo(
     () =>
-      createAskAiBlockHeaderAction({
-        supportsAiEditing: (blockType) =>
-          enabledDocumentAiBlockTypes.has(blockType),
-        onSubmit: (
-          ctx: AskAiBlockHeaderActionRenderContext,
-          prompt: string,
-        ) => {
-          void startBlockScopedChat({
-            target: {
-              blockDocumentId: ctx.blockDocumentId,
-              blockId: ctx.blockId,
-              blockType: ctx.blockType,
-              blockInstanceId: ctx.blockInstanceId,
+      embeddedAiEnabled
+        ? createAskAiBlockHeaderAction({
+            supportsAiEditing: (blockType) =>
+              enabledDocumentAiBlockTypes.has(blockType),
+            onSubmit: (
+              ctx: AskAiBlockHeaderActionRenderContext,
+              prompt: string,
+            ) => {
+              void startBlockScopedChat({
+                target: {
+                  blockDocumentId: ctx.blockDocumentId,
+                  blockId: ctx.blockId,
+                  blockType: ctx.blockType,
+                  blockInstanceId: ctx.blockInstanceId,
+                },
+                prompt,
+                revealAssistant,
+                actions: createStartBlockScopedChatActions(roomStore.getState),
+                isValidBlockDocumentArtifact: (candidate) =>
+                  candidate.type === 'block-document',
+                artifactLabel: 'document',
+              });
             },
-            prompt,
-            revealAssistant,
-            actions: createStartBlockScopedChatActions(roomStore.getState),
-            isValidBlockDocumentArtifact: (candidate) =>
-              candidate.type === 'block-document',
-            artifactLabel: 'document',
-          });
-        },
-      }),
+          })
+        : undefined,
     [revealAssistant, enabledDocumentAiBlockTypes],
   );
 
