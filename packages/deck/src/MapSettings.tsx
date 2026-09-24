@@ -2543,6 +2543,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                                   targetGeometryColumn:
                                     restored.targetGeometryColumn ?? null,
                                 },
+                                sourceColumns,
                               ),
                             );
                           }}
@@ -2572,6 +2573,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                                           mapConfig,
                                           activeLayerIndex,
                                           {sourceGeometryColumn},
+                                          sourceColumns,
                                         ),
                                       );
                                     }}
@@ -2592,6 +2594,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                                           mapConfig,
                                           activeLayerIndex,
                                           {targetGeometryColumn},
+                                          sourceColumns,
                                         ),
                                       );
                                     }}

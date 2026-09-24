@@ -952,7 +952,8 @@ function withArcLayerBinding(
 
 /**
  * Binds an arc layer to source/target geometry columns and drops a generated
- * lon/lat transform once both endpoints have left the generated aliases.
+ * lon/lat transform once both selected names exist on `sourceColumns`.
+ * Transform-produced columns (e.g. `buffered_source`) keep the SQL.
  */
 export function setDeckMapLayerArcGeometryColumns(
   config: DeckMapConfig,
@@ -961,6 +962,7 @@ export function setDeckMapLayerArcGeometryColumns(
     sourceGeometryColumn?: string | null;
     targetGeometryColumn?: string | null;
   },
+  sourceColumns: ReadonlyArray<{name: string}> = [],
 ): DeckMapConfig {
   const layer = getDeckMapLayerRecords(config)[layerIndex];
   const datasetId = getDeckMapLayerDatasetId(layer);
@@ -985,8 +987,21 @@ export function setDeckMapLayerArcGeometryColumns(
     isDeckMapTableDatasetSource(source) && source.transformSql
       ? getArcTransformGeometryAliases(source.transformSql)
       : undefined;
+  const sourceColumnNames = new Set(
+    sourceColumns.map((column) => column.name.toLowerCase()),
+  );
+  const sourceOnTable = Boolean(
+    sourceGeometryColumn &&
+    sourceColumnNames.has(sourceGeometryColumn.toLowerCase()),
+  );
+  const targetOnTable = Boolean(
+    targetGeometryColumn &&
+    sourceColumnNames.has(targetGeometryColumn.toLowerCase()),
+  );
   const leavingGenerated = Boolean(
     generatedAliases &&
+    sourceOnTable &&
+    targetOnTable &&
     sourceGeometryColumn !== generatedAliases.sourceGeometryColumn &&
     targetGeometryColumn !== generatedAliases.targetGeometryColumn,
   );
