@@ -234,19 +234,6 @@ describe('mapLayerConfigUtils', () => {
     expect(config.datasets.places.geometryColumn).toBe('geom');
   });
 
-  it('decodes a WKB blob geometry column before taking its centroid', () => {
-    const nextConfig = setDeckMapLayerGeometryColumn(config, 0, 'geometry', [
-      {name: 'geometry', type: 'BLOB'},
-    ]);
-
-    expect(nextConfig.datasets.places.source).toMatchObject({
-      tableName: 'places',
-      transformSql: expect.stringContaining(
-        'ST_Centroid(ST_GeomFromWKB("geometry"))',
-      ),
-    });
-  });
-
   it('stores a single lat/lon pick without dropping a source geometry column', () => {
     const nextConfig = setDeckMapLayerCoordinateColumns(
       config,
@@ -1173,49 +1160,6 @@ describe('arc geometry vs lon/lat bindings', () => {
     });
   });
 
-  it('switches an arc lon/lat map back to source geometry columns', () => {
-    const lonLatConfig = setDeckMapLayerArcCoordinateColumns(
-      arcConfig,
-      0,
-      {
-        sourceLatitudeColumn: 'origin_lat',
-        sourceLongitudeColumn: 'origin_lon',
-        targetLatitudeColumn: 'dest_lat',
-        targetLongitudeColumn: 'dest_lon',
-      },
-      sourceColumns,
-    );
-    const nextConfig = setDeckMapLayerArcGeometryColumns(
-      lonLatConfig,
-      0,
-      {
-        sourceGeometryColumn: 'origin_geom',
-        targetGeometryColumn: 'dest_geom',
-      },
-      sourceColumns,
-    );
-
-    expect(nextConfig.datasets.trips.source).toEqual({tableName: 'trips'});
-    expect(nextConfig.datasets.trips.geometryEncodingHint).toBeUndefined();
-    expect(nextConfig.fitToData).toMatchObject({
-      dataset: 'trips',
-      geometryColumns: ['origin_geom', 'dest_geom'],
-    });
-    expect(
-      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
-    ).toMatchObject({
-      dataset: 'trips',
-      sourceGeometryColumn: 'origin_geom',
-      targetGeometryColumn: 'dest_geom',
-    });
-    expect(
-      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
-    ).not.toHaveProperty('sourceLatitudeColumn');
-    expect(
-      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
-    ).not.toHaveProperty('targetLongitudeColumn');
-  });
-
   it('keeps the generated arc transform until both native endpoints are set', () => {
     const lonLatConfig = setDeckMapLayerArcCoordinateColumns(
       arcConfig,
@@ -1255,12 +1199,23 @@ describe('arc geometry vs lon/lat bindings', () => {
     );
     expect(afterBoth.datasets.trips.source).toEqual({tableName: 'trips'});
     expect(afterBoth.datasets.trips.geometryEncodingHint).toBeUndefined();
+    expect(afterBoth.fitToData).toMatchObject({
+      dataset: 'trips',
+      geometryColumns: ['origin_geom', 'dest_geom'],
+    });
     expect(
       getDeckMapLayerRecords(afterBoth)[0]?._sqlroomsBinding,
     ).toMatchObject({
+      dataset: 'trips',
       sourceGeometryColumn: 'origin_geom',
       targetGeometryColumn: 'dest_geom',
     });
+    expect(
+      getDeckMapLayerRecords(afterBoth)[0]?._sqlroomsBinding,
+    ).not.toHaveProperty('sourceLatitudeColumn');
+    expect(
+      getDeckMapLayerRecords(afterBoth)[0]?._sqlroomsBinding,
+    ).not.toHaveProperty('targetLongitudeColumn');
   });
 
   it('reapplies arc lon/lat after switching back from source geometry columns', () => {

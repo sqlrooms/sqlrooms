@@ -1338,9 +1338,6 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   );
   const datasetSchemaErrorMessage = datasetSchema.error?.message;
 
-  const showGeometryColumnSetting =
-    usesGeometryColumnSetting(activeLayer?.['@@type']) ||
-    usesPointCoordinateSetting(activeLayer?.['@@type']);
   const showPointCoordinateSetting = usesPointCoordinateSetting(
     activeLayer?.['@@type'],
   );
@@ -1490,7 +1487,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   const pathPolygonGeometryColumns =
     pointGeometryColumns.length > 0 ? pointGeometryColumns : positionColumns;
   const showPathPolygonGeometryGroup = Boolean(
-    showGeometryColumnSetting &&
+    usesGeometryColumnSetting(activeLayer?.['@@type']) &&
     !showPointCoordinateSetting &&
     !showArcColumnSetting &&
     (pathPolygonGeometryColumns.length > 0 ||

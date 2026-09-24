@@ -600,7 +600,7 @@ export function setDeckMapLayerGeometryColumn(
   );
   const generatedAlias =
     isDeckMapTableDatasetSource(source) && source.transformSql
-      ? getPointTransformGeometryAlias(source.transformSql)
+      ? parseDeckMapPointTransformSql(source.transformSql)?.geometryColumn
       : undefined;
   const keepCoordinateFit =
     leavingCoordinateFit && generatedAlias === geometryColumn;
@@ -685,13 +685,6 @@ export function setDeckMapLayerGeometryColumn(
       _sqlroomsBinding: nextBinding,
     };
   });
-}
-
-/** Alias created by a lon/lat → WKB point transform, if this SQL is one. */
-function getPointTransformGeometryAlias(
-  transformSql: string,
-): string | undefined {
-  return parseDeckMapPointTransformSql(transformSql)?.geometryColumn;
 }
 
 /**
@@ -864,17 +857,6 @@ function pickUnusedColumnName(
   return candidate;
 }
 
-function getArcTransformGeometryAliases(
-  transformSql: string,
-): {sourceGeometryColumn: string; targetGeometryColumn: string} | undefined {
-  const parsed = parseDeckMapArcTransformSql(transformSql);
-  if (!parsed) return undefined;
-  return {
-    sourceGeometryColumn: parsed.sourceGeometryColumn,
-    targetGeometryColumn: parsed.targetGeometryColumn,
-  };
-}
-
 function nextArcFitToData(
   config: DeckMapConfig,
   datasetId: string,
@@ -985,7 +967,7 @@ export function setDeckMapLayerArcGeometryColumns(
   const source = dataset.source;
   const generatedAliases =
     isDeckMapTableDatasetSource(source) && source.transformSql
-      ? getArcTransformGeometryAliases(source.transformSql)
+      ? parseDeckMapArcTransformSql(source.transformSql)
       : undefined;
   const sourceColumnNames = new Set(
     sourceColumns.map((column) => column.name.toLowerCase()),
