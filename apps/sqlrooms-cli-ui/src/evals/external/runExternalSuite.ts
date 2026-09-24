@@ -332,58 +332,72 @@ export async function runExternalSuite(options: {
           options.onResource?.({kind: 'harness', value: pid, active}),
         evidencePrefix: path.join(options.outputDir, scenario.id),
       });
-      harnessOutput =
-        harness === 'claude'
-          ? readClaudeOutput(processResult.stdout)
-          : readCodexOutput(processResult.stdout);
-      finalAnswer = harnessOutput.finalAnswer;
+      const stopped =
+        processResult.cancelled ||
+        processResult.timedOut ||
+        processResult.outputLimited;
       if (processResult.cancelled)
         recordError(new Error('Harness cancelled.'), 'cancelled');
       else if (processResult.timedOut)
         recordError(new Error('Harness deadline exceeded.'), 'timeout');
       else if (processResult.outputLimited)
         recordError(new Error('Harness output limit exceeded.'), 'harness');
-      else if (
-        processResult.exitCode !== 0 ||
-        harnessOutput.failed ||
-        !harnessOutput.completed
-      ) {
-        const authentication =
-          /unauthori[sz]ed|authenticat|not logged in|login required|401/i.test(
-            processResult.stdout + processResult.stderr,
+      try {
+        harnessOutput =
+          harness === 'claude'
+            ? readClaudeOutput(processResult.stdout)
+            : readCodexOutput(processResult.stdout);
+      } catch (error) {
+        // A stopped harness can leave a truncated JSONL line.
+        recordError(error, 'harness');
+      }
+      if (harnessOutput) {
+        finalAnswer = harnessOutput.finalAnswer;
+        if (
+          !stopped &&
+          (processResult.exitCode !== 0 ||
+            harnessOutput.failed ||
+            !harnessOutput.completed)
+        ) {
+          const authentication =
+            /unauthori[sz]ed|authenticat|not logged in|login required|401/i.test(
+              processResult.stdout + processResult.stderr,
+            );
+          recordError(
+            new Error(
+              `Harness failed (exit ${processResult.exitCode}); see raw output.`,
+            ),
+            authentication ? 'authentication' : 'harness',
           );
-        recordError(
-          new Error(
-            `Harness failed (exit ${processResult.exitCode}); see raw output.`,
-          ),
-          authentication ? 'authentication' : 'harness',
-        );
-      }
-      if (
-        ('skillInvoked' in harnessOutput && !harnessOutput.skillInvoked) ||
-        !harnessOutput.skillReads.some((read) =>
-          read.output.includes(skillContents.trim()),
+        }
+        if (
+          ('skillInvoked' in harnessOutput && !harnessOutput.skillInvoked) ||
+          !harnessOutput.skillReads.some((read) =>
+            read.output.includes(skillContents.trim()),
+          )
+        ) {
+          recordError(
+            new Error(
+              'Successful native SQLRooms skill read was not observed.',
+            ),
+            'guidance',
+          );
+        }
+        if (
+          harness === 'claude' &&
+          !['documents.md', 'charts.md', 'maps.md'].every((name) =>
+            harnessOutput!.skillReads.some(
+              (read) =>
+                read.command.endsWith('/references/' + name) &&
+                read.output.length > 100,
+            ),
+          )
         )
-      ) {
-        recordError(
-          new Error('Successful native SQLRooms skill read was not observed.'),
-          'guidance',
-        );
+          recordError(
+            new Error('Successful focused reference reads were not observed.'),
+            'guidance',
+          );
       }
-      if (
-        harness === 'claude' &&
-        !['documents.md', 'charts.md', 'maps.md'].every((name) =>
-          harnessOutput!.skillReads.some(
-            (read) =>
-              read.command.endsWith('/references/' + name) &&
-              read.output.length > 100,
-          ),
-        )
-      )
-        recordError(
-          new Error('Successful focused reference reads were not observed.'),
-          'guidance',
-        );
       if (
         !protocol.includes('tools/list') ||
         !protocol.some((method) => method.startsWith('tools/call:'))

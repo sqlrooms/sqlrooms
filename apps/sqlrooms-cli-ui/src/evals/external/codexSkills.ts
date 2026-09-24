@@ -1,4 +1,4 @@
-import {access, readdir, realpath} from 'node:fs/promises';
+import {access, readdir, realpath, stat} from 'node:fs/promises';
 import {homedir} from 'node:os';
 import path from 'node:path';
 
@@ -36,8 +36,14 @@ export async function findOtherCodexSkills(): Promise<string[]> {
       if (entry.name === 'node_modules' || entry.name === '.git') continue;
       if (entry.isDirectory()) await visit(path.join(resolved, entry.name));
       else if (entry.isSymbolicLink()) {
-        const target = await realpath(path.join(resolved, entry.name));
-        const {stat} = await import('node:fs/promises');
+        let target: string;
+        try {
+          target = await realpath(path.join(resolved, entry.name));
+        } catch (error) {
+          // Skip dangling links, such as stale plugin cache entries.
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+          throw error;
+        }
         if ((await stat(target)).isDirectory()) await visit(target);
       }
     }
