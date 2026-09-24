@@ -1024,4 +1024,81 @@ describe('applyDeckMapTableSelection', () => {
       Object.keys(applyDeckMapTableSelection(config, h3CellsTable).datasets),
     ).toEqual(['origins', 'destinations']);
   });
+
+  it('clears geometry bindings in a serialized spec when dropping a transform', () => {
+    const config = createPointMapConfig();
+    const serialized = {...config, spec: JSON.stringify(config.spec)};
+
+    const next = applyDeckMapTableSelection(serialized, h3CellsTable);
+    const spec = JSON.parse(next.spec as string);
+
+    expect(next.datasets.h3_cells?.source).toEqual({
+      tableName: '"main"."h3_cells"',
+    });
+    expect(spec.layers[0]._sqlroomsBinding).toEqual({dataset: 'h3_cells'});
+  });
+
+  it('keeps an authored transform that only resembles the generated one', () => {
+    const authoredTransformSql = [
+      'SELECT *, ST_AsWKB(ST_Point("easting", "northing")) AS "__sqlrooms_geom"',
+      `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+      'WHERE "easting" BETWEEN -180 AND 180',
+    ].join(' ');
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            _sqlroomsBinding: {
+              dataset: 'grids',
+              geometryColumn: '__sqlrooms_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        grids: {
+          source: {
+            tableName: '"main"."grids"',
+            transformSql: authoredTransformSql,
+          },
+          geometryColumn: '__sqlrooms_geom',
+          geometryEncodingHint: 'wkb' as const,
+        },
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, h3CellsTable);
+
+    expect(next.datasets.h3_cells?.source).toMatchObject({
+      tableName: '"main"."h3_cells"',
+      transformSql: authoredTransformSql,
+    });
+    expect(next.datasets.h3_cells?.geometryColumn).toBe('__sqlrooms_geom');
+    expect(next.spec.layers[0]._sqlroomsBinding).toMatchObject({
+      geometryColumn: '__sqlrooms_geom',
+    });
+  });
+
+  it('leaves a sqlQuery-backed map alone when the pick changes nothing', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'pinned',
+            _sqlroomsBinding: {dataset: 'pinned'},
+          },
+        ],
+      },
+      datasets: {
+        pinned: {source: {sqlQuery: 'SELECT * FROM archived_places'}},
+      },
+      fitToData: {dataset: 'pinned', padding: 40},
+    };
+
+    const next = applyDeckMapTableSelection(config, h3CellsTable);
+
+    expect(next).toBe(config);
+  });
 });

@@ -461,6 +461,19 @@ function renameDeckMapDataset(
   };
 }
 
+/** True when a dataset's source is the given table, so its id can name it. */
+function deckMapDatasetReadsTable(
+  config: DeckMapConfig,
+  datasetId: string,
+  table: DataTable,
+): boolean {
+  const source = config.datasets?.[datasetId]?.source;
+  return (
+    isDeckMapTableDatasetSource(source) &&
+    source.tableName === quoteDeckMapSqlTableReference(table.table)
+  );
+}
+
 /**
  * Resolves the dataset rename implied by a table pick.
  *
@@ -502,15 +515,22 @@ function clearDeckMapGeneratedFit(
   return next;
 }
 
-/** Drops a dataset's generated geometry column from layer bindings. */
+/**
+ * Drops a dataset's generated geometry column from layer bindings.
+ *
+ * Handles a spec stored as serialized JSON: leaving a string spec untouched
+ * would keep layers requesting a geometry column that no longer exists on the
+ * dataset.
+ */
 function clearDeckMapGeometryColumnBindings(
   config: DeckMapConfig,
   datasetId: string,
   geometryColumn: string | undefined,
 ): DeckMapConfig {
-  if (!geometryColumn || !isRecord(config.spec)) return config;
-  const layers = config.spec.layers;
-  if (!Array.isArray(layers)) return config;
+  if (!geometryColumn) return config;
+  const parsed = parseDeckMapSpecRecord(config.spec);
+  const layers = parsed?.layers;
+  if (!parsed || !Array.isArray(layers)) return config;
 
   let changed = false;
   const nextLayers = layers.map((layer) => {
@@ -528,11 +548,57 @@ function clearDeckMapGeometryColumnBindings(
     return {...layer, _sqlroomsBinding: nextBinding};
   });
 
-  return changed
-    ? {...config, spec: {...config.spec, layers: nextLayers}}
-    : config;
+  if (!changed) return config;
+  const nextSpec = {...parsed, layers: nextLayers};
+  return {
+    ...config,
+    spec: (typeof config.spec === 'string'
+      ? JSON.stringify(nextSpec)
+      : nextSpec) as DeckMapConfig['spec'],
+  };
 }
 
+/** Reads an identifier back out of its quoted SQL form. */
+function unquoteDeckMapSqlIdentifier(quoted: string) {
+  return quoted.slice(1, -1).replace(/""/g, '"');
+}
+
+const QUOTED_SQL_IDENTIFIER = String.raw`"(?:[^"]|"")*"`;
+const GENERATED_POINT_TRANSFORM_HEAD = new RegExp(
+  String.raw`^SELECT \*, ST_AsWKB\(ST_Point\((${QUOTED_SQL_IDENTIFIER}), (${QUOTED_SQL_IDENTIFIER})\)\) AS (${QUOTED_SQL_IDENTIFIER}) `,
+);
+
+/**
+ * True only for the exact SQL {@link createDeckMapPointTransformSql} emits.
+ *
+ * The three identifiers are read back out of the candidate and the canonical
+ * SQL is regenerated from them, so an authored transform is never mistaken for
+ * a generated one — not even hand-written `ST_AsWKB(ST_Point(...))` over
+ * columns this module cannot auto-detect, such as `easting`/`northing`.
+ */
+function isGeneratedDeckMapPointTransform(transformSql: string | undefined) {
+  const match = transformSql?.match(GENERATED_POINT_TRANSFORM_HEAD);
+  if (!match) return false;
+  const [, longitude, latitude, geometry] = match;
+  if (!longitude || !latitude || !geometry) return false;
+  return (
+    transformSql ===
+    createDeckMapPointTransformSql({
+      longitudeColumn: unquoteDeckMapSqlIdentifier(longitude),
+      latitudeColumn: unquoteDeckMapSqlIdentifier(latitude),
+      geometryColumn: unquoteDeckMapSqlIdentifier(geometry),
+    })
+  );
+}
+
+/**
+ * Points a map's single table-backed dataset at another table.
+ *
+ * With `dropUnusableTransform`, a generated point transform that cannot bind to
+ * the picked table is removed along with the state derived from it. Authored
+ * transforms are always kept — the caller cannot tell whether they would bind,
+ * and discarding one would destroy work that only the author can reproduce.
+ */
 function retargetDeckMapDatasetTableName(
   config: DeckMapConfig,
   table: DataTable,
@@ -549,7 +615,7 @@ function retargetDeckMapDatasetTableName(
   const tableName = quoteDeckMapSqlTableReference(table.table);
   const dropTransform =
     options?.dropUnusableTransform === true &&
-    Boolean(dataset.source.transformSql?.trim()) &&
+    isGeneratedDeckMapPointTransform(dataset.source.transformSql) &&
     !deckMapDatasetRequiresPreservedTransform(config, datasetId);
 
   if (dataset.source.tableName === tableName && !dropTransform) return config;
@@ -1145,10 +1211,13 @@ export function regenerateMapConfigForTable(
  * leave the dataset unreadable — even its schema fails to describe, which hides
  * the settings pickers needed to repair the map. Such a transform is dropped
  * unless a retained arc/H3/trips layer still depends on the columns it produces;
- * those keep it so switching away and back restores a working map.
+ * those keep it so switching away and back restores a working map. Only the
+ * exact generated SQL is dropped — see
+ * {@link isGeneratedDeckMapPointTransform}.
  *
- * A table-derived dataset id follows the pick so the spec stops naming the old
- * table; see {@link resolveDeckMapDatasetRename}.
+ * The dataset id follows the pick so the spec stops naming the old table, but
+ * only once the dataset actually reads the picked table; see
+ * {@link resolveDeckMapDatasetRename} and {@link deckMapDatasetReadsTable}.
  */
 export function applyDeckMapTableSelection(
   config: DeckMapConfig,
@@ -1170,7 +1239,7 @@ export function applyDeckMapTableSelection(
           dropUnusableTransform: true,
         });
 
-  return rename
+  return rename && deckMapDatasetReadsTable(retargeted, rename.from, table)
     ? renameDeckMapDataset(retargeted, rename.from, rename.to)
     : retargeted;
 }
