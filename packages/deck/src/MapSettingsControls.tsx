@@ -73,7 +73,6 @@ export function isDeckMapGeometryPickerColumn(column: TableColumn): boolean {
   const category = getColumnTypeCategory(column.type);
   return (
     category === 'geometry' ||
-    category === 'binary' ||
     type.includes('geoarrow') ||
     type.includes('wkb') ||
     type.includes('wkt')

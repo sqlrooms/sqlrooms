@@ -58,6 +58,16 @@ describe('Deck map settings controls', () => {
         'geometry',
       ).map((column) => column.name),
     ).toEqual(['origin_geom', 'dest_geom', 'pickup']);
+    expect(
+      filterDeckMapColumns(
+        [
+          {name: 'image_payload', type: 'BLOB'},
+          {name: 'geom', type: 'WKB_BLOB'},
+          {name: 'shape', type: 'GEOMETRY'},
+        ],
+        'geometry',
+      ).map((column) => column.name),
+    ).toEqual(['geom', 'shape']);
     expect(filterDeckMapColumns(columns, 'all')).toBe(columns);
   });
 

@@ -1231,6 +1231,7 @@ describe('arc geometry vs lon/lat bindings', () => {
       tableName: 'trips',
       transformSql: expect.stringContaining('ST_Point("origin_lon"'),
     });
+    expect(afterSource.datasets.trips.geometryEncodingHint).toBeUndefined();
     expect(
       getDeckMapLayerRecords(afterSource)[0]?._sqlroomsBinding,
     ).toMatchObject({
