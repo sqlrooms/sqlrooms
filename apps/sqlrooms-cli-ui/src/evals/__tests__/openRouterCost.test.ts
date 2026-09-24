@@ -7,6 +7,18 @@ const RATES = {
 };
 
 describe('createOpenRouterCostTracker', () => {
+  it('keeps cost unknown without model-specific rates but retains billed cost', async () => {
+    const tracker = createOpenRouterCostTracker();
+    expect(tracker.resolveCost({inputTokens: 1_000_000})).toBeUndefined();
+    await tracker.metadataExtractor.extractMetadata({
+      parsedBody: {usage: {cost: 0.25}},
+    });
+    expect(tracker.resolveCost({inputTokens: 1_000_000})).toEqual({
+      costUsd: 0.25,
+      source: 'provider-reported',
+    });
+  });
+
   it('accumulates provider-reported cost across streamed model calls', () => {
     const tracker = createOpenRouterCostTracker(RATES);
     const first = tracker.metadataExtractor.createStreamExtractor();

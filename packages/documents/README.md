@@ -7,6 +7,34 @@ See the
 [Blocks and Block Documents developer guide](https://sqlrooms.org/blocks-and-documents)
 for the conceptual model, ownership rules, and a focused host setup.
 
+## Block inspection
+
+`createBlockDocumentCommands` registers the read-only
+`block-document.inspect-block({artifactId, blockId})` command. Both IDs are
+required. It verifies that the artifact is a document and that the block belongs
+to it; `blockId` is the document block ID, not a backing resource ID.
+
+Inline blocks return `{artifactId, block}`, including their inline configuration.
+For a stateful block, register an optional `readState` alongside `ensureState` in
+`statefulBlockTypes`:
+
+```ts
+statefulBlockTypes: [
+  {
+    blockType: 'map',
+    readState: ({state, blockInstanceId}) =>
+      state.deckMaps.config.mapsById[blockInstanceId],
+  },
+];
+```
+
+The command returns `{artifactId, block, backingState}` using that type's reader.
+Readers must return JSON-serializable data without initializing or changing state;
+`undefined` means the backing instance is missing. Unregistered types, types
+without readers, and missing backing instances return explicit failures. The
+command contains no map-specific lookup or AI dependency. Host authorization and
+transport result limits still apply.
+
 ## Usage
 
 ```tsx

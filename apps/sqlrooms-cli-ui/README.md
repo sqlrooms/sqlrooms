@@ -334,3 +334,17 @@ Iframe-backed content is still unsupported.
 Pre-release CRDT snapshots and saved AI run context are not migrated across
 document naming changes. Reset incompatible development sync state and saved
 sessions when upgrading. Existing local workspace migrations remain supported.
+
+### Headless external harness evaluation
+
+The browser and both evaluation targets share `createCliDomainSlice`. CLI MCP
+capabilities accept an injected store through `createCliCapabilityRuntime`; the
+browser retains its query approval policy. `block-document.inspect-block` reads a document block using explicit `artifactId`
+and `blockId`, resolving backing state through the registered block type. Maps
+register a reader; other stateful types without readers fail explicitly.
+The isolated host projects command discovery to require explicit document IDs;
+the browser retains its optional current-document read behavior.
+
+See [external harness evaluation](evals/EXTERNAL_HARNESS.md) for the Codex/MCP run
+command, isolated fixture policy, evidence, and fidelity limits. This does not
+enable browser external mode or change production AI/persistence behavior.

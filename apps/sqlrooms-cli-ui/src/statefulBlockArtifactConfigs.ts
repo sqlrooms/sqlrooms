@@ -45,6 +45,8 @@ export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
       options?: BlockDocumentStatefulBlockCreateNodeOptions,
     ) => void;
     deleteState: (state: RoomState, artifactId: string) => void;
+    /** Read backing state without initialization; undefined means missing. */
+    readState?: (state: RoomState, blockInstanceId: string) => unknown;
   };
 
 export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
@@ -116,6 +118,8 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     requireScrollModifier: true,
     scrollHintLabel: 'this map',
     settings: DeckMapBlockSettings,
+    readState: (state, blockInstanceId) =>
+      state.deckMaps.config.mapsById[blockInstanceId],
     ensureState: (state, artifactId, title) => {
       ensureDeckMapResourceState(state, artifactId, title);
     },
@@ -281,6 +285,10 @@ export function createStatefulBlockCommandTypes({
       ensureState: ({state, blockInstanceId, title}) => {
         config.ensureState(state, blockInstanceId, title);
       },
+      readState: config.readState
+        ? ({state, blockInstanceId}) =>
+            config.readState!(state, blockInstanceId)
+        : undefined,
     };
   });
 }

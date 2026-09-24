@@ -4,6 +4,13 @@ import {CREATE_DOCUMENT_CHART_MAP_SCENARIO} from '../scenarios';
 
 const runMock = jest.fn<() => Promise<RunEvidence>>();
 const disposeMock = jest.fn<() => Promise<void>>();
+const createTargetMock = jest.fn<
+  (options: unknown) => {run: typeof runMock; dispose: typeof disposeMock}
+>(() => ({run: runMock, dispose: disposeMock}));
+const costOptionsMock = jest.fn<(options: unknown) => void>();
+const languageModelMock = jest.fn<(id: string, options: unknown) => object>(
+  () => ({}),
+);
 const resolveCostMock =
   jest.fn<
     (
@@ -14,20 +21,24 @@ const resolveCostMock =
   >();
 
 jest.unstable_mockModule('../createCliEvalTarget', () => ({
-  createCliEvalTarget: () => ({run: runMock, dispose: disposeMock}),
+  createCliEvalTarget: createTargetMock,
 }));
 jest.unstable_mockModule('../openRouterCost', () => ({
-  createOpenRouterCostTracker: () => ({
-    metadataExtractor: {},
-    resolveCost: resolveCostMock,
-  }),
+  createOpenRouterCostTracker: (options: unknown) => {
+    costOptionsMock(options);
+    return {
+      metadataExtractor: {},
+      resolveCost: resolveCostMock,
+    };
+  },
 }));
 jest.unstable_mockModule('@ai-sdk/openai-compatible', () => ({
-  createOpenAICompatible: () => ({languageModel: () => ({})}),
+  createOpenAICompatible: () => ({languageModel: languageModelMock}),
 }));
 
 const {default: SqlroomsCliEvalProvider} = await import('../promptfooProvider');
 const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;
+const originalEvalModel = process.env.SQLROOMS_EVAL_MODEL;
 
 function runEvidence(): RunEvidence {
   const timestamp = '2026-08-21T12:00:00.000Z';
@@ -75,6 +86,10 @@ beforeEach(() => {
   runMock.mockReset().mockResolvedValue(runEvidence());
   disposeMock.mockReset().mockResolvedValue(undefined);
   resolveCostMock.mockReset();
+  createTargetMock.mockClear();
+  costOptionsMock.mockClear();
+  languageModelMock.mockClear();
+  delete process.env.SQLROOMS_EVAL_MODEL;
 });
 
 afterAll(() => {
@@ -83,9 +98,31 @@ afterAll(() => {
   } else {
     process.env.OPENROUTER_API_KEY = originalOpenRouterApiKey;
   }
+  if (originalEvalModel === undefined) delete process.env.SQLROOMS_EVAL_MODEL;
+  else process.env.SQLROOMS_EVAL_MODEL = originalEvalModel;
 });
 
 describe('SqlroomsCliEvalProvider cost propagation', () => {
+  it('passes the selected model into the target and evidence identity', async () => {
+    process.env.SQLROOMS_EVAL_MODEL = 'openai/gpt-5.5';
+    const provider = new SqlroomsCliEvalProvider({});
+    await provider.callApi(CREATE_DOCUMENT_CHART_MAP_SCENARIO.turns[0]!.input, {
+      vars: {scenarioId: CREATE_DOCUMENT_CHART_MAP_SCENARIO.id},
+    });
+    expect(createTargetMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelProvider: 'openrouter',
+        modelId: 'openai/gpt-5.5',
+        configuredRevision: 'openai/gpt-5.5',
+      }),
+    );
+    expect(languageModelMock).toHaveBeenCalledWith(
+      'openai/gpt-5.5',
+      expect.any(Object),
+    );
+    expect(costOptionsMock).toHaveBeenCalledWith(undefined);
+  });
+
   it.each([
     ['provider-reported', 0.012],
     ['estimated', 0.0000116],
