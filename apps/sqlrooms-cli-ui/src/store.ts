@@ -1,4 +1,4 @@
-import {ArtifactsSliceConfig, createArtifactsSlice} from '@sqlrooms/artifacts';
+import {ArtifactsSliceConfig} from '@sqlrooms/artifacts';
 import {
   ArtifactAiConfigSchema,
   createArtifactAiSlice,
@@ -21,7 +21,7 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
-import {createDeckMapsSlice, DeckMapsSliceConfig} from '@sqlrooms/deck';
+import {DeckMapsSliceConfig} from '@sqlrooms/deck';
 import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck/mosaic';
 import {
   arrowTableToJson,
@@ -59,7 +59,6 @@ import {
 import {
   BaseRoomConfig,
   createPersistHelpers,
-  createRoomShellSlice,
   createRoomStore,
   DEFAULT_ROOM_TITLE,
   LayoutConfig,
@@ -85,7 +84,6 @@ import {
 } from '@sqlrooms/db-settings';
 import {
   BlockDocumentsSliceConfig,
-  createBlockDocumentsSlice,
   createMarkdownDocumentsSlice,
   MarkdownDocumentsSliceConfig,
 } from '@sqlrooms/documents';
@@ -123,14 +121,7 @@ import {
   AppBuilderProjectConfigSchema,
   RoomState,
 } from './store-types';
-import {
-  getStatefulBlockArtifactConfig,
-  isStatefulBlockArtifactType,
-} from './statefulBlockArtifactConfigs';
-import {
-  registerCliCapabilityProfileCommands,
-  unregisterCliCapabilityProfileCommands,
-} from './registerCliCapabilityProfileCommands';
+import {createCliDomainSlice} from './createCliDomainSlice';
 
 export type {RoomState} from './store-types';
 
@@ -683,16 +674,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       };
 
       const dashboardSlice: RoomState['dashboard'] = {
-        initialize: async () => {
-          registerCliCapabilityProfileCommands(
-            store,
-            cliCapabilityProfile,
-            cliArtifactTypes,
-          );
-        },
-        destroy: async () => {
-          unregisterCliCapabilityProfileCommands(store);
-        },
         ensureDashboardArtifact: (artifactId) => {
           const artifact = get().artifacts.getArtifact(artifactId);
           if (!artifact || artifact.type !== 'dashboard') {
@@ -842,55 +823,55 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createRoomShellSlice({
-          connector,
-          config: {title: defaultWorkspaceTitle, dataSources: []},
-          layout: createLayout({artifactTypes: cliArtifactTypes, store}),
-          createCommandProps: {
-            // createRoomShellSlice is typed to the base room state, but this
-            // app middleware needs the composed CLI RoomState at runtime.
-            middleware: [artifactChatAssociationMiddleware as any],
-          },
-          createDbProps: {
-            duckDb: {
-              loadTableSchemasFilter: (() => {
-                const filter = createDefaultLoadTableSchemasFilter();
-                return (table: QualifiedTableName) => {
-                  return (
-                    filter(table) &&
-                    !(
-                      table.database === get().db.currentDatabase &&
-                      table.schema === 'mosaic'
-                    )
-                  );
-                };
-              })(),
-              loadSchemaCatalogFilter: (entry: SchemaCatalogFilterEntry) => {
-                if (!defaultLoadSchemaCatalogFilter(entry)) {
-                  return false;
-                }
-                if (
-                  entry.type === 'schema' &&
-                  entry.database === get().db.currentDatabase &&
-                  entry.schema === 'mosaic'
-                ) {
-                  return false;
-                }
-                if (
-                  entry.type === 'table' &&
-                  entry.table.database === get().db.currentDatabase &&
-                  entry.table.schema === 'mosaic'
-                ) {
-                  return false;
-                }
-                return true;
+        ...createCliDomainSlice({
+          profile: cliCapabilityProfile,
+          artifactTypes: cliArtifactTypes,
+          shell: {
+            connector,
+            config: {title: defaultWorkspaceTitle, dataSources: []},
+            layout: createLayout({artifactTypes: cliArtifactTypes, store}),
+            createCommandProps: {
+              // createRoomShellSlice is typed to the base room state, but this
+              // app middleware needs the composed CLI RoomState at runtime.
+              middleware: [artifactChatAssociationMiddleware as any],
+            },
+            createDbProps: {
+              duckDb: {
+                loadTableSchemasFilter: (() => {
+                  const filter = createDefaultLoadTableSchemasFilter();
+                  return (table: QualifiedTableName) => {
+                    return (
+                      filter(table) &&
+                      !(
+                        table.database === get().db.currentDatabase &&
+                        table.schema === 'mosaic'
+                      )
+                    );
+                  };
+                })(),
+                loadSchemaCatalogFilter: (entry: SchemaCatalogFilterEntry) => {
+                  if (!defaultLoadSchemaCatalogFilter(entry)) {
+                    return false;
+                  }
+                  if (
+                    entry.type === 'schema' &&
+                    entry.database === get().db.currentDatabase &&
+                    entry.schema === 'mosaic'
+                  ) {
+                    return false;
+                  }
+                  if (
+                    entry.type === 'table' &&
+                    entry.table.database === get().db.currentDatabase &&
+                    entry.table.schema === 'mosaic'
+                  ) {
+                    return false;
+                  }
+                  return true;
+                },
               },
             },
           },
-        })(set, get, store),
-
-        ...createArtifactsSlice({
-          artifactTypes: cliArtifactTypes,
         })(set, get, store),
 
         ...createArtifactAiSlice()(set, get, store),
@@ -902,8 +883,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             schema: MOSAIC_PREAGG_SCHEMA_REF,
           },
         })(set, get, store),
-
-        ...createDeckMapsSlice()(set, get, store),
 
         ...createDashboardFeatureSlices(
           cliCapabilityProfile.dashboard.deckMaps
@@ -936,42 +915,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createCanvasSlice()(set, get, store),
 
         ...createMarkdownDocumentsSlice()(set, get, store),
-
-        ...createBlockDocumentsSlice<RoomState>({
-          onCreateOwnedStatefulBlock: ({
-            blockInstanceId,
-            blockType,
-            getState,
-          }) => {
-            if (!isStatefulBlockArtifactType(blockType)) {
-              console.warn('Unknown stateful block type on create', {
-                blockType,
-                blockInstanceId,
-              });
-              return;
-            }
-            const config = getStatefulBlockArtifactConfig(blockType);
-            // Do not pass embeddedTitle here: create-stateful-block already
-            // called ensureState with the command-provided title. Re-running
-            // with the generic embedded title would overwrite it.
-            config.ensureState(getState(), blockInstanceId);
-          },
-          onDeleteOwnedStatefulBlock: ({
-            blockInstanceId,
-            blockType,
-            getState,
-          }) => {
-            if (!isStatefulBlockArtifactType(blockType)) {
-              console.warn('Unknown stateful block type on delete', {
-                blockType,
-                blockInstanceId,
-              });
-              return;
-            }
-            const config = getStatefulBlockArtifactConfig(blockType);
-            config.deleteState(getState(), blockInstanceId);
-          },
-        })(set, get, store),
 
         ...(runtimeConfig.syncEnabled
           ? createCrdtSlice<RoomState>({

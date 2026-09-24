@@ -57,6 +57,10 @@ import {
 } from '../BlockDocumentStatefulBlockRendererContext';
 import {BLOCK_DOCUMENT_TITLE_NODE_NAME} from './extensions/BlockDocumentTitleNode';
 import {useBlockDocumentEditorContext} from './BlockDocumentEditorContext';
+import {
+  BLOCK_DOCUMENT_CONTENT_GUTTER,
+  BLOCK_DOCUMENT_CONTROLS_LEFT_INSET,
+} from './blockDocumentLayout';
 
 type BlockControlState = {
   element: HTMLElement;
@@ -124,13 +128,11 @@ type BlockTypeSearchSelection = {
 
 const BLOCK_CONTROLS_STACK_HEIGHT = 32;
 const BLOCK_CONTROLS_TOP_INSET = 4;
-const BLOCK_CONTROLS_GUTTER_HOVER_WIDTH = 96;
 const DRAG_SCROLL_EDGE_THRESHOLD = 80;
 const DRAG_SCROLL_MAX_STEP = 28;
 const BLOCK_TYPE_SEARCH_MENU_MAX_HEIGHT = 300;
 const BLOCK_TYPE_SEARCH_MENU_LIST_MAX_HEIGHT = 240;
 const BLOCK_TYPE_SEARCH_MENU_VIEWPORT_PADDING = 16;
-const BLOCK_DOCUMENT_CONTENT_LEFT_GUTTER = 96;
 const EMPTY_BLOCK_PLACEHOLDER = "Press '/' to change block type";
 const SLASH_SEARCH_PLACEHOLDER = 'Type to search';
 const FILTER_SEARCH_PLACEHOLDER = 'Type to filter';
@@ -218,7 +220,7 @@ function isPointerInEditorGutter(
   const editorRect = editorElement.getBoundingClientRect();
   return (
     event.clientX >= editorRect.left &&
-    event.clientX <= editorRect.left + BLOCK_CONTROLS_GUTTER_HOVER_WIDTH &&
+    event.clientX <= editorRect.left + BLOCK_DOCUMENT_CONTENT_GUTTER &&
     event.clientY >= editorRect.top &&
     event.clientY <= editorRect.bottom
   );
@@ -347,11 +349,8 @@ function getDropIndicator(
       editorRect.left -
       scrollRect.left +
       scrollElement.scrollLeft +
-      BLOCK_DOCUMENT_CONTENT_LEFT_GUTTER,
-    width: Math.max(
-      0,
-      editorRect.width - BLOCK_DOCUMENT_CONTENT_LEFT_GUTTER - 24,
-    ),
+      BLOCK_DOCUMENT_CONTENT_GUTTER,
+    width: Math.max(0, editorRect.width - BLOCK_DOCUMENT_CONTENT_GUTTER * 2),
   };
 }
 
@@ -1667,8 +1666,11 @@ export const BlockDocumentBlockControls: FC<
       {activeBlock ? (
         <div
           ref={controlsRef}
-          className="pointer-events-none absolute left-2 z-20 flex -translate-y-1/2 flex-row items-center gap-0.5"
-          style={{top: activeBlock.top}}
+          className="pointer-events-none absolute z-20 flex -translate-y-1/2 flex-row items-center gap-0.5"
+          style={{
+            top: activeBlock.top,
+            left: BLOCK_DOCUMENT_CONTROLS_LEFT_INSET,
+          }}
         >
           <TooltipProvider>
             {renderAddButton()}

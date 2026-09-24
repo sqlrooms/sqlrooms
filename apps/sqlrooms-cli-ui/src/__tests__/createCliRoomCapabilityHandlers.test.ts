@@ -80,9 +80,6 @@ const state = {
   },
 };
 
-jest.unstable_mockModule('../store', () => ({
-  roomStore: {getState: () => state},
-}));
 jest.unstable_mockModule('@sqlrooms/duckdb', () => ({
   arrowTableToJson: (result: {rows: unknown[]}) => [...result.rows],
   getTableDisplayName: (table: {table: string}) => table.table,
@@ -109,11 +106,12 @@ const {createCliRoomCapabilities} =
 
 function capability(
   name: string,
-  options?: Parameters<typeof createCliRoomCapabilities>[0],
+  options?: Omit<Parameters<typeof createCliRoomCapabilities>[0], 'store'>,
 ) {
-  return createCliRoomCapabilities(options).find(
-    (entry) => entry.name === name,
-  )!;
+  return createCliRoomCapabilities({
+    ...options,
+    store: {getState: () => state} as any,
+  }).find((entry) => entry.name === name)!;
 }
 
 async function flushQueuedInvocations() {
@@ -337,15 +335,16 @@ describe('CLI room capability handlers', () => {
           finishFirst = resolve;
         }),
     );
+    const executeCapability = capability('execute_command');
     const firstController = new AbortController();
-    const firstInvocation = capability('execute_command').execute(
+    const firstInvocation = executeCapability.execute(
       {commandId: 'workspace.stuck'},
       {surface: 'mcp-http', signal: firstController.signal},
     );
     await flushQueuedInvocations();
     expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(1);
 
-    const secondInvocation = capability('execute_command').execute(
+    const secondInvocation = executeCapability.execute(
       {commandId: 'workspace.refresh'},
       {surface: 'mcp-http'},
     );

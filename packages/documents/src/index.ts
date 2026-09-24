@@ -214,3 +214,12 @@ export {
   formatBlockDocumentContext,
   type FormatBlockDocumentContextOptions,
 } from './formatBlockDocumentContext';
+export {
+  BlockCaptionEditor,
+  type BlockCaptionEditorProps,
+} from './components/BlockCaptionEditor';
+export {
+  DataTableSelector,
+  DataTableSelectorEmptyState,
+  type DataTableSelectorProps,
+} from './components/DataTableSelector';

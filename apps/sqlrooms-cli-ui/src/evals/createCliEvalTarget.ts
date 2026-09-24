@@ -1,8 +1,5 @@
 import {createArtifactAiSlice} from '@sqlrooms/artifacts/ai';
-import {createArtifactsSlice} from '@sqlrooms/artifacts';
 import {createAiSlice, getChatRequestErrorMessage} from '@sqlrooms/ai';
-import {createDeckMapsSlice, ensureDeckMapResourceState} from '@sqlrooms/deck';
-import {createBlockDocumentsSlice} from '@sqlrooms/documents';
 import {createNodeDuckDbConnector} from '@sqlrooms/duckdb-node';
 import {
   RUN_EVIDENCE_SCHEMA_VERSION,
@@ -16,7 +13,6 @@ import {
   type RunEvidence,
   type ScenarioDefinition,
 } from '@sqlrooms/evals';
-import {createRoomShellSlice} from '@sqlrooms/room-shell';
 import {
   wrapLanguageModel,
   type LanguageModel,
@@ -35,10 +31,8 @@ import {
   resolveCliCapabilityProfile,
   type CliCapabilityProfile,
 } from '../profiles';
-import {
-  registerCliCapabilityProfileCommands,
-  unregisterCliCapabilityProfileCommands,
-} from '../registerCliCapabilityProfileCommands';
+import {createCliDomainSlice} from '../createCliDomainSlice';
+import {fixtureWorkspaceMode, seedDocument} from './workspaceFixture';
 import type {RoomState} from '../store-types';
 import {createCliEvalDuckDbOptions} from './fixture';
 import {snapshotCliEvalState} from './snapshot';
@@ -547,55 +541,18 @@ function createHeadlessStore(
       nestedAgentModel: model,
     });
     const state = {
-      ...createRoomShellSlice({
-        connector,
-        config: {title: 'SQLRooms Eval', dataSources: []},
-        createCommandProps: {
-          middleware: [artifactChatAssociationMiddleware as any],
+      ...createCliDomainSlice({
+        profile,
+        artifactTypes,
+        shell: {
+          connector,
+          config: {title: 'SQLRooms Eval', dataSources: []},
+          createCommandProps: {
+            middleware: [artifactChatAssociationMiddleware as any],
+          },
         },
       })(set, get, store),
-      ...createArtifactsSlice<RoomState>({artifactTypes})(set, get, store),
       ...createArtifactAiSlice<RoomState>({autoSync: false})(set, get, store),
-      ...createDeckMapsSlice()(set, get, store),
-      ...createBlockDocumentsSlice<RoomState>({
-        onCreateOwnedStatefulBlock: ({
-          blockInstanceId,
-          blockType,
-          getState,
-        }) => {
-          if (blockType === 'map') {
-            ensureDeckMapResourceState(getState(), blockInstanceId);
-          }
-        },
-        onDeleteOwnedStatefulBlock: ({
-          blockInstanceId,
-          blockType,
-          getState,
-        }) => {
-          if (blockType === 'map')
-            getState().deckMaps.removeMap(blockInstanceId);
-        },
-      })(set, get, store),
-      dashboard: {
-        initialize: async () => {
-          registerCliCapabilityProfileCommands(
-            typedStore,
-            profile,
-            artifactTypes,
-          );
-        },
-        destroy: async () => {
-          unregisterCliCapabilityProfileCommands(typedStore);
-        },
-        ensureDashboardArtifact: () => {},
-        addDataTableExplorerForTable: () => undefined,
-        getCurrentDashboardArtifactId: () => undefined,
-        createDashboardArtifact: () => {
-          throw new Error(
-            'Dashboard capabilities are disabled for this profile.',
-          );
-        },
-      },
       ...createAiSlice({
         tools,
         defaultProvider: modelIdentity.provider,
@@ -613,91 +570,6 @@ function createHeadlessStore(
     return state as unknown as RoomState;
   });
   return {store: roomStore, connector};
-}
-
-function fixtureWorkspaceMode(
-  scenario: ScenarioDefinition,
-): 'empty' | 'document' | 'document-chart-map' {
-  const mode = scenario.fixture.workspace;
-  if (
-    mode === 'empty' ||
-    mode === 'document' ||
-    mode === 'document-chart-map'
-  ) {
-    return mode;
-  }
-  return 'document';
-}
-
-function seedDocument(
-  store: StoreApi<RoomState>,
-  scenario: ScenarioDefinition,
-  repetition: number,
-  mode: 'document' | 'document-chart-map',
-): string {
-  const documentId = store.getState().artifacts.createArtifact({
-    id: `eval-${scenario.id}-${repetition}`,
-    type: 'block-document',
-    title: 'Evaluation Document',
-  });
-  store.getState().blockDocuments.ensureBlockDocument(documentId);
-  if (mode === 'document-chart-map') {
-    const mapId = `${documentId}-map`;
-    store.getState().blockDocuments.appendBlocks(documentId, [
-      {
-        id: 'seed-heading',
-        type: 'heading',
-        level: 2,
-        text: [{type: 'text', text: 'Existing analysis'}],
-      },
-      {
-        id: 'seed-chart',
-        type: 'chart',
-        tableName: '"analytics"."events"',
-        config: {
-          chartType: 'bar',
-          x: {field: 'category'},
-          y: {field: 'metric', aggregate: 'sum'},
-          title: 'Original metric chart',
-        },
-      },
-      {
-        id: 'seed-map-block',
-        type: 'statefulBlock',
-        blockType: 'map',
-        blockInstanceId: mapId,
-        ownership: 'owned',
-        caption: 'Existing event map',
-      },
-    ]);
-    store.getState().deckMaps.updateMap(mapId, {
-      title: 'Existing event map',
-      selectedTable: '"analytics"."events"',
-      config: {
-        datasets: {
-          events: {source: {tableName: '"analytics"."events"'}},
-        },
-        spec: {
-          layers: [
-            {
-              '@@type': 'GeoArrowScatterplotLayer',
-              _sqlroomsBinding: {
-                dataset: 'events',
-                longitudeColumn: 'longitude',
-                latitudeColumn: 'latitude',
-              },
-            },
-          ],
-        },
-        fitToData: {
-          dataset: 'events',
-          longitudeColumn: 'longitude',
-          latitudeColumn: 'latitude',
-        },
-      },
-    });
-  }
-  return documentId;
 }
 
 /** Creates an isolated, in-process CLI eval target using production wiring. */

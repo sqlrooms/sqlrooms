@@ -3,7 +3,11 @@ import {
   type DataTable,
   type DuckDbSliceState,
 } from '@sqlrooms/duckdb';
-import {useBlockSettingsStore} from '@sqlrooms/documents';
+import {
+  BlockCaptionEditor,
+  DataTableSelectorEmptyState,
+  useBlockSettingsStore,
+} from '@sqlrooms/documents';
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import {FocusIcon, MapIcon, SlidersVerticalIcon} from 'lucide-react';
 import {
@@ -197,14 +201,11 @@ export function DeckMapBlockRenderer({
       <div className="border-border flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <MapIcon className="h-4 w-4 shrink-0" />
-          <input
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+          <BlockCaptionEditor
             value={caption ?? map.title}
-            readOnly={readOnly}
+            isReadOnly={readOnly}
             placeholder={map.selectedTable ?? title ?? 'Map caption'}
-            onChange={(event) =>
-              onCaptionChange?.(event.target.value || undefined)
-            }
+            onChange={(value) => onCaptionChange?.(value || undefined)}
           />
         </div>
         <div className="flex items-center gap-0.5">
@@ -235,9 +236,7 @@ export function DeckMapBlockRenderer({
             variant={isSettingsShown ? 'secondary' : 'ghost'}
             size="icon"
             className="h-6 w-6"
-            aria-label={
-              isSettingsShown ? 'Close map settings' : 'Open map settings'
-            }
+            aria-label={isSettingsShown ? 'Close settings' : 'Open settings'}
             onClick={() =>
               isSettingsShown
                 ? requestCloseSettingsPanel()
@@ -274,29 +273,16 @@ export function DeckMapBlockRenderer({
             />
           </DeckMapResourceErrorBoundary>
         ) : (
-          <div className="flex h-full min-h-[320px] items-center justify-center p-4">
-            <select
-              className="border-border bg-background rounded border px-3 py-2 text-sm"
-              value={map.selectedTable ?? ''}
+          <div className="h-full min-h-80">
+            <DataTableSelectorEmptyState
+              tables={tables}
+              value={tables.find(
+                (candidate) =>
+                  getTableIdentity(candidate.table) === map.selectedTable,
+              )}
               disabled={readOnly}
-              onChange={(event) => {
-                const table = tables.find(
-                  (candidate) =>
-                    getTableIdentity(candidate.table) === event.target.value,
-                );
-                if (table) handleTableChange(table);
-              }}
-            >
-              <option value="">Select a table</option>
-              {tables.map((table) => (
-                <option
-                  key={getTableIdentity(table.table)}
-                  value={getTableIdentity(table.table)}
-                >
-                  {table.tableName}
-                </option>
-              ))}
-            </select>
+              onChange={handleTableChange}
+            />
           </div>
         )}
       </div>
