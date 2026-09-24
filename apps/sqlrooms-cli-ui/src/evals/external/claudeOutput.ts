@@ -50,9 +50,10 @@ export function readClaudeOutput(stdout: string) {
           ? block.content
           : (block.content ?? []).map((part) => part.text ?? '').join('\n');
       // Read includes line-number prefixes; retain the raw stream separately.
+      // Strip only the prefix so content indentation survives.
       skillReads.push({
         command: use.input.file_path,
-        output: output.replace(/^\s*\d+[→\t] ?/gm, ''),
+        output: output.replace(/^ *\d+(?:→|\t)/gm, ''),
       });
     }
   }

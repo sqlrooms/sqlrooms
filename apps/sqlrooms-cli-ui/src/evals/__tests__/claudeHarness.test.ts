@@ -59,7 +59,8 @@ it('requires successful Skill and Read results, and grades only the final result
             {
               type: 'tool_result',
               tool_use_id: 'r',
-              content: '1→Guidance\n2→More',
+              content:
+                '     1→Guidance\n     2→  - indented\n     3→\n    10\tMore',
             },
           ],
         },
@@ -78,7 +79,7 @@ it('requires successful Skill and Read results, and grades only the final result
     failed: false,
     observedModelId: 'observed-model',
   });
-  expect(output.skillReads[0]?.output).toBe('Guidance\nMore');
+  expect(output.skillReads[0]?.output).toBe('Guidance\n  - indented\n\nMore');
 });
 
 it('does not treat denied guidance or an interrupted turn as success', () => {
