@@ -12,19 +12,23 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 
 from .catalog import Catalog
-from .contract import CONTROL_VERSION, TOOL_HASH, TOOL_VERSION
+from .contract import CONTROL_VERSION
 from .operations import Operations
+from .settings import ApplicationSettings
 from . import registry
 from .storage import WorkspaceError
 
 
 class Runtime:
-    def __init__(self, server):
+    def __init__(self, server, *, settings: ApplicationSettings | None = None):
         self.server = server
+        self.settings = settings or ApplicationSettings()
         self._catalog = None
         self.workspace = None
         self.operations = Operations()
-        self.managed = os.environ.get("SQLROOMS_MANAGED") == "1"
+        self.managed = (
+            os.environ.get(self.settings.environment_prefix + "_MANAGED") == "1"
+        )
         self.started = time.time()
         self.stopping = False
         self.close_failed = False
@@ -43,27 +47,34 @@ class Runtime:
                 "Managed workspace history requires tested owner-only storage, which is not yet available on this platform.",
             )
         if self._catalog is None:
-            self._catalog = Catalog()
+            self._catalog = Catalog(self.settings)
         return self._catalog
 
     def identity(self):
         s = self.server
         mcp = s._mcp_status()
         return {
+            "application": self.settings.product,
             "instanceId": s.access.binding,
             "workspaceId": self.workspace["workspaceId"] if self.workspace else None,
             "name": self.workspace["name"] if self.workspace else None,
             "databasePath": s.duckdb_database,
-            "profile": s.capability_profile,
-            "executionMode": s.execution_mode,
-            "embeddedAiEnabled": s.execution_mode == "embedded",
+            **(
+                {
+                    "profile": s.capability_profile,
+                    "executionMode": s.execution_mode,
+                    "embeddedAiEnabled": s.execution_mode == "embedded",
+                }
+                if self.settings.profiles
+                else {}
+            ),
             "ownership": "managed" if self.managed else "manual",
             "apiUrl": s._ui_url(),
             "browserUrl": s.external_url or s._ui_url() if s.serve_ui else None,
             "mcpEnabled": mcp["enabled"],
             "mcpUrl": s._mcp_url() if mcp["enabled"] else None,
-            "toolVersion": TOOL_VERSION,
-            "toolHash": TOOL_HASH,
+            "toolVersion": self.settings.contract["version"],
+            "toolHash": self.settings.tool_hash,
             "controlVersion": CONTROL_VERSION,
             "lifecycle": "stopping" if self.stopping else "running",
             "readiness": "ready"
@@ -79,7 +90,7 @@ class Runtime:
         self.workspace = await asyncio.to_thread(
             self.catalog.register,
             s.duckdb_database,
-            profile=s.capability_profile,
+            profile=s.capability_profile if self.settings.profiles else None,
             opened=True,
         )
         registry.publish(
@@ -88,7 +99,8 @@ class Runtime:
                 "pid": os.getpid(),
                 "processMarker": registry.process_marker(os.getpid()),
                 "credentialFile": str(s.credential_file.path),
-            }
+            },
+            settings=self.settings,
         )
 
     def routes(self, app):
@@ -240,6 +252,7 @@ class Runtime:
             )
             return {
                 "ok": True,
+                "application": self.settings.product,
                 "instanceId": s.access.binding,
                 "lifecycle": "stopping",
                 "flush": result,

@@ -28,7 +28,11 @@ class MetadataStorage:
         self.init_meta_storage(namespace="crdt", attached_db_path=path)
 
     def init_meta_storage(
-        self, namespace: str, attached_db_path: Optional[str] = None
+        self,
+        namespace: str,
+        attached_db_path: Optional[str] = None,
+        *,
+        sync_storage=True,
     ) -> None:
         """Initialize SQLRooms meta persistence (UI state + CRDT snapshots).
 
@@ -65,6 +69,9 @@ class MetadataStorage:
             );
             """
         )
+
+        if not sync_storage:
+            return
 
         # CRDT snapshots
         rooms_ref = self._sync_rooms_table_ref()

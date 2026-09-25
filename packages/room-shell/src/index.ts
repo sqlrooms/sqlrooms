@@ -175,3 +175,8 @@ export {
 } from '@sqlrooms/room-store';
 
 export type {LayoutDirection} from '@sqlrooms/room-store';
+
+export {
+  createDuckDbPersistStorage,
+  type DuckDbPersistStorage,
+} from './createDuckDbPersistStorage';

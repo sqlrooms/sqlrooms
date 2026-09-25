@@ -7,6 +7,12 @@ import {fileURLToPath} from 'node:url';
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const packagesByTarget = {
+  roomie: {
+    label: 'roomie',
+    cwd: resolve(rootDir, 'python/roomie'),
+    packageJson: resolve(rootDir, 'python/roomie/package.json'),
+    uploadArgs: ['twine', 'upload', '--skip-existing', 'dist/roomie-*'],
+  },
   sqlrooms: {
     label: 'sqlrooms',
     cwd: resolve(rootDir, 'python/sqlrooms'),
@@ -15,19 +21,20 @@ const packagesByTarget = {
   },
 };
 
-const dependencyOrder = ['sqlrooms'];
+// Keep existing SQLRooms releases scoped by default; Roomie is explicitly targeted.
+const dependencyOrder = ['sqlrooms', 'roomie'];
 
 const usage = () => {
   console.log(`Manage SQLRooms Python CLI package releases.
 
 Usage:
-  pnpm cli:version --target <sqlrooms|all> --bump <patch|minor|major>
-  pnpm cli:version --target <sqlrooms|all> --set <version>
-  pnpm cli:publish [--target <sqlrooms|all>]
-  pnpm cli:publish:dry [--target <sqlrooms|all>]
+  pnpm cli:version --target <sqlrooms|roomie|all> --bump <patch|minor|major>
+  pnpm cli:version --target <sqlrooms|roomie|all> --set <version>
+  pnpm cli:publish [--target <sqlrooms|roomie|all>]
+  pnpm cli:publish:dry [--target <sqlrooms|roomie|all>]
 
 Options:
-  --target <target>  Package to operate on. Defaults to all.
+  --target <target>  Package to operate on. Defaults to sqlrooms.
   --bump <level>     Explicitly bump patch, minor, or major.
   --set <version>    Explicitly set the version.
   --dry-run          Run publish validation/build steps without uploading.
@@ -42,7 +49,7 @@ const fail = (message) => {
 const parseArgs = (argv) => {
   const parsed = {
     command: undefined,
-    target: 'all',
+    target: 'sqlrooms',
     bump: undefined,
     setVersion: undefined,
     dryRun: false,
@@ -91,7 +98,7 @@ const getTargets = (target) => {
     return [target];
   }
 
-  fail(`Unknown target: ${target}. Use sqlrooms or all.`);
+  fail(`Unknown target: ${target}. Use sqlrooms, roomie or all.`);
 };
 
 const readPackageJson = (target) =>
@@ -191,6 +198,10 @@ const publishPackages = ({target, dryRun, bump, setVersion}) => {
 
   for (const packageTarget of targets) {
     const pkg = packagesByTarget[packageTarget];
+    if (packageTarget === 'roomie')
+      run(pkg.label, pkg.cwd, '../.venv/bin/python', [
+        'scripts/check_release.py',
+      ]);
     run(pkg.label, pkg.cwd, 'uvx', pkg.uploadArgs);
   }
 

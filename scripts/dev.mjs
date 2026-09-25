@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 import {spawn, spawnSync} from 'node:child_process';
 import net from 'node:net';
 import path from 'node:path';
@@ -25,6 +26,14 @@ const rawArgs = process.argv.slice(2);
 const hasTarget = rawArgs[0] && !rawArgs[0].startsWith('-');
 const target = hasTarget ? rawArgs[0] : null;
 const restArgs = hasTarget ? rawArgs.slice(1) : rawArgs;
+if (target === 'roomie') {
+  const result = spawnSync(
+    process.execPath,
+    [fileURLToPath(new URL('./dev-roomie.mjs', import.meta.url)), ...restArgs],
+    {stdio: 'inherit'},
+  );
+  process.exit(result.status ?? 1);
+}
 const targetAliases = {
   cli: {
     packageName: 'sqlrooms-python',

@@ -13,14 +13,14 @@ from . import registry
 from .storage import WorkspaceError, atomic_json, home, private_dir
 
 
-def pending_path(database: str) -> Path:
-    return private_dir(home() / "starting") / (
+def pending_path(database: str, *, settings=None) -> Path:
+    return private_dir((settings.home() if settings else home()) / "starting") / (
         hashlib.sha256(database.encode()).hexdigest() + ".json"
     )
 
 
-def check_pending(database: str):
-    path = pending_path(database)
+def check_pending(database: str, *, settings=None):
+    path = pending_path(database, settings=settings)
     try:
         value = json.loads(path.read_text())
     except FileNotFoundError:
@@ -47,9 +47,9 @@ def check_pending(database: str):
     path.unlink(missing_ok=True)
 
 
-def mark_pending(database: str, pid: int, workspace_id: str):
+def mark_pending(database: str, pid: int, workspace_id: str, *, settings=None):
     atomic_json(
-        pending_path(database),
+        pending_path(database, settings=settings),
         {
             "pid": pid,
             "processMarker": registry.process_marker(pid),

@@ -8,8 +8,10 @@ import {
   TableColumn,
 } from '@sqlrooms/duckdb-core';
 
+/** Filter selectable tables by identity and, when available, catalog metadata. */
 export type LoadTableSchemasFilterFunction = (
   table: QualifiedTableName,
+  metadata?: DataTable,
 ) => boolean;
 
 export type LoadTableSchemasFilter = {
@@ -28,8 +30,10 @@ export type SchemaCatalogFilterEntry =
   | {type: 'schema'; database: string; schema: string}
   | {type: 'table'; table: QualifiedTableName};
 
+/** Filter catalog entries; table entries additionally provide loaded metadata. */
 export type LoadSchemaCatalogFilterFunction = (
   entry: SchemaCatalogFilterEntry,
+  metadata?: DataTable,
 ) => boolean;
 
 export type LoadSchemaCatalogOptions = LoadTableSchemasFilter & {
@@ -58,7 +62,7 @@ export async function loadTableSchemas(
     });
 
     // Apply filter (if not provided or null, include all tables)
-    if (!filterFunction || filterFunction(dataTable.table)) {
+    if (!filterFunction || filterFunction(dataTable.table, dataTable)) {
       tables.push(dataTable);
     }
   }
@@ -110,7 +114,8 @@ export async function loadSchemaCatalog(
     const table = parseSchemaCatalogTableRow(result, i, {defaultDatabase});
     if (
       table &&
-      (!filterFunction || filterFunction({type: 'table', table: table.table}))
+      (!filterFunction ||
+        filterFunction({type: 'table', table: table.table}, table))
     ) {
       group.tables.push(table);
     }

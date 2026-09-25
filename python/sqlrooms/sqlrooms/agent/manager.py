@@ -7,13 +7,12 @@ import os
 from pathlib import Path
 import re
 import subprocess
-import sys
 import time
 import uuid
 
 from .catalog import Catalog
 from . import registry
-from .storage import WorkspaceError, canonical, home, lock, managed_root, private_dir
+from .storage import WorkspaceError, canonical, lock, private_dir
 
 PROFILES = {"default", "experimental", "document-charts-maps"}
 
@@ -21,16 +20,17 @@ PROFILES = {"default", "experimental", "document-charts-maps"}
 class Manager:
     def __init__(self, catalog=None):
         self.catalog = catalog or Catalog()
+        self.settings = self.catalog.settings
 
     def live(self):
-        values = registry.records()
+        values = registry.records(settings=self.settings)
 
         def inspect(record):
             public = registry.public_record(record)
             try:
                 # Even advisory observations use the authenticated local API to
                 # corroborate identity; they never invent a callable MCP endpoint.
-                return {**public, **registry.verify(record)}
+                return {**public, **registry.verify(record, settings=self.settings)}
             except WorkspaceError as exc:
                 return {
                     **public,
@@ -106,14 +106,21 @@ class Manager:
 
     def target(self, instance_id, *, tools=False, control=False):
         record = next(
-            (r for r in registry.records() if r["instanceId"] == instance_id), None
+            (
+                r
+                for r in registry.records(settings=self.settings)
+                if r["instanceId"] == instance_id
+            ),
+            None,
         )
         if not record:
             raise WorkspaceError(
                 "stale_target",
                 "Instance is no longer registered. List and explicitly reopen the saved workspace; do not replay this operation.",
             )
-        status = registry.verify(record, tools=tools, control=control)
+        status = registry.verify(
+            record, settings=self.settings, tools=tools, control=control
+        )
         return record, status
 
     def open(
@@ -129,7 +136,7 @@ class Manager:
             raise WorkspaceError(
                 "invalid_input", "Specify exactly one of workspaceId, path, or create."
             )
-        if profile is not None and profile not in PROFILES:
+        if profile is not None and profile not in self.settings.profiles:
             raise WorkspaceError(
                 "invalid_profile",
                 "Choose default, experimental, or document-charts-maps.",
@@ -148,7 +155,7 @@ class Manager:
             slug = (
                 re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:60] or "workspace"
             )
-            root = managed_root()
+            root = self.settings.managed_root()
             root.mkdir(parents=True, exist_ok=True)
             directory = root / (slug + "-" + uuid.uuid4().hex[:8])
             directory.mkdir(mode=0o700)
@@ -161,13 +168,15 @@ class Manager:
         path = canonical(path)
         # The lock spans discovery, startup and browser-open decision across
         # connector processes. No connector-wide mutable selected workspace.
-        with lock("open:" + path, timeout=25):
+        with lock("open:" + path, timeout=25, settings=self.settings):
             entries = self.catalog.read()
             saved = next((e for e in entries if e["databasePath"] == path), None)
-            for record in registry.records():
+            for record in registry.records(settings=self.settings):
                 if record["databasePath"] != path or path == ":memory:":
                     continue
-                live = registry.verify(record, tools=True, control=True)
+                live = registry.verify(
+                    record, settings=self.settings, tools=True, control=True
+                )
                 if live.get("lifecycle") == "stopping":
                     raise WorkspaceError(
                         "workspace_busy",
@@ -188,7 +197,7 @@ class Manager:
                 return self._ready(record, openBrowser)
             from .process import check_pending, mark_pending, pending_path
 
-            check_pending(path)
+            check_pending(path, settings=self.settings)
             if workspaceId:
                 availability = self.catalog.availability.check([path], refresh=True)[
                     path
@@ -211,7 +220,7 @@ class Manager:
                     profile=remembered,
                 )
             selected_profile = profile or (
-                "document-charts-maps" if new else remembered
+                self.settings.default_new_profile if new else remembered
             )
             if path != ":memory:":
                 # Validate lock/format before spawning; never truncate an existing
@@ -228,26 +237,14 @@ class Manager:
                         databasePath=path,
                     ) from None
             entry = self.catalog.register(path, name=name if new else None)
-            command = [
-                sys.executable,
-                "-m",
-                "sqlrooms",
-                "--db-path",
-                path,
-                "--mcp",
-                "--execution-mode",
-                "external",
-                "--profile",
-                selected_profile,
-                "--no-open-browser",
-            ]
-            logs = private_dir(home() / "logs")
+            command = self.settings.launch_command(path, selected_profile)
+            logs = private_dir(self.settings.home() / "logs")
             log_path = logs / (entry["workspaceId"] + ".log")
             # The worker rotates its own log; connector pipes are never inherited.
             env = {
                 **os.environ,
-                "SQLROOMS_MANAGED": "1",
-                "SQLROOMS_MANAGED_LOG": str(log_path),
+                self.settings.environment_prefix + "_MANAGED": "1",
+                self.settings.environment_prefix + "_MANAGED_LOG": str(log_path),
             }
             with open(os.devnull, "wb") as sink:
                 child = subprocess.Popen(
@@ -255,19 +252,21 @@ class Manager:
                     stdin=subprocess.DEVNULL,
                     stdout=sink,
                     stderr=sink,
-                    cwd=str(home()),
+                    cwd=str(self.settings.home()),
                     env=env,
                     start_new_session=True,
                 )
-            mark_pending(path, child.pid, entry["workspaceId"])
+            mark_pending(path, child.pid, entry["workspaceId"], settings=self.settings)
             deadline = time.monotonic() + 15
             while time.monotonic() < deadline:
-                for record in registry.records():
+                for record in registry.records(settings=self.settings):
                     if record["pid"] == child.pid and record["databasePath"] == path:
-                        pending_path(path).unlink(missing_ok=True)
+                        pending_path(path, settings=self.settings).unlink(
+                            missing_ok=True
+                        )
                         return self._ready(record, openBrowser)
                 if child.poll() is not None:
-                    pending_path(path).unlink(missing_ok=True)
+                    pending_path(path, settings=self.settings).unlink(missing_ok=True)
                     raise WorkspaceError(
                         "startup_failed",
                         "Managed server failed to start. Inspect its local log; the project has been retained.",
@@ -292,7 +291,7 @@ class Manager:
             deadline = time.monotonic() + 3
             while result["readiness"] != "ready" and time.monotonic() < deadline:
                 time.sleep(0.1)
-                result = registry.verify(record, tools=True)
+                result = registry.verify(record, settings=self.settings, tools=True)
         return {
             "ok": True,
             **result,
@@ -306,13 +305,16 @@ class Manager:
 
     def locate(self, *, workspaceId, path, confirmed=False):
         entry = self.catalog.get(workspaceId)
-        with lock("open:" + entry["databasePath"]):
+        with lock("open:" + entry["databasePath"], settings=self.settings):
             return {
                 "ok": True,
                 "workspace": self.catalog.locate(
                     workspaceId,
                     path,
                     confirmed=confirmed,
-                    live_ids={r["workspaceId"] for r in registry.records()},
+                    live_ids={
+                        r["workspaceId"]
+                        for r in registry.records(settings=self.settings)
+                    },
                 ),
             }

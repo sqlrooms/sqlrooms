@@ -411,6 +411,11 @@ panel omits a source it falls back to the dashboard selected table. Panel render
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
 
+Retained vgplot charts are mutable runtime handles. The dashboard slice keeps
+them in an opaque cache so Immer config updates cannot freeze chart callbacks
+or resizing state. Use `setRetainedChart()` / `setRetainedChartByKey()` and the
+runtime eviction methods to update this cache; it is never persisted.
+
 `createDashboardFeatureSlices()` composes `createMosaicDashboardSlice()` with
 the shared `createBlockSettingsSlice()` from `@sqlrooms/documents`, which is the
 slice used by reusable dashboard panel settings. If an app also uses block

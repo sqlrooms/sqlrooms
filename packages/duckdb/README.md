@@ -70,6 +70,21 @@ function UserList() {
 
 For more information and examples on using the `useSql` hook, see the [useSql API documentation](/api/duckdb/functions/useSql).
 
+### Table visibility and catalog inspection
+
+`createDuckDbSlice({loadTableSchemasFilter})` filters `db.tables` and
+`db.loadTableSchemas()`, which provide table choices for charts and explorers.
+Its callback receives `(qualifiedName, metadata)`; metadata includes `isView` and
+columns. For example, `(table, metadata) => metadata?.isView === false` limits
+selectors to physical tables. Existing callbacks accepting only the name continue
+to work.
+
+`loadSchemaCatalogFilter` independently controls `db.schemaTrees`. Supply it when
+the catalog should retain relations excluded from table selectors, such as views
+that remain available for SQL inspection. Table callbacks also receive metadata
+as a second argument; database/schema callbacks do not. When omitted, the table
+filter applies to catalog table entries too. `null` disables the respective filter.
+
 ### Monitoring WebSocket DuckDB Connections
 
 `createWebSocketDuckDbConnector()` exposes the persistent WebSocket lifecycle

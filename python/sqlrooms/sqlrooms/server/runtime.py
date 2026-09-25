@@ -52,12 +52,14 @@ class DuckDBRuntime(MetadataStorage):
         extensions=None,
         meta_namespace="__sqlrooms",
         meta_db_path=None,
+        sync_storage=True,
         max_workers=4,
         max_operations=64,
     ):
         self.database_path = database_path
         self.storage_root = Path(storage_root)
         self.extensions = ["httpfs"] if extensions is None else extensions
+        self.sync_storage = sync_storage
         self.meta_namespace = meta_namespace
         self.meta_db_path = meta_db_path
         self.max_operations = max_operations
@@ -98,7 +100,11 @@ class DuckDBRuntime(MetadataStorage):
                     except Exception as exc:
                         logger.warning("Failed to load extension %s: %s", spec, exc)
                 self.connection.execute(f"SET threads TO {os.cpu_count() or 4}")
-                self.init_meta_storage(self.meta_namespace, self.meta_db_path)
+                self.init_meta_storage(
+                    self.meta_namespace,
+                    self.meta_db_path,
+                    sync_storage=self.sync_storage,
+                )
             except BaseException:
                 self.connection.close()
                 self.connection = None

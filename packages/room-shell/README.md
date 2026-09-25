@@ -182,3 +182,16 @@ for usage and fail-closed semantics.
 - `@sqlrooms/ai`
 - `@sqlrooms/mosaic`
 - `@sqlrooms/vega`
+
+## DuckDB workspace persistence
+
+`createDuckDbPersistStorage<T>(connector, {namespace})` adapts a DuckDB connector
+for `persistSliceConfigs`. The default metadata namespace is `__sqlrooms`; an
+alternate application can supply its own namespace. The server must create that
+namespace. Storage provides `controller`, `flush()` and `completeHydration(state)`.
+Call `completeHydration` only after schema validation, merge and application
+initialization succeed. Until then, writes are suppressed so an unsupported or
+failed restore cannot overwrite saved metadata. Subscribe to the controller with
+its listener API; `getState()` returns a copy and is not a React snapshot getter.
+A managed close must flush and check `error`, `dirty` and `saving` before claiming
+persistence succeeded.

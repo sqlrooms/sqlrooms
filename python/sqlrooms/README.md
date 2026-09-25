@@ -338,3 +338,28 @@ are 20 seconds. Results are reauthorized before enqueue and
 send. Metadata and final checkpoint errors propagate instead of reporting a save.
 Loro stays installed to preserve the tested sync path; disabled sync initializes
 no Loro documents or background tasks. Pandas remains required for JSON encoding.
+
+### Alternate local applications
+
+`sqlrooms.agent.settings.ApplicationSettings` is the explicit boundary for
+application identity, storage roots, managed launch policy and the browser tool
+contract. Pass one settings instance to `Catalog`, `Manager` (via its catalog),
+`Runtime`, `Connector`, and registry/development-launch helpers. Defaults preserve
+SQLRooms profiles, paths and commands. A fixed alternate application can provide
+an empty profile tuple, its own product/environment prefix and generated tool
+contract. No global environment rewriting is needed; identities and registry
+verification include the product as well as contract compatibility.
+
+`sqlrooms.server.bootstrap.register_bootstrap_routes` installs the shared ticket
+exchange, renewal and native bootstrap routes. The composing application still
+must enforce the operation-specific `TransportSecurity` checks in middleware.
+`create_app(..., distribution="sqlrooms")` controls `/version` metadata; alternate
+applications supply their own installed distribution name.
+`DuckDBRuntime(..., sync_storage=False)` skips creation of CRDT storage tables;
+combine it with `create_app(..., sync_enabled=False)` to omit sync initialization
+and routes. Neither setting removes installed Python dependencies.
+
+Roomie under `python/roomie` is a concrete alternate composition. It owns its
+application UI/routes and `__roomie` metadata, while reusing the server, access,
+MCP and managed-lifecycle implementations. The two applications are tested in one
+process to prevent identity or storage leaks.
