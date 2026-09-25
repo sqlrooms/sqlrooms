@@ -41,6 +41,7 @@
     "@sqlrooms/blocks": "workspace:*",
     "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/crdt": "workspace:*",
+    "@sqlrooms/db": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",

@@ -109,4 +109,41 @@ describe('DataTableExplorer compound API', () => {
     expect(markup).toContain('min-w-full');
     expect(markup).toContain('width:180px');
   });
+
+  it('renders BIGINT values outside the safe integer range', () => {
+    const unsafe = 610625465232654335n;
+    const pageTable = new arrow.Table({
+      id: arrow.vectorFromArray([unsafe], new arrow.Int64()),
+    });
+
+    const explorer = createDataTableExplorer();
+    explorer.pageTable = pageTable;
+    explorer.columns = [
+      {
+        field: new arrow.Field('id', new arrow.Int64(), true),
+        kind: 'histogram',
+        name: 'id',
+        summary: {
+          filteredBins: [],
+          filteredNullCount: 0,
+          interactor: null,
+          isLoading: false,
+          kind: 'histogram',
+          totalBins: [],
+          totalNullCount: 0,
+          valueType: 'number',
+        },
+      },
+    ];
+
+    const markup = renderToStaticMarkup(
+      <table>
+        <DataTableExplorer.Root explorer={explorer}>
+          <DataTableExplorer.Rows />
+        </DataTableExplorer.Root>
+      </table>,
+    );
+
+    expect(markup).toContain('610625465232654335');
+  });
 });

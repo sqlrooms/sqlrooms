@@ -26,6 +26,12 @@ const MCP_EXCLUDED_COMMAND_IDS = new Set([
   'sql-editor.run-query',
 ]);
 
+/** Serializes commands per store, so a replacement runtime waits for work that outlived its predecessor. */
+const commandInvocationQueues = new WeakMap<
+  StoreApi<RoomShellSliceState>,
+  Promise<void>
+>();
+
 type CreateCliRoomCapabilitiesOptions = {
   store: StoreApi<RoomShellSliceState>;
   metaNamespace?: string;
@@ -35,14 +41,13 @@ type CreateCliRoomCapabilitiesOptions = {
   trackPendingOperation?: (operation: Promise<unknown>) => void;
 };
 
-/** Creates bounded CLI operations for one injected store and invocation queue. */
+/** Creates bounded CLI operations for one injected store and its shared invocation queue. */
 export function createCliRoomCapabilities({
   store: roomStore,
   metaNamespace = '__sqlrooms',
   describeCommand,
   trackPendingOperation,
 }: CreateCliRoomCapabilitiesOptions): RoomCapability[] {
-  let commandInvocationQueue = Promise.resolve();
   return [
     createQueryCapability(metaNamespace),
     createListTablesCapability(metaNamespace),
@@ -553,12 +558,16 @@ export function createCliRoomCapabilities({
     invoke: () => Promise<RoomCommandResult>,
     signal?: AbortSignal,
   ): Promise<RoomCommandResult> {
-    const waitForTurn = commandInvocationQueue;
+    const waitForTurn =
+      commandInvocationQueues.get(roomStore) ?? Promise.resolve();
     let releaseTurn!: () => void;
     const turnFinished = new Promise<void>((resolve) => {
       releaseTurn = resolve;
     });
-    commandInvocationQueue = waitForTurn.then(() => turnFinished);
+    commandInvocationQueues.set(
+      roomStore,
+      waitForTurn.then(() => turnFinished),
+    );
 
     return waitForTurn.then(async () => {
       if (signal?.aborted) {
