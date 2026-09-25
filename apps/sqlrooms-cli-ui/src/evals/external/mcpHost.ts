@@ -16,6 +16,8 @@ export async function startEvalMcpHost(
   runtime: ReturnType<typeof createCliCapabilityRuntime>,
   onRequest: (method: string, input?: unknown) => void = () => {},
 ) {
+  if (process.platform === 'win32')
+    throw new Error('Private credential ACLs are not yet verified on Windows.');
   const token = randomBytes(32).toString('hex');
   const sessions = new Set<Server>();
   const pending = new Set<Promise<unknown>>();
@@ -92,29 +94,39 @@ export async function startEvalMcpHost(
     http.once('error', reject);
     http.listen(0, '127.0.0.1', resolve);
   });
-  const address = http.address();
-  if (!address || typeof address === 'string')
-    throw new Error('Missing MCP address.');
-  if (process.platform === 'win32')
-    throw new Error('Private credential ACLs are not yet verified on Windows.');
-  const credentialDirectory = await mkdtemp(
-    path.join(tmpdir(), 'sqlrooms-eval-auth-'),
-  );
-  const credentialFile = path.join(credentialDirectory, 'credential.json');
-  await writeFile(
-    credentialFile,
-    JSON.stringify({token, mcpUrl: `http://127.0.0.1:${address.port}/mcp`}),
-    {mode: 0o600},
-  );
+  let url: string;
+  let credentialDirectory: string | undefined;
+  let credentialFile: string;
+  try {
+    const address = http.address();
+    if (!address || typeof address === 'string')
+      throw new Error('Missing MCP address.');
+    url = `http://127.0.0.1:${address.port}/mcp`;
+    credentialDirectory = await mkdtemp(
+      path.join(tmpdir(), 'sqlrooms-eval-auth-'),
+    );
+    credentialFile = path.join(credentialDirectory, 'credential.json');
+    await writeFile(credentialFile, JSON.stringify({token, mcpUrl: url}), {
+      mode: 0o600,
+    });
+  } catch (error) {
+    // The caller receives no disposal handle, so release what setup acquired.
+    if (credentialDirectory)
+      await rm(credentialDirectory, {recursive: true, force: true});
+    http.closeAllConnections();
+    await new Promise<void>((resolve) => http.close(() => resolve()));
+    throw error;
+  }
+  const createdCredentialDirectory = credentialDirectory;
   let disposed = false;
   return {
-    url: `http://127.0.0.1:${address.port}/mcp`,
+    url,
     token,
     credentialFile,
     async dispose() {
       if (disposed) return;
       disposed = true;
-      await rm(credentialDirectory, {recursive: true, force: true});
+      await rm(createdCredentialDirectory, {recursive: true, force: true});
       runtime.dispose();
       await Promise.allSettled([...sessions].map((server) => server.close()));
       http.closeAllConnections();
