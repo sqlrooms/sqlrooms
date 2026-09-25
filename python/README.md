@@ -17,5 +17,11 @@ from this directory. Version and publication commands have one runtime artifact
 owner (`pnpm cli:version`, `pnpm cli:publish:dry`). Publication requires a separate
 explicit release operation. `sqlrooms-rag` remains independently versioned.
 
+## Publishing to PyPI
+
+See [Publishing SQLRooms and Roomie](PUBLISHING.md) for prerequisites, versioning,
+authentication, dry runs, uploads, and installation checks. Publish the compatible
+SQLRooms runtime before releasing Roomie.
+
 See [runtime documentation](sqlrooms/README.md),
 [migration](sqlrooms/MIGRATION.md) and [authentication](sqlrooms/AUTHENTICATION.md).

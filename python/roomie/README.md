@@ -67,6 +67,9 @@ uploading. Recheck the prerequisite release and PyPI name ownership separately.
 The dry-run does not upload packages or configure release credentials/Trusted
 Publishing.
 
+See [Publishing SQLRooms and Roomie](../PUBLISHING.md) for the release sequence,
+PyPI authentication, and installation checks against the published runtime.
+
 Development setup requires Node 24, pnpm 11 and uv. End users of the wheel do not
 need Node. `pnpm --filter roomie-python dev:setup` installs the paired checkout
 runtime and Roomie into `python/.venv`, explicitly bypassing Roomie dependency
