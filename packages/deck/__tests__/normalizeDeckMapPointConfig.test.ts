@@ -1234,56 +1234,67 @@ describe('applyDeckMapTableSelection', () => {
     });
   });
 
-  it('keeps a generated transform whose coordinate columns the table has', () => {
-    // No conventionally named lon/lat, so regeneration bails — but the
-    // transform's own inputs are present, so it still binds.
-    const nonStandardTable: DataTable = {
-      table: makeQualifiedTableName({schema: 'main', table: 'rides'}),
-      tableName: 'rides',
-      schema: 'main',
-      isView: false,
-      columns: [
-        {name: 'pickup_lon', type: 'DOUBLE'},
-        {name: 'pickup_lat', type: 'DOUBLE'},
-      ],
-    };
-    const transformSql = createDeckMapPointTransformSql({
-      longitudeColumn: 'pickup_lon',
-      latitudeColumn: 'pickup_lat',
-      geometryColumn: '__sqlrooms_geom',
-    });
-    const config = {
-      spec: {
-        layers: [
-          {
-            '@@type': 'GeoArrowScatterplotLayer',
-            _sqlroomsBinding: {
-              dataset: 'rides_2024',
-              geometryColumn: '__sqlrooms_geom',
-            },
-          },
+  // No conventionally named lon/lat, so regeneration bails — but the
+  // transform's own inputs are present, so it still binds. DuckDB resolves
+  // identifiers case-insensitively even when quoted, so casing must not matter.
+  it.each([
+    {casing: 'exactly', longitude: 'pickup_lon', latitude: 'pickup_lat'},
+    {
+      casing: 'in another case',
+      longitude: 'Pickup_Lon',
+      latitude: 'Pickup_Lat',
+    },
+  ])(
+    'keeps a generated transform whose columns the table has $casing',
+    ({longitude, latitude}) => {
+      const nonStandardTable: DataTable = {
+        table: makeQualifiedTableName({schema: 'main', table: 'rides'}),
+        tableName: 'rides',
+        schema: 'main',
+        isView: false,
+        columns: [
+          {name: longitude, type: 'DOUBLE'},
+          {name: latitude, type: 'DOUBLE'},
         ],
-      },
-      datasets: {
-        rides_2024: {
-          source: {tableName: '"main"."rides_2024"', transformSql},
-          geometryColumn: '__sqlrooms_geom',
-          geometryEncodingHint: 'wkb' as const,
+      };
+      const transformSql = createDeckMapPointTransformSql({
+        longitudeColumn: 'pickup_lon',
+        latitudeColumn: 'pickup_lat',
+        geometryColumn: '__sqlrooms_geom',
+      });
+      const config = {
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              _sqlroomsBinding: {
+                dataset: 'rides_2024',
+                geometryColumn: '__sqlrooms_geom',
+              },
+            },
+          ],
         },
-      },
-    };
+        datasets: {
+          rides_2024: {
+            source: {tableName: '"main"."rides_2024"', transformSql},
+            geometryColumn: '__sqlrooms_geom',
+            geometryEncodingHint: 'wkb' as const,
+          },
+        },
+      };
 
-    const next = applyDeckMapTableSelection(config, nonStandardTable);
+      const next = applyDeckMapTableSelection(config, nonStandardTable);
 
-    expect(next.datasets.rides?.source).toMatchObject({
-      tableName: '"main"."rides"',
-      transformSql,
-    });
-    expect(next.datasets.rides?.geometryColumn).toBe('__sqlrooms_geom');
-    expect(next.spec.layers[0]._sqlroomsBinding).toMatchObject({
-      geometryColumn: '__sqlrooms_geom',
-    });
-  });
+      expect(next.datasets.rides?.source).toMatchObject({
+        tableName: '"main"."rides"',
+        transformSql,
+      });
+      expect(next.datasets.rides?.geometryColumn).toBe('__sqlrooms_geom');
+      expect(next.spec.layers[0]._sqlroomsBinding).toMatchObject({
+        geometryColumn: '__sqlrooms_geom',
+      });
+    },
+  );
 
   it('clears arc geometry accessors when dropping a transform', () => {
     const config = {

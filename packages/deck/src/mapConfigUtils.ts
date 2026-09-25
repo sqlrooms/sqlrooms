@@ -706,15 +706,17 @@ function retargetDeckMapDatasetTableName(
     options?.dropUnusableTransform === true
       ? parseGeneratedDeckMapPointTransform(dataset.source.transformSql)
       : undefined;
-  const tableColumnNames = new Set(table.columns.map((column) => column.name));
-  const generatedTransform =
-    candidate &&
-    !(
-      tableColumnNames.has(candidate.longitudeColumn) &&
-      tableColumnNames.has(candidate.latitudeColumn)
-    )
-      ? candidate
-      : undefined;
+  // Case-insensitively, because DuckDB resolves identifiers that way even when
+  // they are quoted — `"pickup_lon"` binds to a `Pickup_Lon` column, so an
+  // exact match would discard a transform that still runs.
+  const tableColumnNames = new Set(
+    table.columns.map((column) => column.name.toLowerCase()),
+  );
+  const bindsToTable =
+    candidate !== undefined &&
+    tableColumnNames.has(candidate.longitudeColumn.toLowerCase()) &&
+    tableColumnNames.has(candidate.latitudeColumn.toLowerCase());
+  const generatedTransform = bindsToTable ? undefined : candidate;
   const dropTransform = generatedTransform !== undefined;
 
   if (dataset.source.tableName === tableName && !dropTransform) return config;
