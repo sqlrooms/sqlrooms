@@ -61,7 +61,12 @@ function formatPercentOfTotal(value: number) {
   }).format(value);
 }
 
-function CategorySummaryCell({
+/**
+ * Renders the category-bucket summary bar for one dataTableExplorer column.
+ * Exported so custom headers built on `useDataTableExplorer` can recompose
+ * summary cells per column.
+ */
+export function DataTableExplorerCategorySummaryCell({
   summary,
 }: {
   summary: DataTableExplorerCategorySummary;
@@ -186,7 +191,12 @@ function formatDomainValue(value: number | Date, valueType: 'date' | 'number') {
   }).format(typeof value === 'number' ? value : value.getTime());
 }
 
-function HistogramSummaryCell({
+/**
+ * Renders the histogram summary (with brush interactor) for one
+ * dataTableExplorer column. Exported so custom headers built on
+ * `useDataTableExplorer` can recompose summary cells per column.
+ */
+export function DataTableExplorerHistogramSummaryCell({
   summary,
 }: {
   summary: DataTableExplorerHistogramSummary;
@@ -393,12 +403,24 @@ function HistogramSummaryCell({
   );
 }
 
-function SummaryCell({column}: {column: DataTableExplorerColumnState}) {
+/**
+ * Renders the summary cell matching a column's summary kind. Columns with a
+ * `'none'` summary render no summary UI. Exported so custom headers built on
+ * `useDataTableExplorer` can reuse the default per-column summary rendering.
+ */
+export function DataTableExplorerSummaryCell({
+  column,
+}: {
+  column: DataTableExplorerColumnState;
+}) {
   if (column.summary.kind === 'histogram') {
-    return <HistogramSummaryCell summary={column.summary} />;
+    return <DataTableExplorerHistogramSummaryCell summary={column.summary} />;
   }
   if (column.summary.kind === 'category') {
-    return <CategorySummaryCell summary={column.summary} />;
+    return <DataTableExplorerCategorySummaryCell summary={column.summary} />;
+  }
+  if (column.summary.kind === 'none') {
+    return null;
   }
   return (
     <div className="text-muted-foreground pt-1.5 text-[10px] font-normal">
@@ -478,7 +500,7 @@ export function DataTableExplorerHeader({
                       )}
                     </span>
                   </button>
-                  <SummaryCell column={column} />
+                  <DataTableExplorerSummaryCell column={column} />
                 </div>
               </TableHead>
             );
