@@ -625,6 +625,7 @@ document artifacts. By default the command IDs are:
 
 - `block-document.list`
 - `block-document.get`
+- `block-document.inspect-block`
 - `block-document.create`
 - `block-document.append-blocks`
 - `block-document.insert-blocks`

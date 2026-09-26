@@ -7,7 +7,15 @@ from mcp import Client
 from starlette.websockets import WebSocketDisconnect
 
 from sqlrooms.web.mcp import SqlroomsMcpService
+from sqlrooms.web.security import TransportSecurity
+from sqlrooms.server.access import LocalAccess
 from sqlrooms.web.mcp_bridge import McpBridgeBroker, McpBridgeError
+
+
+def make_service(broker):
+    return SqlroomsMcpService(
+        broker, security=TransportSecurity(LocalAccess(), set(), {"127.0.0.1"})
+    )
 
 
 class StubBroker:
@@ -123,7 +131,7 @@ async def test_mcp_bridge_cleans_up_lease_when_auth_ack_fails():
 
 @pytest.mark.asyncio
 async def test_mcp_service_adapts_dynamic_browser_catalog():
-    service = SqlroomsMcpService(StubBroker())
+    service = make_service(StubBroker())
 
     result = await service._list_tools(None, None)
 
@@ -144,7 +152,7 @@ async def test_mcp_service_returns_short_lived_empty_catalog_while_room_not_read
                 retryable=True,
             )
 
-    service = SqlroomsMcpService(WaitingBroker())
+    service = make_service(WaitingBroker())
 
     result = await service._list_tools(None, None)
 
@@ -159,7 +167,7 @@ async def test_mcp_service_preserves_non_transient_discovery_errors():
         async def request(self, _method, _params=None):
             raise McpBridgeError("bridge_error", "Bridge failed.")
 
-    service = SqlroomsMcpService(FailedBroker())
+    service = make_service(FailedBroker())
 
     with pytest.raises(McpBridgeError, match="Bridge failed"):
         await service._list_tools(None, None)
@@ -168,7 +176,7 @@ async def test_mcp_service_preserves_non_transient_discovery_errors():
 @pytest.mark.asyncio
 async def test_mcp_service_serves_2026_protocol_with_official_client():
     broker = StubBroker()
-    service = SqlroomsMcpService(broker)
+    service = make_service(broker)
 
     async with Client(
         service.server,
@@ -193,7 +201,7 @@ async def test_mcp_service_serves_2026_protocol_with_official_client():
 @pytest.mark.asyncio
 async def test_mcp_service_reads_2026_client_identity_from_request_metadata():
     broker = StubBroker()
-    service = SqlroomsMcpService(broker)
+    service = make_service(broker)
     context = SimpleNamespace(
         meta={
             types.CLIENT_INFO_META_KEY: {
@@ -234,7 +242,7 @@ async def test_mcp_service_cancels_bridge_request_when_http_caller_disconnects()
         async def is_disconnected(self):
             return True
 
-    service = SqlroomsMcpService(WaitingBroker())
+    service = make_service(WaitingBroker())
     context = SimpleNamespace(request=DisconnectedRequest())
 
     with pytest.raises(McpBridgeError, match="caller disconnected"):

@@ -7,7 +7,6 @@ import {
   getPythonCliDevArgs,
   hasOption,
   readOptionValue,
-  shouldProxyCliDevWebSockets,
 } from './cli-dev-args.mjs';
 import {waitForCliApi} from './cli-dev-readiness.mjs';
 
@@ -60,7 +59,6 @@ const forwardedCliArgs =
         stripScriptSeparator: Boolean(process.env.npm_execpath),
       });
 const cliArgs = target === 'cli' ? forwardedCliArgs : [];
-const proxyCliDevWebSockets = shouldProxyCliDevWebSockets(cliArgs);
 const turboArgsForTarget = target === 'cli' ? [] : restArgs;
 const isDryRun = controlArgs.some(
   (arg) => arg === '--dry' || arg.startsWith('--dry='),
@@ -269,9 +267,9 @@ if (target !== 'cli') {
       pythonCliArgs,
     )} node scripts/dev.mjs)`,
   );
-  console.log(`(wait for http://${proxyHost}:${apiPort}/api/status)`);
+  console.log(`(wait for http://${proxyHost}:${apiPort}/healthz)`);
   console.log(
-    `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS=${proxyCliDevWebSockets} ./node_modules/.bin/vite --host --port ${uiPort})`,
+    `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS=true ./node_modules/.bin/vite --host --port ${uiPort})`,
   );
   process.exit(0);
 }
@@ -368,9 +366,10 @@ if (target === 'cli') {
     cwd: path.resolve('python/sqlrooms'),
     env: {
       SQLROOMS_CLI_DEV_ARGS: JSON.stringify(pythonCliArgs),
+      SQLROOMS_ALLOWED_ORIGINS: `http://localhost:${uiPort},http://127.0.0.1:${uiPort}`,
     },
   });
-  const apiStatusUrl = `http://${proxyHost}:${apiPort}/api/status`;
+  const apiStatusUrl = `http://${proxyHost}:${apiPort}/healthz`;
   try {
     await waitForCliApi(apiStatusUrl, {signal: cliStartupController.signal});
   } catch (error) {
@@ -390,7 +389,7 @@ if (target === 'cli') {
         cwd: path.resolve('apps/sqlrooms-cli-ui'),
         env: {
           SQLROOMS_CLI_API_PROXY_TARGET: `http://${proxyHost}:${apiPort}`,
-          VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS: String(proxyCliDevWebSockets),
+          VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS: 'true',
         },
       },
     );

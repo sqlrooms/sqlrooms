@@ -11,6 +11,7 @@ import mcp.types as types
 from mcp.server import Server, ServerRequestContext
 
 from .mcp_bridge import McpBridgeBroker, McpBridgeError
+from .security import McpAuthorization, TransportSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 class SqlroomsMcpService:
     """Official MCP SDK adapter for the live browser capability catalog."""
 
-    def __init__(self, broker: McpBridgeBroker):
+    def __init__(self, broker: McpBridgeBroker, *, security: TransportSecurity):
         self.broker = broker
         self.server = Server(
             "SQLRooms",
@@ -32,6 +33,8 @@ class SqlroomsMcpService:
             host="127.0.0.1",
             max_request_body_size=256 * 1024,
         )
+
+        self.app = McpAuthorization(self.app, security)
 
     async def _list_tools(
         self,

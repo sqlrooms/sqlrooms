@@ -314,7 +314,13 @@ export async function runExternalSuite(options: {
             ? {
                 ...process.env,
                 SQLROOMS_MCP_URL: host.url,
-                SQLROOMS_MCP_TOKEN: host.token,
+                SQLROOMS_CREDENTIAL_FILE: host.credentialFile,
+                SQLROOMS_MCP_HEADERS_HELPER: [
+                  process.execPath,
+                  path.join(cwd, 'plugin/headers.mjs'),
+                ]
+                  .map((part) => "'" + part.replace(/'/g, "'\\''") + "'")
+                  .join(' '),
               }
             : {
                 PATH: process.env.PATH,

@@ -1,3 +1,5 @@
+import {authorizedFetch, instancePath, pageCredential} from './browserAuth';
+
 /**
  * Startup state for one runtime component reported by the CLI backend.
  */
@@ -28,6 +30,8 @@ export type RuntimeStartupStatus = {
 export type RuntimeConfig = {
   /** Chooses model execution ownership independently of capability profile. */
   executionMode?: 'embedded' | 'external';
+  /** Server-owned live database generation. */
+  binding?: string;
   wsUrl?: string;
   wsAuthToken?: string;
   apiBaseUrl?: string;
@@ -156,7 +160,7 @@ function delay(ms: number): Promise<void> {
 
 async function fetchJson<T>(url: string): Promise<T | undefined> {
   try {
-    const res = await fetch(url);
+    const res = await authorizedFetch(url);
     if (!res.ok) return undefined;
     return (await res.json()) as T;
   } catch {
@@ -189,10 +193,34 @@ async function fetchJsonWithRetry<T>(
 }
 
 /**
- * Fetches `/api/config`, returning an empty runtime config if the request fails.
+ * Fetches the current instance's configuration, failing closed without authorization.
  */
 export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
-  return (await fetchJsonWithRetry<RuntimeConfig>('/api/config')) ?? {};
+  const config = await fetchJsonWithRetry<RuntimeConfig>(
+    instancePath('/api/config'),
+  );
+  if (!config)
+    throw new Error('SQLRooms configuration requires authorization.');
+  // Always use the authenticated page origin, including explicitly mapped dev
+  // proxies. Never attach the credential to a URL supplied in workspace data.
+  // The launcher rejects external WS options that don't match this proxy route.
+  const wsUrl = webSocketUrl(location.href, instancePath('/ws/duckdb'));
+  return {
+    ...config,
+    apiBaseUrl: instancePath('').replace(/\/$/, ''),
+    wsUrl,
+    crdtWsUrl: wsUrl,
+    wsAuthToken: pageCredential(),
+    mcp: config.mcp
+      ? {
+          ...config.mcp,
+          bridgeUrl: webSocketUrl(
+            location.href,
+            instancePath('/ws/mcp-bridge'),
+          ),
+        }
+      : undefined,
+  };
 }
 
 /**
@@ -201,5 +229,5 @@ export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
 export async function fetchRuntimeStartupStatus(): Promise<
   RuntimeStartupStatus | undefined
 > {
-  return fetchJson<RuntimeStartupStatus>('/api/status');
+  return fetchJson<RuntimeStartupStatus>(instancePath('/api/status'));
 }

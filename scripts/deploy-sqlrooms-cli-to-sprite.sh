@@ -50,6 +50,10 @@ Environment variables with matching uppercase names are also supported.
 Notes:
   The script publishes the UI at the Sprite URL and tells the browser to use the
   Sprite websocket proxy URL for DuckDB, e.g. wss://<sprite>.sprites.dev/ws/duckdb.
+  SQLRooms binds loopback; the Sprite HTTP proxy routes to the service port.
+  Workspace access still requires a SQLRooms launch ticket. Retrieve the native
+  credential-file path from the service log and use POST /api/auth/ticket as
+  described in python/sqlrooms/AUTHENTICATION.md.
   HEALTH_CHECK_TIMEOUT and HEALTH_CHECK_INTERVAL can tune service readiness polling.
 USAGE
 }
@@ -198,6 +202,7 @@ if [[ "$SKIP_BUILD" != "1" ]]; then
   (cd "$ROOT_DIR/python/sqlrooms" && pnpm build:ui)
 else
   echo "Skipping pnpm builds; using the existing bundled CLI UI."
+  (cd "$ROOT_DIR/python/sqlrooms" && pnpm build:plugin)
   if [[ ! -f "$ROOT_DIR/python/sqlrooms/sqlrooms/web/static/index.html" ]]; then
     echo "Missing bundled CLI UI at python/sqlrooms/sqlrooms/web/static/index.html." >&2
     echo "Run once without --skip-build so the UI is built and copied into the Python package." >&2
@@ -250,7 +255,7 @@ cat >"$APP_DIR/run-sqlrooms.sh" <<RUNNER
 #!/usr/bin/env bash
 set -euo pipefail
 exec "$APP_DIR/venv/bin/sqlrooms" \\
-  --host 0.0.0.0 \\
+  --host 127.0.0.1 \\
   --port "$HTTP_PORT" \\
   --ws-port "$WS_PORT" \\
   --external-url "$SQLROOMS_EXTERNAL_URL" \\
@@ -265,13 +270,13 @@ if [[ "${#sync_args[@]}" -gt 0 ]]; then
   sed -i 's/--no-open-browser \\/--no-open-browser \\\n  --experimental \\\n  --experimental-sync \\/' "$APP_DIR/run-sqlrooms.sh"
 fi
 
-sprite-env services create "$SERVICE_NAME" --cmd "$APP_DIR/run-sqlrooms.sh"
+sprite-env services create "$SERVICE_NAME" --cmd "$APP_DIR/run-sqlrooms.sh" --http-port "$HTTP_PORT"
 "$APP_DIR/venv/bin/python" - <<PY
 import sys
 import time
 import urllib.request
 
-url = "http://127.0.0.1:$HTTP_PORT/api/config"
+url = "http://127.0.0.1:$HTTP_PORT/healthz"
 timeout = float("$HEALTH_CHECK_TIMEOUT")
 interval = float("$HEALTH_CHECK_INTERVAL")
 deadline = time.monotonic() + timeout
@@ -309,7 +314,7 @@ SPRITE_HOST="${SPRITE_URL#https://}"
 SPRITE_WS_URL="wss://$SPRITE_HOST/ws/duckdb"
 if [[ "$RUN_PROXY" == "1" ]]; then
   DEPLOY_EXTERNAL_URL="http://localhost:$LOCAL_HTTP_PORT"
-  DEPLOY_EXTERNAL_WS_URL="ws://localhost:$LOCAL_WS_PORT"
+  DEPLOY_EXTERNAL_WS_URL="ws://localhost:$LOCAL_HTTP_PORT/ws/duckdb"
 else
   DEPLOY_EXTERNAL_URL="$SPRITE_URL"
   DEPLOY_EXTERNAL_WS_URL="$SPRITE_WS_URL"
@@ -347,5 +352,4 @@ if [[ "$RUN_PROXY" == "1" ]]; then
   sprite_proxy "$LOCAL_HTTP_PORT:$HTTP_PORT" "$LOCAL_WS_PORT:$WS_PORT"
 fi
 
-echo "To open a local debugging proxy later, run:"
-echo "  sprite proxy ${SPRITE_ORG:+-o $SPRITE_ORG }-s $SPRITE_NAME $LOCAL_HTTP_PORT:$HTTP_PORT $LOCAL_WS_PORT:$WS_PORT"
+echo "For local browser debugging, use --proxy when deploying so the exact local origin is allowed."

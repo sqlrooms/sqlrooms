@@ -6,6 +6,7 @@ import asyncio
 import os
 from pathlib import Path
 import shutil
+import shlex
 import sys
 from typing import TYPE_CHECKING
 
@@ -76,7 +77,10 @@ async def run_claude_session(
         env={
             **os.environ,
             "SQLROOMS_MCP_URL": server._mcp_url(),
-            "SQLROOMS_MCP_TOKEN": server.session_token,
+            "SQLROOMS_CREDENTIAL_FILE": str(server.credential_file.path),
+            "SQLROOMS_MCP_HEADERS_HELPER": shlex.join(
+                [sys.executable, "-m", "sqlrooms.web.native_headers"]
+            ),
         },
         # Inherit the foreground terminal and its process group. Detaching makes
         # terminal reads fail or stop with SIGTTIN. Never signal the shared group.

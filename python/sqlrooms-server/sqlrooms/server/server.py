@@ -9,7 +9,7 @@ import ipaddress
 
 import ujson
 from socketify import App, CompressOptions, OpCode
-from .auth import AuthManager
+from .auth import AuthManager, AuthorizedSocket
 
 from .query import run_duckdb
 from . import db_async
@@ -223,6 +223,9 @@ def server(
     allow_client_snapshots: bool = False,
     save_debounce_ms: int = 500,
     local_only: bool = False,
+    access_verifier=None,
+    allowed_origins: set[str] | None = None,
+    allowed_hosts: set[str] | None = None,
     log_startup_message: bool = True,
 ):
     # SSL server
@@ -233,7 +236,7 @@ def server(
     app.json_serializer(ujson)
 
     # Auth helper
-    auth = AuthManager(auth_token)
+    auth = AuthManager(auth_token, access_verifier)
 
     # Initialize meta storage (UI state + CRDT snapshots) regardless of whether sync is enabled.
     # This ensures the namespace exists for UI-side SQL persistence.
@@ -273,6 +276,14 @@ def server(
     def ws_upgrade(res, req, socket_context):
         """Attach per-connection user_data so message handlers have stable state."""
         nonlocal _next_conn_id
+        origin = req.get_header("origin")
+        host = req.get_header("host")
+        # Native clients omit Origin but still complete the credential handshake.
+        if (
+            origin and allowed_origins is not None and origin not in allowed_origins
+        ) or (allowed_hosts is not None and host not in allowed_hosts):
+            res.write_status(403).end("forbidden")
+            return
         try:
             key = req.get_header("sec-websocket-key")
             protocol = req.get_header("sec-websocket-protocol")
@@ -297,6 +308,8 @@ def server(
             except Exception:
                 pass
 
+    auth_timers = {}
+
     def ws_open(ws):
         if local_only:
             try:
@@ -310,6 +323,15 @@ def server(
                     pass
                 return
         auth.on_open(ws)
+        # uWebSockets callbacks are on this loop. Cancel lifetime callbacks before
+        # the native socket is freed; never retain a wrapper after close.
+        conn_id = int(ws.get_user_data())
+
+        def check_lifetime(_):
+            if auth.check_lifetime(ws):
+                auth_timers[conn_id] = app.loop.loop.call_later(1, check_lifetime, None)
+
+        auth_timers[conn_id] = app.loop.loop.call_later(1, check_lifetime, None)
         # No-op: per-connection state is created during upgrade.
         # Subscribe to a private per-connection channel so background tasks can deliver
         # results via `app.publish` without calling `ws.send` after close.
@@ -385,6 +407,8 @@ def server(
                     conn_id = None
 
                 def _send_to_conn(payload, opcode):
+                    if not auth.is_connection_authed(conn_id):
+                        return False
                     # Publish to the per-connection channel; socketify will drop delivery if closed.
                     channel = f"__conn:{conn_id}" if conn_id is not None else None
                     if channel is None:
@@ -413,6 +437,28 @@ def server(
         ws.send({"type": "error", "error": "invalid message"}, OpCode.TEXT)
 
     async def ws_message(ws, message, opcode):
+        # Every domain path, including binary Arrow/CRDT, passes the same gate.
+        if not auth.is_authed(ws):
+            if opcode != OpCode.TEXT or len(message) > 4096:
+                auth.reject(ws)
+                return
+            try:
+                auth.handle_ws_message(ws, ujson.loads(message))
+            except (ValueError, TypeError):
+                auth.reject(ws)
+            return
+        if opcode == OpCode.TEXT:
+            try:
+                payload = ujson.loads(message)
+                if isinstance(payload, dict) and payload.get("type") == "auth":
+                    auth.handle_ws_message(ws, payload)
+                    return
+            except (ValueError, TypeError):
+                pass
+        connection_id = int(ws.get_user_data())
+        ws = AuthorizedSocket(
+            ws, connection_id, lambda: auth.is_connection_authed(connection_id)
+        )
         # Handle binary upfront with its own error handling so we never emit "invalid json"
         if opcode == OpCode.BINARY:
             if isinstance(message, str):
@@ -445,42 +491,16 @@ def server(
             ws.send({"type": "error", "error": "binary not supported"}, OpCode.TEXT)
             return
 
-        if isinstance(message, (bytes, bytearray, memoryview)):
-            if crdt_ws is not None:
-                try:
-                    conn_id = int(ws.get_user_data())  # type: ignore[attr-defined]
-                except Exception:
-                    conn_id = -1
-                try:
-                    await crdt_ws.handle_binary_update(
-                        ws,
-                        conn_id=conn_id,
-                        payload=message.tobytes()
-                        if isinstance(message, memoryview)
-                        else bytes(message),
-                    )
-                except Exception as exc:
-                    logger.exception(
-                        "Failed to process CRDT binary payload (bytes-like)"
-                    )
-                    ws.send({"type": "error", "error": str(exc)}, OpCode.TEXT)
-                return
-            if crdt_enabled:
-                # Sync was requested but CRDT handler failed to initialize.
-                ws.send({"type": "error", "error": "CRDT unavailable"}, OpCode.TEXT)
-                return
-            msg_str = bytes(message).decode("utf-8", "ignore")
-        else:
-            msg_str = message
+        msg_str = (
+            bytes(message).decode("utf-8", "replace")
+            if isinstance(message, (bytes, bytearray, memoryview))
+            else message
+        )
 
         try:
             query = ujson.loads(msg_str)
         except Exception:
             ws.send({"type": "error", "error": "invalid json"}, OpCode.TEXT)
-            return
-
-        # Delegate auth handling; if it handled the message (auth/unauthorized), stop
-        if auth.handle_ws_message(ws, query):
             return
 
         await _process_message(ws, query)
@@ -511,6 +531,9 @@ def server(
                 pass
 
     def _version(res, req):
+        if not auth.check_http(req):
+            res.write_status(401).end("unauthorized")
+            return
         try:
             import duckdb as _duckdb  # local import to avoid unused import warnings
 
@@ -544,6 +567,9 @@ def server(
                     crdt_ws.unregister_conn(conn_id)
         except Exception:
             logger.exception("Error during ws_close cleanup")
+        timer = auth_timers.pop(int(ws.get_user_data()), None)
+        if timer is not None:
+            timer.cancel()
         auth.on_close(ws)
 
     app.ws(
@@ -574,7 +600,7 @@ def server(
     app.set_error_handler(on_error)
 
     app.listen(
-        port,
+        {"port": port, "host": "127.0.0.1"} if local_only else port,
         lambda config: (
             sys.stdout.write(
                 f"DuckDB Server listening at ws://localhost:{config.port} (WS only). Health at http://localhost:{config.port}/healthz\n"

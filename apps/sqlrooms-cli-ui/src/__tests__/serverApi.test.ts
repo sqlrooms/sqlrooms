@@ -1,7 +1,12 @@
 import {afterEach, describe, expect, jest, test} from '@jest/globals';
 import {createStore} from 'zustand/vanilla';
 import {persist} from 'zustand/middleware';
-import {createDuckDbPersistStorage, fetchMcpStatus} from '../serverApi';
+jest.unstable_mockModule('../browserAuth', () => ({
+  authorizedFetch: (...args: Parameters<typeof fetch>) =>
+    globalThis.fetch(...args),
+}));
+const {createDuckDbPersistStorage, fetchMcpStatus} =
+  await import('../serverApi');
 
 const originalFetch = globalThis.fetch;
 

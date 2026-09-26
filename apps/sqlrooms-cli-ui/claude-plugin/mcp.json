@@ -3,7 +3,7 @@
     "sqlrooms": {
       "type": "http",
       "url": "${SQLROOMS_MCP_URL}",
-      "headers": {"Authorization": "Bearer ${SQLROOMS_MCP_TOKEN}"}
+      "headersHelper": "${SQLROOMS_MCP_HEADERS_HELPER}"
     }
   }
 }
