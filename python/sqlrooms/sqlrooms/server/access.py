@@ -58,7 +58,6 @@ class LocalAccess:
         self._credentials: dict[str, AccessContext] = {}
         self._tickets: dict[str, tuple[str, float]] = {}
         self.native_token = self.issue("native", NATIVE_OPERATIONS)
-        self.upstream_token = self.issue("upstream", frozenset({"query"}))
 
     def issue(
         self, kind: str, operations: frozenset[str], ttl: float | None = None

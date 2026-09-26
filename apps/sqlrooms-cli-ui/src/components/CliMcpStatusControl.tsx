@@ -164,8 +164,8 @@ export function CliMcpStatusControl() {
           {status.enabled ? 'Stop MCP server' : 'Start MCP server'}
         </Button>
         <p className="text-muted-foreground text-[11px]">
-          The listener is loopback-only. Port changes require restarting
-          SQLRooms with <code>--mcp-port</code>.
+          MCP shares the HTTP listener. Port changes require restarting SQLRooms
+          with <code>--port</code>.
         </p>
       </PopoverContent>
     </Popover>

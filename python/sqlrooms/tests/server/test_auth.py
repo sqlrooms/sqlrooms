@@ -1,81 +1,7 @@
 import json
-import os
-import tempfile
-import time
-import subprocess
-import sys
-import socket
 
 import aiohttp
 import pytest
-
-
-@pytest.fixture(scope="module")
-def server_proc_auth():
-    port = 30021
-    token = "secret123"
-    out = tempfile.NamedTemporaryFile(delete=False)
-    err = tempfile.NamedTemporaryFile(delete=False)
-    env = os.environ.copy()
-    proc = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "sqlrooms.server",
-            "--port",
-            str(port),
-            "--auth-token",
-            token,
-        ],
-        stdout=out,
-        stderr=err,
-        env=env,
-    )
-    started = False
-    deadline = time.time() + 12.0
-    while time.time() < deadline:
-        if proc.poll() is not None:
-            break
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.2):
-                started = True
-                break
-        except OSError:
-            time.sleep(0.1)
-    if not started:
-        try:
-            proc.terminate()
-        except Exception:
-            pass
-        try:
-            with open(out.name, "r") as fo:
-                print("STDOUT:", fo.read())
-            with open(err.name, "r") as fe:
-                print("STDERR:", fe.read())
-        except Exception:
-            pass
-        pytest.fail("Server failed to start listening on port")
-    yield {
-        "proc": proc,
-        "port": port,
-        "token": token,
-    }
-    try:
-        proc.terminate()
-        proc.wait(timeout=5)
-    except Exception:
-        try:
-            proc.kill()
-        except Exception:
-            pass
-    try:
-        os.unlink(out.name)
-    except Exception:
-        pass
-    try:
-        os.unlink(err.name)
-    except Exception:
-        pass
 
 
 @pytest.mark.asyncio
@@ -86,7 +12,7 @@ async def test_ws_auth_flow(server_proc_auth):
 
     # Unauthorized attempt: send query without first auth -> expect error/close
     async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+        async with session.ws_connect(f"ws://localhost:{port}/ws/duckdb") as ws:
             await ws.send_str(
                 json.dumps(
                     {
@@ -125,7 +51,7 @@ async def test_ws_auth_flow(server_proc_auth):
 
     # Authorized flow: send auth, expect ack, then a successful query
     async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.ws_connect(f"ws://localhost:{port}") as ws:
+        async with session.ws_connect(f"ws://localhost:{port}/ws/duckdb") as ws:
             await ws.send_str(json.dumps({"type": "auth", "token": token}))
             # Expect authAck
             auth_debug = []
@@ -200,7 +126,7 @@ async def test_ws_auth_flow(server_proc_auth):
 
 @pytest.mark.asyncio
 async def test_same_ip_connections_do_not_share_auth_or_close_state(server_proc_auth):
-    url = f"ws://127.0.0.1:{server_proc_auth['port']}"
+    url = f"ws://127.0.0.1:{server_proc_auth['port']}/ws/duckdb"
     async with aiohttp.ClientSession() as session:
         async with session.ws_connect(url) as first:
             await first.send_json({"type": "auth", "token": server_proc_auth["token"]})
@@ -209,7 +135,7 @@ async def test_same_ip_connections_do_not_share_auth_or_close_state(server_proc_
                 await second.send_json(
                     {"type": "json", "sql": "SELECT 1", "queryId": "forbidden"}
                 )
-                assert (await second.receive_json())["error"] == "unauthorized"
+                assert (await second.receive()).type == aiohttp.WSMsgType.CLOSE
             # Closing the unauthenticated same-IP socket cannot revoke the first.
             await first.send_json(
                 {
@@ -223,7 +149,7 @@ async def test_same_ip_connections_do_not_share_auth_or_close_state(server_proc_
             assert json.loads(result["data"])[0]["answer"] == 42
             async with session.ws_connect(url) as replacement:
                 await replacement.send_bytes(b"\x00\x00\x00\x00CRDT")
-                assert (await replacement.receive_json())["error"] == "unauthorized"
+                assert (await replacement.receive()).type == aiohttp.WSMsgType.CLOSE
 
 
 @pytest.mark.asyncio
@@ -242,10 +168,10 @@ async def test_all_direct_domain_paths_reject_before_dispatch(
 ):
     async with aiohttp.ClientSession() as session:
         async with session.ws_connect(
-            f"ws://127.0.0.1:{server_proc_auth['port']}"
+            f"ws://127.0.0.1:{server_proc_auth['port']}/ws/duckdb"
         ) as ws:
             if isinstance(payload, bytes):
                 await ws.send_bytes(payload)
             else:
                 await ws.send_json(payload)
-            assert (await ws.receive_json())["error"] == "unauthorized"
+            assert (await ws.receive()).type == aiohttp.WSMsgType.CLOSE

@@ -1,3 +1,4 @@
+import pytest
 from pathlib import Path
 
 import click
@@ -222,32 +223,6 @@ def test_resolve_http_port_scans_from_default(monkeypatch):
     assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT, None)]
 
 
-def test_resolve_http_port_reserves_explicit_ws_port(monkeypatch):
-    calls = []
-
-    def fake_pick_free_port(host, start_port=None, *, reserved_ports=None):
-        calls.append((host, start_port, reserved_ports))
-        return 3001
-
-    monkeypatch.setattr("sqlrooms.cli._pick_free_port", fake_pick_free_port)
-
-    assert _resolve_http_port("127.0.0.1", None, ws_port=3000) == 3001
-    assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT, {3000})]
-
-
-def test_resolve_http_port_reserves_explicit_mcp_port(monkeypatch):
-    calls = []
-
-    def fake_pick_free_port(host, start_port=None, *, reserved_ports=None):
-        calls.append((host, start_port, reserved_ports))
-        return 3001
-
-    monkeypatch.setattr("sqlrooms.cli._pick_free_port", fake_pick_free_port)
-
-    assert _resolve_http_port("127.0.0.1", None, mcp_port=3000) == 3001
-    assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT, {3000})]
-
-
 def test_cli_export_help():
     result = runner.invoke(app, ["export", "--help"])
     stdout = click.unstyle(result.stdout)
@@ -449,3 +424,29 @@ user = "admin"
 # Since the main function in cli.py starts an asyncio loop and a server,
 # unit testing it without mocks is hard. We'll skip deep integration tests
 # of the full server startup here.
+
+
+@pytest.mark.parametrize("option", ["--ws-port", "--mcp-port"])
+def test_removed_listener_options_fail_with_migration_guidance(option):
+    result = runner.invoke(app, ["--no-config", option, "4000", ":memory:"])
+    assert result.exit_code == 1
+    assert "Use --port" in result.output
+
+
+def test_server_command_uses_same_no_ui_launcher(monkeypatch):
+    from unittest.mock import AsyncMock
+
+    instances = []
+
+    def server(**kwargs):
+        instances.append(kwargs)
+        return type("Server", (), {"start": AsyncMock()})()
+
+    monkeypatch.setattr("sqlrooms.cli.SqlroomsHttpServer", server)
+    result = runner.invoke(
+        app, ["server", "--db-path", ":memory:", "--port", "4080", "--no-config"]
+    )
+    assert result.exit_code == 0, result.output
+    assert instances[0]["serve_ui"] is False
+    assert instances[0]["open_browser"] is False
+    assert instances[0]["port"] == 4080

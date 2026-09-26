@@ -8,13 +8,13 @@ Launch a local SQLRooms DuckDB project for adding data, authoring documents, and
 uvx sqlrooms ./sqlrooms.db
 ```
 
-This CLI requires `sqlrooms-server>=0.1.3` for its shared authentication boundary.
-Release the updated server package before publishing this CLI; source installations
-must install both updated packages together.
+The `sqlrooms` distribution includes the CLI, UI, and reusable Python runtime.
+See [migration instructions](MIGRATION.md) before upgrading an environment that
+contains the former `sqlrooms-server` distribution.
 
 What happens:
 
-- Starts the DuckDB websocket backend (from `sqlrooms-server`) on a free local port.
+- Runs one ASGI server: HTTP, DuckDB WebSockets at `/ws/duckdb`, the browser bridge at `/ws/mcp-bridge`, and optional HTTP MCP at `/mcp` share one port.
 - Serves the SQLRooms document UI on `http://localhost:3000`, or the next free port, and opens your browser (disable with `--no-open-browser`).
 - Drag-and-drop CSV, TSV, JSON, Parquet, and DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
 - UI state is stored in the SQLRooms meta namespace (default `__sqlrooms`) of the selected DuckDB file.
@@ -34,7 +34,7 @@ after theme changes and workspace reloads. Change the saved style through
 - `--version`: Print the installed `sqlrooms` CLI version and exit.
 - `--db-path`: DuckDB database to use as a flag alternative. Pass a filepath to persist, or `:memory:` for an explicit temporary in-memory session.
 - `--host` / `--port`: HTTP host/port for the UI. The default bind address is `127.0.0.1`. If `--port` is omitted, `3000` or the next free port is chosen automatically.
-- `--ws-port`: WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.
+- `--ws-port` and `--mcp-port`: Removed. Use `--port` for all transports; old flags fail with migration guidance.
 - `--profile`: Select a complete production capability profile: `default`, `experimental`, or `document-charts-maps`.
 - `--experimental`: Compatibility alias for `--profile experimental`.
 - `--experimental-sync`: Enable experimental sync (CRDT) over WebSocket (Loro). Requires the `experimental` profile.
@@ -44,9 +44,8 @@ after theme changes and workspace reloads. Change the saved style through
 - `--meta-namespace` (default `__sqlrooms`): Namespace for SQLRooms meta tables. If `--meta-db` is provided, used as ATTACH alias; otherwise used as a schema in the main DB.
 - `--no-open-browser`: Skip automatically opening the browser tab.
 - `--ui`: Optional path to a custom UI bundle directory (a Vite `dist/`). If omitted, uses the bundled default UI.
-- `--no-ui`: Start only the HTTP API server and DuckDB websocket backend; do not serve the bundled/static UI.
-- `--mcp`: Start a loopback-only MCP HTTP server backed by the live browser room.
-- `--mcp-port`: Select the loopback MCP port (defaults to 42100 or the next free port).
+- `--no-ui`: Serve the same runtime/API without UI assets, equivalent to `sqlrooms server --db-path ...`.
+- `--mcp`: Enable `/mcp` on the shared listener, backed by the live browser room.
 - `--config`: Path to a SQLRooms TOML config file. Defaults to `~/.config/sqlrooms/config.toml` (`%APPDATA%\sqlrooms\config.toml` on Windows).
 - `--no-config`: Disable config file loading.
 
@@ -54,10 +53,8 @@ Read-only artifact, document-block, and dashboard-panel image tools are always
 available in the CLI UI. Using their image results requires a vision-capable
 model and a provider that supports image tool results.
 
-`--host 0.0.0.0` is an advanced local-network mode. Only use it on trusted
-networks; it exposes the SQLRooms UI/API bind address beyond your loopback
-interface. The DuckDB websocket backend still enforces local-only connections
-unless you explicitly use external proxy settings.
+The server requires a loopback bind host. An explicitly configured development
+or external proxy must preserve the authenticated Host/Origin boundary.
 
 The MCP listener uses the official stateless Streamable HTTP transport. The
 browser must remain open and initialized because the live room owns the tool
@@ -177,13 +174,17 @@ warehouse = "your-dev-warehouse"
 
 ## Server-only mode (no UI)
 
-If you only want the DuckDB websocket server (no HTTP UI server), install/run `sqlrooms-server`:
+Use the consolidated distribution and the same authenticated app:
 
 ```bash
-uvx sqlrooms-server --db-path ./sqlrooms.db --port 4000
+uvx sqlrooms server --db-path ./sqlrooms.db --port 4000
 ```
 
-`sqlrooms-server` is also available as an alias console script.
+Connect to `ws://127.0.0.1:4000/ws/duckdb` using the private native
+credential handoff described in [AUTHENTICATION.md](AUTHENTICATION.md).
+No UI assets are required in this mode. MCP tools still require an owning browser;
+server-only mode does not make them headless. Use `./server` to open a database
+literally named `server`, as with `./agent`.
 
 ## Backend connectors (DbSlice bridge)
 
@@ -204,7 +205,6 @@ uv tool install "sqlrooms[snowflake]"
 ```bash
 uvx sqlrooms \
   ./sqlrooms.db \
-  --ws-port 4000 \
   --port 3000
 ```
 
@@ -213,7 +213,6 @@ uvx sqlrooms \
 ```bash
 uvx sqlrooms \
   ./sqlrooms.db \
-  --ws-port 4000 \
   --port 3000
 ```
 
@@ -302,3 +301,40 @@ preserved. See [tool permissions](AGENT_WORKSPACES.md#claude-code-tool-permissio
 
 See [agent-managed workspaces](AGENT_WORKSPACES.md) for setup, profiles, explicit
 instance routing, recovery, lifecycle, and current verification limitations.
+
+## Reusable ASGI runtime
+
+The core imports no CLI, UI assets, profiles or sync implementation unless enabled:
+
+```python
+from pathlib import Path
+from sqlrooms.server.access import LocalAccess
+from sqlrooms.server.app import create_app, UVICORN_OPTIONS
+from sqlrooms.server.runtime import DuckDBRuntime
+from sqlrooms.server.security import TransportSecurity
+
+access = LocalAccess()
+runtime = DuckDBRuntime("analysis.duckdb", Path("./storage"), extensions=[])
+security = TransportSecurity(access, {"http://127.0.0.1:3000"}, {"127.0.0.1:3000"})
+app = create_app(runtime, security, title="My analysis app")
+# uvicorn.run(app, host="127.0.0.1", port=3000, **UVICORN_OPTIONS)
+```
+
+`create_app(..., configure=callable, lifespan=async_context_manager)` lets the caller
+register application routes/assets after protocol routes and attach resources to
+the shared lifespan. `sync_enabled=True` opts into CRDT. The caller provides its
+own credential delivery; never embed the native token in browser source or URLs.
+`DuckDBRuntime.start()`, `run_db_task(callable, query_id=...)`, `cancel_query(id)`,
+`ready`, and `close()` own the database, per-operation cursors and executor.
+Cancellation is best effort and never promises to undo committed statements.
+
+Run one Uvicorn worker per writable workspace. Limits: 128 MiB input frames,
+128 MiB/64 outgoing messages per connection (including the in-flight frame),
+32 pending operations/128 MiB retained input per connection, 64 database operations,
+and 64 connections including authentication handshakes. Overflow closes the affected slow client with
+1013; sends time out after 15 seconds. WebSocket compression is explicitly disabled because large-frame compression
+blocks the shared event loop and delays control traffic. Ping interval and timeout
+are 20 seconds. Results are reauthorized before enqueue and
+send. Metadata and final checkpoint errors propagate instead of reporting a save.
+Loro stays installed to preserve the tested sync path; disabled sync initializes
+no Loro documents or background tasks. Pandas remains required for JSON encoding.

@@ -16,6 +16,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
+  "anyio>=4.0",
   "click>=8.4.2",
   "cryptography>=46.0.5",
   "duckdb>=1.5.3,<1.6.0",
@@ -28,7 +29,8 @@ dependencies = [
   "pyarrow>=17.0.0",
   "pygments>=2.20.0",
   "python-multipart>=0.0.32",
-  "sqlrooms-server>=0.1.3",
+  "pandas",
+  "loro>=1.10.0",
   "starlette>=1.3.1",
   "tomli>=2.0.0; python_version < '3.11'",
   "tomlkit>=0.13.0",
@@ -57,12 +59,11 @@ build-backend = "hatchling.build"
 dev = [
   "pytest>=9.0.3",
   "pytest-asyncio",
+  "aiohttp>=3.13.4",
+  "psutil",
   "httpx",
   "ruff",
 ]
-
-[tool.uv.sources]
-sqlrooms-server = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["sqlrooms"]
@@ -71,7 +72,7 @@ packages = ["sqlrooms"]
 artifacts = ["sqlrooms/web/static/**", "sqlrooms/claude_plugin/**"]
 
 [tool.hatch.build.targets.sdist]
-include = ["README.md", "LICENSE", "sqlrooms"]
+include = ["README.md", "LICENSE", "package.json", "pyproject.toml", "AUTHENTICATION.md", "AGENT_WORKSPACES.md", "MIGRATION.md", "sqlrooms"]
 
 [tool.hatch.version]
 path = "package.json"

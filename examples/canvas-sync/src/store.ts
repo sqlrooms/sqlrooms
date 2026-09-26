@@ -1,3 +1,4 @@
+import {databaseUrl, pageToken} from './auth';
 import {Canvas, CanvasSliceState, createCanvasSlice} from '@sqlrooms/canvas';
 import {createCanvasCrdtMirror} from '@sqlrooms/canvas/crdt';
 import {
@@ -44,8 +45,7 @@ export type RoomState = RoomShellSliceState &
 export const RoomPanelTypes = z.enum(['main', 'left', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-const SERVER_URL =
-  (import.meta as any).env?.VITE_SYNC_WS_URL ?? 'ws://localhost:4000';
+const SERVER_URL = databaseUrl.href;
 const ROOM_ID =
   (import.meta as any).env?.VITE_SYNC_ROOM_ID ?? 'canvas-sync-room';
 
@@ -53,7 +53,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => {
     return {
       ...createRoomShellSlice({
-        connector: createWebSocketDuckDbConnector({wsUrl: SERVER_URL}),
+        connector: createWebSocketDuckDbConnector({
+          wsUrl: SERVER_URL,
+          authToken: pageToken,
+        }),
         layout: {
           config: {
             id: 'root',
@@ -105,6 +108,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createCrdtSlice({
         storage: createIndexedDbDocStorage({key: 'sqlrooms-canvas-sync'}),
         sync: createWebSocketSyncConnector({
+          token: pageToken,
           url: SERVER_URL,
           roomId: ROOM_ID,
           // Server already sends a snapshot on join; only send incremental updates.

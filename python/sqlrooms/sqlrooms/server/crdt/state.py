@@ -6,9 +6,28 @@ from typing import Dict, Optional
 
 from loro import ExportMode, LoroDoc  # type: ignore
 
-from .. import db_async
 
 logger = logging.getLogger(__name__)
+
+
+async def run_sync_work(function, *args):
+    """Settle Loro work before releasing its room lock, even on cancellation."""
+    task = asyncio.create_task(asyncio.to_thread(function, *args))
+    try:
+        return await asyncio.shield(task)
+    except asyncio.CancelledError:
+        import anyio
+
+        with anyio.CancelScope(shield=True):
+            while not task.done():
+                try:
+                    await asyncio.shield(task)
+                except asyncio.CancelledError:
+                    continue
+        # The mutation may already have applied; callers must mark it dirty
+        # before running it and flush during shutdown.
+        task.result()
+        raise
 
 
 class RoomDoc:
@@ -23,7 +42,8 @@ class RoomDoc:
 class CrdtState:
     """Manages per-room LoroDoc with lazy load/save to DuckDB (via db_async helpers)."""
 
-    def __init__(self):
+    def __init__(self, runtime):
+        self.runtime = runtime
         self._rooms: Dict[str, RoomDoc] = {}
 
     def _ensure(self, room_id: str) -> RoomDoc:
@@ -35,18 +55,17 @@ class CrdtState:
         room = self._ensure(room_id)
         if room.loaded:
             return room
-        snapshot = await db_async.load_crdt_snapshot(room_id)
-        if snapshot:
-            try:
-                room.doc.import_(snapshot)
-            except Exception:
-                logger.exception("Failed to import snapshot for room %s", room_id)
-        room.loaded = True
+        async with room.lock:
+            if not room.loaded:
+                snapshot = await self.runtime.load_crdt_snapshot(room_id)
+                if snapshot:
+                    await run_sync_work(room.doc.import_, snapshot)
+                room.loaded = True
         return room
 
     async def save_snapshot(self, room_id: str, doc: LoroDoc) -> None:
-        snapshot = doc.export(ExportMode.Snapshot())
-        await db_async.save_crdt_snapshot(room_id, snapshot)
+        snapshot = await run_sync_work(doc.export, ExportMode.Snapshot())
+        await self.runtime.save_crdt_snapshot(room_id, snapshot)
 
     async def schedule_save(self, room_id: str, delay_ms: int = 500) -> None:
         """Schedule a debounced snapshot save."""
@@ -83,9 +102,15 @@ class CrdtState:
             return
 
         logger.info("Flushing %d dirty CRDT rooms", len(dirty_room_ids))
-        await asyncio.gather(
-            *(self.flush_room(rid) for rid in dirty_room_ids), return_exceptions=True
-        )
+        await asyncio.gather(*(self.flush_room(rid) for rid in dirty_room_ids))
+
+    async def close(self):
+        """Settle debounced saves and propagate final persistence failures."""
+        tasks = [room.save_task for room in self._rooms.values() if room.save_task]
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        await self.flush_all()
 
     def export_update(self, doc: LoroDoc, from_version=None) -> bytes:
         """

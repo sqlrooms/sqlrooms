@@ -78,21 +78,10 @@ def reserve_listener(host: str, port: int):
 def reserve_managed_listeners(server):
     old_port = server.port
     http = reserve_listener(server.host, old_port)
-    try:
-        mcp = reserve_listener("127.0.0.1", server.mcp_port)
-    except BaseException:
-        http.close()
-        raise
     server.port = http.getsockname()[1]
-    server.mcp_port = mcp.getsockname()[1]
     origins = {
         f"http://{host}:{server.port}" for host in ("127.0.0.1", "localhost", "[::1]")
     }
     server.security.origins.update(origins)
     server.security.hosts.update(origin.removeprefix("http://") for origin in origins)
-    server.mcp_security.origins.update(origins)
-    server.mcp_security.hosts = {
-        f"127.0.0.1:{server.mcp_port}",
-        f"localhost:{server.mcp_port}",
-    }
-    return http, mcp
+    return http

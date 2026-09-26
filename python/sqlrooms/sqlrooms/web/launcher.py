@@ -17,7 +17,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 import uvicorn
 from fastapi import FastAPI, File, UploadFile
-from fastapi import Request, WebSocket, WebSocketDisconnect
+from fastapi import Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import (
     FileResponse,
@@ -27,9 +27,10 @@ from fastapi.responses import (
     StreamingResponse,
 )
 
-from sqlrooms.server import db_async
-from sqlrooms.server.cache import QueryCache
-from sqlrooms.server.server import server as duckdb_ws_server
+from contextlib import asynccontextmanager
+from starlette.routing import Route
+from sqlrooms.server.runtime import DuckDBRuntime
+from sqlrooms.server.app import create_app, UVICORN_OPTIONS
 
 from .db_bridge import (
     ENGINE_CONFIG_FIELDS,
@@ -46,7 +47,6 @@ from .security import (
     TransportSecurity,
     bearer,
     NO_STORE,
-    authenticate_upstream,
     normalize_transport_url,
     supports_private_credentials,
 )
@@ -71,64 +71,6 @@ async def _write_upload_to_path(file: UploadFile, target: Path) -> int:
             bytes_written += len(chunk)
             f.write(chunk)
     return bytes_written
-
-
-async def _relay_duckdb_websockets(
-    client_ws: WebSocket, upstream_ws: Any, security: TransportSecurity, token: str
-) -> None:
-    async def client_to_upstream() -> None:
-        while True:
-            message = await client_ws.receive()
-            if message["type"] == "websocket.disconnect":
-                await upstream_ws.close()
-                return
-            security.access.verify(token, "query")
-            if message.get("bytes") is not None:
-                await upstream_ws.send(message["bytes"])
-            elif message.get("text") is not None:
-                try:
-                    payload = json.loads(message["text"])
-                except ValueError:
-                    payload = None
-                if isinstance(payload, dict) and payload.get("type") == "auth":
-                    # Never forward page credentials into the native boundary.
-                    if payload.get("token") != token:
-                        raise AccessDenied()
-                    await client_ws.send_json({"type": "authAck"})
-                    continue
-                await upstream_ws.send(message["text"])
-
-    async def upstream_to_client() -> None:
-        async for message in upstream_ws:
-            security.access.verify(token, "query")
-            if isinstance(message, bytes):
-                await client_ws.send_bytes(message)
-            else:
-                await client_ws.send_text(message)
-
-    relay_tasks = {
-        asyncio.create_task(client_to_upstream()),
-        asyncio.create_task(upstream_to_client()),
-    }
-    relay_tasks.add(
-        asyncio.create_task(security.watch_socket(client_ws, token, "query"))
-    )
-    try:
-        done, _ = await asyncio.wait(
-            relay_tasks,
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-        for task in done:
-            task.result()
-    except asyncio.CancelledError:
-        # The dev supervisor cancels active ASGI connections during Ctrl+C.
-        # Treat that as a normal WebSocket shutdown rather than an app error.
-        return
-    finally:
-        for task in relay_tasks:
-            if not task.done():
-                task.cancel()
-        await asyncio.gather(*relay_tasks, return_exceptions=True)
 
 
 def _normalize_config_string(value: Any) -> str | None:
@@ -513,7 +455,7 @@ class SqlroomsHttpServer:
         db_path: str | Path,
         host: str,
         port: int,
-        ws_port: int | None,
+        ws_port: int | None = None,
         *,
         sync_enabled: bool = False,
         meta_db: str | None = None,
@@ -573,21 +515,14 @@ class SqlroomsHttpServer:
             expected_ws_url
         ):
             raise ValueError(
-                "--external-ws-url must use the page's /ws/duckdb proxy route. "
+                "--external-ws-url must use the page's /ws/duckdb route. "
                 "Split WebSocket endpoints are unsupported with local authentication; "
                 "omit --external-ws-url and proxy HTTP and WebSockets together."
             )
-        if ws_port is None:
-            # socketify listens on all interfaces; we pick a free local port for convenience
-            # to avoid collisions when multiple dev servers are running.
-            reserved_ports = {self.port}
-            if mcp_port is not None:
-                reserved_ports.add(mcp_port)
-            self.ws_port = _pick_free_port(
-                self._public_host(), reserved_ports=reserved_ports
+        if ws_port is not None or mcp_port is not None:
+            raise ValueError(
+                "--ws-port and --mcp-port were removed; use --port for HTTP, /ws/duckdb and /mcp."
             )
-        else:
-            self.ws_port = ws_port
         self.llm_provider = llm_provider
         self.llm_model = llm_model
         self.api_key = api_key
@@ -632,10 +567,6 @@ class SqlroomsHttpServer:
         )
         self.config_path = config_path
         self.connector_settings = connector_settings or []
-        self.mcp_port = mcp_port or _pick_free_port(
-            "127.0.0.1", 42100, reserved_ports={self.port, self.ws_port}
-        )
-
         self.ui_provider: UiProvider = (
             DirectoryUiProvider(ui_dir) if ui_dir else BuiltinUiProvider()
         )
@@ -643,9 +574,12 @@ class SqlroomsHttpServer:
         self.index_html = self.ui_provider.index_html()
         self.upload_dir = base_dir / "sqlrooms_uploads"
         self.upload_dir.mkdir(parents=True, exist_ok=True)
-        self._duckdb_thread: threading.Thread | None = None
-        self._duckdb_ready = threading.Event()
-        self._duckdb_start_error: BaseException | None = None
+        self.runtime = DuckDBRuntime(
+            self.duckdb_database,
+            self.upload_dir,
+            meta_namespace=self.meta_namespace,
+            meta_db_path=self.meta_db,
+        )
         origins = {
             f"http://{host}:{self.port}" for host in ("127.0.0.1", "localhost", "[::1]")
         }
@@ -661,19 +595,15 @@ class SqlroomsHttpServer:
         }
         hosts = {urlsplit(origin).netloc for origin in origins}
         self.security = TransportSecurity(self.access, origins, hosts)
-        self.mcp_security = TransportSecurity(
-            self.access,
-            origins,
-            {f"127.0.0.1:{self.mcp_port}", f"localhost:{self.mcp_port}"},
-        )
+        self.mcp_security = self.security
         self.mcp_broker = McpBridgeBroker(self.session_token, security=self.security)
         self.mcp_service = SqlroomsMcpService(
             self.mcp_broker, security=self.mcp_security
         )
-        self._mcp_server: uvicorn.Server | None = None
-        self._mcp_task: asyncio.Task[None] | None = None
-        self._mcp_lock = asyncio.Lock()
+        self.mcp_service.enabled = False
         self._mcp_last_error: str | None = None
+        self._app_resources = None
+
         from ..agent.runtime import Runtime
 
         self.agent_runtime = Runtime(self)
@@ -684,7 +614,6 @@ class SqlroomsHttpServer:
     ) -> int | None:
         self._assert_ui_available()
         self._reserved_http_socket = None
-        self._reserved_mcp_socket = None
         try:
             native_required = (
                 session is not None
@@ -699,15 +628,13 @@ class SqlroomsHttpServer:
             if self.agent_runtime.managed:
                 from ..agent.process import reserve_managed_listeners
 
-                self._reserved_http_socket, self._reserved_mcp_socket = (
-                    reserve_managed_listeners(self)
-                )
+                self._reserved_http_socket = reserve_managed_listeners(self)
             if supports_private_credentials():
                 self.credential_file = CredentialFile(
                     self.access,
                     self._ui_url(),
                     self._mcp_url(),
-                    f"ws://127.0.0.1:{self.ws_port}",
+                    self._ws_proxy_url(),
                 )
             return await self._serve(session)
         finally:
@@ -720,9 +647,8 @@ class SqlroomsHttpServer:
             await self.mcp_broker.close()
             if self.credential_file:
                 self.credential_file.close()
-            for sock in (self._reserved_http_socket, self._reserved_mcp_socket):
-                if sock:
-                    sock.close()
+            if self._reserved_http_socket:
+                self._reserved_http_socket.close()
 
     async def _serve(
         self, session: Callable[[], Awaitable[int]] | None = None
@@ -750,9 +676,6 @@ class SqlroomsHttpServer:
                 + self._launch_url(),
                 file=sys.stderr,
             )
-        self._start_duckdb_backend()
-        if self.mcp_enabled_default:
-            await self._start_mcp()
         app = self._build_app()
 
         browser_timer = None
@@ -769,8 +692,7 @@ class SqlroomsHttpServer:
             port=self.port,
             log_level="warning",
             access_log=False,
-            lifespan="off",
-            loop="asyncio",
+            **UVICORN_OPTIONS,
         )
         server = uvicorn.Server(config)
         self._http_server = server
@@ -785,11 +707,7 @@ class SqlroomsHttpServer:
             if self.credential_file is None:
                 return
             for _ in range(1000):
-                if self._duckdb_start_error:
-                    raise RuntimeError(
-                        "Database startup failed; check the database path or existing writer."
-                    )
-                if getattr(server, "started", False) and self._duckdb_ready.is_set():
+                if getattr(server, "started", False) and self.runtime.ready:
                     await self.agent_runtime.publish()
                     return
                 await asyncio.sleep(0.01)
@@ -798,7 +716,12 @@ class SqlroomsHttpServer:
         registration_task = asyncio.create_task(register_when_ready())
         try:
             if session is not None:
-                session_task = asyncio.create_task(session())
+
+                async def ready_session():
+                    await registration_task
+                    return await session()
+
+                session_task = asyncio.create_task(ready_session())
             watched = {http_task, registration_task}
             if session_task:
                 watched.add(session_task)
@@ -810,6 +733,10 @@ class SqlroomsHttpServer:
                     return await session_task
                 if http_task in done:
                     await http_task
+                    if self._app_resources.start_error:
+                        raise RuntimeError(
+                            "Database/application startup failed"
+                        ) from self._app_resources.start_error
                     return None
                 if registration_task in done:
                     await registration_task
@@ -831,93 +758,37 @@ class SqlroomsHttpServer:
             except asyncio.TimeoutError:
                 http_task.cancel()
                 await asyncio.gather(http_task, return_exceptions=True)
+            if self._app_resources and self._app_resources.failure:
+                raise RuntimeError(
+                    "Workspace persistence failed during shutdown"
+                ) from self._app_resources.failure
 
     async def _start_mcp(self) -> Dict[str, Any]:
         if not supports_private_credentials():
             raise RuntimeError(
                 "Native MCP requires owner-only credential storage; Windows ACL support is not yet available."
             )
-        async with self._mcp_lock:
-            if self._mcp_task is not None and not self._mcp_task.done():
-                return self._mcp_status()
-            self._mcp_last_error = None
-            # The MCP SDK's StreamableHTTPSessionManager is single-use. Build a
-            # fresh service whenever the independently controlled listener is
-            # started so a stop/start cycle gets a new session manager.
-            self.mcp_service = SqlroomsMcpService(
-                self.mcp_broker, security=self.mcp_security
-            )
-            config = uvicorn.Config(
-                self.mcp_service.app,
-                host="127.0.0.1",
-                port=self.mcp_port,
-                log_level="warning",
-                access_log=False,
-                lifespan="on",
-                loop="asyncio",
-            )
-            server = uvicorn.Server(config)
-
-            async def serve_mcp() -> None:
-                reserved = getattr(self, "_reserved_mcp_socket", None)
-                self._reserved_mcp_socket = None
-                try:
-                    await server.serve(
-                        sockets=[reserved]
-                    ) if reserved else await server.serve()
-                except SystemExit as exc:
-                    raise RuntimeError(
-                        f"MCP listener failed to start (exit code {exc.code})."
-                    ) from exc
-                finally:
-                    if reserved:
-                        reserved.close()
-
-            task = asyncio.create_task(serve_mcp(), name="sqlrooms-mcp-server")
-            self._mcp_server = server
-            self._mcp_task = task
-            for _ in range(1_000):
-                if server.started:
-                    logger.info("SQLRooms MCP URL: %s", self._mcp_url())
-                    return self._mcp_status()
-                if task.done():
-                    try:
-                        task.result()
-                    except Exception as exc:
-                        self._mcp_last_error = str(exc)
-                    self._mcp_server = None
-                    self._mcp_task = None
-                    raise RuntimeError(
-                        self._mcp_last_error or "MCP listener failed to start."
-                    )
-                await asyncio.sleep(0.01)
-            server.should_exit = True
-            await asyncio.gather(task, return_exceptions=True)
-            self._mcp_server = None
-            self._mcp_task = None
-            self._mcp_last_error = "Timed out starting MCP listener."
-            raise RuntimeError(self._mcp_last_error)
+        self.mcp_service.enabled = True
+        return self._mcp_status()
 
     async def _stop_mcp(self) -> Dict[str, Any]:
-        async with self._mcp_lock:
-            server = self._mcp_server
-            task = self._mcp_task
-            if server is None or task is None:
-                return self._mcp_status()
-            server.should_exit = True
-            try:
-                await asyncio.wait_for(task, timeout=5)
-            except asyncio.TimeoutError:
-                task.cancel()
-                await asyncio.gather(task, return_exceptions=True)
-                self._mcp_last_error = "Timed out stopping MCP listener."
-            finally:
-                self._mcp_server = None
-                self._mcp_task = None
-            return self._mcp_status()
+        self.mcp_service.enabled = False
+        return self._mcp_status()
+
+    @asynccontextmanager
+    async def _application_lifespan(self, app):
+        # Explicitly enter the SDK lifespan; mounting/routing alone does not run it.
+        try:
+            async with self.mcp_service.lifespan():
+                if self.mcp_enabled_default:
+                    await self._start_mcp()
+                yield
+        finally:
+            await self._stop_mcp()
+            await self.mcp_broker.close()
 
     def _mcp_status(self) -> Dict[str, Any]:
-        running = self._mcp_task is not None and not self._mcp_task.done()
+        running = self.mcp_service.enabled
         bridge = self.mcp_broker.status()
         if self._mcp_last_error:
             status = "error"
@@ -973,16 +844,15 @@ class SqlroomsHttpServer:
         return f"http://{self._host_for_url(self._ui_host())}:{self.port}"
 
     def _ws_url(self) -> str:
-        return (
-            self.external_ws_url
-            or f"ws://{self._host_for_url(self._public_host())}:{self.ws_port}"
+        return self.external_ws_url or _derive_ws_proxy_url(
+            self.external_url or self._ui_url()
         )
 
     def _ws_proxy_url(self) -> str:
-        return f"ws://{self._host_for_url(self._ui_host())}:{self.port}/ws/duckdb"
+        return _derive_ws_proxy_url(self._ui_url())
 
     def _mcp_url(self) -> str:
-        return f"http://127.0.0.1:{self.mcp_port}/mcp"
+        return self._ui_url() + "/mcp"
 
     def _mcp_bridge_url(self) -> str:
         if self.external_url:
@@ -1051,49 +921,12 @@ class SqlroomsHttpServer:
             headers=NO_STORE_HEADERS,
         )
 
-    def _start_duckdb_backend(self) -> None:
-        self._duckdb_ready.clear()
-        self._duckdb_start_error = None
-        thread = threading.Thread(
-            target=self._run_duckdb_server,
-            daemon=True,
-            name="duckdb-ws-server",
-        )
-        thread.start()
-        self._duckdb_thread = thread
-        self._duckdb_ready.wait(timeout=10)
-        if self._duckdb_start_error is not None:
-            logger.error("Failed to start DuckDB websocket backend")
-            return
-        if not self._duckdb_ready.is_set():
-            logger.warning(
-                "DuckDB websocket backend is still starting after 10 seconds"
-            )
-            return
-        logger.info(
-            "Started DuckDB websocket backend at ws://%s:%s",
-            self._public_host(),
-            self.ws_port,
-        )
-
     def _runtime_status(self) -> Dict[str, Any]:
-        duckdb_status: Dict[str, Any]
-        if self._duckdb_start_error is not None:
-            duckdb_status = {
-                "status": "error",
-                "message": "DuckDB websocket backend failed to start",
-                "error": "Database startup failed",
-            }
-        elif self._duckdb_ready.is_set():
-            duckdb_status = {"status": "ready"}
-        else:
-            duckdb_status = {"status": "starting"}
-
-        status = "ready" if duckdb_status["status"] == "ready" else "degraded"
+        status = "ready" if self.runtime.ready else "starting"
         return {
-            "status": status,
+            "status": "ready" if self.runtime.ready else "degraded",
             "components": {
-                "duckdbWebSocket": duckdb_status,
+                "duckdbWebSocket": {"status": status},
                 "mcp": self._mcp_status(),
             },
         }
@@ -1168,15 +1001,17 @@ class SqlroomsHttpServer:
     def _require_session_token(self, request: Request):
         return self._require_api_auth(request)
 
-    async def _authenticate_duckdb_proxy_websocket(self, client_ws: WebSocket):
-        result = await self.security.authenticate_socket(client_ws, "query")
-        if result:
-            await client_ws.send_json({"type": "authAck"})
-            return result[0]
-        return None
-
     def _build_app(self) -> FastAPI:
-        app = FastAPI(title="sqlrooms", version="0.1.0")
+        app = create_app(
+            self.runtime,
+            self.security,
+            title="sqlrooms",
+            sync_enabled=self.sync_enabled,
+            allow_client_snapshots=self.sync_enabled and self.is_in_memory,
+            lifespan=self._application_lifespan,
+        )
+        self._app_resources = app.state.resources
+        app.router.routes.append(Route("/mcp", endpoint=self.mcp_service))
         self.agent_runtime.routes(app)
         app.add_middleware(
             CORSMiddleware,
@@ -1244,10 +1079,6 @@ class SqlroomsHttpServer:
         async def identity():
             return {"binding": self.access.binding}
 
-        @app.get("/healthz")
-        async def health():
-            return {"status": "ok"}
-
         @app.post("/api/auth/exchange")
         async def exchange(request: Request):
             # Bound the unauthenticated body before JSON decoding.
@@ -1280,56 +1111,6 @@ class SqlroomsHttpServer:
         @app.get("/config.json")
         async def get_config_json():
             return self._runtime_config()
-
-        @app.websocket("/ws/duckdb")
-        async def duckdb_websocket_proxy(client_ws: WebSocket):
-            token = await self._authenticate_duckdb_proxy_websocket(client_ws)
-            if not token:
-                return
-
-            try:
-                import websockets
-            except ImportError:
-                await client_ws.close(code=1011, reason="websockets package missing")
-                return
-
-            upstream_url = f"ws://127.0.0.1:{self.ws_port}"
-            try:
-                async with websockets.connect(
-                    upstream_url,
-                    max_size=None,
-                    logger=transport_logger,
-                ) as upstream_ws:
-                    await authenticate_upstream(upstream_ws, self.access.upstream_token)
-                    await _relay_duckdb_websockets(
-                        client_ws, upstream_ws, self.security, token
-                    )
-            except WebSocketDisconnect:
-                return
-            except OSError as exc:
-                if exc.errno in {
-                    errno.ECONNREFUSED,
-                    errno.ECONNRESET,
-                    errno.EHOSTUNREACH,
-                    errno.ENETUNREACH,
-                }:
-                    logger.warning(
-                        "DuckDB websocket backend unavailable at %s: %s",
-                        upstream_url,
-                        exc,
-                    )
-                    try:
-                        await client_ws.close(code=1013, reason="backend unavailable")
-                    except Exception:
-                        pass
-                    return
-                raise
-            except Exception:
-                logger.error("DuckDB websocket proxy failed")
-                try:
-                    await client_ws.close(code=1011)
-                except Exception:
-                    pass
 
         @app.websocket("/ws/mcp-bridge")
         async def mcp_browser_bridge(client_ws: WebSocket):
@@ -1678,7 +1459,7 @@ class SqlroomsHttpServer:
                 }
 
             try:
-                data = await db_async.run_db_task(_run)
+                data = await self.runtime.run_db_task(_run)
             except Exception:
                 return JSONResponse({"error": "Operation failed"}, status_code=400)
             return data
@@ -1723,61 +1504,3 @@ class SqlroomsHttpServer:
             )
 
         return app
-
-    def _run_duckdb_server(self) -> None:
-        import signal
-
-        # In some environments (notably when embedding), signal handlers can only be
-        # registered from the main thread. The websocket server itself does not rely
-        # on signals, so we no-op signal registration in this background thread.
-        original_signal = signal.signal
-
-        def _noop_signal(*_args, **_kwargs):
-            return None
-
-        signal.signal = _noop_signal  # type: ignore
-        try:
-            db_async.init_global_connection(self.duckdb_database, extensions=["httpfs"])
-            self._duckdb_start_error = None
-
-            def listening(port):
-                self.ws_port = port
-                if self.credential_file:
-                    from ..agent.storage import atomic_json
-                    from .security import read_credential_file
-
-                    value = read_credential_file(self.credential_file.path)
-                    atomic_json(
-                        self.credential_file.path,
-                        {**value, "wsUrl": f"ws://127.0.0.1:{port}"},
-                    )
-                self._duckdb_ready.set()
-
-            cache = QueryCache()
-            duckdb_ws_server(
-                cache,
-                self.ws_port,
-                auth_token=self.access.upstream_token,
-                access_verifier=self.access.verify,
-                allowed_origins=set(),
-                allowed_hosts={
-                    f"127.0.0.1:{self.ws_port}",
-                    f"localhost:{self.ws_port}",
-                },
-                sync_enabled=self.sync_enabled,
-                meta_db_path=self.meta_db,
-                meta_namespace=self.meta_namespace,
-                allow_client_snapshots=bool(
-                    self.sync_enabled and self.duckdb_database == ":memory:"
-                ),
-                local_only=True,
-                log_startup_message=self.debug,
-                on_listen=listening,
-                listen_attempts=3 if self.agent_runtime.managed else 1,
-            )
-        except Exception as exc:
-            self._duckdb_start_error = exc
-            self._duckdb_ready.set()
-            logger.error("DuckDB websocket backend failed to start")
-        finally:
-            signal.signal = original_signal  # type: ignore

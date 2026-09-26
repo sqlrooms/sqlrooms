@@ -27,6 +27,7 @@ class Runtime:
         self.managed = os.environ.get("SQLROOMS_MANAGED") == "1"
         self.started = time.time()
         self.stopping = False
+        self.close_failed = False
         self.active_calls = 0
         self.browser_opened_at = 0.0
         self.browser_lock = asyncio.Lock()
@@ -187,7 +188,7 @@ class Runtime:
                     "Flush and close this manually launched workspace in its terminal.",
                 )
             if (
-                self.stopping
+                (self.stopping and not self.close_failed)
                 or self.active_calls
                 or self.operations.active
                 or s.mcp_broker.status()["pendingRequests"]
@@ -197,28 +198,43 @@ class Runtime:
                     "Wait for active workspace operations before closing.",
                 )
             self.stopping = True
-            try:
-                result = await s.mcp_broker.request("workspace.flush", timeout=15)
-                if not isinstance(result, dict) or not result.get("ok"):
-                    raise WorkspaceError(
-                        "flush_failed",
-                        "The browser could not confirm its final save. The server remains running.",
-                    )
-            except BaseException as exc:
-                self.stopping = False
+            retrying_persistence = self.close_failed
+            self.close_failed = False
+            result = {"ok": True, "previouslyConfirmed": True}
+            if not retrying_persistence:
                 try:
-                    await s.mcp_broker.request("workspace.resume", timeout=2)
-                except Exception:
-                    pass
-                from ..web.mcp_bridge import McpBridgeError
+                    result = await s.mcp_broker.request("workspace.flush", timeout=15)
+                    if not isinstance(result, dict) or not result.get("ok"):
+                        raise WorkspaceError(
+                            "flush_failed",
+                            "The browser could not confirm its final save. The server remains running.",
+                        )
+                except BaseException as exc:
+                    self.stopping = False
+                    try:
+                        await s.mcp_broker.request("workspace.resume", timeout=2)
+                    except Exception:
+                        pass
+                    from ..web.mcp_bridge import McpBridgeError
 
-                if isinstance(exc, McpBridgeError):
-                    raise WorkspaceError(
-                        exc.code,
-                        "The owning browser could not confirm its final save. Reconnect it and retry close; the server remains running.",
-                    ) from exc
-                raise
-            # Reply before asking uvicorn to close its listeners.
+                    if isinstance(exc, McpBridgeError):
+                        raise WorkspaceError(
+                            exc.code,
+                            "The owning browser could not confirm its final save. Reconnect it and retry close; the server remains running.",
+                        ) from exc
+                    raise
+            try:
+                await s._app_resources.close()
+            except (Exception, asyncio.CancelledError) as exc:
+                self.close_failed = True
+                if isinstance(exc, asyncio.CancelledError):
+                    raise
+                raise WorkspaceError(
+                    "persistence_failed",
+                    "Database shutdown could not confirm persistence. Admission remains stopped; resolve the storage problem and retry close. No successful close was recorded.",
+                ) from exc
+            self.close_failed = False
+            # Reply only after persistence, before stopping the shared listener.
             asyncio.get_running_loop().call_later(
                 0.2, setattr, s._http_server, "should_exit", True
             )

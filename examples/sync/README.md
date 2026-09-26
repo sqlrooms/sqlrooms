@@ -1,47 +1,41 @@
-# SQLRooms CRDT Sync Example (Vite)
+# sync example
 
-Minimal React + Zustand example that mirrors state to a Loro CRDT via `@sqlrooms/crdt` and syncs against `sqlrooms-server` with CRDT enabled.
+Uses the authenticated DuckDB transport from the consolidated `sqlrooms` Python
+distribution. Build workspace packages before running examples.
 
-## Run the server (with CRDT)
-
-```bash
-cd python/sqlrooms-server
-uv run sqlrooms-server --db-path main.db --crdt-db crdt.db --port 4000
-```
-
-## Run the client
-
-```bash
-cd examples/sync
-pnpm install
-pnpm dev
-```
-
-Open two tabs at http://localhost:4173 to see live sync. State persists locally via `localStorage` and on the server via `--crdt-db`.
-
-Environment overrides (optional):
-
-- `VITE_SYNC_WS_URL` (default `ws://localhost:4000`)
-- `VITE_SYNC_ROOM_ID` (default `demo-room`)
-
-# SQLRooms CRDT Sync Example
-
-Minimal example that wires `@sqlrooms/crdt` into a vanilla Zustand store and syncs through the `sqlrooms-sync` WebSocket server.
-
-## Run the sync server
-
-```bash
-cd python/sqlrooms-sync
-uv run python -m pkg.server  # listens on ws://localhost:4800
-```
-
-## Run the example
-
-```bash
-cd examples/sync
-pnpm install
+```sh
 pnpm build
-pnpm dev
+cd python
+uv run --package sqlrooms sqlrooms server --db-path ./example.duckdb --port 4000 --external-url http://localhost:5173 --experimental --experimental-sync
+# In another terminal at the repository root:
+pnpm dev sync-example
 ```
 
-You should see console logs of the mirrored state. Start a second process to observe updates flowing through the server. State is persisted locally via `createLocalStorageDocStorage`.
+Vite uses port 5173 (strict) for HMR and proxies `/auth.json`, `/api`,
+`/ws/duckdb`, and `/ws/mcp-bridge` to port 4000. The explicit external URL
+binds page authorization to this development origin. Run one example at a time.
+
+The backend prints a private credential-file path. Use it from a local terminal
+to request a single-use browser launch ticket:
+
+```sh
+python - /path/from/log/credential.json <<'PY'
+import json, sys, urllib.request
+from pathlib import Path
+credential = json.loads(Path(sys.argv[1]).read_text())
+request = urllib.request.Request(credential['apiUrl'] + '/api/auth/ticket',
+    method='POST', headers={'Authorization': 'Bearer ' + credential['token']})
+print(json.load(urllib.request.urlopen(request))['url'])
+PY
+```
+
+Open the returned link. The example exchanges its fragment ticket, removes it
+from the address bar, checks the backend binding and renews a tab-local page
+credential. A backend restart needs a fresh link. Do not put native credentials
+or provider keys in `VITE_*` variables or disable authentication.
+
+For sync examples, change the room with `VITE_SYNC_ROOM_ID`; snapshots persist
+in the database metadata namespace.
+
+See [Python runtime documentation](../../python/sqlrooms/README.md) and
+[migration](../../python/sqlrooms/MIGRATION.md) for the wire protocol and limits.
