@@ -632,7 +632,8 @@ describe('applyDeckMapTableSelection', () => {
     const afterBack = applyDeckMapTableSelection(afterAway, arcsTable);
 
     expect(afterAway.spec.layers[0]['@@type']).toBe('GeoArrowArcLayer');
-    expect(afterAway.datasets.arcs?.source).toMatchObject({
+    // The dataset id follows the picked table, so it round-trips back to `arcs`.
+    expect(afterAway.datasets.places?.source).toMatchObject({
       tableName: '"main"."places"',
       transformSql: arcTransformSql,
     });
@@ -657,7 +658,7 @@ describe('applyDeckMapTableSelection', () => {
     const afterAway = applyDeckMapTableSelection(serialized, placesGeoTable);
     const afterBack = applyDeckMapTableSelection(afterAway, arcsTable);
 
-    expect(afterAway.datasets.arcs?.source).toMatchObject({
+    expect(afterAway.datasets.places?.source).toMatchObject({
       tableName: '"main"."places"',
       transformSql: arcTransformSql,
     });
@@ -666,8 +667,12 @@ describe('applyDeckMapTableSelection', () => {
       transformSql: arcTransformSql,
     });
     expect(
+      JSON.parse(afterAway.spec as string).layers[0]._sqlroomsBinding.dataset,
+    ).toBe('places');
+    expect(
       JSON.parse(afterBack.spec as string).layers[0]._sqlroomsBinding,
     ).toMatchObject({
+      dataset: 'arcs',
       sourceGeometryColumn: 'source_geom',
       targetGeometryColumn: 'target_geom',
     });
@@ -828,9 +833,587 @@ describe('applyDeckMapTableSelection', () => {
 
     const next = applyDeckMapTableSelection(config, placesGeoTable);
 
-    expect(next.datasets.arcs?.source).toMatchObject({
+    expect(next.datasets.places?.source).toMatchObject({
       tableName: '"main"."places"',
     });
-    expect(next.datasets.arcs?.source).not.toHaveProperty('sqlQuery');
+    expect(next.datasets.places?.source).not.toHaveProperty('sqlQuery');
+  });
+
+  const h3CellsTable: DataTable = {
+    table: makeQualifiedTableName({schema: 'main', table: 'h3_cells'}),
+    tableName: 'h3_cells',
+    schema: 'main',
+    isView: false,
+    columns: [
+      {name: 'h3', type: 'VARCHAR'},
+      {name: 'count_population', type: 'BIGINT'},
+    ],
+  };
+
+  function createPointMapConfig() {
+    return {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'points',
+            _sqlroomsBinding: {
+              dataset: 'points',
+              geometryColumn: '__sqlrooms_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        points: {
+          source: {
+            tableName: '"main"."taxes"',
+            transformSql: createDeckMapPointTransformSql({
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              geometryColumn: '__sqlrooms_geom',
+            }),
+          },
+          geometryColumn: '__sqlrooms_geom',
+          geometryEncodingHint: 'wkb' as const,
+        },
+      },
+      fitToData: {
+        dataset: 'points',
+        longitudeColumn: 'Long',
+        latitudeColumn: 'Lat',
+        padding: 40,
+        maxZoom: 12,
+      },
+      interaction: {
+        type: 'point-radius-brush' as const,
+        dataset: 'points',
+        longitudeColumn: 'Long',
+        latitudeColumn: 'Lat',
+      },
+    };
+  }
+
+  it('drops an unusable point transform when the table has no coordinates', () => {
+    const next = applyDeckMapTableSelection(
+      createPointMapConfig(),
+      h3CellsTable,
+    );
+
+    expect(next.datasets.h3_cells?.source).toEqual({
+      tableName: '"main"."h3_cells"',
+    });
+    expect(next.datasets.h3_cells).not.toHaveProperty('geometryColumn');
+    expect(next.datasets.h3_cells).not.toHaveProperty('geometryEncodingHint');
+    expect(next.spec.layers[0]._sqlroomsBinding).toEqual({dataset: 'h3_cells'});
+    expect(next.fitToData).toEqual({
+      dataset: 'h3_cells',
+      padding: 40,
+      maxZoom: 12,
+    });
+    expect(next.interaction).toBeUndefined();
+  });
+
+  it('drops an unusable transform when the same table is re-selected', () => {
+    const config = applyDeckMapTableSelection(
+      createPointMapConfig(),
+      h3CellsTable,
+    );
+    const broken = {
+      ...config,
+      datasets: {
+        h3_cells: {
+          ...config.datasets.h3_cells,
+          source: {
+            ...config.datasets.h3_cells!.source,
+            transformSql: createDeckMapPointTransformSql({
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              geometryColumn: '__sqlrooms_geom',
+            }),
+          },
+        },
+      },
+    };
+
+    expect(
+      applyDeckMapTableSelection(broken, h3CellsTable).datasets.h3_cells
+        ?.source,
+    ).toEqual({tableName: '"main"."h3_cells"'});
+  });
+
+  it('keeps an H3 transform when the table has no coordinates', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {dataset: 'hexes', hexagonColumn: 'h3_cell'},
+          },
+        ],
+      },
+      datasets: {
+        hexes: {
+          source: {tableName: '"main"."hexes"', transformSql: h3TransformSql},
+        },
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, h3CellsTable);
+
+    expect(next.datasets.h3_cells?.source).toMatchObject({
+      tableName: '"main"."h3_cells"',
+      transformSql: h3TransformSql,
+    });
+  });
+
+  it('re-ids a single dataset and every reference to it', () => {
+    const next = applyDeckMapTableSelection(
+      createPointMapConfig(),
+      placesGeoTable,
+    );
+
+    expect(Object.keys(next.datasets)).toEqual(['places']);
+    expect(next.spec.layers[0]).toMatchObject({
+      id: 'places',
+      _sqlroomsBinding: {dataset: 'places'},
+    });
+    expect(next.fitToData?.dataset).toBe('places');
+    expect(next.interaction?.dataset).toBe('places');
+  });
+
+  it('re-ids a dataset whose id already drifted from its table', () => {
+    const drifted = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            id: 'old_table',
+            _sqlroomsBinding: {dataset: 'old_table'},
+          },
+        ],
+      },
+      datasets: {
+        old_table: {source: {tableName: '"main"."h3_cells"'}},
+      },
+      fitToData: {dataset: 'old_table', padding: 40},
+    };
+
+    const next = applyDeckMapTableSelection(drifted, h3CellsTable);
+
+    expect(Object.keys(next.datasets)).toEqual(['h3_cells']);
+    expect(next.spec.layers[0]._sqlroomsBinding).toEqual({dataset: 'h3_cells'});
+    expect(next.fitToData?.dataset).toBe('h3_cells');
+  });
+
+  it('leaves ids alone when multiple datasets give them meaning', () => {
+    const config = {
+      spec: {
+        layers: [
+          {_sqlroomsBinding: {dataset: 'origins'}},
+          {_sqlroomsBinding: {dataset: 'destinations'}},
+        ],
+      },
+      datasets: {
+        origins: {source: {tableName: '"main"."origins"'}},
+        destinations: {source: {tableName: '"main"."destinations"'}},
+      },
+    };
+
+    expect(
+      Object.keys(applyDeckMapTableSelection(config, h3CellsTable).datasets),
+    ).toEqual(['origins', 'destinations']);
+  });
+
+  it('clears geometry bindings in a serialized spec when dropping a transform', () => {
+    const config = createPointMapConfig();
+    const serialized = {...config, spec: JSON.stringify(config.spec)};
+
+    const next = applyDeckMapTableSelection(serialized, h3CellsTable);
+    const spec = JSON.parse(next.spec as string);
+
+    expect(next.datasets.h3_cells?.source).toEqual({
+      tableName: '"main"."h3_cells"',
+    });
+    expect(spec.layers[0]._sqlroomsBinding).toEqual({dataset: 'h3_cells'});
+  });
+
+  it('keeps an authored transform that only resembles the generated one', () => {
+    const authoredTransformSql = [
+      'SELECT *, ST_AsWKB(ST_Point("easting", "northing")) AS "__sqlrooms_geom"',
+      `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+      'WHERE "easting" BETWEEN -180 AND 180',
+    ].join(' ');
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            _sqlroomsBinding: {
+              dataset: 'grids',
+              geometryColumn: '__sqlrooms_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        grids: {
+          source: {
+            tableName: '"main"."grids"',
+            transformSql: authoredTransformSql,
+          },
+          geometryColumn: '__sqlrooms_geom',
+          geometryEncodingHint: 'wkb' as const,
+        },
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, h3CellsTable);
+
+    expect(next.datasets.h3_cells?.source).toMatchObject({
+      tableName: '"main"."h3_cells"',
+      transformSql: authoredTransformSql,
+    });
+    expect(next.datasets.h3_cells?.geometryColumn).toBe('__sqlrooms_geom');
+    expect(next.spec.layers[0]._sqlroomsBinding).toMatchObject({
+      geometryColumn: '__sqlrooms_geom',
+    });
+  });
+
+  it('drops a generated transform stored with a trailing semicolon', () => {
+    const config = createPointMapConfig();
+    const stored = {
+      ...config,
+      datasets: {
+        points: {
+          ...config.datasets.points,
+          source: {
+            ...config.datasets.points.source,
+            transformSql: `  ${config.datasets.points.source.transformSql} ; `,
+          },
+        },
+      },
+    };
+
+    expect(
+      applyDeckMapTableSelection(stored, h3CellsTable).datasets.h3_cells
+        ?.source,
+    ).toEqual({tableName: '"main"."h3_cells"'});
+  });
+
+  it('clears a generated binding when the dataset omits geometryColumn', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {
+              dataset: 'points',
+              geometryColumn: '__sqlrooms_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        points: {
+          source: {
+            tableName: '"main"."taxes"',
+            transformSql: createDeckMapPointTransformSql({
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              geometryColumn: '__sqlrooms_geom',
+            }),
+          },
+        },
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, h3CellsTable);
+
+    expect(next.datasets.h3_cells?.source).toEqual({
+      tableName: '"main"."h3_cells"',
+    });
+    expect(next.spec.layers[0]._sqlroomsBinding).toEqual({dataset: 'h3_cells'});
+  });
+
+  it('clears a generated binding on a layer that omits the dataset key', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {geometryColumn: '__sqlrooms_geom'},
+          },
+        ],
+      },
+      datasets: {
+        points: {
+          source: {
+            tableName: '"main"."taxes"',
+            transformSql: createDeckMapPointTransformSql({
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              geometryColumn: '__sqlrooms_geom',
+            }),
+          },
+          geometryColumn: '__sqlrooms_geom',
+        },
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, h3CellsTable);
+
+    expect(next.spec.layers[0]._sqlroomsBinding).toEqual({});
+  });
+
+  it('clears a simple geometry accessor when dropping a transform', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            getPosition: '@@=__sqlrooms_geom',
+            _sqlroomsBinding: {dataset: 'points'},
+          },
+        ],
+      },
+      datasets: {
+        points: {
+          source: {
+            tableName: '"main"."taxes"',
+            transformSql: createDeckMapPointTransformSql({
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              geometryColumn: '__sqlrooms_geom',
+            }),
+          },
+          geometryColumn: '__sqlrooms_geom',
+        },
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, h3CellsTable);
+
+    expect(next.spec.layers[0]).not.toHaveProperty('getPosition');
+  });
+
+  it('drops a generated point transform an H3 layer does not need', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {dataset: 'points', hexagonColumn: 'h3'},
+          },
+        ],
+      },
+      datasets: {
+        points: {
+          source: {
+            tableName: '"main"."taxes"',
+            transformSql: createDeckMapPointTransformSql({
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              geometryColumn: '__sqlrooms_geom',
+            }),
+          },
+          geometryColumn: '__sqlrooms_geom',
+        },
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, h3CellsTable);
+
+    expect(next.datasets.h3_cells?.source).toEqual({
+      tableName: '"main"."h3_cells"',
+    });
+    // The H3 column comes from the source table, so the binding survives.
+    expect(next.spec.layers[0]._sqlroomsBinding).toEqual({
+      dataset: 'h3_cells',
+      hexagonColumn: 'h3',
+    });
+  });
+
+  // No conventionally named lon/lat, so regeneration bails — but the
+  // transform's own inputs are present, so it still binds. DuckDB resolves
+  // identifiers case-insensitively even when quoted, so casing must not matter.
+  it.each([
+    {casing: 'exactly', longitude: 'pickup_lon', latitude: 'pickup_lat'},
+    {
+      casing: 'in another case',
+      longitude: 'Pickup_Lon',
+      latitude: 'Pickup_Lat',
+    },
+  ])(
+    'keeps a generated transform whose columns the table has $casing',
+    ({longitude, latitude}) => {
+      const nonStandardTable: DataTable = {
+        table: makeQualifiedTableName({schema: 'main', table: 'rides'}),
+        tableName: 'rides',
+        schema: 'main',
+        isView: false,
+        columns: [
+          {name: longitude, type: 'DOUBLE'},
+          {name: latitude, type: 'DOUBLE'},
+        ],
+      };
+      const transformSql = createDeckMapPointTransformSql({
+        longitudeColumn: 'pickup_lon',
+        latitudeColumn: 'pickup_lat',
+        geometryColumn: '__sqlrooms_geom',
+      });
+      const config = {
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              _sqlroomsBinding: {
+                dataset: 'rides_2024',
+                geometryColumn: '__sqlrooms_geom',
+              },
+            },
+          ],
+        },
+        datasets: {
+          rides_2024: {
+            source: {tableName: '"main"."rides_2024"', transformSql},
+            geometryColumn: '__sqlrooms_geom',
+            geometryEncodingHint: 'wkb' as const,
+          },
+        },
+      };
+
+      const next = applyDeckMapTableSelection(config, nonStandardTable);
+
+      expect(next.datasets.rides?.source).toMatchObject({
+        tableName: '"main"."rides"',
+        transformSql,
+      });
+      expect(next.datasets.rides?.geometryColumn).toBe('__sqlrooms_geom');
+      expect(next.spec.layers[0]._sqlroomsBinding).toMatchObject({
+        geometryColumn: '__sqlrooms_geom',
+      });
+    },
+  );
+
+  it('clears arc geometry accessors when dropping a transform', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowArcLayer',
+            getSourcePosition: '@@=__sqlrooms_geom',
+            getTargetPosition: '@@=__sqlrooms_geom',
+            _sqlroomsBinding: {dataset: 'points'},
+          },
+        ],
+      },
+      datasets: {
+        points: {
+          source: {
+            tableName: '"main"."taxes"',
+            transformSql: createDeckMapPointTransformSql({
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              geometryColumn: '__sqlrooms_geom',
+            }),
+          },
+          geometryColumn: '__sqlrooms_geom',
+        },
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, h3CellsTable);
+
+    expect(next.spec.layers[0]).not.toHaveProperty('getSourcePosition');
+    expect(next.spec.layers[0]).not.toHaveProperty('getTargetPosition');
+  });
+
+  it('keeps a source-backed h3 fit column when dropping a transform', () => {
+    const config = {
+      ...createPointMapConfig(),
+      fitToData: {
+        dataset: 'points',
+        longitudeColumn: 'Long',
+        latitudeColumn: 'Lat',
+        h3Column: 'h3',
+        padding: 40,
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, h3CellsTable);
+
+    expect(next.fitToData).toEqual({
+      dataset: 'h3_cells',
+      h3Column: 'h3',
+      padding: 40,
+    });
+  });
+
+  it('keeps the dataset id for a table name containing a dot', () => {
+    const dottedTable: DataTable = {
+      table: makeQualifiedTableName({schema: 'main', table: 'events.2026'}),
+      tableName: 'events.2026',
+      schema: 'main',
+      isView: false,
+      columns: [{name: 'h3', type: 'VARCHAR'}],
+    };
+
+    const next = applyDeckMapTableSelection(
+      createPointMapConfig(),
+      dottedTable,
+    );
+
+    expect(Object.keys(next.datasets)).toEqual(['events.2026']);
+    expect(next.spec.layers[0]._sqlroomsBinding).toEqual({
+      dataset: 'events.2026',
+    });
+  });
+
+  it('re-ids a sqlQuery map once regeneration gives it a table source', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'pinned',
+            _sqlroomsBinding: {dataset: 'pinned'},
+          },
+        ],
+      },
+      datasets: {
+        pinned: {source: {sqlQuery: 'SELECT * FROM archived_places'}},
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, placesGeoTable);
+
+    expect(next.datasets.places?.source).toMatchObject({
+      tableName: '"main"."places"',
+    });
+    expect(next.datasets.places?.source).not.toHaveProperty('sqlQuery');
+    expect(Object.keys(next.datasets)).toEqual(['places']);
+  });
+
+  it('leaves a sqlQuery-backed map alone when the pick changes nothing', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'pinned',
+            _sqlroomsBinding: {dataset: 'pinned'},
+          },
+        ],
+      },
+      datasets: {
+        pinned: {source: {sqlQuery: 'SELECT * FROM archived_places'}},
+      },
+      fitToData: {dataset: 'pinned', padding: 40},
+    };
+
+    const next = applyDeckMapTableSelection(config, h3CellsTable);
+
+    expect(next).toBe(config);
   });
 });
