@@ -122,7 +122,7 @@ placeholder AI/session state or promise that other profiles are headless.
 
 `EXTERNAL_EVAL_POLICY` is trusted host configuration saved in every run. It allows
 the six shared capabilities, bounded SELECTs, and only the document list/get,
-map get, document/chart/map creation, block update, and append commands required
+block inspection, document/chart/map creation, block update, and append commands required
 by the suite. Targeted commands require explicit document IDs. Other commands,
 caller-provided confirmation, and implicit current-document targeting are denied.
 Command input validation and existing high-risk/confirmation gates still apply.
