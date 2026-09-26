@@ -3,6 +3,7 @@ import {
   arrowTypeToDuckDbColumnType,
   createDeckMapDatasetOutputSchemaSql,
   isDeckMapGeneratedColumn,
+  isDeckMapGeneratedTransformColumn,
   resolveDeckMapDatasetSchema,
 } from '../src/useDeckMapDatasetSchema';
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from '../src/datasets/tableDatasetSql';
@@ -66,6 +67,20 @@ describe('Deck map dataset schema helpers', () => {
       'lat',
     ]);
     expect(isDeckMapGeneratedColumn('source_geom')).toBe(true);
+  });
+
+  it('treats transform aliases as generated only when they are absent from the source table', () => {
+    expect(isDeckMapGeneratedTransformColumn('source_geom', [])).toBe(true);
+    expect(
+      isDeckMapGeneratedTransformColumn('target_geom', [
+        {name: 'origin_geom'},
+        {name: 'dest_geom'},
+      ]),
+    ).toBe(true);
+    expect(
+      isDeckMapGeneratedTransformColumn('source_geom', [{name: 'source_geom'}]),
+    ).toBe(false);
+    expect(isDeckMapGeneratedTransformColumn('origin_geom', [])).toBe(false);
   });
 
   it('preserves source columns with generated-looking names as data columns', () => {
