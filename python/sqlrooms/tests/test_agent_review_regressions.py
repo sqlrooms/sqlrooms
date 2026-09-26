@@ -1,6 +1,7 @@
 """Regression coverage for agent discovery, errors, and interrupted startup."""
 
 import asyncio
+from contextlib import contextmanager
 import json
 import os
 import subprocess
@@ -260,6 +261,37 @@ def test_spawn_waits_for_pending_publication(tmp_path, monkeypatch, publish_succ
         with pytest.raises(OSError, match="publication failed"):
             process.spawn_pending(database, "saved", command, env=os.environ.copy())
         assert not output.exists()
+
+
+def test_failed_release_reaps_child_and_removes_pending_record(tmp_path, monkeypatch):
+    database = str(tmp_path / "test.duckdb")
+    pending = process.pending_path(database)
+    original_fdopen = os.fdopen
+    pids = []
+
+    def fail_release(data):
+        assert data == b"1"
+        pids.append(json.loads(pending.read_text(encoding="utf-8"))["pid"])
+        raise BrokenPipeError("release failed")
+
+    @contextmanager
+    def fdopen(fd, mode, **kwargs):
+        with original_fdopen(fd, mode, **kwargs) as stream:
+            if mode == "wb":
+                yield Mock(wraps=stream, write=Mock(side_effect=fail_release))
+            else:
+                yield stream
+
+    monkeypatch.setattr(process.os, "fdopen", fdopen)
+    with pytest.raises(BrokenPipeError, match="release failed"):
+        process.spawn_pending(
+            database, "saved", [sys.executable, "-c", "pass"], env=os.environ.copy()
+        )
+    assert len(pids) == 1
+    with pytest.raises(ChildProcessError):
+        os.waitpid(pids[0], os.WNOHANG)
+    assert not pending.exists()
+    process.check_pending(database)
 
 
 def test_launch_gate_exits_when_parent_disappears(tmp_path):

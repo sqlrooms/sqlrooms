@@ -95,6 +95,7 @@ def spawn_pending(database: str, workspace_id: str, command: list[str], *, env):
         if child is not None:
             child.terminate()
             child.wait()
+            pending_path(database).unlink(missing_ok=True)
         raise
     return child
 
