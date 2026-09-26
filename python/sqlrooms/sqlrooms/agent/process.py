@@ -8,6 +8,8 @@ import json
 import os
 from pathlib import Path
 import socket
+import subprocess
+import sys
 
 from . import registry
 from .storage import WorkspaceError, atomic_json, home, private_dir
@@ -58,6 +60,45 @@ def mark_pending(database: str, pid: int, workspace_id: str):
     )
 
 
+def spawn_pending(database: str, workspace_id: str, command: list[str], *, env):
+    """Release a detached child only after recording its startup identity.
+
+    If the parent exits before publication, pipe EOF makes the child exit
+    without opening the database. After publication, retries can find its PID.
+    """
+    read_fd, write_fd = os.pipe()
+    child = None
+    try:
+        with (
+            os.fdopen(read_fd, "rb") as reader,
+            os.fdopen(write_fd, "wb", buffering=0) as writer,
+        ):
+            child = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "sqlrooms.agent.process",
+                    str(reader.fileno()),
+                    *command,
+                ],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                cwd=str(home()),
+                env=env,
+                pass_fds=(reader.fileno(),),
+                start_new_session=True,
+            )
+            mark_pending(database, child.pid, workspace_id)
+            writer.write(b"1")
+    except BaseException:
+        if child is not None:
+            child.terminate()
+            child.wait()
+        raise
+    return child
+
+
 def reserve_listener(host: str, port: int):
     """Bind before publication; keep the socket through uvicorn startup."""
     family = socket.AF_INET6 if ":" in host else socket.AF_INET
@@ -96,3 +137,10 @@ def reserve_managed_listeners(server):
         f"localhost:{server.mcp_port}",
     }
     return http, mcp
+
+
+if __name__ == "__main__":
+    with os.fdopen(int(sys.argv[1]), "rb", buffering=0) as gate:
+        if gate.read(1) != b"1":
+            sys.exit(1)
+    os.execv(sys.argv[2], sys.argv[2:])

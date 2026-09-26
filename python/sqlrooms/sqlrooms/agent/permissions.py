@@ -19,7 +19,7 @@ TRUST_DESCRIPTION = (
 def read_object(path: Path):
     """Read client JSON without replacing malformed or inaccessible settings."""
     try:
-        value = json.loads(path.read_text()) if path.exists() else {}
+        value = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
         if not isinstance(value, dict):
             raise ValueError("Expected a JSON object")
         return value
@@ -34,7 +34,7 @@ def write_client_json(path: Path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(dir=path.parent)
     try:
-        with os.fdopen(fd, "w") as stream:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
             json.dump(value, stream, indent=2)
             stream.write("\n")
             stream.flush()

@@ -87,6 +87,15 @@ remain unchanged. Release the CLI together with the matching `sqlrooms-server` b
 startup uses its listener-readiness callback. This implementation requires POSIX permissions and lifecycle
 semantics; Windows support is not claimed.
 
+Managed launches save the selected profile before starting a child. The child
+waits until its pending process record is written before opening the workspace;
+if the connector exits earlier, the child exits too. Interrupted launches retain
+their profile for subsequent reopen attempts.
+
+Manual launches keep serving if optional agent-history registration fails. Such
+instances cannot be discovered by agents until registration is available again
+and the instance is restarted. Managed launches require registration to succeed.
+
 ## Static tool surface
 
 The connector always advertises five lifecycle/catalog tools plus six shared

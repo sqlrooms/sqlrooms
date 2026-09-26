@@ -714,7 +714,10 @@ class SqlroomsHttpServer:
             from ..agent.registry import remove
 
             if self.credential_file:
-                remove(self.access.binding)
+                try:
+                    remove(self.access.binding)
+                except Exception:
+                    logger.warning("Failed to remove runtime registration")
             self.access.invalidate()
             await self._stop_mcp()
             await self.mcp_broker.close()
@@ -790,7 +793,14 @@ class SqlroomsHttpServer:
                         "Database startup failed; check the database path or existing writer."
                     )
                 if getattr(server, "started", False) and self._duckdb_ready.is_set():
-                    await self.agent_runtime.publish()
+                    try:
+                        await self.agent_runtime.publish()
+                    except Exception:
+                        if self.agent_runtime.managed:
+                            raise
+                        logger.warning(
+                            "Workspace registration unavailable; agents cannot discover this instance."
+                        )
                     return
                 await asyncio.sleep(0.01)
             raise RuntimeError("Runtime startup timed out.")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import subprocess
 from urllib.parse import urlsplit
 
@@ -47,7 +48,16 @@ def records() -> list[dict]:
             if path.stem != record["instanceId"] or not isinstance(record["pid"], int):
                 continue
             marker = process_marker(record["pid"])
-            if marker is None or marker != record["processMarker"]:
+            if marker is None or record["processMarker"] is None:
+                try:
+                    os.kill(record["pid"], 0)
+                except ProcessLookupError:
+                    path.unlink(missing_ok=True)
+                    continue
+                except PermissionError:
+                    pass
+                # Retain uncertain identities for authenticated verify().
+            elif marker != record["processMarker"]:
                 path.unlink(missing_ok=True)
                 continue
             result.append(record)
@@ -101,7 +111,18 @@ def request(record: dict, path: str, *, payload=None, token=None, timeout=2):
                 "Runtime authorization failed; reopen or restart the workspace.",
             )
         response.raise_for_status()
-        return response.json()
+        result = response.json()
+        if result.get("ok") is False:
+            raise WorkspaceError(
+                result["code"],
+                result["message"],
+                **{
+                    k: v
+                    for k, v in result.items()
+                    if k not in {"ok", "code", "message"}
+                },
+            )
+        return result
     except httpx.HTTPError:
         raise WorkspaceError(
             "connection_failed",

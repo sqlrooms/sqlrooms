@@ -61,9 +61,11 @@ unless you explicitly use external proxy settings.
 
 The MCP listener uses the official stateless Streamable HTTP transport. The
 browser must remain open and initialized because the live room owns the tool
-catalog and execution state. Every MCP SQL query requires an allow-once dialog
-in that browser. This approval and the one-statement `SELECT` check are not a
-SQL sandbox; only approve SQL from a client and request you trust.
+catalog and execution state. Verified reads of workspace tables run without a
+prompt. External or unverified SELECTs and database-writing commands require
+per-request approval in that browser. This approval and the one-statement
+`SELECT` check are not a SQL sandbox; only approve SQL from a client and request
+you trust.
 
 There is intentionally no `sqlrooms add`, `sqlrooms import`, or
 `sqlrooms doctor` command in the first public CLI. Drag-and-drop import is the

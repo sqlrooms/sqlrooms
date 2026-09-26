@@ -6,7 +6,6 @@ from concurrent.futures import ThreadPoolExecutor
 import os
 from pathlib import Path
 import re
-import subprocess
 import sys
 import time
 import uuid
@@ -186,7 +185,7 @@ class Manager:
                         instance=live,
                     )
                 return self._ready(record, openBrowser)
-            from .process import check_pending, mark_pending, pending_path
+            from .process import check_pending, pending_path, spawn_pending
 
             check_pending(path)
             if workspaceId:
@@ -227,7 +226,9 @@ class Manager:
                         "Cannot open the DuckDB file. Check permissions, format, disk space, and other database writers.",
                         databasePath=path,
                     ) from None
-            entry = self.catalog.register(path, name=name if new else None)
+            entry = self.catalog.register(
+                path, name=name if new else None, profile=selected_profile
+            )
             command = [
                 sys.executable,
                 "-m",
@@ -249,17 +250,7 @@ class Manager:
                 "SQLROOMS_MANAGED": "1",
                 "SQLROOMS_MANAGED_LOG": str(log_path),
             }
-            with open(os.devnull, "wb") as sink:
-                child = subprocess.Popen(
-                    command,
-                    stdin=subprocess.DEVNULL,
-                    stdout=sink,
-                    stderr=sink,
-                    cwd=str(home()),
-                    env=env,
-                    start_new_session=True,
-                )
-            mark_pending(path, child.pid, entry["workspaceId"])
+            child = spawn_pending(path, entry["workspaceId"], command, env=env)
             deadline = time.monotonic() + 15
             while time.monotonic() < deadline:
                 for record in registry.records():
