@@ -1,3 +1,8 @@
+import {
+  CLI_MCP_TOOLS,
+  DEFAULT_QUERY_ROWS,
+  MAX_QUERY_ROWS,
+} from './cliMcpToolContract';
 import type {RoomCapability, RoomCapabilityContext} from '@sqlrooms/mcp';
 import {
   arrowTableToJson,
@@ -15,12 +20,17 @@ import {likePatternToRegex} from './mcpCapabilityUtils';
 import type {StoreApi} from 'zustand';
 import type {RoomShellSliceState} from '@sqlrooms/room-shell';
 
-const DEFAULT_QUERY_ROWS = 200;
-const MAX_QUERY_ROWS = 1_000;
+import {
+  assertCliDestination,
+  inspectCliSelect,
+  needsCliReadApproval,
+  CliSqlError,
+} from './cliSqlPolicy';
+
 const MAX_LISTED_TABLES = 1_000;
 const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms';
 const MCP_EXCLUDED_COMMAND_IDS = new Set([
-  'db.create-table-from-query',
+  'room.add-url-data-source',
   'room.add-sql-data-source',
   'sql-editor.run-current-query',
   'sql-editor.run-query',
@@ -32,7 +42,19 @@ const commandInvocationQueues = new WeakMap<
   Promise<void>
 >();
 
+/** One exact, non-reusable host approval for a SQL read or database write. */
+export type CliOperationApproval = {
+  kind: 'external-read' | 'write';
+  sql: string;
+  commandId?: string;
+  maxRows?: number;
+};
+
 type CreateCliRoomCapabilitiesOptions = {
+  approveOperation?: (
+    operation: CliOperationApproval,
+    context: RoomCapabilityContext,
+  ) => Promise<'allow' | 'deny' | 'cancelled' | 'expired'>;
   store: StoreApi<RoomShellSliceState>;
   metaNamespace?: string;
   /** Projects discovery metadata for the host; does not replace authorization. */
@@ -41,12 +63,13 @@ type CreateCliRoomCapabilitiesOptions = {
   trackPendingOperation?: (operation: Promise<unknown>) => void;
 };
 
-/** Creates bounded CLI operations for one injected store and its shared invocation queue. */
+/** Creates bounded CLI operations for one injected store and invocation queue. */
 export function createCliRoomCapabilities({
   store: roomStore,
   metaNamespace = '__sqlrooms',
   describeCommand,
   trackPendingOperation,
+  approveOperation,
 }: CreateCliRoomCapabilitiesOptions): RoomCapability[] {
   return [
     createQueryCapability(metaNamespace),
@@ -59,25 +82,7 @@ export function createCliRoomCapabilities({
 
   function createQueryCapability(metaNamespace: string): RoomCapability {
     return {
-      name: 'query',
-      title: 'Query the room database',
-      description:
-        'Run one user-approved SQL SELECT query against the live room and return bounded JSON rows. SELECT validation is not a host sandbox.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          sql: {type: 'string', minLength: 1},
-          maxRows: {
-            type: 'integer',
-            minimum: 1,
-            maximum: MAX_QUERY_ROWS,
-            default: DEFAULT_QUERY_ROWS,
-          },
-        },
-        required: ['sql'],
-        additionalProperties: false,
-      },
-      annotations: {untrustedContentHint: true},
+      ...CLI_MCP_TOOLS.query,
       execute: async (rawInput, context) => {
         const input = rawInput as {sql: string; maxRows?: number};
         const sql = input.sql.trim();
@@ -86,39 +91,17 @@ export function createCliRoomCapabilities({
           Math.max(1, Math.floor(input.maxRows ?? DEFAULT_QUERY_ROWS)),
         );
         const state = roomStore.getState();
-        const parsed = await state.db.sqlSelectToJson(sql);
-        const parseError = parsed.error ? parsed.error_message : undefined;
-        if (
-          parsed.error ||
-          parsed.statements.length !== 1 ||
-          parsed.statements[0]?.node.type !== 'SELECT_NODE'
-        ) {
-          return {
-            ok: false,
-            code: 'query_not_readonly',
-            message: parseError || 'Only one SELECT statement is allowed.',
-          };
-        }
-        const namespaceReference = findInternalNamespaceReference(
-          parsed.statements,
-          metaNamespace,
-        );
-        if (namespaceReference === 'internal') {
-          return {
-            ok: false,
-            code: 'query_internal_namespace',
-            message: `Access to internal schema ${metaNamespace} is denied.`,
-          };
-        }
-        if (namespaceReference === 'dynamic') {
-          return {
-            ok: false,
-            code: 'query_dynamic_table_reference',
-            message:
-              'Dynamic query and table references are not allowed over MCP.',
-          };
-        }
         try {
+          const parsed = await inspectCliSelect(state.db, sql, metaNamespace);
+          if (await needsCliReadApproval(state.db, parsed)) {
+            const denied = await requireApproval(
+              {kind: 'external-read', sql, maxRows},
+              context,
+            );
+            if (denied) return denied;
+          }
+          if (context.signal?.aborted)
+            return {ok: false, code: 'cancelled', message: 'Query cancelled.'};
           const connector = await state.db.getConnector();
           const boundedSql = sql.replace(/;+\s*$/, '');
           const result = await connector.query(
@@ -140,7 +123,12 @@ export function createCliRoomCapabilities({
         } catch (error) {
           return {
             ok: false,
-            code: context.signal?.aborted ? 'cancelled' : 'query_failed',
+            code:
+              error instanceof CliSqlError
+                ? error.code
+                : context.signal?.aborted
+                  ? 'cancelled'
+                  : 'query_failed',
             message: error instanceof Error ? error.message : 'Query failed.',
             retryable: Boolean(context.signal?.aborted),
           };
@@ -149,79 +137,32 @@ export function createCliRoomCapabilities({
     };
   }
 
-  function findInternalNamespaceReference(
-    statements: unknown[],
-    namespace: string,
-  ): 'internal' | 'dynamic' | undefined {
-    const normalizedNamespace = namespace.toLowerCase();
-    let result: 'internal' | 'dynamic' | undefined;
-
-    const visit = (value: unknown): void => {
-      if (
-        result === 'internal' ||
-        value === null ||
-        typeof value !== 'object'
-      ) {
-        return;
-      }
-      if (Array.isArray(value)) {
-        for (const entry of value) visit(entry);
-        return;
-      }
-
-      const node = value as Record<string, unknown>;
-      if (node.type === 'BASE_TABLE') {
-        const identifiers = [node.catalog_name, node.schema_name];
-        if (
-          identifiers.some(
-            (identifier) =>
-              typeof identifier === 'string' &&
-              identifier.toLowerCase() === normalizedNamespace,
-          )
-        ) {
-          result = 'internal';
-          return;
-        }
-      }
-      if (node.type === 'TABLE_FUNCTION') {
-        const tableFunction = node.function;
-        if (tableFunction && typeof tableFunction === 'object') {
-          const functionName = (tableFunction as Record<string, unknown>)
-            .function_name;
-          if (
-            typeof functionName === 'string' &&
-            (functionName.toLowerCase() === 'query' ||
-              functionName.toLowerCase() === 'query_table')
-          ) {
-            result = 'dynamic';
-          }
-        }
-      }
-
-      for (const child of Object.values(node)) visit(child);
+  async function requireApproval(
+    operation: CliOperationApproval,
+    context: RoomCapabilityContext,
+  ) {
+    const decision = context.signal?.aborted
+      ? 'cancelled'
+      : await approveOperation?.(operation, context);
+    if (decision === 'allow' && !context.signal?.aborted) return undefined;
+    return {
+      ok: false,
+      code:
+        decision === 'cancelled' || context.signal?.aborted
+          ? 'cancelled'
+          : 'permission_denied',
+      message:
+        decision === 'expired'
+          ? 'Approval expired.'
+          : decision === undefined
+            ? 'This operation requires approval from the owning browser.'
+            : 'The operation was not approved.',
     };
-
-    visit(statements);
-    return result;
   }
 
   function createListTablesCapability(metaNamespace: string): RoomCapability {
     return {
-      name: 'list_tables',
-      title: 'List room tables',
-      description:
-        'List visible tables and views with canonical table IDs for follow-up calls.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          database: {type: 'string'},
-          schema: {type: 'string'},
-          pattern: {type: 'string', maxLength: 200},
-          includeViews: {type: 'boolean', default: true},
-        },
-        additionalProperties: false,
-      },
-      annotations: {readOnlyHint: true, untrustedContentHint: true},
+      ...CLI_MCP_TOOLS.list_tables,
       execute: async (rawInput) => {
         const input = rawInput as {
           database?: string;
@@ -276,17 +217,7 @@ export function createCliRoomCapabilities({
     metaNamespace: string,
   ): RoomCapability {
     return {
-      name: 'read_table_schema',
-      title: 'Read a table schema',
-      description:
-        'Read column metadata and the optional CREATE statement for one visible table or view.',
-      inputSchema: {
-        type: 'object',
-        properties: {tableId: {type: 'string', minLength: 1}},
-        required: ['tableId'],
-        additionalProperties: false,
-      },
-      annotations: {readOnlyHint: true, untrustedContentHint: true},
+      ...CLI_MCP_TOOLS.read_table_schema,
       execute: async (rawInput) => {
         const {tableId} = rawInput as {tableId: string};
         const visibleTables = await refreshVisibleTables(metaNamespace);
@@ -352,19 +283,7 @@ export function createCliRoomCapabilities({
 
   function createSearchCommandsCapability(): RoomCapability {
     return {
-      name: 'search_commands',
-      title: 'Search room commands',
-      description:
-        'Search the live command registry by intent, then inspect a selected command with get_command.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          query: {type: 'string', default: ''},
-          limit: {type: 'integer', minimum: 1, maximum: 50, default: 10},
-        },
-        additionalProperties: false,
-      },
-      annotations: {readOnlyHint: true},
+      ...CLI_MCP_TOOLS.search_commands,
       execute: (rawInput, context) => {
         const input = rawInput as {query?: string; limit?: number};
         const query = input.query?.trim().toLowerCase() ?? '';
@@ -398,17 +317,7 @@ export function createCliRoomCapabilities({
 
   function createGetCommandCapability(): RoomCapability {
     return {
-      name: 'get_command',
-      title: 'Inspect a room command',
-      description:
-        'Get the current portable schema, availability, and risk metadata for one command.',
-      inputSchema: {
-        type: 'object',
-        properties: {commandId: {type: 'string', minLength: 1}},
-        required: ['commandId'],
-        additionalProperties: false,
-      },
-      annotations: {readOnlyHint: true},
+      ...CLI_MCP_TOOLS.get_command,
       execute: (rawInput, context) => {
         const {commandId} = rawInput as {commandId: string};
         const command = listMcpCommands(context, true).find(
@@ -427,20 +336,7 @@ export function createCliRoomCapabilities({
 
   function createExecuteCommandCapability(): RoomCapability {
     return {
-      name: 'execute_command',
-      title: 'Execute a room command',
-      description:
-        'Execute one enabled command against the live room. High-risk and confirmation-gated commands are denied in this release.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          commandId: {type: 'string', minLength: 1},
-          input: {},
-        },
-        required: ['commandId'],
-        additionalProperties: false,
-      },
-      annotations: {destructiveHint: true},
+      ...CLI_MCP_TOOLS.execute_command,
       execute: async (rawInput, context) => {
         const {commandId, input} = rawInput as {
           commandId: string;
@@ -458,8 +354,51 @@ export function createCliRoomCapabilities({
         }
         const result = await enqueueCommandInvocation(
           commandId,
-          () =>
-            invokeCommandWithPolicy(
+          async () => {
+            const databaseWrite =
+              (commandId.startsWith('db.') && !command.readOnly) ||
+              commandId === 'room.remove-data-source';
+            let confirmed = false;
+            if (databaseWrite) {
+              const tableName = (input as {tableName?: unknown} | undefined)
+                ?.tableName;
+              if (typeof tableName === 'string') {
+                try {
+                  assertCliDestination(
+                    roomStore.getState().db,
+                    tableName,
+                    metaNamespace,
+                  );
+                } catch (error) {
+                  return {
+                    success: false,
+                    commandId,
+                    code:
+                      error instanceof CliSqlError
+                        ? error.code
+                        : 'invalid_table',
+                    error: String(error),
+                  };
+                }
+              }
+              const denied = await requireApproval(
+                {
+                  kind: 'write',
+                  commandId,
+                  sql: JSON.stringify(input ?? {}, null, 2),
+                },
+                context,
+              );
+              if (denied)
+                return {
+                  success: false,
+                  commandId,
+                  code: denied.code,
+                  error: denied.message,
+                };
+              confirmed = true;
+            }
+            return invokeCommandWithPolicy(
               roomStore,
               commandId,
               input,
@@ -474,8 +413,9 @@ export function createCliRoomCapabilities({
                 },
                 signal: context.signal,
               },
-              {confirmed: false},
-            ),
+              {confirmed},
+            );
+          },
           context.signal,
         );
         if (result.success) {

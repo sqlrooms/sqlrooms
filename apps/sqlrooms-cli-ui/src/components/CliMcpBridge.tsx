@@ -5,7 +5,7 @@ import {
   cancelAllMcpQueryApprovals,
   requestMcpQueryApproval,
 } from '../mcpQueryApproval';
-import {roomStore} from '../store';
+import {roomStore, uiStatePersistenceController} from '../store';
 import {runtimeConfig} from '../runtimeEnvironment';
 import {useRoomStore} from '../roomStoreHooks';
 
@@ -22,43 +22,43 @@ export function CliMcpBridge() {
     const runtime = createCliCapabilityRuntime({
       store: roomStore,
       metaNamespace: runtimeConfig.metaNamespace,
-      policy: {
-        authorize: async ({capability, input, context}) => {
-          if (capability.name !== 'query') return {allowed: true};
-          const query = input as {sql: string; maxRows?: number};
-          const state = roomStore.getState();
-          const decision = await requestMcpQueryApproval({
-            clientName: context.clientInfo?.name || 'Unknown MCP client',
-            clientVersion: context.clientInfo?.version,
-            roomTitle: state.room.config.title,
-            database: state.db.currentDatabase || 'main',
-            databasePath: runtimeConfig.dbPath || ':memory:',
-            sql: query.sql,
-            maxRows: query.maxRows ?? 200,
-            signal: context.signal,
-          });
-          if (decision === 'allow') return {allowed: true};
-          return {
-            allowed: false,
-            result: {
-              ok: false,
-              code:
-                decision === 'cancelled' ? 'cancelled' : 'permission_denied',
-              message:
-                decision === 'expired'
-                  ? 'Query approval expired.'
-                  : decision === 'cancelled'
-                    ? 'Query approval was cancelled.'
-                    : 'The user denied this query.',
-              ...(decision === 'cancelled' ? {retryable: true} : {}),
-            },
-          };
-        },
+      policy: {authorize: () => ({allowed: true})},
+      approveOperation: async (operation, context) => {
+        const state = roomStore.getState();
+        return requestMcpQueryApproval({
+          ...operation,
+          clientName: context.clientInfo?.name || 'Unknown MCP client',
+          clientVersion: context.clientInfo?.version,
+          roomTitle: state.room.config.title,
+          database: state.db.currentDatabase || 'main',
+          databasePath: runtimeConfig.dbPath || ':memory:',
+          signal: context.signal,
+        });
       },
     });
     const bridge = registerBrowserMcpBridge(runtime, {
       url: runtimeConfig.mcp.bridgeUrl,
       token,
+      onFlush: async () => {
+        const root = document.getElementById('root');
+        if (root) root.inert = true;
+        try {
+          await runtime.drain();
+          await uiStatePersistenceController.flush('managed-close');
+          const state = uiStatePersistenceController.getState();
+          if (state.error || state.dirty || state.saving) {
+            throw new Error('Workspace changes could not be saved.');
+          }
+          return {ok: true, lastSavedAt: state.lastSavedAt};
+        } catch (error) {
+          if (root) root.inert = false;
+          throw error;
+        }
+      },
+      onResume: () => {
+        const root = document.getElementById('root');
+        if (root) root.inert = false;
+      },
     });
     return () => {
       cancelAllMcpQueryApprovals();

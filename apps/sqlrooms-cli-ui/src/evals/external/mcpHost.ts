@@ -16,8 +16,6 @@ export async function startEvalMcpHost(
   runtime: ReturnType<typeof createCliCapabilityRuntime>,
   onRequest: (method: string, input?: unknown) => void = () => {},
 ) {
-  if (process.platform === 'win32')
-    throw new Error('Private credential ACLs are not yet verified on Windows.');
   const token = randomBytes(32).toString('hex');
   const sessions = new Set<Server>();
   const pending = new Set<Promise<unknown>>();
@@ -101,6 +99,10 @@ export async function startEvalMcpHost(
     const address = http.address();
     if (!address || typeof address === 'string')
       throw new Error('Missing MCP address.');
+    if (process.platform === 'win32')
+      throw new Error(
+        'Private credential ACLs are not yet verified on Windows.',
+      );
     url = `http://127.0.0.1:${address.port}/mcp`;
     credentialDirectory = await mkdtemp(
       path.join(tmpdir(), 'sqlrooms-eval-auth-'),

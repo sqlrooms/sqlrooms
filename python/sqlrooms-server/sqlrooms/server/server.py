@@ -6,6 +6,7 @@ import json
 import concurrent.futures
 import re
 import ipaddress
+from collections.abc import Callable
 
 import ujson
 from socketify import App, CompressOptions, OpCode
@@ -227,7 +228,14 @@ def server(
     allowed_origins: set[str] | None = None,
     allowed_hosts: set[str] | None = None,
     log_startup_message: bool = True,
+    on_listen: Callable[[int], None] | None = None,
+    listen_attempts: int = 1,
 ):
+    """Serve DuckDB; report the bound port through on_listen after binding.
+
+    listen_attempts > 1 retries a bind collision on an OS-assigned port. The
+    callback runs synchronously before serving requests, including host checks.
+    """
     # SSL server
     # app = App(AppOptions(key_file_name="./localhost-key.pem", cert_file_name="./localhost.pem"))
     app = App()
@@ -599,14 +607,31 @@ def server(
 
     app.set_error_handler(on_error)
 
-    app.listen(
-        {"port": port, "host": "127.0.0.1"} if local_only else port,
-        lambda config: (
-            sys.stdout.write(
-                f"DuckDB Server listening at ws://localhost:{config.port} (WS only). Health at http://localhost:{config.port}/healthz\n"
-            )
-            if log_startup_message
-            else None
-        ),
-    )
+    bound_port = None
+
+    def listening(config):
+        nonlocal bound_port
+        bound_port = config.port
+
+    # Socketify reports a failed bind through its C callback, so absence of a
+    # synchronous successful callback is the reliable failure signal.
+    for attempt in range(max(1, listen_attempts)):
+        selected = port if attempt == 0 else 0
+        app.listen(
+            {"port": selected, "host": "127.0.0.1"} if local_only else selected,
+            listening,
+        )
+        if bound_port is not None:
+            break
+    if bound_port is None:
+        app.dispose()
+        raise OSError(f"Unable to bind DuckDB websocket listener on port {port}")
+    if allowed_hosts is not None and bound_port != port:
+        allowed_hosts = {f"127.0.0.1:{bound_port}", f"localhost:{bound_port}"}
+    if on_listen:
+        on_listen(bound_port)
+    if log_startup_message:
+        sys.stdout.write(
+            f"DuckDB Server listening at ws://localhost:{bound_port} (WS only). Health at http://localhost:{bound_port}/healthz\n"
+        )
     app.run()

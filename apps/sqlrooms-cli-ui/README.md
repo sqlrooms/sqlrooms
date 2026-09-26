@@ -364,7 +364,12 @@ waits for the production MCP bridge, and attaches a native Claude Code terminal
 session. Capability profiles remain independent of execution mode. AI slices,
 model tools, chat actions and AI-settings autosave are absent in external mode;
 dormant saved conversations/settings round-trip through existing persistence.
-Manual authoring and browser query approvals remain active.
+Manual authoring remains active. Verified reads of workspace tables run without
+prompting. External or unverified SELECTs and database-writing commands require
+per-request browser approval. CLI data commands materialize local files through
+`db.import-file`, or one SELECT through `db.create-table-from-query`, preserving
+existing tables unless replacement is explicit. `room.add-url-data-source` is
+removed from the CLI registry. See [data import](../../python/sqlrooms/AGENT_WORKSPACES.md#importing-data).
 
 `skills/sqlrooms` is the canonical guidance source for both external harnesses.
 `build-claude-plugin.mjs` generates the distributable plugin in the Python package

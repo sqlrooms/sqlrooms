@@ -5,7 +5,7 @@ jest.unstable_mockModule('../browserAuth', () => ({
   authorizedFetch: (...args: Parameters<typeof fetch>) =>
     globalThis.fetch(...args),
 }));
-const {createDuckDbPersistStorage, fetchMcpStatus} =
+const {createDuckDbPersistStorage, fetchMcpStatus, resolveLocalFile} =
   await import('../serverApi');
 
 const originalFetch = globalThis.fetch;
@@ -176,4 +176,29 @@ describe('fetchMcpStatus', () => {
     await rejection;
     expect(signal?.aborted).toBe(true);
   });
+});
+
+test('local import resolves a server path through the authenticated file API', async () => {
+  const signal = new AbortController().signal;
+  globalThis.fetch = jest.fn(
+    async () =>
+      new Response(JSON.stringify({path: '/tmp/cars.csv', format: 'csv'}), {
+        status: 200,
+      }),
+  ) as typeof fetch;
+  expect(
+    await resolveLocalFile(
+      {path: '~/cars.csv'},
+      {apiBaseUrl: 'http://127.0.0.1:4173'},
+      signal,
+    ),
+  ).toEqual({path: '/tmp/cars.csv', format: 'csv'});
+  expect(globalThis.fetch).toHaveBeenCalledWith(
+    'http://127.0.0.1:4173/api/local-file',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({path: '~/cars.csv'}),
+      signal,
+    }),
+  );
 });
