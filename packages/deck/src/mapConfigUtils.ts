@@ -761,6 +761,8 @@ export function normalizeDeckMapPointConfig<
           datasetId,
           datasetIds,
           geometryColumn,
+          longitudeColumn: coordinateColumns.longitudeColumn,
+          latitudeColumn: coordinateColumns.latitudeColumn,
         }),
       };
     }
