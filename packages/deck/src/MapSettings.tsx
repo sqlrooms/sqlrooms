@@ -45,15 +45,7 @@ import {
 } from '@sqlrooms/ui';
 import {AlertTriangleIcon} from 'lucide-react';
 import {DeckMapBasemapSelect} from './DeckMapBasemapSelect';
-import {
-  isDeckMapSqlDatasetSource,
-  isDeckMapTableDatasetSource,
-  type DeckMapConfig,
-} from './mapConfig';
-import {
-  parseDeckMapArcTransformSql,
-  parseDeckMapPointTransformSql,
-} from './mapConfigUtils';
+import {isDeckMapTableDatasetSource, type DeckMapConfig} from './mapConfig';
 import {
   clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
@@ -1344,55 +1336,29 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   const activeLayerBinding = isRecord(activeLayer?._sqlroomsBinding)
     ? activeLayer._sqlroomsBinding
     : undefined;
-  const parsedPointTransform = isDeckMapTableDatasetSource(
-    activeLayerDatasetSource,
-  )
-    ? activeLayerDatasetSource.transformSql
-      ? parseDeckMapPointTransformSql(activeLayerDatasetSource.transformSql)
-      : undefined
-    : isDeckMapSqlDatasetSource(activeLayerDatasetSource)
-      ? parseDeckMapPointTransformSql(activeLayerDatasetSource.sqlQuery)
-      : undefined;
-  const parsedArcTransform = isDeckMapTableDatasetSource(
-    activeLayerDatasetSource,
-  )
-    ? activeLayerDatasetSource.transformSql
-      ? parseDeckMapArcTransformSql(activeLayerDatasetSource.transformSql)
-      : undefined
-    : isDeckMapSqlDatasetSource(activeLayerDatasetSource)
-      ? parseDeckMapArcTransformSql(activeLayerDatasetSource.sqlQuery)
-      : undefined;
+  const generatedTransform = isRecord(activeLayerBinding?.generatedTransform)
+    ? activeLayerBinding.generatedTransform
+    : undefined;
   const fitToData =
     mapConfig.fitToData?.dataset === activeLayerDatasetId
       ? mapConfig.fitToData
-      : undefined;
-  const interactionCoordinates =
-    mapConfig.interaction?.type === 'point-radius-brush' &&
-    mapConfig.interaction.dataset === activeLayerDatasetId
-      ? mapConfig.interaction
       : undefined;
   const boundPointGeometryColumn =
     typeof activeLayerBinding?.geometryColumn === 'string'
       ? activeLayerBinding.geometryColumn
       : activeLayerDataset?.geometryColumn;
   const isGeneratedPointGeometryColumn = (columnName: string) =>
-    isDeckMapGeneratedTransformColumn(columnName, sourceColumns);
-  const usingGeneratedPointGeometry = Boolean(
-    boundPointGeometryColumn &&
-    isGeneratedPointGeometryColumn(boundPointGeometryColumn),
-  );
+    isDeckMapGeneratedTransformColumn(columnName, sourceColumns) ||
+    (typeof generatedTransform?.geometryColumn === 'string' &&
+      generatedTransform.geometryColumn === columnName);
   const latitudeColumn =
-    fitToData?.latitudeColumn ||
-    parsedPointTransform?.latitudeColumn ||
-    (usingGeneratedPointGeometry
-      ? interactionCoordinates?.latitudeColumn
-      : undefined);
+    (typeof activeLayerBinding?.latitudeColumn === 'string'
+      ? activeLayerBinding.latitudeColumn
+      : undefined) || fitToData?.latitudeColumn;
   const longitudeColumn =
-    fitToData?.longitudeColumn ||
-    parsedPointTransform?.longitudeColumn ||
-    (usingGeneratedPointGeometry
-      ? interactionCoordinates?.longitudeColumn
-      : undefined);
+    (typeof activeLayerBinding?.longitudeColumn === 'string'
+      ? activeLayerBinding.longitudeColumn
+      : undefined) || fitToData?.longitudeColumn;
   const usingCoordinateColumns = Boolean(latitudeColumn || longitudeColumn);
   const pointGeometryColumns = listDeckMapGeometryPickerColumns({
     sourceColumns,
@@ -1423,12 +1389,20 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
       : undefined;
   const nativeArcSourceGeometryColumn =
     arcSourceGeometryColumn &&
-    !isDeckMapGeneratedTransformColumn(arcSourceGeometryColumn, sourceColumns)
+    !isDeckMapGeneratedTransformColumn(
+      arcSourceGeometryColumn,
+      sourceColumns,
+    ) &&
+    generatedTransform?.sourceGeometryColumn !== arcSourceGeometryColumn
       ? arcSourceGeometryColumn
       : undefined;
   const nativeArcTargetGeometryColumn =
     arcTargetGeometryColumn &&
-    !isDeckMapGeneratedTransformColumn(arcTargetGeometryColumn, sourceColumns)
+    !isDeckMapGeneratedTransformColumn(
+      arcTargetGeometryColumn,
+      sourceColumns,
+    ) &&
+    generatedTransform?.targetGeometryColumn !== arcTargetGeometryColumn
       ? arcTargetGeometryColumn
       : undefined;
   const arcGeometryColumns = listDeckMapGeometryPickerColumns({
@@ -1439,25 +1413,27 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
       nativeArcTargetGeometryColumn,
     ],
     isGeneratedColumn: (columnName) =>
-      isDeckMapGeneratedTransformColumn(columnName, sourceColumns),
+      isDeckMapGeneratedTransformColumn(columnName, sourceColumns) ||
+      generatedTransform?.sourceGeometryColumn === columnName ||
+      generatedTransform?.targetGeometryColumn === columnName,
   });
   const hasArcGeometryColumns = arcGeometryColumns.length > 0;
   const sourceLatitudeColumn =
-    (typeof activeLayerBinding?.sourceLatitudeColumn === 'string'
+    typeof activeLayerBinding?.sourceLatitudeColumn === 'string'
       ? activeLayerBinding.sourceLatitudeColumn
-      : undefined) || parsedArcTransform?.sourceLatitudeColumn;
+      : undefined;
   const sourceLongitudeColumn =
-    (typeof activeLayerBinding?.sourceLongitudeColumn === 'string'
+    typeof activeLayerBinding?.sourceLongitudeColumn === 'string'
       ? activeLayerBinding.sourceLongitudeColumn
-      : undefined) || parsedArcTransform?.sourceLongitudeColumn;
+      : undefined;
   const targetLatitudeColumn =
-    (typeof activeLayerBinding?.targetLatitudeColumn === 'string'
+    typeof activeLayerBinding?.targetLatitudeColumn === 'string'
       ? activeLayerBinding.targetLatitudeColumn
-      : undefined) || parsedArcTransform?.targetLatitudeColumn;
+      : undefined;
   const targetLongitudeColumn =
-    (typeof activeLayerBinding?.targetLongitudeColumn === 'string'
+    typeof activeLayerBinding?.targetLongitudeColumn === 'string'
       ? activeLayerBinding.targetLongitudeColumn
-      : undefined) || parsedArcTransform?.targetLongitudeColumn;
+      : undefined;
   const usingArcCoordinateColumns = Boolean(
     sourceLatitudeColumn ||
     sourceLongitudeColumn ||

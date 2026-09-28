@@ -254,6 +254,14 @@ describe('mapLayerConfigUtils', () => {
     expect(nextConfig.fitToData).not.toHaveProperty('longitudeColumn');
     expect(nextConfig.datasets.places.geometryColumn).toBe('geom');
     expect(nextConfig.datasets.places.source).toEqual({tableName: 'places'});
+    expect(
+      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
+    ).toMatchObject({
+      latitudeColumn: 'latitude',
+    });
+    expect(
+      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
+    ).not.toHaveProperty('longitudeColumn');
   });
 
   it('applies a point transform once both lat and lon are selected', () => {
@@ -295,10 +303,16 @@ describe('mapLayerConfigUtils', () => {
     ).toMatchObject({
       dataset: 'places',
       geometryColumn: '__sqlrooms_geom',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'latitude',
+      generatedTransform: {
+        kind: 'point',
+        geometryColumn: '__sqlrooms_geom',
+      },
     });
   });
 
-  it('rewrites an existing point transform when one lon/lat axis is already in SQL', () => {
+  it('rewrites an existing point transform when one lon/lat axis is already bound', () => {
     const heatmapConfig = {
       spec: {
         layers: [
@@ -308,6 +322,9 @@ describe('mapLayerConfigUtils', () => {
             _sqlroomsBinding: {
               dataset: 'earthquakes',
               geometryColumn: 'geom',
+              longitudeColumn: 'Longitude',
+              latitudeColumn: 'Latitude',
+              generatedTransform: {kind: 'point', geometryColumn: 'geom'},
             },
           },
         ],
@@ -384,6 +401,12 @@ describe('mapLayerConfigUtils', () => {
             _sqlroomsBinding: {
               dataset: 'places',
               geometryColumn: '__sqlrooms_geom',
+              longitudeColumn: 'longitude',
+              latitudeColumn: 'latitude',
+              generatedTransform: {
+                kind: 'point',
+                geometryColumn: '__sqlrooms_geom',
+              },
             },
           },
         ],
@@ -429,7 +452,11 @@ describe('mapLayerConfigUtils', () => {
     ).toMatchObject({
       dataset: 'places',
       geometryColumn: 'geom',
+      generatedTransform: {kind: 'centroid', geometryColumn: 'geom'},
     });
+    expect(
+      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
+    ).not.toHaveProperty('longitudeColumn');
   });
 
   it('reapplies lon/lat after switching back from a source geometry column', () => {
@@ -442,6 +469,12 @@ describe('mapLayerConfigUtils', () => {
             _sqlroomsBinding: {
               dataset: 'places',
               geometryColumn: '__sqlrooms_geom',
+              longitudeColumn: 'longitude',
+              latitudeColumn: 'latitude',
+              generatedTransform: {
+                kind: 'point',
+                geometryColumn: '__sqlrooms_geom',
+              },
             },
           },
         ],
@@ -506,6 +539,10 @@ describe('mapLayerConfigUtils', () => {
             _sqlroomsBinding: {
               dataset: 'buildings',
               geometryColumn: '__sqlrooms_geom',
+              generatedTransform: {
+                kind: 'point',
+                geometryColumn: '__sqlrooms_geom',
+              },
             },
           },
         ],
@@ -551,6 +588,12 @@ describe('mapLayerConfigUtils', () => {
             _sqlroomsBinding: {
               dataset: 'places',
               geometryColumn: '__sqlrooms_geom',
+              longitudeColumn: 'longitude',
+              latitudeColumn: 'latitude',
+              generatedTransform: {
+                kind: 'point',
+                geometryColumn: '__sqlrooms_geom',
+              },
             },
           },
         ],
@@ -1127,6 +1170,11 @@ describe('arc geometry vs lon/lat bindings', () => {
       sourceLongitudeColumn: 'origin_lon',
       targetLatitudeColumn: 'dest_lat',
       targetLongitudeColumn: 'dest_lon',
+      generatedTransform: {
+        kind: 'arc',
+        sourceGeometryColumn: 'source_geom',
+        targetGeometryColumn: 'target_geom',
+      },
     });
     expect(nextConfig.fitToData).toMatchObject({
       dataset: 'trips',
@@ -1268,7 +1316,7 @@ describe('arc geometry vs lon/lat bindings', () => {
     });
   });
 
-  it('rewrites an existing arc transform when one lon/lat axis is already in SQL', () => {
+  it('does not recover arc lon/lat from transform SQL', () => {
     const existing = setDeckMapLayerArcCoordinateColumns(
       arcConfig,
       0,
@@ -1299,11 +1347,16 @@ describe('arc geometry vs lon/lat bindings', () => {
     );
 
     expect(String(nextConfig.datasets.trips.source.transformSql)).toContain(
-      'ST_Point("dest_lon", "origin_lat")',
+      'ST_Point("origin_lon", "origin_lat")',
     );
-    expect(String(nextConfig.datasets.trips.source.transformSql)).toContain(
-      'ST_Point("dest_lon", "dest_lat")',
-    );
+    expect(
+      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
+    ).toMatchObject({
+      sourceLongitudeColumn: 'dest_lon',
+    });
+    expect(
+      getDeckMapLayerRecords(nextConfig)[0]?._sqlroomsBinding,
+    ).not.toHaveProperty('sourceLatitudeColumn');
   });
 
   it('keeps the generated arc transform when picking derived output geometry', () => {

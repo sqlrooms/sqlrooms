@@ -4,9 +4,6 @@ import {
   applyDeckMapPointBinding,
   createDeckMapArcTransformSql,
   createDeckMapCentroidTransformSql,
-  parseDeckMapArcTransformSql,
-  parseDeckMapCentroidTransformSql,
-  parseDeckMapPointTransformSql,
 } from './mapConfigUtils';
 import type {DeckAutoLayerType} from './types';
 import {DEFAULT_HEATMAP_COLOR_RANGE} from './json/heatmapDefaults';
@@ -578,6 +575,34 @@ export function setDeckMapLayerColumnRadius(
   );
 }
 
+function readGeneratedTransform(binding: Record<string, unknown>):
+  | {
+      kind: 'point' | 'centroid' | 'arc';
+      geometryColumn?: string;
+      sourceGeometryColumn?: string;
+      targetGeometryColumn?: string;
+    }
+  | undefined {
+  const value = binding.generatedTransform;
+  if (!isRecord(value)) return undefined;
+  const kind = value.kind;
+  if (kind !== 'point' && kind !== 'centroid' && kind !== 'arc') {
+    return undefined;
+  }
+  return {
+    kind,
+    ...(typeof value.geometryColumn === 'string'
+      ? {geometryColumn: value.geometryColumn}
+      : {}),
+    ...(typeof value.sourceGeometryColumn === 'string'
+      ? {sourceGeometryColumn: value.sourceGeometryColumn}
+      : {}),
+    ...(typeof value.targetGeometryColumn === 'string'
+      ? {targetGeometryColumn: value.targetGeometryColumn}
+      : {}),
+  };
+}
+
 export function setDeckMapLayerGeometryColumn(
   config: DeckMapConfig,
   layerIndex: number,
@@ -592,6 +617,10 @@ export function setDeckMapLayerGeometryColumn(
 
   const dataset = config.datasets[datasetId];
   const source = dataset.source;
+  const binding = isRecord(layer?._sqlroomsBinding)
+    ? layer._sqlroomsBinding
+    : {};
+  const generated = readGeneratedTransform(binding);
   const currentFitToData = config.fitToData;
   const leavingCoordinateFit = Boolean(
     currentFitToData?.dataset === datasetId &&
@@ -599,19 +628,33 @@ export function setDeckMapLayerGeometryColumn(
     currentFitToData.latitudeColumn,
   );
   const generatedAlias =
-    isDeckMapTableDatasetSource(source) && source.transformSql
-      ? parseDeckMapPointTransformSql(source.transformSql)?.geometryColumn
-      : undefined;
-  const keepCoordinateFit =
-    leavingCoordinateFit && generatedAlias === geometryColumn;
+    generated?.kind === 'point' ? generated.geometryColumn : undefined;
+  const keepCoordinateFit = Boolean(
+    generatedAlias === geometryColumn ||
+    (leavingCoordinateFit &&
+      geometryColumn ===
+        (readBindingColumn(binding, 'geometryColumn') ||
+          dataset.geometryColumn)),
+  );
+  const creatingCentroid = Boolean(
+    !keepCoordinateFit &&
+    usesPointCoordinateSetting(layer?.['@@type']) &&
+    isDeckMapTableDatasetSource(source),
+  );
+  const droppingGenerated = Boolean(
+    !keepCoordinateFit &&
+    !creatingCentroid &&
+    isDeckMapTableDatasetSource(source) &&
+    source.transformSql &&
+    (generated?.kind === 'point' ||
+      generated?.kind === 'centroid' ||
+      leavingCoordinateFit),
+  );
   let nextSource = source;
   let nextGeometryEncodingHint = dataset.geometryEncodingHint;
   if (keepCoordinateFit) {
     nextSource = source;
-  } else if (
-    usesPointCoordinateSetting(layer?.['@@type']) &&
-    isDeckMapTableDatasetSource(source)
-  ) {
+  } else if (creatingCentroid && isDeckMapTableDatasetSource(source)) {
     nextSource = {
       tableName: source.tableName,
       transformSql: createDeckMapCentroidTransformSql({
@@ -622,13 +665,7 @@ export function setDeckMapLayerGeometryColumn(
       }),
     };
     nextGeometryEncodingHint = 'wkb';
-  } else if (
-    isDeckMapTableDatasetSource(source) &&
-    source.transformSql &&
-    (generatedAlias ||
-      parseDeckMapCentroidTransformSql(source.transformSql) ||
-      leavingCoordinateFit)
-  ) {
+  } else if (droppingGenerated && isDeckMapTableDatasetSource(source)) {
     nextSource = {tableName: source.tableName};
     nextGeometryEncodingHint = undefined;
   }
@@ -678,8 +715,18 @@ export function setDeckMapLayerGeometryColumn(
       ...(isRecord(l._sqlroomsBinding) ? l._sqlroomsBinding : {}),
       geometryColumn,
     };
-    delete nextBinding.longitudeColumn;
-    delete nextBinding.latitudeColumn;
+    if (!keepCoordinateFit) {
+      delete nextBinding.longitudeColumn;
+      delete nextBinding.latitudeColumn;
+      if (creatingCentroid) {
+        nextBinding.generatedTransform = {
+          kind: 'centroid',
+          geometryColumn,
+        };
+      } else if (droppingGenerated) {
+        delete nextBinding.generatedTransform;
+      }
+    }
     return {
       ...l,
       _sqlroomsBinding: nextBinding,
@@ -689,9 +736,8 @@ export function setDeckMapLayerGeometryColumn(
 
 /**
  * Binds a point layer to longitude/latitude columns. A single-axis pick is
- * stored on `fitToData` so the settings UI can update immediately; once both
- * axes are known — from this pick, `fitToData`, or the current point transform
- * SQL — the canonical WKB point transform is applied.
+ * stored on the layer binding and `fitToData`; once both axes are known the
+ * canonical WKB point transform is applied.
  */
 export function setDeckMapLayerCoordinateColumns(
   config: DeckMapConfig,
@@ -709,27 +755,24 @@ export function setDeckMapLayerCoordinateColumns(
   }
 
   const dataset = config.datasets[datasetId];
+  const binding = isRecord(layer?._sqlroomsBinding)
+    ? layer._sqlroomsBinding
+    : {};
+  const generated = readGeneratedTransform(binding);
   const currentFit =
     config.fitToData?.dataset === datasetId ? config.fitToData : undefined;
-  const parsedTransform =
-    isDeckMapTableDatasetSource(dataset.source) && dataset.source.transformSql
-      ? parseDeckMapPointTransformSql(dataset.source.transformSql)
-      : undefined;
   const interactionCoordinates =
     config.interaction?.type === 'point-radius-brush' &&
     config.interaction.dataset === datasetId
       ? config.interaction
       : undefined;
-  // The settings UI shows lon/lat from fitToData *or* the current transform SQL.
-  // Keep the other axis from those same places so changing one column on a map
-  // that already has a point transform actually rewrites the geometry.
   const currentLatitude =
+    readBindingColumn(binding, 'latitudeColumn') ||
     currentFit?.latitudeColumn ||
-    parsedTransform?.latitudeColumn ||
     interactionCoordinates?.latitudeColumn;
   const currentLongitude =
+    readBindingColumn(binding, 'longitudeColumn') ||
     currentFit?.longitudeColumn ||
-    parsedTransform?.longitudeColumn ||
     interactionCoordinates?.longitudeColumn;
   const latitudeColumn =
     columns.latitudeColumn === null
@@ -756,13 +799,34 @@ export function setDeckMapLayerCoordinateColumns(
     ...(latitudeColumn ? {latitudeColumn} : {}),
     ...(longitudeColumn ? {longitudeColumn} : {}),
   };
-  const withFit = {...config, fitToData: nextFitToData};
+  const withBinding = updateDeckMapLayer(
+    {...config, fitToData: nextFitToData},
+    layerIndex,
+    (nextLayer) => {
+      const nextBinding: Record<string, unknown> = {
+        ...(isRecord(nextLayer._sqlroomsBinding)
+          ? nextLayer._sqlroomsBinding
+          : {}),
+      };
+      if (latitudeColumn) {
+        nextBinding.latitudeColumn = latitudeColumn;
+      } else {
+        delete nextBinding.latitudeColumn;
+      }
+      if (longitudeColumn) {
+        nextBinding.longitudeColumn = longitudeColumn;
+      } else {
+        delete nextBinding.longitudeColumn;
+      }
+      return {...nextLayer, _sqlroomsBinding: nextBinding};
+    },
+  );
   if (!latitudeColumn || !longitudeColumn) {
-    return withFit;
+    return withBinding;
   }
 
   if (!dataset || !isDeckMapTableDatasetSource(dataset.source)) {
-    return withFit;
+    return withBinding;
   }
 
   const sourceColumnNames = new Set(
@@ -773,16 +837,18 @@ export function setDeckMapLayerCoordinateColumns(
     !sourceColumnNames.has(latitudeColumn.toLowerCase()) ||
     !sourceColumnNames.has(longitudeColumn.toLowerCase())
   ) {
-    return withFit;
+    return withBinding;
   }
-  const existingGeometryAlias = parsedTransform?.geometryColumn;
+  const existingGeometryAlias =
+    (generated?.kind === 'point' ? generated.geometryColumn : undefined) ||
+    readBindingColumn(binding, 'geometryColumn');
   const preserveGeometryAlias =
     existingGeometryAlias &&
     !sourceColumnNames.has(existingGeometryAlias.toLowerCase())
       ? existingGeometryAlias
       : undefined;
   const bound = applyDeckMapPointBinding({
-    config: withFit,
+    config: withBinding,
     pointBinding: {
       dataset: datasetId,
       longitudeColumn,
@@ -965,9 +1031,13 @@ export function setDeckMapLayerArcGeometryColumns(
     readBindingColumn(binding, 'targetGeometryColumn'),
   );
   const source = dataset.source;
+  const generated = readGeneratedTransform(binding);
   const generatedAliases =
-    isDeckMapTableDatasetSource(source) && source.transformSql
-      ? parseDeckMapArcTransformSql(source.transformSql)
+    generated?.kind === 'arc'
+      ? {
+          sourceGeometryColumn: generated.sourceGeometryColumn,
+          targetGeometryColumn: generated.targetGeometryColumn,
+        }
       : undefined;
   const sourceColumnNames = new Set(
     sourceColumns.map((column) => column.name.toLowerCase()),
@@ -1017,6 +1087,9 @@ export function setDeckMapLayerArcGeometryColumns(
   delete nextBinding.sourceLongitudeColumn;
   delete nextBinding.targetLatitudeColumn;
   delete nextBinding.targetLongitudeColumn;
+  if (leavingGenerated) {
+    delete nextBinding.generatedTransform;
+  }
 
   return withArcLayerBinding(
     config,
@@ -1056,29 +1129,21 @@ export function setDeckMapLayerArcCoordinateColumns(
   const binding = isRecord(layer?._sqlroomsBinding)
     ? layer._sqlroomsBinding
     : {};
-  const parsedArcTransform =
-    isDeckMapTableDatasetSource(dataset.source) && dataset.source.transformSql
-      ? parseDeckMapArcTransformSql(dataset.source.transformSql)
-      : undefined;
   const sourceLatitudeColumn = nextBindingColumn(
     columns.sourceLatitudeColumn,
-    readBindingColumn(binding, 'sourceLatitudeColumn') ||
-      parsedArcTransform?.sourceLatitudeColumn,
+    readBindingColumn(binding, 'sourceLatitudeColumn'),
   );
   const sourceLongitudeColumn = nextBindingColumn(
     columns.sourceLongitudeColumn,
-    readBindingColumn(binding, 'sourceLongitudeColumn') ||
-      parsedArcTransform?.sourceLongitudeColumn,
+    readBindingColumn(binding, 'sourceLongitudeColumn'),
   );
   const targetLatitudeColumn = nextBindingColumn(
     columns.targetLatitudeColumn,
-    readBindingColumn(binding, 'targetLatitudeColumn') ||
-      parsedArcTransform?.targetLatitudeColumn,
+    readBindingColumn(binding, 'targetLatitudeColumn'),
   );
   const targetLongitudeColumn = nextBindingColumn(
     columns.targetLongitudeColumn,
-    readBindingColumn(binding, 'targetLongitudeColumn') ||
-      parsedArcTransform?.targetLongitudeColumn,
+    readBindingColumn(binding, 'targetLongitudeColumn'),
   );
   const nextBinding: Record<string, unknown> = {...binding};
   if (sourceLatitudeColumn) {
@@ -1143,6 +1208,11 @@ export function setDeckMapLayerArcCoordinateColumns(
   );
   nextBinding.sourceGeometryColumn = sourceGeometryColumn;
   nextBinding.targetGeometryColumn = targetGeometryColumn;
+  nextBinding.generatedTransform = {
+    kind: 'arc',
+    sourceGeometryColumn,
+    targetGeometryColumn,
+  };
 
   return withArcLayerBinding(
     config,

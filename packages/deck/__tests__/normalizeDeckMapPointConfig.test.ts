@@ -2,13 +2,9 @@ import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 import {
   applyDeckMapPointBinding,
   applyDeckMapTableSelection,
-  createDeckMapArcTransformSql,
   createDeckMapCentroidTransformSql,
   createDeckMapPointTransformSql,
   normalizeDeckMapPointConfig,
-  parseDeckMapArcTransformSql,
-  parseDeckMapCentroidTransformSql,
-  parseDeckMapPointTransformSql,
   regenerateMapConfigForTable,
 } from '../src/mapConfigUtils';
 import {createEmptyDeckMapConfig} from '../src/mapConfig';
@@ -34,53 +30,6 @@ describe('normalizeDeckMapPointConfig', () => {
     ).toContain(DECK_TABLE_DATASET_SOURCE_RELATION);
   });
 
-  it('parses lon/lat columns back out of canonical point transform SQL', () => {
-    expect(
-      parseDeckMapPointTransformSql(
-        createDeckMapPointTransformSql({
-          longitudeColumn: 'Longitude',
-          latitudeColumn: 'Latitude',
-          geometryColumn: '__sqlrooms_geom',
-        }),
-      ),
-    ).toEqual({
-      longitudeColumn: 'Longitude',
-      latitudeColumn: 'Latitude',
-      geometryColumn: '__sqlrooms_geom',
-    });
-    expect(
-      parseDeckMapCentroidTransformSql(
-        createDeckMapCentroidTransformSql({geometryColumn: 'geometry'}),
-      ),
-    ).toEqual({geometryColumn: 'geometry'});
-    expect(
-      parseDeckMapCentroidTransformSql(
-        createDeckMapCentroidTransformSql({
-          geometryColumn: 'geom',
-          geometryColumnType: 'BLOB',
-        }),
-      ),
-    ).toEqual({geometryColumn: 'geom'});
-    expect(
-      parseDeckMapCentroidTransformSql(
-        createDeckMapPointTransformSql({
-          longitudeColumn: 'longitude',
-          latitudeColumn: 'latitude',
-          geometryColumn: '__sqlrooms_geom',
-        }),
-      ),
-    ).toBeUndefined();
-    expect(
-      parseDeckMapPointTransformSql(
-        'SELECT ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
-      ),
-    ).toEqual({
-      longitudeColumn: 'lon',
-      latitudeColumn: 'lat',
-      geometryColumn: 'geom',
-    });
-  });
-
   it('decodes encoded geometry columns in the centroid transform', () => {
     // ST_Centroid rejects WKB_BLOB/BLOB/VARCHAR; the decode differs per type.
     expect(
@@ -101,37 +50,6 @@ describe('normalizeDeckMapPointConfig', () => {
         geometryColumnType: 'BLOB',
       }),
     ).toContain('ST_Centroid(ST_GeomFromWKB("geom"))');
-  });
-
-  it('parses origin/destination lon/lat columns back out of canonical arc transform SQL', () => {
-    expect(
-      parseDeckMapArcTransformSql(
-        createDeckMapArcTransformSql({
-          sourceLongitudeColumn: 'origin_lon',
-          sourceLatitudeColumn: 'origin_lat',
-          targetLongitudeColumn: 'dest_lon',
-          targetLatitudeColumn: 'dest_lat',
-          sourceGeometryColumn: 'source_geom',
-          targetGeometryColumn: 'target_geom',
-        }),
-      ),
-    ).toEqual({
-      sourceLongitudeColumn: 'origin_lon',
-      sourceLatitudeColumn: 'origin_lat',
-      sourceGeometryColumn: 'source_geom',
-      targetLongitudeColumn: 'dest_lon',
-      targetLatitudeColumn: 'dest_lat',
-      targetGeometryColumn: 'target_geom',
-    });
-    expect(
-      parseDeckMapArcTransformSql(
-        createDeckMapPointTransformSql({
-          longitudeColumn: 'longitude',
-          latitudeColumn: 'latitude',
-          geometryColumn: '__sqlrooms_geom',
-        }),
-      ),
-    ).toBeUndefined();
   });
 
   it('applies structured point provenance with canonical SQL and bindings', () => {
@@ -200,6 +118,9 @@ describe('normalizeDeckMapPointConfig', () => {
     expect(next.spec.layers[0]._sqlroomsBinding).toEqual({
       dataset: 'places',
       geometryColumn: 'geom',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'latitude',
+      generatedTransform: {kind: 'point', geometryColumn: 'geom'},
     });
     expect(next.spec.layers[0]).not.toHaveProperty('getPosition');
     expect(next.fitToData).toEqual({

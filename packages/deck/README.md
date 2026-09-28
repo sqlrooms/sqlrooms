@@ -644,8 +644,11 @@ Currently supported SQLRooms binding fields are:
 - `dataset`: binds the layer to one dataset id
 - `geometryColumn`: overrides geometry column detection for that layer
 - `geometryEncodingHint`: helps geometry detection when the source table needs it
+- `longitudeColumn` / `latitudeColumn`: point, heatmap, and column lon/lat
 - `sourceGeometryColumn`: source point geometry for `GeoArrowArcLayer`
 - `targetGeometryColumn`: target point geometry for `GeoArrowArcLayer`
+- `sourceLongitudeColumn` / `sourceLatitudeColumn` / `targetLongitudeColumn` / `targetLatitudeColumn`: arc lon/lat
+- `generatedTransform`: records a SQLRooms-generated point, centroid, or arc transform
 - `timestampColumn`: timestamp list column for `GeoArrowTripsLayer`
 - `hexagonColumn`: H3 index column for `GeoArrowH3HexagonLayer`
 

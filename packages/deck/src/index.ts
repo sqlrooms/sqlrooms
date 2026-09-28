@@ -142,6 +142,7 @@ export {
   GeometryEncodingHint as DeckGeometryEncodingHint,
   DeckJsonMapLayerSpec,
   DeckJsonMapSpec,
+  DeckMapGeneratedTransform,
   LayerBindingConfig,
   LayerBindingProps,
 } from './DeckJsonMapSpec';

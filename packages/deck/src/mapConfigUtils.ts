@@ -310,81 +310,6 @@ export function createDeckMapCentroidTransformSql(options: {
 }
 
 /**
- * Reads the source geometry column from canonical centroid point transform SQL.
- */
-export function parseDeckMapCentroidTransformSql(
-  transformSql: string,
-): {geometryColumn: string} | undefined {
-  const match = transformSql.match(
-    /ST_AsWKB\s*\(\s*ST_Centroid\s*\(\s*(?:ST_GeomFromWKB\s*\(\s*)?"?([^"\s,()]+)"?\s*(?:::\s*GEOMETRY\s*)?\)+\s*AS\s+"?([^\s",]+)"?/i,
-  );
-  if (!match?.[1] || !match[2] || match[1] !== match[2]) return undefined;
-  return {geometryColumn: match[1]};
-}
-
-/**
- * Reads longitude/latitude/geometry aliases from canonical point transform SQL.
- */
-export function parseDeckMapPointTransformSql(transformSql: string):
-  | {
-      longitudeColumn: string;
-      latitudeColumn: string;
-      geometryColumn: string;
-    }
-  | undefined {
-  const match = transformSql.match(
-    /ST_AsWKB\s*\(\s*ST_Point\s*\(\s*"?([^"\s,]+)"?\s*,\s*"?([^"\s,]+)"?\s*\)\s*\)\s*AS\s+"?([^\s",]+)"?/i,
-  );
-  if (!match?.[1] || !match[2] || !match[3]) return undefined;
-  return {
-    longitudeColumn: match[1],
-    latitudeColumn: match[2],
-    geometryColumn: match[3],
-  };
-}
-
-/**
- * Reads origin/destination lon/lat and geometry aliases from canonical arc
- * transform SQL.
- */
-export function parseDeckMapArcTransformSql(transformSql: string):
-  | {
-      sourceLongitudeColumn: string;
-      sourceLatitudeColumn: string;
-      targetLongitudeColumn: string;
-      targetLatitudeColumn: string;
-      sourceGeometryColumn: string;
-      targetGeometryColumn: string;
-    }
-  | undefined {
-  const matches = [
-    ...transformSql.matchAll(
-      /ST_AsWKB\s*\(\s*ST_Point\s*\(\s*"?([^"\s,]+)"?\s*,\s*"?([^"\s,]+)"?\s*\)\s*\)\s*AS\s+"?([^\s",]+)"?/gi,
-    ),
-  ];
-  const source = matches[0];
-  const target = matches[1];
-  if (
-    !source?.[1] ||
-    !source[2] ||
-    !source[3] ||
-    !target?.[1] ||
-    !target[2] ||
-    !target[3]
-  ) {
-    return undefined;
-  }
-  return {
-    sourceLongitudeColumn: source[1],
-    sourceLatitudeColumn: source[2],
-    sourceGeometryColumn: source[3],
-    targetLongitudeColumn: target[1],
-    targetLatitudeColumn: target[2],
-    targetGeometryColumn: target[3],
-  };
-}
-
-/**
  * Builds the standard origin/destination lon/lat → WKB arc transform SQL.
  */
 export function createDeckMapArcTransformSql(options: {
@@ -560,6 +485,8 @@ function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
   datasetId: string;
   datasetIds: string[];
   geometryColumn: string;
+  longitudeColumn: string;
+  latitudeColumn: string;
 }): T {
   let changed = false;
   const layers = options.layers.map((layer) => {
@@ -585,8 +512,6 @@ function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
       ? layer._sqlroomsBinding
       : {};
     const geometryBinding = {...binding};
-    delete geometryBinding.longitudeColumn;
-    delete geometryBinding.latitudeColumn;
     const pointLayer = {...layer};
     delete pointLayer.getPosition;
 
@@ -599,6 +524,12 @@ function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
             ? binding.dataset
             : options.datasetId,
         geometryColumn: options.geometryColumn,
+        longitudeColumn: options.longitudeColumn,
+        latitudeColumn: options.latitudeColumn,
+        generatedTransform: {
+          kind: 'point' as const,
+          geometryColumn: options.geometryColumn,
+        },
       },
     };
   });
@@ -677,6 +608,8 @@ export function applyDeckMapPointBinding<
                 datasetId,
                 datasetIds,
                 geometryColumn,
+                longitudeColumn,
+                latitudeColumn,
               }),
             }
           : {}),
