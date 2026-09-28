@@ -1062,14 +1062,11 @@ export function setDeckMapLayerArcGeometryColumns(
       ? {tableName: source.tableName}
       : source;
   const nextDataset = {...dataset};
-  // Drop the dataset-wide WKB hint as soon as either endpoint is native so a
-  // mixed WKT/GeoArrow + generated-alias bind is not forced through the WKB
-  // decoder. The leftover generated column can still be inferred from its type.
-  if (
-    generatedAliases &&
-    (sourceGeometryColumn !== generatedAliases.sourceGeometryColumn ||
-      targetGeometryColumn !== generatedAliases.targetGeometryColumn)
-  ) {
+  // Drop the dataset-wide WKB hint as soon as either endpoint is a native
+  // source column so mixed WKT/GeoArrow + generated-alias binds, and maps
+  // authored before generatedTransform existed, are not forced through the
+  // WKB decoder. Leftover generated columns can still be inferred from type.
+  if (sourceOnTable || targetOnTable) {
     delete nextDataset.geometryEncodingHint;
   }
   const nextBinding: Record<string, unknown> = {...binding};

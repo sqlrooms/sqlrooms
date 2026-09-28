@@ -1266,6 +1266,46 @@ describe('arc geometry vs lon/lat bindings', () => {
     ).not.toHaveProperty('targetLongitudeColumn');
   });
 
+  it('clears a leftover WKB hint when native arc endpoints are selected without generatedTransform', () => {
+    const legacyConfig = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowArcLayer',
+            id: 'arcs',
+            _sqlroomsBinding: {
+              dataset: 'trips',
+              sourceGeometryColumn: 'source_geom',
+              targetGeometryColumn: 'target_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        trips: {
+          source: {
+            tableName: 'trips',
+            transformSql:
+              'SELECT *, ST_AsWKB(ST_Point("origin_lon", "origin_lat")) AS "source_geom", ST_AsWKB(ST_Point("dest_lon", "dest_lat")) AS "target_geom" FROM __sqlrooms_source',
+          },
+          geometryEncodingHint: 'wkb' as const,
+        },
+      },
+    };
+
+    const nextConfig = setDeckMapLayerArcGeometryColumns(
+      legacyConfig,
+      0,
+      {
+        sourceGeometryColumn: 'origin_geom',
+        targetGeometryColumn: 'dest_geom',
+      },
+      sourceColumns,
+    );
+
+    expect(nextConfig.datasets.trips.geometryEncodingHint).toBeUndefined();
+  });
+
   it('reapplies arc lon/lat after switching back from source geometry columns', () => {
     const lonLatConfig = setDeckMapLayerArcCoordinateColumns(
       arcConfig,
