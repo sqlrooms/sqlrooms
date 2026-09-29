@@ -224,6 +224,33 @@ describe('Roomie authoring commands', () => {
     ).rejects.toThrow();
   });
 
+  it('rejects a defaulted backing instance that is already owned', async () => {
+    const {validate} = setup({
+      first: [tableBlock('existing', 'existing-instance')],
+    });
+    await expect(
+      validate('block-document.create-stateful-block', {
+        artifactId: 'second',
+        blockType: 'data-table',
+        blockId: 'existing-instance',
+      }),
+    ).rejects.toThrow('Block instance already belongs to a document.');
+  });
+
+  it('rejects a duplicate block ID in the target document', async () => {
+    const {validate} = setup({
+      document: [tableBlock('existing', 'existing-instance')],
+    });
+    await expect(
+      validate('block-document.create-stateful-block', {
+        artifactId: 'document',
+        blockType: 'data-table',
+        blockId: 'existing',
+        blockInstanceId: 'fresh-instance',
+      }),
+    ).rejects.toThrow('Block ID already exists in document.');
+  });
+
   it('rejects duplicate instances within a single incoming batch', async () => {
     const {validate} = setup();
     await expect(

@@ -193,6 +193,8 @@ Call `completeHydration` only after schema validation, merge and application
 initialization succeed. Until then, writes are suppressed so an unsupported or
 failed restore cannot overwrite saved metadata. Subscribe to the controller with
 its listener API; `getState()` returns a copy and is not a React snapshot getter.
+A host that replaces or closes the adapter must call `dispose()` to remove its
+browser lifecycle handlers.
 A managed close must flush and check `error`, `dirty` and `saving` before claiming
 persistence succeeded.
 The adapter requests a browser unload warning while changes are dirty or saving.

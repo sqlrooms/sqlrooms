@@ -15,6 +15,8 @@ export type DuckDbPersistStorage<TPersisted> = PersistStorage<TPersisted> & {
   controller: PersistenceController<string>;
   /** Await before closing or reloading; rejects if the pending write fails. */
   flush: () => Promise<void>;
+  /** Removes browser lifecycle handlers and prevents them from being registered again. */
+  dispose: () => void;
   /** Enables writes and schedules any changes retained by a successful restore. */
   completeHydration: (state: TPersisted) => void;
 };
@@ -61,6 +63,8 @@ export function createDuckDbPersistStorage<TPersisted>(
   const namespace = options?.namespace || '__sqlrooms';
   let ensured: Promise<void> | null = null;
   let handlersRegistered = false;
+  let disposed = false;
+  let removeFlushHandlers = () => {};
   // Loading the JSON is not enough: slice validation and merge must succeed
   // before runtime changes are allowed to replace the saved workspace.
   let hydrated = false;
@@ -116,31 +120,43 @@ export function createDuckDbPersistStorage<TPersisted>(
     },
   });
   const registerFlushHandlers = () => {
-    if (handlersRegistered || typeof window === 'undefined') return;
+    if (handlersRegistered || disposed || typeof window === 'undefined') return;
     handlersRegistered = true;
     const flushNow = () => {
       // Best effort only; the controller retains failures for the save UI.
       void persistence.flush('final-flush').catch(() => {});
     };
-    window.addEventListener('beforeunload', (event) => {
+    const beforeUnloadHandler = (event: BeforeUnloadEvent) => {
       const {dirty, saving} = persistence.controller.getState();
       if (dirty || saving) {
         event.preventDefault();
         event.returnValue = '';
         flushNow();
       }
-    });
-    document.addEventListener('visibilitychange', () => {
+    };
+    const visibilityChangeHandler = () => {
       if (document.visibilityState === 'hidden') {
         flushNow();
       }
-    });
+    };
+    window.addEventListener('beforeunload', beforeUnloadHandler);
+    document.addEventListener('visibilitychange', visibilityChangeHandler);
+    removeFlushHandlers = () => {
+      window.removeEventListener('beforeunload', beforeUnloadHandler);
+      document.removeEventListener('visibilitychange', visibilityChangeHandler);
+      handlersRegistered = false;
+      removeFlushHandlers = () => {};
+    };
   };
 
   return {
     ...persistence.storage,
     controller: persistence.controller,
     flush: persistence.flush,
+    dispose: () => {
+      disposed = true;
+      removeFlushHandlers();
+    },
     completeHydration: (state) => {
       // Keep the loaded snapshot as the saved baseline. Startup changes and
       // migrations must reach DuckDB before they can be considered saved.

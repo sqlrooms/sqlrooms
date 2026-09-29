@@ -155,22 +155,6 @@ export function createRoomieCommands(options: {
         command.id === 'dashboard.set-selected-table'
       )
         validateRenderSource(state.db, input.tableName);
-      if (command.id === 'block-document.create-stateful-block') {
-        if (!STATEFUL_BLOCKS.includes(input.blockType))
-          throw new Error('Unsupported Roomie block.');
-        if (input.ownership && input.ownership !== 'owned')
-          throw new Error('Roomie blocks must be document-owned.');
-        if (
-          input.blockInstanceId &&
-          ownedBlocks(state).some(
-            (b) =>
-              b.type === 'statefulBlock' &&
-              b.blockInstanceId === input.blockInstanceId,
-          )
-        )
-          throw new Error('Block instance already belongs to a document.');
-      }
-      const incomingInstances = new Set<string>();
       const existingBlocks = Object.entries(
         state.blockDocuments.config.artifacts,
       ).flatMap(([artifactId, document]) =>
@@ -179,6 +163,31 @@ export function createRoomieCommands(options: {
           block,
         })),
       );
+      if (command.id === 'block-document.create-stateful-block') {
+        if (!STATEFUL_BLOCKS.includes(input.blockType))
+          throw new Error('Unsupported Roomie block.');
+        if (input.ownership && input.ownership !== 'owned')
+          throw new Error('Roomie blocks must be document-owned.');
+        const blockInstanceId = input.blockInstanceId ?? input.blockId;
+        if (
+          blockInstanceId !== undefined &&
+          existingBlocks.some(
+            ({block}) =>
+              block.type === 'statefulBlock' &&
+              block.blockInstanceId === blockInstanceId,
+          )
+        )
+          throw new Error('Block instance already belongs to a document.');
+        if (
+          input.blockId !== undefined &&
+          existingBlocks.some(
+            ({artifactId, block}) =>
+              artifactId === input.artifactId && block.id === input.blockId,
+          )
+        )
+          throw new Error('Block ID already exists in document.');
+      }
+      const incomingInstances = new Set<string>();
       for (const block of blocks) {
         validateBlock(block);
         validateBlockRenderSources(state.db, block);

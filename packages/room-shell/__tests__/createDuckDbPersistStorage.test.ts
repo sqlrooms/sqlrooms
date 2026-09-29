@@ -115,6 +115,40 @@ describe('DuckDB workspace persistence', () => {
     });
   });
 
+  it('removes browser flush handlers permanently when disposed', async () => {
+    const removeWindowEvent = jest.spyOn(window, 'removeEventListener');
+    const removeDocumentEvent = jest.spyOn(document, 'removeEventListener');
+    const storage = createDuckDbPersistStorage(connector());
+    await storage.getItem('workspace');
+    storage.completeHydration({});
+
+    const beforeUnloadHandler = windowEvents.mock.calls.find(
+      ([type]) => type === 'beforeunload',
+    )?.[1];
+    const visibilityChangeHandler = documentEvents.mock.calls.find(
+      ([type]) => type === 'visibilitychange',
+    )?.[1];
+    storage.dispose();
+    storage.completeHydration({});
+
+    expect(beforeUnloadHandler).toBeDefined();
+    expect(visibilityChangeHandler).toBeDefined();
+    expect(removeWindowEvent).toHaveBeenCalledWith(
+      'beforeunload',
+      beforeUnloadHandler,
+    );
+    expect(removeDocumentEvent).toHaveBeenCalledWith(
+      'visibilitychange',
+      visibilityChangeHandler,
+    );
+    expect(
+      windowEvents.mock.calls.filter(([type]) => type === 'beforeunload'),
+    ).toHaveLength(1);
+    expect(
+      documentEvents.mock.calls.filter(([type]) => type === 'visibilitychange'),
+    ).toHaveLength(1);
+  });
+
   it('does not write before hydration is successfully completed', async () => {
     const db = connector();
     const storage = createDuckDbPersistStorage(db);
