@@ -37,6 +37,7 @@ import {
   writeToolTimingsToMetadata,
 } from './chatTransport';
 import {
+  AI_GENERATION_FAILED_TEXT,
   ANALYSIS_CANCELLED,
   SESSION_DELETED,
   TOOL_CALL_CANCELLED,
@@ -185,6 +186,12 @@ export type AiSliceState = {
         contextSources?: string[];
         contextMetrics?: Record<string, number>;
         sessionId?: string;
+        /**
+         * Called when the model call fails, before the placeholder response is
+         * returned. Lets a caller tell a failure apart from a response that
+         * merely happens to equal the placeholder text.
+         */
+        onError?: (error: unknown) => void;
       },
     ) => Promise<string>;
     startAnalysis: (
@@ -209,9 +216,13 @@ export type AiSliceState = {
     /**
      * Whether a model is resolvable by *any* configured path: a custom-model
      * factory supplied to {@link AiSliceOptions.getCustomModel}, or — once a
-     * session exists — its provider/model pair being present in the
-     * `@sqlrooms/ai-settings` model list. With no session yet, the resolved
-     * default is assumed available.
+     * session exists — its provider/model pair being listed by whichever
+     * registry owns the app's models. {@link AiSliceOptions.getAvailableModels}
+     * is consulted first and is authoritative when it returns a non-empty
+     * list, since that is what a session's selection is resolved against;
+     * otherwise the `@sqlrooms/ai-settings` model list decides, falling back
+     * to the session simply naming a provider and a model. With no session
+     * yet, the resolved default is assumed available.
      *
      * Only checks that a factory **was configured**; never calls it, since
      * invoking it may have side effects and a factory returning `undefined`
@@ -382,6 +393,15 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   }) => string;
   defaultProvider?: string;
   defaultModel?: string;
+  /**
+   * The provider/model pairs this app offers, used both to resolve a new
+   * session's selection and, by `hasResolvableModel`, to decide whether the
+   * composer can send.
+   *
+   * Called on **every** readiness check, which happens inside React selectors
+   * and so runs on each store update. Keep it cheap: return a memoized or
+   * module-level array rather than rebuilding one per call.
+   */
   getAvailableModels?: () => Array<{provider: string; value: string}>;
   /** Provide a pre-configured model client for a provider (e.g., Azure). */
   getCustomModel?: () => LanguageModel | undefined;
@@ -742,19 +762,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
       return {modelProvider: defaultProvider, model: defaultModel};
     };
 
-    // Initialize base config and ensure the initial session respects default provider/model
+    // `createDefaultAiConfig` deliberately creates no session — the first one
+    // is created when the user sends, through `createSession`, which resolves
+    // its model via `getResolvedModelSelection`. Until then `initialPrompt`
+    // lives on `draftPrompt` below.
     const baseConfig = cleanupSessionForks(
       createDefaultAiConfig(cleanedConfig),
     );
-    if (!cleanedConfig?.sessions || cleanedConfig.sessions.length === 0) {
-      const firstSession = baseConfig.sessions[0];
-      if (firstSession) {
-        firstSession.modelProvider = defaultProvider;
-        firstSession.model = defaultModel;
-        firstSession.prompt = initialPrompt;
-        firstSession.isRunning = false;
-      }
-    }
 
     // Clean up openSessionTabs for sessions that no longer exist and ensure it's initialized
     const sessionIdSet = new Set(baseConfig.sessions.map((s) => s.id));
@@ -1169,6 +1183,22 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           // default provider/model, so a model is available.
           if (!currentSession) {
             return true;
+          }
+
+          // `getAvailableModels` is the registry a session's selection is
+          // actually resolved against (see `getResolvedModelSelection`), so a
+          // host that supplies one has already answered this question.
+          // Consulting `aiSettings` first would let a settings registry the
+          // host never populated veto a selection this slice itself produced —
+          // and merely mounting the settings slice installs a stock registry,
+          // so its presence alone says nothing about who owns model listing.
+          const availableModels = getAvailableModels?.();
+          if (availableModels && availableModels.length > 0) {
+            return availableModels.some(
+              (candidate) =>
+                candidate.provider === currentSession.modelProvider &&
+                candidate.value === currentSession.model,
+            );
           }
 
           if (hasAiSettingsConfig(state)) {
@@ -1764,6 +1794,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             contextMetrics?: Record<string, number>;
             sessionId?: string;
             abortSignal?: AbortSignal;
+            /**
+             * Called when the model call fails, before the placeholder is
+             * returned. Lets a caller distinguish a failure from a response
+             * that merely happens to equal {@link AI_GENERATION_FAILED_TEXT}.
+             */
+            onError?: (error: unknown) => void;
           } = {},
         ) => {
           // One-shot generateText path with explicit abort lifecycle management
@@ -1783,6 +1819,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             ],
             contextMetrics,
             sessionId,
+            onError,
           } = options;
 
           if (abortSignal?.aborted) {
@@ -1899,7 +1936,17 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               throw new ToolAbortError(TOOL_CALL_CANCELLED);
             }
             console.error('Error generating text:', error);
-            return 'error: can not generate response';
+            // A caller's callback must not be able to turn the documented
+            // placeholder response into a rejection.
+            try {
+              onError?.(error);
+            } catch (callbackError) {
+              console.error(
+                'sendPrompt onError callback threw:',
+                callbackError,
+              );
+            }
+            return AI_GENERATION_FAILED_TEXT;
           }
         },
 

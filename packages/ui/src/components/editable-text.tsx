@@ -51,6 +51,10 @@ export const EditableText: FC<{
   editTrigger?: 'click' | 'doubleClick';
   value: string;
   placeholder?: string;
+  /**
+   * Called with the trimmed text when editing is committed (Enter or blur).
+   * Not called when the trimmed text equals the current `value`.
+   */
   onChange: (text: string) => void;
   /** Called on each keystroke while editing. */
   onInputChange?: (text: string) => void;
@@ -154,6 +158,21 @@ export const EditableText: FC<{
     [isReadOnly, onEditingChange],
   );
 
+  // Commits the trimmed input, skipping commits that would leave the value
+  // unchanged so that merely focusing and leaving the field is not an edit.
+  const commit = useCallback(() => {
+    const trimmedValue = internalValueRef.current.trim();
+    if (trimmedValue !== valueRef.current) {
+      onChange(trimmedValue);
+    }
+
+    // After onChange, sync internal value back to the prop
+    // If parent rejected the change, value prop stays the same and we reset
+    // If parent accepted the change, value prop updates and we sync to it
+    setInternalValue(valueRef.current);
+    internalValueRef.current = valueRef.current;
+  }, [onChange]);
+
   const handleBlur = useCallback(() => {
     // Skip if blur was triggered by Enter/Escape key
     if (skipBlurHandlerRef.current) {
@@ -161,17 +180,9 @@ export const EditableText: FC<{
       return;
     }
 
-    const trimmedValue = internalValueRef.current?.trim();
-    onChange(trimmedValue);
-
-    // After onChange, sync internal value back to the prop
-    // If parent rejected the change, value prop stays the same and we reset
-    // If parent accepted the change, value prop updates and we sync to it
-    setInternalValue(valueRef.current);
-    internalValueRef.current = valueRef.current;
-
+    commit();
     handleSetEditing(false);
-  }, [handleSetEditing, onChange]);
+  }, [commit, handleSetEditing]);
 
   const handleClick = useCallback(() => {
     if (!isInternalEditing) {
@@ -214,15 +225,7 @@ export const EditableText: FC<{
           inputRef.current?.blur();
           break;
         case 'Enter': {
-          const trimmedValue = internalValueRef.current.trim();
-          onChange(trimmedValue);
-
-          // After onChange, sync internal value back to the prop
-          // If parent rejected the change, value prop stays the same and we reset
-          // If parent accepted the change, value prop updates and we sync to it
-          setInternalValue(valueRef.current);
-          internalValueRef.current = valueRef.current;
-
+          commit();
           handleSetEditing(false);
           skipBlurHandlerRef.current = true;
           inputRef.current?.blur();
@@ -236,7 +239,7 @@ export const EditableText: FC<{
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isInternalEditing, onChange, handleSetEditing]);
+  }, [isInternalEditing, commit, handleSetEditing]);
 
   return (
     <Input

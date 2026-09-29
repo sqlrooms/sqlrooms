@@ -38,6 +38,7 @@ function createTestStore(options?: {
   aiSettingsConfig?: AiSettingsSliceConfig;
   sessionConfig?: ReturnType<typeof createSessionConfig>;
   chatEndPoint?: string;
+  availableModels?: Array<{provider: string; value: string}>;
 }) {
   const sliceOptions: AiSliceOptions = {
     tools: {} as any,
@@ -46,6 +47,9 @@ function createTestStore(options?: {
     defaultModel: 'shared-model',
     getCustomModel: options?.getCustomModel,
     chatEndPoint: options?.chatEndPoint,
+    ...(options?.availableModels
+      ? {getAvailableModels: () => options.availableModels!}
+      : {}),
     config:
       options?.sessionConfig ?? createSessionConfig('openai', 'shared-model'),
   };
@@ -140,6 +144,36 @@ describe('AiSlice hasResolvableModel', () => {
     expect(store.getState().aiSettings?.config.customModels).toEqual([]);
 
     expect(store.getState().ai.hasResolvableModel()).toBe(true);
+  });
+
+  it('is resolvable from the host model registry even when ai-settings does not list the model', () => {
+    // A host that manages its own models (env-configured tiers, a model
+    // proxy) mounts the ai-settings slice for its other settings without
+    // registering those models there. The stock registry that mounting
+    // installs must not veto a selection this slice itself resolved.
+    const store = createTestStore({
+      availableModels: [{provider: 'bedrock', value: 'tier-pro'}],
+      aiSettingsConfig: createSettingsConfig([
+        {provider: 'openai', modelName: 'gpt-4.1'},
+      ]),
+      sessionConfig: createSessionConfig('bedrock', 'tier-pro'),
+    });
+
+    expect(store.getState().ai.hasResolvableModel()).toBe(true);
+  });
+
+  it('is not resolvable when the host model registry is supplied and omits the session model', () => {
+    // Precedence must not mean "always true": a host registry that is
+    // populated still gates, it is simply the one that gates.
+    const store = createTestStore({
+      availableModels: [{provider: 'bedrock', value: 'tier-free'}],
+      aiSettingsConfig: createSettingsConfig([
+        {provider: 'bedrock', modelName: 'tier-pro'},
+      ]),
+      sessionConfig: createSessionConfig('bedrock', 'tier-pro'),
+    });
+
+    expect(store.getState().ai.hasResolvableModel()).toBe(false);
   });
 
   it('is resolvable when no ai-settings slice is installed and the session has a provider/model pair', () => {

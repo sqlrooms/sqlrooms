@@ -3512,6 +3512,9 @@ importers:
       '@sqlrooms/crdt':
         specifier: workspace:*
         version: link:../crdt
+      '@sqlrooms/db':
+        specifier: workspace:*
+        version: link:../db
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../room-store

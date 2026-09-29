@@ -1367,7 +1367,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <SettingsPanelHeader
-        title="Map settings"
+        title="Settings"
         className="shrink-0 p-2"
         actions={
           customConfig ? undefined : (
@@ -1383,7 +1383,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
           )
         }
         onClose={onClose}
-        closeLabel="Close map settings"
+        closeLabel="Close settings"
       />
 
       <div className="flex shrink-0 flex-col gap-2 px-2 pb-2">

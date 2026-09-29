@@ -150,6 +150,34 @@ describe('explicit browser authorization', () => {
     expect(storage.size).toBe(0);
   });
 
+  test('renewal retries transient failures before expiry', async () => {
+    globalThis.fetch = jest
+      .fn<typeof fetch>()
+      .mockImplementation(async (url) =>
+        reply(url === '/auth.json' ? {binding: session.binding} : session),
+      );
+    const auth = await import('../browserAuth');
+    await auth.bootstrapAuthorization();
+    const renewed = {...session, expiresAt: session.expiresAt + 120};
+    const renew = jest
+      .fn<typeof fetch>()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(reply({}, 503))
+      .mockResolvedValue(reply(renewed));
+    globalThis.fetch = renew;
+    await jest.advanceTimersByTimeAsync(60_100);
+    expect(renew).toHaveBeenCalledTimes(1);
+    expect(JSON.parse([...storage.values()][0]!).expiresAt).toBe(
+      session.expiresAt,
+    );
+    await jest.advanceTimersByTimeAsync(20_000);
+    expect(renew).toHaveBeenCalledTimes(3);
+    expect(auth.pageCredential()).toBe('page-secret');
+    expect(JSON.parse([...storage.values()][0]!).expiresAt).toBe(
+      renewed.expiresAt,
+    );
+  });
+
   test('expired sessions and replay errors fail closed', async () => {
     globalThis.fetch = jest
       .fn<typeof fetch>()
