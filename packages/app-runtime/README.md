@@ -194,6 +194,13 @@ type QueryResult = {
 The host enforces read-only `SELECT` parsing, a single statement, row limits,
 and request timeouts before returning data to the iframe.
 
+`HtmlAppBlock` and `executeReadonlyQuery` accept an optional
+`authorizeQuery(request)` callback. It runs after SELECT parsing and before query
+execution; reject by throwing, or await the host's approval policy. SELECT parsing
+alone does not restrict file readers, views or functions. Hosts requiring a local
+data boundary should supply this callback to validate sources. Existing callers
+without a callback retain the default read-only policy.
+
 ## Later Capability Boundaries
 
 The v1 bridge intentionally stops at bounded JSON query results. The following

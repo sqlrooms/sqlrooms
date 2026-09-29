@@ -188,7 +188,6 @@ export function createPersistenceController<TSnapshot>({
     if (saveInFlight) {
       if (pendingSnapshot !== undefined || state.pendingSave) {
         pendingSaveReason = reason;
-        setState({pendingSave: true});
       }
       return saveInFlight;
     }
@@ -216,6 +215,13 @@ export function createPersistenceController<TSnapshot>({
           inFlightSnapshot = snapshot;
           try {
             await adapter.save(snapshot, {reason: activeReason});
+          } catch (error) {
+            // Retain the failed snapshot for explicit retry unless a newer
+            // snapshot (or a live snapshot getter) can supply the next write.
+            if (pendingSnapshot === undefined && !getSnapshot) {
+              pendingSnapshot = snapshot;
+            }
+            throw error;
           } finally {
             inFlightSnapshot = undefined;
           }

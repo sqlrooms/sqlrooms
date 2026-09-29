@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from zipfile import ZipFile
@@ -9,11 +10,13 @@ def _resolve_wheels(args: list[str]) -> list[Path]:
     if args:
         wheels = [Path(arg) for arg in args]
     else:
+        package_json = Path(__file__).resolve().parents[1] / "package.json"
+        version = json.loads(package_json.read_text())["version"]
         candidate_dirs = [Path("dist"), Path("..") / "dist"]
         wheels = [
             wheel
             for candidate_dir in candidate_dirs
-            for wheel in sorted(candidate_dir.glob("sqlrooms-*.whl"))
+            for wheel in sorted(candidate_dir.glob(f"sqlrooms-{version}-*.whl"))
         ]
     return [wheel for wheel in wheels if wheel.name.startswith("sqlrooms-")]
 

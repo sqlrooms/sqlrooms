@@ -8,6 +8,7 @@ import {
 } from '@sqlrooms/room-store';
 import {createMosaicSlice} from '../src/MosaicSlice';
 import {createMosaicDashboardSlice} from '../src/dashboard/MosaicDashboardSlice';
+import type {RetainedVgPlotChart} from '../src/useVgPlotChartRetention';
 import {
   createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardDataTableExplorerPanelConfig,
@@ -557,6 +558,75 @@ describe('MosaicDashboardSlice generic panels', () => {
     expect(
       store.getState().mosaicDashboard.getRetainedChart(dashboardId, panel.id),
     ).toBeUndefined();
+  });
+
+  it('keeps live chart handles mutable across dashboard state updates', () => {
+    const store = createTestStore();
+    const dashboardId = store.getState().mosaicDashboard.createDashboard();
+    const runtime = createRuntimeChart();
+    const chart: RetainedVgPlotChart = {
+      ...runtime.chart,
+      markStates: new Map(),
+      markErrors: new Map(),
+      params: new Map(),
+    };
+    const runtimeKey = 'block-document:document-1:chart-block:chart-1';
+    store.getState().mosaicDashboard.setRetainedChartByKey(runtimeKey, chart);
+
+    store.getState().mosaicDashboard.setDashboardTitle(dashboardId, 'Renamed');
+
+    expect(Object.isFrozen(store.getState().mosaicDashboard.config)).toBe(true);
+    expect(
+      store.getState().mosaicDashboard.getRetainedChartByKey(runtimeKey),
+    ).toBe(chart);
+    const mark = {};
+    const error = new Error('Query failed');
+    // vgplot updates these same handles when a query completes or a plot resizes.
+    expect(() => {
+      chart.markStates!.set(mark, 'pending');
+      chart.markErrors!.set(mark, error);
+      chart.error = error;
+      chart.params!.clear();
+      chart.markStates!.clear();
+      chart.markErrors!.clear();
+      chart.error = undefined;
+    }).not.toThrow();
+    expect(runtime.destroy).not.toHaveBeenCalled();
+  });
+
+  it('preserves mutable handles when retained charts are replaced, evicted, and reset', () => {
+    const store = createTestStore();
+    const dashboardId = store.getState().mosaicDashboard.createDashboard();
+    const first = createRuntimeChart();
+    const replacement = createRuntimeChart();
+    const survivingChart: RetainedVgPlotChart = {
+      ...createRuntimeChart().chart,
+      markStates: new Map(),
+    };
+    const api = store.getState().mosaicDashboard;
+    api.setRetainedChart(dashboardId, 'first', first.chart);
+    api.setRetainedChartByKey('document-chart', survivingChart);
+    api.setRetainedChart(dashboardId, 'first', replacement.chart);
+    expect(first.destroy).toHaveBeenCalledTimes(1);
+
+    api.evictDashboardRuntime(dashboardId);
+    api.setDashboardTitle(dashboardId, 'After dashboard eviction');
+    expect(replacement.destroy).toHaveBeenCalledTimes(1);
+    expect(() => survivingChart.markStates!.set({}, 'success')).not.toThrow();
+
+    api.setRetainedChartByKey('temporary-chart', createRuntimeChart().chart);
+    api.evictPanelRuntimeByKey('temporary-chart');
+    api.setDashboardTitle(dashboardId, 'After panel eviction');
+    expect(() => survivingChart.markStates!.clear()).not.toThrow();
+
+    api.clearAllDashboardRuntime();
+    const nextChart: RetainedVgPlotChart = {
+      ...createRuntimeChart().chart,
+      markStates: new Map(),
+    };
+    api.setRetainedChartByKey('next-chart', nextChart);
+    api.setDashboardTitle(dashboardId, 'After reset');
+    expect(() => nextChart.markStates!.set({}, 'pending')).not.toThrow();
   });
 
   it('tracks retained charts and runtime issues by caller-provided keys', () => {

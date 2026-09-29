@@ -6,6 +6,70 @@ function nextMacrotask() {
 }
 
 describe('createPersistenceController', () => {
+  it.each([false, true])(
+    'retries a failed write, preferring newer edits: %s',
+    async (newerEdit) => {
+      const attempted: string[] = [];
+      let rejectWrite!: (error: Error) => void;
+      let started!: () => void;
+      const firstStarted = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      const controller = createPersistenceController<string>({
+        adapter: {
+          load: async () => null,
+          save: async (snapshot) => {
+            attempted.push(snapshot);
+            if (attempted.length === 1) {
+              started();
+              await new Promise<void>((_resolve, reject) => {
+                rejectWrite = reject;
+              });
+            }
+          },
+        },
+      });
+      controller.setSnapshot('first');
+      const first = controller.flush();
+      await firstStarted;
+      if (newerEdit) controller.setSnapshot('newer');
+      rejectWrite(new Error('Write failed'));
+      await expect(first).rejects.toThrow('Write failed');
+      expect(controller.getState().dirty).toBe(true);
+      await controller.flush();
+      expect(attempted).toEqual(['first', newerEdit ? 'newer' : 'first']);
+      expect(controller.getState()).toMatchObject({
+        dirty: false,
+        saving: false,
+        error: null,
+      });
+    },
+  );
+
+  it('coalesces concurrent flushes without requiring another snapshot', async () => {
+    const saved: string[] = [];
+    const controller = createPersistenceController<string>({
+      adapter: {
+        load: async () => null,
+        save: async (snapshot) => {
+          saved.push(snapshot);
+        },
+      },
+    });
+    controller.setSnapshot('edited');
+    await Promise.all([
+      controller.flush(),
+      controller.flush(),
+      controller.flush(),
+    ]);
+    expect(saved).toEqual(['edited']);
+    expect(controller.getState()).toMatchObject({
+      dirty: false,
+      saving: false,
+      error: null,
+    });
+  });
+
   it('hydrates without marking dirty', async () => {
     const controller = createPersistenceController<string>({
       adapter: {

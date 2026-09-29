@@ -4,6 +4,7 @@ import {
   createDuckDbSlice,
   defaultLoadSchemaCatalogFilter,
   DuckDbSliceState,
+  type CreateDuckDbSliceProps,
 } from '../src/DuckDbSlice';
 import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
@@ -19,14 +20,16 @@ type TestStoreState = BaseRoomStoreState & DuckDbSliceState;
 /**
  * Creates a test store with DuckDbSlice using a real Node.js DuckDB connector.
  */
-function createTestStore() {
+function createTestStore(
+  options: Omit<CreateDuckDbSliceProps, 'connector'> = {},
+) {
   const connector = createNodeDuckDbConnector({
     dbPath: ':memory:',
   });
 
   return createStore<TestStoreState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
-    ...createDuckDbSlice({connector})(...args),
+    ...createDuckDbSlice({connector, ...options})(...args),
   }));
 }
 
@@ -508,6 +511,100 @@ describe('DuckDbSlice', () => {
   });
 
   describe('refreshTableSchemas', () => {
+    it.each(['database', 'schema', 'table'])(
+      'keeps selectable tables when the catalog hides their %s',
+      async (hiddenType) => {
+        const filtered = createTestStore({
+          loadTableSchemasFilter: (name) => name.table === 'selectable_rows',
+          loadSchemaCatalogFilter: (entry) => entry.type !== hiddenType,
+        });
+        try {
+          await filtered.getState().db.initialize();
+          const connector = await filtered.getState().db.getConnector();
+          await connector.query('CREATE TABLE selectable_rows (value INT)');
+          const tables = await filtered.getState().db.refreshTableSchemas();
+          expect(tables.map((table) => table.table.table)).toEqual([
+            'selectable_rows',
+          ]);
+          expect(
+            (await filtered.getState().db.loadTableSchemas()).map((table) =>
+              getTableIdentity(table.table),
+            ),
+          ).toEqual(tables.map((table) => getTableIdentity(table.table)));
+          expect(
+            filtered.getState().db.findTable('selectable_rows'),
+          ).toBeDefined();
+          expect(
+            JSON.stringify(filtered.getState().db.schemaTrees),
+          ).not.toContain('selectable_rows');
+        } finally {
+          await filtered.getState().db.destroy();
+        }
+      },
+    );
+
+    it('disables catalog filtering with null while keeping the table filter', async () => {
+      const filtered = createTestStore({
+        loadTableSchemasFilter: () => false,
+        loadSchemaCatalogFilter: null,
+      });
+      try {
+        await filtered.getState().db.initialize();
+        const connector = await filtered.getState().db.getConnector();
+        await connector.query('CREATE TABLE catalog_only (value INT)');
+        expect(await filtered.getState().db.refreshTableSchemas()).toEqual([]);
+        expect(JSON.stringify(filtered.getState().db.schemaTrees)).toContain(
+          'catalog_only',
+        );
+      } finally {
+        await filtered.getState().db.destroy();
+      }
+    });
+
+    it('filters selectable tables using metadata while retaining an independent catalog', async () => {
+      const filtered = createTestStore({
+        loadTableSchemasFilter: (name, metadata) =>
+          metadata?.isView === false && name.database === name.defaultDatabase,
+        loadSchemaCatalogFilter: () => true,
+      });
+      try {
+        await filtered.getState().db.initialize();
+        const connector = await filtered.getState().db.getConnector();
+        await connector.query(
+          'CREATE TABLE physical_rows AS SELECT 1 AS value',
+        );
+        await connector.query(
+          'CREATE VIEW inspected_view AS SELECT * FROM physical_rows',
+        );
+        await connector.query("ATTACH ':memory:' AS external_catalog");
+        await connector.query(
+          'CREATE TABLE external_catalog.main.attached_rows (value INT)',
+        );
+        const tables = await filtered.getState().db.refreshTableSchemas();
+        expect(tables.map((table) => table.table.table)).toContain(
+          'physical_rows',
+        );
+        expect(tables.map((table) => table.table.table)).not.toContain(
+          'inspected_view',
+        );
+        expect(tables.map((table) => table.table.table)).not.toContain(
+          'attached_rows',
+        );
+        expect(JSON.stringify(filtered.getState().db.schemaTrees)).toContain(
+          'inspected_view',
+        );
+        const loaded = await filtered.getState().db.loadTableSchemas();
+        expect(loaded.map((table) => table.table.table)).toContain(
+          'physical_rows',
+        );
+        expect(loaded.map((table) => table.table.table)).not.toContain(
+          'inspected_view',
+        );
+      } finally {
+        await filtered.getState().db.destroy();
+      }
+    });
+
     it('should issue a single catalog metadata query per refresh', async () => {
       const connector = createNodeDuckDbConnector({dbPath: ':memory:'});
       const querySql: string[] = [];

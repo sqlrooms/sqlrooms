@@ -16,6 +16,7 @@ from sqlrooms.agent import code_plugin, process, registry
 from sqlrooms.agent.catalog import Catalog
 from sqlrooms.agent.manager import Manager
 from sqlrooms.agent.operations import Operations
+from sqlrooms.agent.settings import ApplicationSettings
 from sqlrooms.agent.storage import WorkspaceError, home
 from sqlrooms.server.access import AccessDenied, LocalAccess
 from sqlrooms.web.launcher import SqlroomsHttpServer
@@ -234,7 +235,12 @@ def test_failed_launch_remembers_selected_profile(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("publish_success", [True, False])
-def test_spawn_waits_for_pending_publication(tmp_path, monkeypatch, publish_success):
+@pytest.mark.parametrize("product", ["sqlrooms", "roomie"])
+def test_spawn_waits_for_pending_publication(
+    tmp_path, monkeypatch, publish_success, product
+):
+    settings = ApplicationSettings(product=product, environment_prefix=product.upper())
+    monkeypatch.setenv(product.upper() + "_HOME", str(tmp_path / product))
     output = tmp_path / "started"
     command = [
         sys.executable,
@@ -244,30 +250,42 @@ def test_spawn_waits_for_pending_publication(tmp_path, monkeypatch, publish_succ
     ]
     original_mark = process.mark_pending
 
-    def mark(database, pid, workspace_id):
+    def mark(database, pid, workspace_id, *, settings):
         assert not output.exists()
         if not publish_success:
             raise OSError("publication failed")
-        original_mark(database, pid, workspace_id)
+        original_mark(database, pid, workspace_id, settings=settings)
 
     monkeypatch.setattr(process, "mark_pending", mark)
     database = str(tmp_path / "test.duckdb")
     if publish_success:
-        child = process.spawn_pending(database, "saved", command, env=os.environ.copy())
+        child = process.spawn_pending(
+            database, "saved", command, env=os.environ.copy(), settings=settings
+        )
         assert child.wait(timeout=5) == 0
         assert output.exists()
         assert (
-            json.loads(process.pending_path(database).read_text())["pid"] == child.pid
+            json.loads(process.pending_path(database, settings=settings).read_text())[
+                "pid"
+            ]
+            == child.pid
         )
     else:
         with pytest.raises(OSError, match="publication failed"):
-            process.spawn_pending(database, "saved", command, env=os.environ.copy())
+            process.spawn_pending(
+                database, "saved", command, env=os.environ.copy(), settings=settings
+            )
         assert not output.exists()
 
 
-def test_failed_release_reaps_child_and_removes_pending_record(tmp_path, monkeypatch):
+@pytest.mark.parametrize("product", ["sqlrooms", "roomie"])
+def test_failed_release_reaps_child_and_removes_pending_record(
+    tmp_path, monkeypatch, product
+):
+    settings = ApplicationSettings(product=product, environment_prefix=product.upper())
+    monkeypatch.setenv(product.upper() + "_HOME", str(tmp_path / product))
     database = str(tmp_path / "test.duckdb")
-    pending = process.pending_path(database)
+    pending = process.pending_path(database, settings=settings)
     original_fdopen = os.fdopen
     pids = []
 
@@ -287,13 +305,17 @@ def test_failed_release_reaps_child_and_removes_pending_record(tmp_path, monkeyp
     monkeypatch.setattr(process.os, "fdopen", fdopen)
     with pytest.raises(BrokenPipeError, match="release failed"):
         process.spawn_pending(
-            database, "saved", [sys.executable, "-c", "pass"], env=os.environ.copy()
+            database,
+            "saved",
+            [sys.executable, "-c", "pass"],
+            env=os.environ.copy(),
+            settings=settings,
         )
     assert len(pids) == 1
     with pytest.raises(ChildProcessError):
         os.waitpid(pids[0], os.WNOHANG)
     assert not pending.exists()
-    process.check_pending(database)
+    process.check_pending(database, settings=settings)
 
 
 def test_launch_gate_exits_when_parent_disappears(tmp_path):

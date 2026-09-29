@@ -1,0 +1,16 @@
+{
+  "name": "roomie-python",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:ui": "node scripts/build.mjs --ui-only",
+    "dev:setup": "node scripts/dev_setup.mjs",
+    "prerelease": "pnpm dev:setup && pnpm build && pnpm test && pnpm typecheck",
+    "test": "../.venv/bin/python -m pytest tests",
+    "typecheck": "../.venv/bin/python -m ruff check roomie tests"
+  },
+  "devDependencies": {
+    "roomie-cli-app": "workspace:*"
+  }
+}

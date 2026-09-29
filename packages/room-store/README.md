@@ -159,6 +159,9 @@ persistence policy outside a room store or Zustand persist. The controller is
 storage-agnostic: hosts provide `load()` and `save()` adapter functions, while
 SQLRooms handles hydration state, dirty tracking, scheduled saves, final flush,
 in-flight save coalescing, and observable save status.
+Failed writes retain the pending snapshot for retry. Calling `flush()` while a
+save is running waits for that write and any newer edits without scheduling a
+duplicate write.
 
 `createPersistHelpers()` still only handles schema-based partialization and
 rehydrate merging. Let `createRoomStorePersistence()` combine those helpers with

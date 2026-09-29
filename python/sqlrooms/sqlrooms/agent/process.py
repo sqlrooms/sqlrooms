@@ -15,14 +15,14 @@ from . import registry
 from .storage import WorkspaceError, atomic_json, home, private_dir
 
 
-def pending_path(database: str) -> Path:
-    return private_dir(home() / "starting") / (
+def pending_path(database: str, *, settings=None) -> Path:
+    return private_dir((settings.home() if settings else home()) / "starting") / (
         hashlib.sha256(database.encode()).hexdigest() + ".json"
     )
 
 
-def check_pending(database: str):
-    path = pending_path(database)
+def check_pending(database: str, *, settings=None):
+    path = pending_path(database, settings=settings)
     try:
         value = json.loads(path.read_text())
     except FileNotFoundError:
@@ -49,9 +49,9 @@ def check_pending(database: str):
     path.unlink(missing_ok=True)
 
 
-def mark_pending(database: str, pid: int, workspace_id: str):
+def mark_pending(database: str, pid: int, workspace_id: str, *, settings=None):
     atomic_json(
-        pending_path(database),
+        pending_path(database, settings=settings),
         {
             "pid": pid,
             "processMarker": registry.process_marker(pid),
@@ -60,7 +60,9 @@ def mark_pending(database: str, pid: int, workspace_id: str):
     )
 
 
-def spawn_pending(database: str, workspace_id: str, command: list[str], *, env):
+def spawn_pending(
+    database: str, workspace_id: str, command: list[str], *, env, settings=None
+):
     """Release a detached child only after recording its startup identity.
 
     If the parent exits before publication, pipe EOF makes the child exit
@@ -84,18 +86,18 @@ def spawn_pending(database: str, workspace_id: str, command: list[str], *, env):
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                cwd=str(home()),
+                cwd=str(settings.home() if settings else home()),
                 env=env,
                 pass_fds=(reader.fileno(),),
                 start_new_session=True,
             )
-            mark_pending(database, child.pid, workspace_id)
+            mark_pending(database, child.pid, workspace_id, settings=settings)
             writer.write(b"1")
     except BaseException:
         if child is not None:
             child.terminate()
             child.wait()
-            pending_path(database).unlink(missing_ok=True)
+            pending_path(database, settings=settings).unlink(missing_ok=True)
         raise
     return child
 

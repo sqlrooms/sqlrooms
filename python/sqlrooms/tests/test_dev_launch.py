@@ -1,7 +1,5 @@
 """Development launch uses native authority without bypassing page bootstrap."""
 
-import importlib.util
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -10,10 +8,8 @@ import pytest
 
 @pytest.fixture
 def dev_launch(monkeypatch):
-    path = Path(__file__).parents[1] / "scripts/open_dev.py"
-    spec = importlib.util.spec_from_file_location("open_dev", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    from sqlrooms.agent import dev as module
+
     response = SimpleNamespace(
         raise_for_status=lambda: None, json=lambda: {"binding": "current"}
     )
@@ -40,13 +36,13 @@ def test_dev_launch_targets_exact_backend_and_keeps_ticket_out_of_logs(
     monkeypatch.setattr(
         dev_launch.registry,
         "records",
-        lambda: [
+        lambda **kwargs: [
             {"instanceId": "other", "apiUrl": expected["apiUrl"]},
             expected,
         ],
     )
     dev_launch.launch_dev(expected["apiUrl"])
-    dev_launch.registry.verify.assert_called_once_with(expected)
+    dev_launch.registry.verify.assert_called_once_with(expected, settings=None)
     dev_launch.registry.request.assert_called_once_with(
         expected, "/api/auth/ticket", payload={}
     )
@@ -66,7 +62,7 @@ def test_dev_launch_targets_exact_backend_and_keeps_ticket_out_of_logs(
 def test_dev_launch_never_targets_other_binding_or_port(
     dev_launch, monkeypatch, record
 ):
-    monkeypatch.setattr(dev_launch.registry, "records", lambda: [record])
+    monkeypatch.setattr(dev_launch.registry, "records", lambda **kwargs: [record])
     with pytest.raises(RuntimeError, match="native handoff"):
         dev_launch.launch_dev("http://127.0.0.1:4273", timeout=0)
     dev_launch.registry.request.assert_not_called()
@@ -77,7 +73,7 @@ def test_no_open_browser_prints_only_to_interactive_terminal(
     dev_launch, monkeypatch, capsys
 ):
     record = {"instanceId": "current", "apiUrl": "http://127.0.0.1:4273"}
-    monkeypatch.setattr(dev_launch.registry, "records", lambda: [record])
+    monkeypatch.setattr(dev_launch.registry, "records", lambda **kwargs: [record])
     monkeypatch.setattr(dev_launch.sys.stderr, "isatty", lambda: True)
     dev_launch.launch_dev(record["apiUrl"], open_browser=False)
     assert "#sqlrooms-ticket=once" in capsys.readouterr().err
@@ -88,7 +84,7 @@ def test_automatic_browser_and_terminal_receive_separate_tickets(
     dev_launch, monkeypatch, capsys
 ):
     record = {"instanceId": "current", "apiUrl": "http://127.0.0.1:4273"}
-    monkeypatch.setattr(dev_launch.registry, "records", lambda: [record])
+    monkeypatch.setattr(dev_launch.registry, "records", lambda **kwargs: [record])
     monkeypatch.setattr(dev_launch.sys.stderr, "isatty", lambda: True)
     dev_launch.registry.request.side_effect = [
         {"url": "http://localhost:3100/#sqlrooms-ticket=browser"},
@@ -101,3 +97,17 @@ def test_automatic_browser_and_terminal_receive_separate_tickets(
     output = capsys.readouterr().err
     assert "#sqlrooms-ticket=terminal" in output
     assert "#sqlrooms-ticket=browser" not in output
+
+
+def test_development_launch_rejects_other_process(dev_launch, monkeypatch):
+    module = dev_launch
+    monkeypatch.setattr(
+        module.registry,
+        "records",
+        lambda **kwargs: [
+            {"instanceId": "current", "apiUrl": "http://localhost:4273", "pid": 99}
+        ],
+    )
+    with pytest.raises(RuntimeError, match="native handoff"):
+        module.launch_dev("http://localhost:4273", expected_pid=100, timeout=0)
+    module.registry.verify.assert_not_called()

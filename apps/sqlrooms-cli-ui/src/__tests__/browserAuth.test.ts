@@ -21,6 +21,7 @@ const reply = (value: unknown, status = 200) =>
 beforeEach(() => {
   jest.resetModules();
   jest.useFakeTimers();
+  session.expiresAt = Date.now() / 1000 + 120;
   storage = new Map();
   replace = jest.fn();
   Object.defineProperty(globalThis, 'location', {

@@ -80,6 +80,7 @@ def create_app(
     security,
     *,
     title="SQLRooms runtime",
+    distribution="sqlrooms",
     sync_enabled=False,
     allow_client_snapshots=False,
     lifespan=None,
@@ -147,8 +148,8 @@ def create_app(
         except AccessDenied as exc:
             return JSONResponse({"error": exc.code}, status_code=401)
         return {
-            "name": "sqlrooms",
-            "version": version("sqlrooms"),
+            "name": distribution,
+            "version": version(distribution),
             "duckdb": duckdb.__version__,
         }
 

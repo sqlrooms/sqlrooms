@@ -33,6 +33,7 @@ import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 import {
   loadSchemaCatalog,
   LoadSchemaCatalogFilterFunction,
+  filterSchemaCatalog,
   loadTableSchemas,
   LoadTableSchemasFilter,
   LoadTableSchemasFilterFunction,
@@ -373,7 +374,9 @@ type QualifiedTableNameInput = Pick<
 export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
   /**
-   * Optional table visibility filter.
+   * Optional selectable-table filter for `db.tables` and `loadTableSchemas`.
+   * Receives catalog metadata, including `isView`, as its second argument.
+   * An independent catalog filter may retain entries in `db.schemaTrees`.
    * Defaults to {@link createDefaultLoadTableSchemasFilter}.
    */
   loadTableSchemasFilter?: LoadTableSchemasFilterFunction | null;
@@ -396,17 +399,18 @@ export function createDuckDbSlice({
   let refreshPromise: Promise<DataTable[]> | null = null;
   let pendingSchemaRefresh = false;
   const effectiveSchemaCatalogFilter =
-    loadSchemaCatalogFilter ??
-    (loadTableSchemasFilter === null
-      ? null
-      : (((entry) => {
-          if (entry.type === 'table') {
-            return loadTableSchemasFilter
-              ? loadTableSchemasFilter(entry.table)
-              : true;
-          }
-          return defaultLoadSchemaCatalogFilter(entry);
-        }) satisfies LoadSchemaCatalogFilterFunction));
+    loadSchemaCatalogFilter !== undefined
+      ? loadSchemaCatalogFilter
+      : loadTableSchemasFilter === null
+        ? null
+        : (((entry, metadata) => {
+            if (entry.type === 'table') {
+              return loadTableSchemasFilter
+                ? loadTableSchemasFilter(entry.table, metadata)
+                : true;
+            }
+            return defaultLoadSchemaCatalogFilter(entry);
+          }) satisfies LoadSchemaCatalogFilterFunction);
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
     (set, get, store) => {
       const parseTableReferenceParts = (
@@ -895,15 +899,25 @@ export function createDuckDbSlice({
                     }),
                   );
                   schemasWithTables = await loadSchemaCatalog(connector, {
-                    filterFunction: effectiveSchemaCatalogFilter,
                     defaultDatabase: currentDatabase,
                   });
                 } while (pendingSchemaRefresh);
 
-                const newTables = schemasWithTables.flatMap((s) => s.tables);
+                const newTables = schemasWithTables
+                  .flatMap((s) => s.tables)
+                  .filter((table) =>
+                    loadTableSchemasFilter
+                      ? loadTableSchemasFilter(table.table, table)
+                      : true,
+                  );
                 const currentTables = get().db.tables;
                 const currentSchemaTrees = get().db.schemaTrees;
-                const newSchemaTrees = createDbSchemaTrees(schemasWithTables);
+                const newSchemaTrees = createDbSchemaTrees(
+                  filterSchemaCatalog(
+                    schemasWithTables,
+                    effectiveSchemaCatalogFilter,
+                  ),
+                );
 
                 if (
                   !deepEquals(newTables, currentTables) ||

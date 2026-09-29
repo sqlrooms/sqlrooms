@@ -7,16 +7,18 @@ from pathlib import Path
 import time
 import uuid
 
-from .storage import WorkspaceError, atomic_json, canonical, home, lock, managed_root
+from .storage import WorkspaceError, atomic_json, canonical, lock
 from .availability import Availability
+from .settings import ApplicationSettings
 from .discovery import Discovery
 
 
 class Catalog:
-    def __init__(self):
-        self.path = home() / "workspaces.json"
+    def __init__(self, settings: ApplicationSettings | None = None):
+        self.settings = settings or ApplicationSettings()
+        self.path = self.settings.home() / "workspaces.json"
         self.availability = Availability()
-        self.discovery = Discovery()
+        self.discovery = Discovery(self.settings)
 
     def read(self) -> list[dict]:
         try:
@@ -65,13 +67,13 @@ class Catalog:
                 "name": name or "Temporary workspace",
                 "origin": "temporary",
             }
-        with lock("catalog"):
+        with lock("catalog", settings=self.settings):
             entries = self.read()
             entry = next((e for e in entries if e["databasePath"] == path), None)
             if entry is None:
                 origin = (
                     "managed"
-                    if Path(path).is_relative_to(managed_root().resolve())
+                    if Path(path).is_relative_to(self.settings.managed_root().resolve())
                     else "external"
                 )
                 entry = {
@@ -92,7 +94,7 @@ class Catalog:
 
     def discover(self, live=(), *, refresh=False):
         candidates, pending = self.discovery.scan(refresh=refresh)
-        with lock("catalog"):
+        with lock("catalog", settings=self.settings):
             entries = self.read()
             known = {e["databasePath"] for e in entries}
             for path in candidates:
@@ -164,7 +166,7 @@ class Catalog:
                 "workspace_unavailable",
                 "Replacement validation timed out; catalog unchanged.",
             ) from None
-        with lock("catalog"):
+        with lock("catalog", settings=self.settings):
             entries = self.read()
             entry = next((e for e in entries if e["workspaceId"] == workspace_id), None)
             if not entry:
@@ -186,7 +188,7 @@ class Catalog:
         return entry
 
     def forget(self, workspace_id: str):
-        with lock("catalog"):
+        with lock("catalog", settings=self.settings):
             self._write([e for e in self.read() if e["workspaceId"] != workspace_id])
         return {
             "ok": True,
@@ -198,7 +200,7 @@ class Catalog:
             raise WorkspaceError(
                 "invalid_input", "Use a workspace title of 1–200 characters."
             )
-        with lock("catalog"):
+        with lock("catalog", settings=self.settings):
             entries = self.read()
             entry = next((e for e in entries if e["workspaceId"] == workspace_id), None)
             if not entry:
