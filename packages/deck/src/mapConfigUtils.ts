@@ -1394,6 +1394,18 @@ export function createDeckMapConfigForTable(options: {
             ...(detectedGeometryColumn
               ? {geometryColumn: detectedGeometryColumn.geometryColumn}
               : {}),
+            // Record the generated point transform the same way
+            // `normalizeDeckMapPointLayers` does, so a map is self-describing
+            // from creation: a later table pick can tell this SQL apart from
+            // authored SQL and retire it once its columns are gone.
+            ...(coordinates
+              ? {
+                  geometryColumn,
+                  longitudeColumn: coordinates.longitudeColumn,
+                  latitudeColumn: coordinates.latitudeColumn,
+                  generatedTransform: {kind: 'point' as const, geometryColumn},
+                }
+              : {}),
           },
           filled: true,
           stroked: false,

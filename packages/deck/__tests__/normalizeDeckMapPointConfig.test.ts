@@ -4,6 +4,7 @@ import {
   applyDeckMapTableSelection,
   createDeckMapArcTransformSql,
   createDeckMapCentroidTransformSql,
+  createDeckMapConfigForTable,
   createDeckMapPointTransformSql,
   normalizeDeckMapPointConfig,
   regenerateMapConfigForTable,
@@ -431,7 +432,9 @@ describe('regenerateMapConfigForTable', () => {
     expect(Object.keys(next.datasets)).toEqual(['places']);
     expect(next.spec).toMatchObject({
       layers: [
-        expect.objectContaining({_sqlroomsBinding: {dataset: 'places'}}),
+        expect.objectContaining({
+          _sqlroomsBinding: expect.objectContaining({dataset: 'places'}),
+        }),
       ],
     });
   });
@@ -1115,6 +1118,37 @@ describe('applyDeckMapTableSelection', () => {
       applyDeckMapTableSelection(partial, h3CellsTable).datasets.h3_cells
         ?.source,
     ).toMatchObject({transformSql: base.datasets.points.source.transformSql});
+  });
+
+  it('repairs a map seeded from a lon/lat table end to end', () => {
+    // The scenario this whole path exists for, driven through the real
+    // creation helper rather than a hand-built fixture: seed a map from a
+    // lon/lat table, then pick a table with no geospatial columns.
+    const seeded = createDeckMapConfigForTable({
+      tableName: 'taxes',
+      tableReference: makeQualifiedTableName({schema: 'main', table: 'taxes'}),
+      columns: [
+        {name: 'Long', type: 'DOUBLE'},
+        {name: 'Lat', type: 'DOUBLE'},
+        {name: 'amount', type: 'DOUBLE'},
+      ],
+    });
+    expect(seeded.datasets.taxes?.source).toMatchObject({
+      transformSql: expect.stringContaining('ST_Point'),
+    });
+
+    const next = applyDeckMapTableSelection(seeded, h3CellsTable);
+
+    expect(next.datasets.h3_cells?.source).toEqual({
+      tableName: '"main"."h3_cells"',
+    });
+    expect(next.datasets.h3_cells).not.toHaveProperty('geometryColumn');
+    expect(next.spec.layers[0]._sqlroomsBinding).toEqual({dataset: 'h3_cells'});
+    expect(next.fitToData).toEqual({
+      dataset: 'h3_cells',
+      padding: 40,
+      maxZoom: 12,
+    });
   });
 
   it('keeps custom SQL that a stale marker no longer describes', () => {
