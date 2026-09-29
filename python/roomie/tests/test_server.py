@@ -1,6 +1,7 @@
 """Exercise Roomie's composition through its production HTTP and WebSocket APIs."""
 
 import json
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import duckdb
@@ -73,6 +74,30 @@ def test_bootstrap_authentication_and_roomie_identity(server):
             }
             & identity.keys()
         )
+
+
+def test_authenticated_browser_upload_writes_sanitized_file(server):
+    payload = "city,value\nZürich,1\n".encode()
+    with TestClient(server.app(), base_url=server._ui_url()) as client:
+        assert (
+            client.post(
+                "/api/upload", files={"file": ("cars.csv", payload)}
+            ).status_code
+            == 401
+        )
+        ticket = server.access.ticket()
+        token = client.post("/api/auth/exchange", json={"ticket": ticket}).json()[
+            "token"
+        ]
+        response = client.post(
+            "/api/upload",
+            headers={"Authorization": "Bearer " + token},
+            files={"file": ("../cars data.csv", payload)},
+        )
+        assert response.status_code == 200
+        path = Path(response.json()["path"])
+        assert path == server.upload_dir / "cars_data.csv"
+        assert path.read_bytes() == payload
 
 
 def test_shared_database_preserves_sqlrooms_state_and_has_no_sync(server):

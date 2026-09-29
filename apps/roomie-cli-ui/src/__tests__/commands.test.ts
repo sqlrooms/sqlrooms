@@ -9,7 +9,15 @@ import {createRoomieCommands} from '../commands';
 import {TableSettings, TableExplorersConfig} from '../model';
 import type {RoomState} from '../RoomState';
 
-function setup(documents: Record<string, BlockDocumentBlock[]> = {}) {
+function setup(
+  documents: Record<string, BlockDocumentBlock[]> = {},
+  dashboardPanels: Array<{
+    id: string;
+    type: string;
+    title: string;
+    config: Record<string, unknown>;
+  }> = [],
+) {
   const tables = TableExplorersConfig.parse({});
   const update = jest.fn(
     (id: string, settings: ReturnType<typeof TableSettings.parse>) => {
@@ -51,7 +59,7 @@ function setup(documents: Record<string, BlockDocumentBlock[]> = {}) {
         ),
       },
     },
-    mosaicDashboard: {getDashboard: () => ({panels: []})},
+    mosaicDashboard: {getDashboard: () => ({panels: dashboardPanels})},
     tableExplorers: {config: tables, update},
   } as unknown as RoomState;
   const context = {
@@ -251,6 +259,33 @@ describe('Roomie authoring commands', () => {
     ).rejects.toThrow('Block ID already exists in document.');
   });
 
+  it('rejects duplicate IDs in generic document mutations', async () => {
+    const paragraph = (id: string): BlockDocumentBlock => ({
+      id,
+      type: 'paragraph',
+      text: [{type: 'text', text: id}],
+    });
+    const {validate} = setup({document: [paragraph('existing')]});
+    await expect(
+      validate('block-document.append-blocks', {
+        artifactId: 'document',
+        blocks: [paragraph('existing')],
+      }),
+    ).rejects.toThrow('Block ID already exists in document.');
+    await expect(
+      validate('block-document.insert-blocks', {
+        artifactId: 'document',
+        index: 0,
+        blocks: [paragraph('duplicate'), paragraph('duplicate')],
+      }),
+    ).rejects.toThrow('Incoming blocks cannot share an ID.');
+    await expect(
+      validate('block-document.create', {
+        blocks: [paragraph('duplicate'), paragraph('duplicate')],
+      }),
+    ).rejects.toThrow('Incoming blocks cannot share an ID.');
+  });
+
   it('rejects duplicate instances within a single incoming batch', async () => {
     const {validate} = setup();
     await expect(
@@ -321,6 +356,41 @@ describe('Roomie authoring commands', () => {
         },
       }),
     ).rejects.toThrow();
+  });
+
+  it('rejects duplicate dashboard panel IDs', async () => {
+    const {validate} = setup(
+      {
+        document: [
+          {
+            id: 'dashboard-block',
+            type: 'statefulBlock',
+            blockType: 'dashboard',
+            blockInstanceId: 'dashboard',
+            ownership: 'owned',
+          },
+        ],
+      },
+      [
+        {
+          id: 'existing-panel',
+          type: 'data-table-explorer',
+          title: 'Existing',
+          config: {},
+        },
+      ],
+    );
+    await expect(
+      validate('dashboard.add-panel', {
+        dashboardId: 'dashboard',
+        panel: {
+          id: 'existing-panel',
+          type: 'data-table-explorer',
+          title: 'Duplicate',
+          config: {},
+        },
+      }),
+    ).rejects.toThrow('Dashboard panel ID already exists.');
   });
 
   it('persists table preferences only for an owned document table', async () => {

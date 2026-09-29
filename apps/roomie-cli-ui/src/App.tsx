@@ -6,6 +6,7 @@ import {Bridge} from './bridge';
 import {config} from './config';
 import {connector, roomStore, storage, useRoomStore} from './store';
 import {CommandDialog} from './CommandDialog';
+import {uploadBrowserFile} from './upload';
 
 /** Document-only Roomie shell with workspace utilities and visible save status. */
 export function App() {
@@ -146,11 +147,12 @@ export function App() {
                 const file = event.target.files?.[0];
                 if (!file) return;
                 try {
-                  await connector.loadFile(
+                  await uploadBrowserFile(
                     file,
                     file.name
                       .replace(/\.[^.]+$/, '')
                       .replace(/[^A-Za-z0-9_]/g, '_'),
+                    connector,
                   );
                   await roomStore.getState().db.refreshTableSchemas();
                 } catch (e) {

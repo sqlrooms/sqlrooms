@@ -3,11 +3,12 @@
 from contextlib import asynccontextmanager
 import asyncio
 from pathlib import Path
+import re
 import sys
 from urllib.parse import urlsplit
 import webbrowser
 
-from fastapi import Request
+from fastapi import File, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 import uvicorn
 from sqlrooms.agent import registry
@@ -26,6 +27,21 @@ from sqlrooms.server.security import (
 from sqlrooms.web.mcp import SqlroomsMcpService
 from sqlrooms.web.mcp_bridge import McpBridgeBroker
 from .settings import settings
+
+
+UPLOAD_COPY_CHUNK_SIZE = 1024 * 1024
+
+
+def _safe_upload_name(name: str | None) -> str:
+    candidate = Path((name or "").strip().replace("\\", "/")).name
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", candidate)
+    return safe if safe not in {"", ".", ".."} else "upload.dat"
+
+
+async def _write_upload(file: UploadFile, target: Path) -> None:
+    with target.open("wb") as output:
+        while chunk := await file.read(UPLOAD_COPY_CHUNK_SIZE):
+            output.write(chunk)
 
 
 class RoomieServer:
@@ -53,9 +69,11 @@ class RoomieServer:
         self.access = LocalAccess()
         self.security = TransportSecurity(self.access, set(), set())
         self._configure_origins()
+        self.upload_dir = self.settings.home() / "uploads"
+        self.upload_dir.mkdir(parents=True, exist_ok=True)
         self.runtime = DuckDBRuntime(
             self.duckdb_database,
-            self.settings.home() / "uploads",
+            self.upload_dir,
             meta_namespace="__roomie",
             sync_storage=False,
         )
@@ -154,6 +172,13 @@ class RoomieServer:
         from sqlrooms.web.local_file import resolve_local_file
 
         app.add_api_route("/api/local-file", resolve_local_file, methods=["POST"])
+
+        @app.post("/api/upload")
+        async def upload_file(file: UploadFile = File(...)):
+            target = self.upload_dir / _safe_upload_name(file.filename)
+            await _write_upload(file, target)
+            return {"path": str(target)}
+
         self.agent_runtime.routes(app)
         app.add_api_websocket_route("/ws/mcp-bridge", self.mcp_broker.handle_websocket)
         # The SDK owns /mcp itself; do not strip its path or redirect a POST.

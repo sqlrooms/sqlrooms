@@ -163,6 +163,33 @@ export function createRoomieCommands(options: {
           block,
         })),
       );
+      const createdBlockIds: string[] = [];
+      if (
+        command.id === 'block-document.create' ||
+        command.id === 'block-document.append-blocks' ||
+        command.id === 'block-document.insert-blocks'
+      )
+        createdBlockIds.push(...blocks.map((block) => block.id));
+      else if (
+        (command.id === 'block-document.create-chart-block' ||
+          command.id === 'block-document.create-stateful-block') &&
+        input.blockId !== undefined
+      )
+        createdBlockIds.push(input.blockId);
+      const incomingBlockIds = new Set<string>();
+      for (const blockId of createdBlockIds) {
+        if (incomingBlockIds.has(blockId))
+          throw new Error('Incoming blocks cannot share an ID.');
+        incomingBlockIds.add(blockId);
+        if (
+          input.artifactId !== undefined &&
+          existingBlocks.some(
+            ({artifactId, block}) =>
+              artifactId === input.artifactId && block.id === blockId,
+          )
+        )
+          throw new Error('Block ID already exists in document.');
+      }
       if (command.id === 'block-document.create-stateful-block') {
         if (!STATEFUL_BLOCKS.includes(input.blockType))
           throw new Error('Unsupported Roomie block.');
@@ -178,14 +205,6 @@ export function createRoomieCommands(options: {
           )
         )
           throw new Error('Block instance already belongs to a document.');
-        if (
-          input.blockId !== undefined &&
-          existingBlocks.some(
-            ({artifactId, block}) =>
-              artifactId === input.artifactId && block.id === input.blockId,
-          )
-        )
-          throw new Error('Block ID already exists in document.');
       }
       const incomingInstances = new Set<string>();
       for (const block of blocks) {
@@ -225,9 +244,13 @@ export function createRoomieCommands(options: {
           )
         )
           throw new Error('Unknown document dashboard.');
-        const existing = state.mosaicDashboard
-          .getDashboard(input.dashboardId)
-          ?.panels.find((p) => p.id === input.panelId);
+        const dashboard = state.mosaicDashboard.getDashboard(input.dashboardId);
+        const existing = dashboard?.panels.find((p) => p.id === input.panelId);
+        if (
+          command.id === 'dashboard.add-panel' &&
+          dashboard?.panels.some((panel) => panel.id === input.panel?.id)
+        )
+          throw new Error('Dashboard panel ID already exists.');
         const panel =
           input.panel ??
           (input.patch && existing ? {...existing, ...input.patch} : undefined);
