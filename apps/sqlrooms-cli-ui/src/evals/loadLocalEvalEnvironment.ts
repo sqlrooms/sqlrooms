@@ -2,13 +2,10 @@ import {loadEnvFile} from 'node:process';
 
 type EnvFileLoader = (path: string) => void;
 
-/** Loads local eval credentials without overriding an existing environment. */
+/** Loads local eval settings; Node preserves values already in the environment. */
 export function loadLocalEvalEnvironment(
-  environment: NodeJS.ProcessEnv = process.env,
   load: EnvFileLoader = loadEnvFile,
 ): void {
-  if (environment.OPENROUTER_API_KEY) return;
-
   try {
     load('.env.local');
   } catch (error) {

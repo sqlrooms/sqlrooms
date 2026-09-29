@@ -218,6 +218,7 @@ export {
   BlockCaptionEditor,
   type BlockCaptionEditorProps,
 } from './components/BlockCaptionEditor';
+export {BlockHeader, type BlockHeaderProps} from './components/BlockHeader';
 export {
   DataTableSelector,
   DataTableSelectorEmptyState,

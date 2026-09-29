@@ -10,7 +10,9 @@ export type McpQueryApprovalRequest = {
   database: string;
   databasePath: string;
   sql: string;
-  maxRows: number;
+  maxRows?: number;
+  kind?: 'external-read' | 'write';
+  commandId?: string;
   expiresAt: number;
 };
 
@@ -47,7 +49,9 @@ export function requestMcpQueryApproval(options: {
   database: string;
   databasePath: string;
   sql: string;
-  maxRows: number;
+  maxRows?: number;
+  kind?: 'external-read' | 'write';
+  commandId?: string;
   signal?: AbortSignal;
   timeoutMs?: number;
 }): Promise<McpQueryApprovalDecision> {
@@ -146,6 +150,8 @@ function publish() {
           databasePath: active.databasePath,
           sql: active.sql,
           maxRows: active.maxRows,
+          kind: active.kind,
+          commandId: active.commandId,
           expiresAt: active.expiresAt,
         },
       }

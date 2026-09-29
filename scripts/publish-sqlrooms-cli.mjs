@@ -7,17 +7,6 @@ import {fileURLToPath} from 'node:url';
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const packagesByTarget = {
-  'sqlrooms-server': {
-    label: 'sqlrooms-server',
-    cwd: resolve(rootDir, 'python/sqlrooms-server'),
-    packageJson: resolve(rootDir, 'python/sqlrooms-server/package.json'),
-    uploadArgs: [
-      'twine',
-      'upload',
-      '--skip-existing',
-      '../dist/sqlrooms_server*',
-    ],
-  },
   sqlrooms: {
     label: 'sqlrooms',
     cwd: resolve(rootDir, 'python/sqlrooms'),
@@ -26,17 +15,16 @@ const packagesByTarget = {
   },
 };
 
-const dependencyOrder = ['sqlrooms-server', 'sqlrooms'];
-const sqlroomsPyproject = resolve(rootDir, 'python/sqlrooms/pyproject.toml');
+const dependencyOrder = ['sqlrooms'];
 
 const usage = () => {
   console.log(`Manage SQLRooms Python CLI package releases.
 
 Usage:
-  pnpm cli:version --target <sqlrooms|sqlrooms-server|all> --bump <patch|minor|major>
-  pnpm cli:version --target <sqlrooms|sqlrooms-server|all> --set <version>
-  pnpm cli:publish [--target <sqlrooms|sqlrooms-server|all>]
-  pnpm cli:publish:dry [--target <sqlrooms|sqlrooms-server|all>]
+  pnpm cli:version --target <sqlrooms|all> --bump <patch|minor|major>
+  pnpm cli:version --target <sqlrooms|all> --set <version>
+  pnpm cli:publish [--target <sqlrooms|all>]
+  pnpm cli:publish:dry [--target <sqlrooms|all>]
 
 Options:
   --target <target>  Package to operate on. Defaults to all.
@@ -103,7 +91,7 @@ const getTargets = (target) => {
     return [target];
   }
 
-  fail(`Unknown target: ${target}. Use sqlrooms, sqlrooms-server, or all.`);
+  fail(`Unknown target: ${target}. Use sqlrooms or all.`);
 };
 
 const readPackageJson = (target) =>
@@ -138,23 +126,6 @@ const bumpVersion = (version, level) => {
   fail(`Unknown bump level: ${level}. Use patch, minor, or major.`);
 };
 
-const updateServerDependencyFloor = (version) => {
-  const pyproject = readFileSync(sqlroomsPyproject, 'utf8');
-  const dependencyPattern = /"sqlrooms-server>=([^"]+)"/;
-  if (!dependencyPattern.test(pyproject)) {
-    fail(
-      'Could not find sqlrooms-server dependency floor in python/sqlrooms/pyproject.toml.',
-    );
-  }
-
-  const updated = pyproject.replace(
-    dependencyPattern,
-    `"sqlrooms-server>=${version}"`,
-  );
-
-  writeFileSync(sqlroomsPyproject, updated);
-};
-
 const run = (label, cwd, command, args) => {
   console.log(`\n==> ${label}: ${command} ${args.join(' ')}`);
   const result = spawnSync(command, args, {
@@ -183,7 +154,6 @@ const versionPackages = ({target, bump, setVersion}) => {
   }
 
   const targets = getTargets(target);
-  let serverVersion;
 
   for (const packageTarget of targets) {
     const pkg = readPackageJson(packageTarget);
@@ -192,15 +162,6 @@ const versionPackages = ({target, bump, setVersion}) => {
     console.log(
       `${packagesByTarget[packageTarget].label}: ${pkg.version} -> ${nextVersion}`,
     );
-
-    if (packageTarget === 'sqlrooms-server') {
-      serverVersion = nextVersion;
-    }
-  }
-
-  if (serverVersion) {
-    updateServerDependencyFloor(serverVersion);
-    console.log(`sqlrooms dependency floor: sqlrooms-server>=${serverVersion}`);
   }
 };
 

@@ -77,3 +77,7 @@ connector implements `DbConnector` in the current runtime.
 - Default materialization strategy is strict ephemeral attached database mode.
 - `@sqlrooms/db/bridge` and `@sqlrooms/db/connectors/duckdb` are supported
   focused entry points for hosts that do not need the complete root export.
+
+HTTP bridges accept explicit authorization through the existing `headers` option.
+Bridge fetches reject redirects so credentials and query payloads stay on the
+configured endpoint.

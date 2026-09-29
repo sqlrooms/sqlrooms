@@ -10,8 +10,17 @@ pnpm add @sqlrooms/crdt loro-crdt loro-mirror
 
 ## Quick start
 
+Start `sqlrooms server` with `--experimental --experimental-sync` and configure
+its browser origin/proxy as shown in the [sync example](../../examples/sync/README.md).
+Use the example's [auth bootstrap](../../examples/sync/src/auth.ts) as `./auth`:
+it exchanges a single-use launch ticket for a page credential, checks the backend
+binding, and renews that credential before expiry. The native credential stays
+in the local credential file; never embed it in frontend code. See the
+[authentication guide](../../python/sqlrooms/AUTHENTICATION.md).
+
 ```ts
 import {schema} from 'loro-mirror';
+import {databaseUrl, pageToken} from './auth';
 import {createRoomStore, persistSliceConfigs} from '@sqlrooms/room-shell';
 import {BaseRoomConfig, LayoutConfig} from '@sqlrooms/room-config';
 import {
@@ -48,9 +57,10 @@ const {roomStore, useRoomStore} = createRoomStore(
         ],
         storage: createLocalStorageDocStorage('sqlrooms-sync-demo'),
         sync: createWebSocketSyncConnector({
-          url: 'ws://localhost:4800',
+          url: databaseUrl.href, // /ws/duckdb through the configured proxy
+          token: pageToken, // sends {type: 'auth', token}, then waits for authAck
           roomId: 'demo-room',
-          // If your server sends a snapshot on join (like sqlrooms-server),
+          // If your server sends a snapshot on join (like sqlrooms server),
           // prefer updates-only to avoid re-sending full snapshots on reconnects.
           sendSnapshotOnConnect: false,
           // Still seed an empty server once after join (important if you load initial
@@ -73,6 +83,12 @@ const {roomStore, useRoomStore} = createRoomStore(
 - **Sync**: plug a `CrdtSyncConnector` (websocket helper included) that forwards local updates and applies remote updates via `doc.import`.
 
 See `examples/sync` for an end-to-end demonstration with the Python sync server.
+
+When `createWebSocketSyncConnector` receives a `token`, it sends an initial
+`{type: 'auth', token}` frame and waits for `authAck` before joining or sending
+snapshots/updates. The token is never added to the URL. Servers must acknowledge
+within five seconds; rejection or timeout closes the socket and uses the normal
+reconnect policy. Without a token, the connector retains its direct join behavior.
 
 ### Testing & debugging
 

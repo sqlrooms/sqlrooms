@@ -7,6 +7,34 @@ See the
 [Blocks and Block Documents developer guide](https://sqlrooms.org/blocks-and-documents)
 for the conceptual model, ownership rules, and a focused host setup.
 
+## Block inspection
+
+`createBlockDocumentCommands` registers the read-only
+`block-document.inspect-block({artifactId, blockId})` command. Both IDs are
+required. It verifies that the artifact is a document and that the block belongs
+to it; `blockId` is the document block ID, not a backing resource ID.
+
+Inline blocks return `{artifactId, block}`, including their inline configuration.
+For a stateful block, register an optional `readState` alongside `ensureState` in
+`statefulBlockTypes`:
+
+```ts
+statefulBlockTypes: [
+  {
+    blockType: 'map',
+    readState: ({state, blockInstanceId}) =>
+      state.deckMaps.config.mapsById[blockInstanceId],
+  },
+];
+```
+
+The command returns `{artifactId, block, backingState}` using that type's reader.
+Readers must return JSON-serializable data without initializing or changing state;
+`undefined` means the backing instance is missing. Unregistered types, types
+without readers, and missing backing instances return explicit failures. The
+command contains no map-specific lookup or AI dependency. Host authorization and
+transport result limits still apply.
+
 ## Usage
 
 ```tsx
@@ -553,6 +581,34 @@ Standalone chart blocks are best for one chart with local context. Dashboard
 stateful blocks are best for coordinated multi-panel views, richer dashboard
 layout, or when dashboard AI tools are the natural authoring path.
 
+## Block headers
+
+`BlockHeader` is the shared chrome for a block's title bar. Chart, map, table
+and dashboard blocks all render through it, so their headings stay identical
+instead of drifting apart. Pair it with `BlockCaptionEditor`, which carries the
+shared caption typography and swallows commits that leave the caption
+unchanged — so merely clicking into a caption never dirties the document.
+
+```tsx
+import {BlockCaptionEditor, BlockHeader} from '@sqlrooms/documents';
+
+function MyBlockHeader({caption, onCaptionChange, readOnly}) {
+  return (
+    <BlockHeader actions={<SettingsButton />}>
+      <BlockCaptionEditor
+        value={caption ?? ''}
+        placeholder="Block caption"
+        isReadOnly={readOnly}
+        onChange={(value) => onCaptionChange(value || undefined)}
+      />
+    </BlockHeader>
+  );
+}
+```
+
+Pass `actionsClassName` when a block's actions need different spacing from the
+default icon-button gap.
+
 ## Commands
 
 `createMarkdownDocumentCommands()` registers AI- and palette-friendly commands for
@@ -569,6 +625,7 @@ document artifacts. By default the command IDs are:
 
 - `block-document.list`
 - `block-document.get`
+- `block-document.inspect-block`
 - `block-document.create`
 - `block-document.append-blocks`
 - `block-document.insert-blocks`

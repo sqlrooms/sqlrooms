@@ -85,5 +85,9 @@ The built-in save and test actions expect these JSON endpoints:
 - `PUT {apiBaseUrl}/api/db/settings`
 - `POST {apiBaseUrl}/api/db/test-connection`
 
+Hosts can pass a `fetch(url, init)` transport to `createDbSettingsSlice` to
+authenticate both actions or resolve a proxy base path. It defaults to browser
+`fetch`; credentials and transport policy remain owned by the host application.
+
 Use `DbConnectionsList`, `DbConnectionForm`, or
 `ConnectorDriversDiagnostics` directly for lower-level composition.

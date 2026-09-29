@@ -1,0 +1,41 @@
+{
+  "client": "aiohttp; permessage-deflate=15; generated 1M rows; 3 process launches",
+  "runs": [
+    {
+      "startup_ms": 778.0853337608278,
+      "cold_ms": 8.825709111988544,
+      "warm_median_ms": 1.7346669919788837,
+      "burst_8_ms": 5.644457880407572,
+      "large_ms": 1836.0750838182867,
+      "large_bytes": 44000437,
+      "upload_ms": 797.4498332478106,
+      "cancel_ack_ms": 0.5789170973002911,
+      "health_ms": 1.2937909923493862,
+      "peak_rss_mib": 514.046875
+    },
+    {
+      "startup_ms": 670.6265420652926,
+      "cold_ms": 7.334582973271608,
+      "warm_median_ms": 1.702416455373168,
+      "burst_8_ms": 5.518916063010693,
+      "large_ms": 1624.6812921017408,
+      "large_bytes": 44000437,
+      "upload_ms": 760.5868331156671,
+      "cancel_ack_ms": 1.0204999707639217,
+      "health_ms": 1.010207924991846,
+      "peak_rss_mib": 514.84375
+    },
+    {
+      "startup_ms": 674.8953340575099,
+      "cold_ms": 7.889790926128626,
+      "warm_median_ms": 1.7121038399636745,
+      "burst_8_ms": 5.8849579654634,
+      "large_ms": 1586.8870001286268,
+      "large_bytes": 44000437,
+      "upload_ms": 737.1424580924213,
+      "cancel_ack_ms": 0.9416672401130199,
+      "health_ms": 1.217207871377468,
+      "peak_rss_mib": 508.203125
+    }
+  ]
+}

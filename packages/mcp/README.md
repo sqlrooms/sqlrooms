@@ -33,3 +33,5 @@ MCP Streamable HTTP protocol negotiated by the official MCP SDK.
 WebMCP is not implemented. A future adapter can map portable capability
 definitions to `document.modelContext.registerTool()` without changing the
 runtime or capability handlers.
+
+The browser bridge accepts an optional `onFlush` callback for authenticated host lifecycle control (`workspace.flush`). It is independent of the advertised workspace tools. Hosts must drain ongoing operations and observe persistence success before reporting a graceful close. Returning no successful result prevents the CLI host from stopping.

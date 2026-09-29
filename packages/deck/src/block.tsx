@@ -5,6 +5,7 @@ import {
 } from '@sqlrooms/duckdb';
 import {
   BlockCaptionEditor,
+  BlockHeader,
   DataTableSelectorEmptyState,
   useBlockSettingsStore,
 } from '@sqlrooms/documents';
@@ -198,7 +199,51 @@ export function DeckMapBlockRenderer({
     : 'Fit view unavailable for this map';
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-border flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
+      <BlockHeader
+        actions={
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className="inline-flex"
+                  tabIndex={canFitView ? undefined : 0}
+                  aria-label={canFitView ? undefined : fitViewLabel}
+                >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    aria-label={fitViewLabel}
+                    disabled={!canFitView}
+                    onClick={() =>
+                      setFitRequestVersion((version) => version + 1)
+                    }
+                  >
+                    <FocusIcon className="h-3.5 w-3.5" />
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{fitViewLabel}</TooltipContent>
+            </Tooltip>
+            <Button
+              type="button"
+              variant={isSettingsShown ? 'secondary' : 'ghost'}
+              size="icon"
+              className="h-6 w-6"
+              aria-label={isSettingsShown ? 'Close settings' : 'Open settings'}
+              onClick={() =>
+                isSettingsShown
+                  ? requestCloseSettingsPanel()
+                  : requestOpenSettingsPanel()
+              }
+            >
+              <SlidersVerticalIcon className="h-3.5 w-3.5" />
+            </Button>
+            {headerActions}
+          </>
+        }
+      >
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <MapIcon className="h-4 w-4 shrink-0" />
           <BlockCaptionEditor
@@ -208,46 +253,7 @@ export function DeckMapBlockRenderer({
             onChange={(value) => onCaptionChange?.(value || undefined)}
           />
         </div>
-        <div className="flex items-center gap-0.5">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                className="inline-flex"
-                tabIndex={canFitView ? undefined : 0}
-                aria-label={canFitView ? undefined : fitViewLabel}
-              >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  aria-label={fitViewLabel}
-                  disabled={!canFitView}
-                  onClick={() => setFitRequestVersion((version) => version + 1)}
-                >
-                  <FocusIcon className="h-3.5 w-3.5" />
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{fitViewLabel}</TooltipContent>
-          </Tooltip>
-          <Button
-            type="button"
-            variant={isSettingsShown ? 'secondary' : 'ghost'}
-            size="icon"
-            className="h-6 w-6"
-            aria-label={isSettingsShown ? 'Close settings' : 'Open settings'}
-            onClick={() =>
-              isSettingsShown
-                ? requestCloseSettingsPanel()
-                : requestOpenSettingsPanel()
-            }
-          >
-            <SlidersVerticalIcon className="h-3.5 w-3.5" />
-          </Button>
-          {headerActions}
-        </div>
-      </div>
+      </BlockHeader>
       <div className="min-h-0 flex-1">
         {hasDatasets ? (
           <DeckMapResourceErrorBoundary

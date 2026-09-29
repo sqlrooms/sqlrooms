@@ -11,10 +11,13 @@ import {createCliEvalTarget} from './createCliEvalTarget';
 import {loadLocalEvalEnvironment} from './loadLocalEvalEnvironment';
 import {createOpenRouterCostTracker} from './openRouterCost';
 import {CLI_BEHAVIORAL_SCENARIOS, createCliScenarioChecks} from './scenarios';
+import {
+  DEFAULT_OPENROUTER_EVAL_MODEL,
+  getOpenRouterEvalModel,
+} from './evalModel';
 
 loadLocalEvalEnvironment();
 
-const MODEL_ID = 'deepseek/deepseek-v4-flash-0731';
 const MODEL_INPUT_COST_USD_PER_MILLION_TOKENS = 0.08;
 const MODEL_OUTPUT_COST_USD_PER_MILLION_TOKENS = 0.18;
 const MAX_STEPS = 24;
@@ -47,7 +50,8 @@ function requiredEnvironment(name: string): string {
   return value;
 }
 
-function createPinnedOpenRouterModel(
+function createOpenRouterModel(
+  modelId: string,
   metadataExtractor: MetadataExtractor,
 ): LanguageModel {
   const provider = createOpenAICompatible({
@@ -61,7 +65,7 @@ function createPinnedOpenRouterModel(
     includeUsage: true,
     metadataExtractor,
   });
-  return provider.languageModel(MODEL_ID, {
+  return provider.languageModel(modelId, {
     transformRequestBody: (body) => ({...body, temperature: TEMPERATURE}),
   }) as LanguageModel;
 }
@@ -113,15 +117,22 @@ export default class SqlroomsCliEvalProvider {
     }
 
     const repeatIndex = context?.repeatIndex ?? 0;
-    const costTracker = createOpenRouterCostTracker({
-      inputCostUsdPerMillionTokens: MODEL_INPUT_COST_USD_PER_MILLION_TOKENS,
-      outputCostUsdPerMillionTokens: MODEL_OUTPUT_COST_USD_PER_MILLION_TOKENS,
-    });
+    const modelId = getOpenRouterEvalModel();
+    const costTracker = createOpenRouterCostTracker(
+      modelId === DEFAULT_OPENROUTER_EVAL_MODEL
+        ? {
+            inputCostUsdPerMillionTokens:
+              MODEL_INPUT_COST_USD_PER_MILLION_TOKENS,
+            outputCostUsdPerMillionTokens:
+              MODEL_OUTPUT_COST_USD_PER_MILLION_TOKENS,
+          }
+        : undefined,
+    );
     const target = createCliEvalTarget({
-      model: createPinnedOpenRouterModel(costTracker.metadataExtractor),
+      model: createOpenRouterModel(modelId, costTracker.metadataExtractor),
       modelProvider: 'openrouter',
-      modelId: MODEL_ID,
-      configuredRevision: MODEL_ID,
+      modelId,
+      configuredRevision: modelId,
       modelSettings: {temperature: TEMPERATURE, maxSteps: MAX_STEPS},
       maxSteps: MAX_STEPS,
       repository: repositoryMetadata(),

@@ -9,9 +9,7 @@ APP_DIR="${APP_DIR:-/home/sprite/sqlrooms}"
 SERVICE_NAME="${SERVICE_NAME:-sqlrooms}"
 DB_PATH="${DB_PATH:-/home/sprite/sqlrooms/sqlrooms.db}"
 HTTP_PORT="${HTTP_PORT:-8080}"
-WS_PORT="${WS_PORT:-4000}"
 LOCAL_HTTP_PORT="${LOCAL_HTTP_PORT:-3000}"
-LOCAL_WS_PORT="${LOCAL_WS_PORT:-4000}"
 HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-60}"
 HEALTH_CHECK_INTERVAL="${HEALTH_CHECK_INTERVAL:-2}"
 SQLROOMS_EXTRAS="${SQLROOMS_EXTRAS:-}"
@@ -34,9 +32,7 @@ Options:
   --app-dir PATH      Remote install directory. Default: /home/sprite/sqlrooms
   --db-path PATH      Remote DuckDB path. Default: /home/sprite/sqlrooms/sqlrooms.db
   --http-port PORT    Remote UI HTTP port. Default: 8080
-  --ws-port PORT      Remote DuckDB websocket port. Default: 4000
   --local-http PORT   Local proxied UI port. Default: 3000
-  --local-ws PORT     Local proxied websocket port. Default: 4000
   --extras EXTRAS     sqlrooms extras to install, e.g. connectors.
   --experimental-sync Enable experimental SQLRooms CRDT sync websocket support.
   --private           Keep the Sprite URL authenticated. Default is public.
@@ -50,6 +46,10 @@ Environment variables with matching uppercase names are also supported.
 Notes:
   The script publishes the UI at the Sprite URL and tells the browser to use the
   Sprite websocket proxy URL for DuckDB, e.g. wss://<sprite>.sprites.dev/ws/duckdb.
+  SQLRooms binds loopback; the Sprite HTTP proxy routes to the service port.
+  Workspace access still requires a SQLRooms launch ticket. Retrieve the native
+  credential-file path from the service log and use POST /api/auth/ticket as
+  described in python/sqlrooms/AUTHENTICATION.md.
   HEALTH_CHECK_TIMEOUT and HEALTH_CHECK_INTERVAL can tune service readiness polling.
 USAGE
 }
@@ -76,16 +76,12 @@ while [[ $# -gt 0 ]]; do
       HTTP_PORT="$2"
       shift 2
       ;;
-    --ws-port)
-      WS_PORT="$2"
-      shift 2
+    --ws-port|--local-ws)
+      echo "Separate WebSocket ports were removed; use --http-port and --local-http." >&2
+      exit 1
       ;;
     --local-http)
       LOCAL_HTTP_PORT="$2"
-      shift 2
-      ;;
-    --local-ws)
-      LOCAL_WS_PORT="$2"
       shift 2
       ;;
     --extras)
@@ -198,13 +194,13 @@ if [[ "$SKIP_BUILD" != "1" ]]; then
   (cd "$ROOT_DIR/python/sqlrooms" && pnpm build:ui)
 else
   echo "Skipping pnpm builds; using the existing bundled CLI UI."
+  (cd "$ROOT_DIR/python/sqlrooms" && pnpm build:plugin)
   if [[ ! -f "$ROOT_DIR/python/sqlrooms/sqlrooms/web/static/index.html" ]]; then
     echo "Missing bundled CLI UI at python/sqlrooms/sqlrooms/web/static/index.html." >&2
     echo "Run once without --skip-build so the UI is built and copied into the Python package." >&2
     exit 1
   fi
 fi
-uv build --project "$ROOT_DIR/python" --package sqlrooms-server --wheel --out-dir "$WHEEL_DIR"
 uv build --project "$ROOT_DIR/python" --package sqlrooms --wheel --out-dir "$WHEEL_DIR"
 tar -C "$WHEEL_DIR" -czf "$BUNDLE" .
 
@@ -216,7 +212,6 @@ set -euo pipefail
 : "${SERVICE_NAME:?}"
 : "${DB_PATH:?}"
 : "${HTTP_PORT:?}"
-: "${WS_PORT:?}"
 : "${SQLROOMS_EXTERNAL_URL:?}"
 : "${SQLROOMS_EXTERNAL_WS_URL:?}"
 HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-60}"
@@ -228,10 +223,9 @@ tar -C "$APP_DIR/wheels" -xzf "$APP_DIR/sqlrooms-wheels.tgz"
 python3 -m venv "$APP_DIR/venv"
 "$APP_DIR/venv/bin/python" -m pip install --upgrade pip wheel
 
-server_wheel="$(find "$APP_DIR/wheels" -maxdepth 1 -name 'sqlrooms_server-*.whl' | head -n 1)"
 cli_wheel="$(find "$APP_DIR/wheels" -maxdepth 1 -name 'sqlrooms-*.whl' ! -name 'sqlrooms_server-*.whl' | head -n 1)"
-if [[ -z "$server_wheel" || -z "$cli_wheel" ]]; then
-  echo "Could not find sqlrooms-server and sqlrooms wheels in $APP_DIR/wheels" >&2
+if [[ -z "$cli_wheel" ]]; then
+  echo "Could not find sqlrooms wheel in $APP_DIR/wheels" >&2
   exit 1
 fi
 
@@ -239,7 +233,7 @@ cli_requirement="$cli_wheel"
 if [[ -n "${SQLROOMS_EXTRAS:-}" ]]; then
   cli_requirement="${cli_wheel}[${SQLROOMS_EXTRAS}]"
 fi
-"$APP_DIR/venv/bin/pip" install --force-reinstall "$server_wheel" "$cli_requirement"
+"$APP_DIR/venv/bin/pip" install --force-reinstall "$cli_requirement"
 
 sync_args=()
 if [[ "${SQLROOMS_SYNC:-0}" == "1" ]]; then
@@ -250,9 +244,8 @@ cat >"$APP_DIR/run-sqlrooms.sh" <<RUNNER
 #!/usr/bin/env bash
 set -euo pipefail
 exec "$APP_DIR/venv/bin/sqlrooms" \\
-  --host 0.0.0.0 \\
+  --host 127.0.0.1 \\
   --port "$HTTP_PORT" \\
-  --ws-port "$WS_PORT" \\
   --external-url "$SQLROOMS_EXTERNAL_URL" \\
   --external-ws-url "$SQLROOMS_EXTERNAL_WS_URL" \\
   --no-open-browser \\
@@ -265,13 +258,13 @@ if [[ "${#sync_args[@]}" -gt 0 ]]; then
   sed -i 's/--no-open-browser \\/--no-open-browser \\\n  --experimental \\\n  --experimental-sync \\/' "$APP_DIR/run-sqlrooms.sh"
 fi
 
-sprite-env services create "$SERVICE_NAME" --cmd "$APP_DIR/run-sqlrooms.sh"
+sprite-env services create "$SERVICE_NAME" --cmd "$APP_DIR/run-sqlrooms.sh" --http-port "$HTTP_PORT"
 "$APP_DIR/venv/bin/python" - <<PY
 import sys
 import time
 import urllib.request
 
-url = "http://127.0.0.1:$HTTP_PORT/api/config"
+url = "http://127.0.0.1:$HTTP_PORT/healthz"
 timeout = float("$HEALTH_CHECK_TIMEOUT")
 interval = float("$HEALTH_CHECK_INTERVAL")
 deadline = time.monotonic() + timeout
@@ -309,7 +302,7 @@ SPRITE_HOST="${SPRITE_URL#https://}"
 SPRITE_WS_URL="wss://$SPRITE_HOST/ws/duckdb"
 if [[ "$RUN_PROXY" == "1" ]]; then
   DEPLOY_EXTERNAL_URL="http://localhost:$LOCAL_HTTP_PORT"
-  DEPLOY_EXTERNAL_WS_URL="ws://localhost:$LOCAL_WS_PORT"
+  DEPLOY_EXTERNAL_WS_URL="ws://localhost:$LOCAL_HTTP_PORT/ws/duckdb"
 else
   DEPLOY_EXTERNAL_URL="$SPRITE_URL"
   DEPLOY_EXTERNAL_WS_URL="$SPRITE_WS_URL"
@@ -320,7 +313,7 @@ sprite_exec mkdir -p "$APP_DIR"
 sprite_exec \
   --file "$BUNDLE:$APP_DIR/sqlrooms-wheels.tgz" \
   --file "$REMOTE_INSTALL:$APP_DIR/install-sqlrooms-on-sprite.sh" \
-  --env "APP_DIR=$APP_DIR,SERVICE_NAME=$SERVICE_NAME,DB_PATH=$DB_PATH,HTTP_PORT=$HTTP_PORT,WS_PORT=$WS_PORT,SQLROOMS_EXTRAS=$SQLROOMS_EXTRAS,SQLROOMS_SYNC=$SQLROOMS_SYNC,SQLROOMS_EXTERNAL_URL=$DEPLOY_EXTERNAL_URL,SQLROOMS_EXTERNAL_WS_URL=$DEPLOY_EXTERNAL_WS_URL,HEALTH_CHECK_TIMEOUT=$HEALTH_CHECK_TIMEOUT,HEALTH_CHECK_INTERVAL=$HEALTH_CHECK_INTERVAL" \
+  --env "APP_DIR=$APP_DIR,SERVICE_NAME=$SERVICE_NAME,DB_PATH=$DB_PATH,HTTP_PORT=$HTTP_PORT,SQLROOMS_EXTRAS=$SQLROOMS_EXTRAS,SQLROOMS_SYNC=$SQLROOMS_SYNC,SQLROOMS_EXTERNAL_URL=$DEPLOY_EXTERNAL_URL,SQLROOMS_EXTERNAL_WS_URL=$DEPLOY_EXTERNAL_WS_URL,HEALTH_CHECK_TIMEOUT=$HEALTH_CHECK_TIMEOUT,HEALTH_CHECK_INTERVAL=$HEALTH_CHECK_INTERVAL" \
   bash "$APP_DIR/install-sqlrooms-on-sprite.sh"
 
 if [[ "$PUBLIC_URL" == "1" ]]; then
@@ -334,7 +327,6 @@ echo "Online UI: $SPRITE_URL"
 echo "Online DuckDB websocket: $SPRITE_WS_URL"
 echo "Runtime UI config: $DEPLOY_EXTERNAL_URL"
 echo "Runtime DuckDB websocket config: $DEPLOY_EXTERNAL_WS_URL"
-echo "Internal DuckDB websocket port: $WS_PORT"
 echo
 echo "Sprite URL settings:"
 sprite_url
@@ -342,10 +334,9 @@ echo
 
 if [[ "$RUN_PROXY" == "1" ]]; then
   echo "Opening optional local proxy. Visit: http://localhost:$LOCAL_HTTP_PORT"
-  echo "The local websocket will be available at: ws://localhost:$LOCAL_WS_PORT"
+  echo "The local websocket will be available at: ws://localhost:$LOCAL_HTTP_PORT/ws/duckdb"
   echo "Press Ctrl+C to stop the proxy; the Sprite service remains installed."
-  sprite_proxy "$LOCAL_HTTP_PORT:$HTTP_PORT" "$LOCAL_WS_PORT:$WS_PORT"
+  sprite_proxy "$LOCAL_HTTP_PORT:$HTTP_PORT"
 fi
 
-echo "To open a local debugging proxy later, run:"
-echo "  sprite proxy ${SPRITE_ORG:+-o $SPRITE_ORG }-s $SPRITE_NAME $LOCAL_HTTP_PORT:$HTTP_PORT $LOCAL_WS_PORT:$WS_PORT"
+echo "For local browser debugging, use --proxy when deploying so the exact local origin is allowed."

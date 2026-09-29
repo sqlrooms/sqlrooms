@@ -80,10 +80,8 @@ const state = {
   },
 };
 
-jest.unstable_mockModule('../store', () => ({
-  roomStore: {getState: () => state},
-}));
 jest.unstable_mockModule('@sqlrooms/duckdb', () => ({
+  parseQualifiedSqlIdentifier: (table: string) => ({table}),
   arrowTableToJson: (result: {rows: unknown[]}) => [...result.rows],
   getTableDisplayName: (table: {table: string}) => table.table,
   getTableIdentity: (table: {
@@ -109,11 +107,12 @@ const {createCliRoomCapabilities} =
 
 function capability(
   name: string,
-  options?: Parameters<typeof createCliRoomCapabilities>[0],
+  options?: Omit<Parameters<typeof createCliRoomCapabilities>[0], 'store'>,
 ) {
-  return createCliRoomCapabilities(options).find(
-    (entry) => entry.name === name,
-  )!;
+  return createCliRoomCapabilities({
+    ...options,
+    store: {getState: () => state} as any,
+  }).find((entry) => entry.name === name)!;
 }
 
 async function flushQueuedInvocations() {
@@ -265,10 +264,10 @@ describe('CLI room capability handlers', () => {
     );
   });
 
-  test('does not expose or execute SQL-bearing commands over MCP', async () => {
+  test('does not expose or execute asynchronous SQL data-source commands over MCP', async () => {
     state.commands.listCommands.mockReturnValueOnce([
       {
-        id: 'db.create-table-from-query',
+        id: 'room.add-sql-data-source',
         owner: 'test',
         name: 'Create table from query',
         enabled: true,
@@ -299,7 +298,7 @@ describe('CLI room capability handlers', () => {
       {surface: 'mcp-http'},
     );
     const execution = await capability('execute_command').execute(
-      {commandId: 'db.create-table-from-query', input: {query: 'SELECT 1'}},
+      {commandId: 'room.add-sql-data-source', input: {query: 'SELECT 1'}},
       {surface: 'mcp-http'},
     );
 
@@ -337,15 +336,16 @@ describe('CLI room capability handlers', () => {
           finishFirst = resolve;
         }),
     );
+    const executeCapability = capability('execute_command');
     const firstController = new AbortController();
-    const firstInvocation = capability('execute_command').execute(
+    const firstInvocation = executeCapability.execute(
       {commandId: 'workspace.stuck'},
       {surface: 'mcp-http', signal: firstController.signal},
     );
     await flushQueuedInvocations();
     expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(1);
 
-    const secondInvocation = capability('execute_command').execute(
+    const secondInvocation = executeCapability.execute(
       {commandId: 'workspace.refresh'},
       {surface: 'mcp-http'},
     );
@@ -366,4 +366,29 @@ describe('CLI room capability handlers', () => {
     await expect(secondInvocation).resolves.toMatchObject({ok: true});
     expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(2);
   });
+});
+
+test('browser metadata matches the distributed canonical contract in every namespace', async () => {
+  const {readFileSync} = await import('node:fs');
+  const {CLI_MCP_CONTRACT_VERSION} = await import('../cliMcpToolContract');
+  const distributed = JSON.parse(
+    readFileSync(
+      new URL(
+        '../../../../python/sqlrooms/sqlrooms/mcp_tool_contract.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
+  expect(distributed.version).toBe(CLI_MCP_CONTRACT_VERSION);
+  for (const metaNamespace of ['__sqlrooms', 'custom_meta']) {
+    const metadata = createCliRoomCapabilities({
+      store: {getState: () => state} as any,
+      metaNamespace,
+    }).map(({execute, ...descriptor}) => {
+      expect(typeof execute).toBe('function');
+      return descriptor;
+    });
+    expect(metadata).toEqual(distributed.tools);
+  }
 });

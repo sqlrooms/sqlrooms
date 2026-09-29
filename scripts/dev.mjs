@@ -7,7 +7,6 @@ import {
   getPythonCliDevArgs,
   hasOption,
   readOptionValue,
-  shouldProxyCliDevWebSockets,
 } from './cli-dev-args.mjs';
 import {waitForCliApi} from './cli-dev-readiness.mjs';
 
@@ -60,7 +59,6 @@ const forwardedCliArgs =
         stripScriptSeparator: Boolean(process.env.npm_execpath),
       });
 const cliArgs = target === 'cli' ? forwardedCliArgs : [];
-const proxyCliDevWebSockets = shouldProxyCliDevWebSockets(cliArgs);
 const turboArgsForTarget = target === 'cli' ? [] : restArgs;
 const isDryRun = controlArgs.some(
   (arg) => arg === '--dry' || arg.startsWith('--dry='),
@@ -157,17 +155,14 @@ function parsePortOption(args, name) {
 async function getCliDevPorts(args) {
   const {host, proxyHost} = getCliDevHosts(args);
   const explicitApiPort = parsePortOption(args, '--port');
-  const explicitWsPort = parsePortOption(args, '--ws-port');
   const reservedPorts = new Set(
-    [CLI_DEV_UI_DEFAULT_PORT, explicitWsPort].filter(
-      (port) => typeof port === 'number',
-    ),
+    [CLI_DEV_UI_DEFAULT_PORT].filter((port) => typeof port === 'number'),
   );
   const apiPort =
     explicitApiPort ??
     (await findAvailablePort(CLI_DEV_API_DEFAULT_PORT, host, reservedPorts));
   const uiReservedPorts = new Set(
-    [apiPort, explicitWsPort].filter((port) => typeof port === 'number'),
+    [apiPort].filter((port) => typeof port === 'number'),
   );
   const uiPort = await findAvailablePort(
     CLI_DEV_UI_DEFAULT_PORT,
@@ -269,9 +264,9 @@ if (target !== 'cli') {
       pythonCliArgs,
     )} node scripts/dev.mjs)`,
   );
-  console.log(`(wait for http://${proxyHost}:${apiPort}/api/status)`);
+  console.log(`(wait for http://${proxyHost}:${apiPort}/healthz)`);
   console.log(
-    `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS=${proxyCliDevWebSockets} ./node_modules/.bin/vite --host --port ${uiPort})`,
+    `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS=true ./node_modules/.bin/vite --host --port ${uiPort})`,
   );
   process.exit(0);
 }
@@ -368,9 +363,10 @@ if (target === 'cli') {
     cwd: path.resolve('python/sqlrooms'),
     env: {
       SQLROOMS_CLI_DEV_ARGS: JSON.stringify(pythonCliArgs),
+      SQLROOMS_ALLOWED_ORIGINS: `http://localhost:${uiPort},http://127.0.0.1:${uiPort}`,
     },
   });
-  const apiStatusUrl = `http://${proxyHost}:${apiPort}/api/status`;
+  const apiStatusUrl = `http://${proxyHost}:${apiPort}/healthz`;
   try {
     await waitForCliApi(apiStatusUrl, {signal: cliStartupController.signal});
   } catch (error) {
@@ -384,16 +380,45 @@ if (target === 'cli') {
   if (!exiting) {
     startProcess(
       'sqlrooms CLI UI dev server',
-      ['--host', '--port', String(uiPort)],
+      ['--host', '--port', String(uiPort), '--strictPort'],
       {
         command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
         cwd: path.resolve('apps/sqlrooms-cli-ui'),
         env: {
           SQLROOMS_CLI_API_PROXY_TARGET: `http://${proxyHost}:${apiPort}`,
-          VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS: String(proxyCliDevWebSockets),
+          VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS: 'true',
         },
       },
     );
+    try {
+      await waitForCliApi(`http://localhost:${uiPort}/`, {
+        signal: cliStartupController.signal,
+      });
+      startProcess(
+        'authorized SQLRooms dev launch',
+        [
+          'run',
+          'python',
+          'scripts/open_dev.py',
+          `http://${proxyHost}:${apiPort}`,
+          ...(cliArgs.includes('--no-open-browser')
+            ? ['--no-open-browser']
+            : []),
+        ],
+        {
+          command: 'uv',
+          cwd: path.resolve('python/sqlrooms'),
+          allowCleanExit: true,
+        },
+      );
+    } catch (error) {
+      if (!exiting) {
+        exiting = true;
+        stopChildren();
+        console.error('SQLRooms CLI UI failed to become ready.', error);
+        process.exit(1);
+      }
+    }
   }
 } else {
   startProcess(

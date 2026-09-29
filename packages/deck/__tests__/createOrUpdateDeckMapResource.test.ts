@@ -137,6 +137,12 @@ describe('createOrUpdateDeckMapResource', () => {
                 _sqlroomsBinding: {
                   dataset: 'places',
                   geometryColumn: 'geom',
+                  longitudeColumn: 'longitude',
+                  latitudeColumn: 'latitude',
+                  generatedTransform: {
+                    kind: 'point',
+                    geometryColumn: 'geom',
+                  },
                 },
               }),
             ],

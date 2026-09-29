@@ -40,9 +40,9 @@ export function CliArtifactsSidebarSection() {
     (state) => state.workspaceUi.setShowArtifactChooser,
   );
   const createArtifactScopedSession = useRoomStore(
-    (state) => state.artifactAi.createArtifactScopedSession,
+    (state) => state.artifactAi?.createArtifactScopedSession,
   );
-  const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
+  const currentSession = useRoomStore((state) => state.ai?.getCurrentSession());
   const setCollapsed = useRoomStore((state) => state.layout.setCollapsed);
   const createSessionDisabled = isCreateSessionDisabled(currentSession);
   const [renameArtifact, setRenameArtifact] = useState<{
@@ -114,12 +114,16 @@ export function CliArtifactsSidebarSection() {
                       artifactName={artifact.name}
                       isPinned={artifact.isPinned}
                       newArtifactChatDisabled={createSessionDisabled}
-                      onNewArtifactChat={() => {
-                        if (createSessionDisabled) return;
-                        artifactTabs.selectArtifact(artifact.id);
-                        createArtifactScopedSession();
-                        setCollapsed('assistant-sidebar', false);
-                      }}
+                      onNewArtifactChat={
+                        createArtifactScopedSession
+                          ? () => {
+                              if (createSessionDisabled) return;
+                              artifactTabs.selectArtifact(artifact.id);
+                              createArtifactScopedSession();
+                              setCollapsed('assistant-sidebar', false);
+                            }
+                          : undefined
+                      }
                       onTogglePin={() =>
                         artifactTabs.togglePinArtifact(artifact.id)
                       }
@@ -174,7 +178,7 @@ function ArtifactSidebarItemMenu({
   artifactName: string;
   isPinned: boolean;
   newArtifactChatDisabled: boolean;
-  onNewArtifactChat: () => void;
+  onNewArtifactChat?: () => void;
   onTogglePin: () => void;
   onDelete: () => void;
   onRename: () => void;
@@ -193,13 +197,15 @@ function ArtifactSidebarItemMenu({
         </SidebarMenuAction>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="right">
-        <DropdownMenuItem
-          disabled={newArtifactChatDisabled}
-          onSelect={onNewArtifactChat}
-        >
-          <MessageSquarePlusIcon className="h-4 w-4" aria-hidden />
-          New artifact chat
-        </DropdownMenuItem>
+        {onNewArtifactChat && (
+          <DropdownMenuItem
+            disabled={newArtifactChatDisabled}
+            onSelect={onNewArtifactChat}
+          >
+            <MessageSquarePlusIcon className="h-4 w-4" aria-hidden />
+            New artifact chat
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onSelect={onTogglePin}>
           {isPinned ? (
             <PinOffIcon className="h-4 w-4" aria-hidden />

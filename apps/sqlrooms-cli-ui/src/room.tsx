@@ -1,3 +1,4 @@
+import {CliWorkspaceStatus} from './components/CliWorkspaceStatus';
 import {RoomShell} from '@sqlrooms/room-shell';
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {
@@ -20,6 +21,7 @@ export const Room = () => {
         <SidebarProvider defaultOpen>
           <CliWorkspaceSidebar onToggleSqlEditor={sqlEditor.onToggle} />
           <SidebarInset className="h-svh min-w-0 overflow-hidden">
+            <CliWorkspaceStatus />
             <RoomShell.LayoutComposer className="min-h-0 flex-1 overflow-hidden [&_[data-slot=resizable-handle][aria-controls=assistant-sidebar][aria-valuenow='0']]:hidden" />
             <RoomShell.LoadingProgress />
             <RoomShell.CommandPalette />

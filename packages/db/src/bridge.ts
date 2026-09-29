@@ -9,6 +9,7 @@ type HttpBridgeOptions = {
   headers?: Record<string, string>;
 };
 
+/** Creates a bridge with explicit headers; redirects are rejected to protect credentials and query data. */
 export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
   const {id, baseUrl, runtimeSupport = 'both', headers = {}} = options;
   const bridgeBaseUrl = baseUrl.replace(/\/$/, '');
@@ -42,6 +43,7 @@ export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
   const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
     const res = await fetch(`${bridgeBaseUrl}${path}`, {
       ...init,
+      redirect: 'error',
       headers: {
         'Content-Type': 'application/json',
         ...headers,
@@ -91,6 +93,7 @@ export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
     fetchArrow: async ({connectionId, sql, signal}) => {
       const res = await fetch(`${bridgeBaseUrl}/api/db/fetch-arrow`, {
         method: 'POST',
+        redirect: 'error',
         headers: {'Content-Type': 'application/json', ...headers},
         body: JSON.stringify({connectionId, sql}),
         signal,
@@ -111,6 +114,7 @@ export function createHttpDbBridge(options: HttpBridgeOptions): DbBridge {
       return (async function* (): AsyncGenerator<Uint8Array> {
         const res = await fetch(`${bridgeBaseUrl}/api/db/fetch-arrow-stream`, {
           method: 'POST',
+          redirect: 'error',
           headers: {'Content-Type': 'application/json', ...headers},
           body: JSON.stringify({connectionId, sql, queryId: qid, chunkRows}),
           signal,

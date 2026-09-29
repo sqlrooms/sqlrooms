@@ -2,6 +2,7 @@
 export function createCliDevProxy(apiProxyTarget) {
   return {
     '/api': apiProxyTarget,
+    '/auth.json': apiProxyTarget,
     '/config.json': apiProxyTarget,
     '/ws': {
       target: apiProxyTarget,

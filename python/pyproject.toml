@@ -1,7 +1,6 @@
 [tool.uv.workspace]
 members = [
   "sqlrooms",
-  "sqlrooms-server",
   "sqlrooms-rag",
 ]
 
@@ -23,5 +22,4 @@ override-dependencies = [
   "starlette>=1.3.1",
   "torch>=2.13.0",
   "transformers>=5.14.1",
-  "ujson>=5.13.0",
 ]

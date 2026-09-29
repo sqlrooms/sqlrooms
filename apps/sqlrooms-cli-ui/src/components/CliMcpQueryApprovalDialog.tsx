@@ -12,7 +12,7 @@ import {
   useMcpQueryApproval,
 } from '../mcpQueryApproval';
 
-/** Presents one allow-once decision for every externally requested SQL query. */
+/** Presents allow-once decisions for database writes and reads beyond ordinary workspace tables. */
 export function CliMcpQueryApprovalDialog() {
   const {active} = useMcpQueryApproval();
 
@@ -27,10 +27,15 @@ export function CliMcpQueryApprovalDialog() {
         {active ? (
           <>
             <DialogHeader>
-              <DialogTitle>Allow this MCP query?</DialogTitle>
+              <DialogTitle>
+                {active.kind === 'write'
+                  ? 'Allow this database change?'
+                  : 'Allow this external data read?'}
+              </DialogTitle>
               <DialogDescription>
-                SQLRooms will run this SQL against the live workspace only if
-                you allow this request.
+                {active.kind === 'write'
+                  ? 'This command changes the database. Existing data may be replaced or deleted as specified below.'
+                  : 'This SELECT uses files, URLs, views, or functions that cannot be verified as ordinary workspace reads.'}
               </DialogDescription>
             </DialogHeader>
             <dl className="grid grid-cols-[8rem_1fr] gap-x-3 gap-y-1 text-sm">
@@ -47,11 +52,25 @@ export function CliMcpQueryApprovalDialog() {
               <dd className="min-w-0 font-mono text-xs break-all">
                 {active.databasePath}
               </dd>
-              <dt className="text-muted-foreground">Maximum rows</dt>
-              <dd>{active.maxRows}</dd>
+              {active.commandId ? (
+                <>
+                  <dt>Command</dt>
+                  <dd>{active.commandId}</dd>
+                </>
+              ) : null}
+              {active.maxRows !== undefined ? (
+                <>
+                  <dt className="text-muted-foreground">Maximum rows</dt>
+                  <dd>{active.maxRows}</dd>
+                </>
+              ) : null}
             </dl>
             <div className="space-y-1">
-              <div className="text-sm font-medium">Complete SQL</div>
+              <div className="text-sm font-medium">
+                {active.kind === 'write'
+                  ? 'Complete command input'
+                  : 'Complete SQL'}
+              </div>
               <pre className="bg-muted max-h-72 overflow-auto rounded-md border p-3 font-mono text-xs whitespace-pre-wrap">
                 {active.sql}
               </pre>

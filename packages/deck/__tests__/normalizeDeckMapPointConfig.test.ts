@@ -2,6 +2,7 @@ import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 import {
   applyDeckMapPointBinding,
   applyDeckMapTableSelection,
+  createDeckMapCentroidTransformSql,
   createDeckMapPointTransformSql,
   normalizeDeckMapPointConfig,
   regenerateMapConfigForTable,
@@ -27,6 +28,28 @@ describe('normalizeDeckMapPointConfig', () => {
         geometryColumn: '__sqlrooms_geom',
       }),
     ).toContain(DECK_TABLE_DATASET_SOURCE_RELATION);
+  });
+
+  it('decodes encoded geometry columns in the centroid transform', () => {
+    // ST_Centroid rejects WKB_BLOB/BLOB/VARCHAR; the decode differs per type.
+    expect(
+      createDeckMapCentroidTransformSql({
+        geometryColumn: 'geom',
+        geometryColumnType: 'GEOMETRY',
+      }),
+    ).toContain('ST_Centroid("geom"::GEOMETRY)');
+    expect(
+      createDeckMapCentroidTransformSql({
+        geometryColumn: 'geom',
+        geometryColumnType: 'WKB_BLOB',
+      }),
+    ).toContain('ST_Centroid("geom"::GEOMETRY)');
+    expect(
+      createDeckMapCentroidTransformSql({
+        geometryColumn: 'geom',
+        geometryColumnType: 'BLOB',
+      }),
+    ).toContain('ST_Centroid(ST_GeomFromWKB("geom"))');
   });
 
   it('applies structured point provenance with canonical SQL and bindings', () => {
@@ -95,6 +118,9 @@ describe('normalizeDeckMapPointConfig', () => {
     expect(next.spec.layers[0]._sqlroomsBinding).toEqual({
       dataset: 'places',
       geometryColumn: 'geom',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'latitude',
+      generatedTransform: {kind: 'point', geometryColumn: 'geom'},
     });
     expect(next.spec.layers[0]).not.toHaveProperty('getPosition');
     expect(next.fitToData).toEqual({
@@ -1134,6 +1160,52 @@ describe('applyDeckMapTableSelection', () => {
       tableName: '"main"."h3_cells"',
     });
     expect(next.spec.layers[0]._sqlroomsBinding).toEqual({dataset: 'h3_cells'});
+  });
+
+  it('clears the generatedTransform marker for a dropped column', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {
+              dataset: 'points',
+              geometryColumn: '__sqlrooms_geom',
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              generatedTransform: {
+                kind: 'point' as const,
+                geometryColumn: '__sqlrooms_geom',
+              },
+            },
+          },
+        ],
+      },
+      datasets: {
+        points: {
+          source: {
+            tableName: '"main"."taxes"',
+            transformSql: createDeckMapPointTransformSql({
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              geometryColumn: '__sqlrooms_geom',
+            }),
+          },
+          geometryColumn: '__sqlrooms_geom',
+        },
+      },
+    };
+
+    const next = applyDeckMapTableSelection(config, h3CellsTable);
+
+    // Settings reads generatedTransform to classify columns, so a marker
+    // naming the dropped column must not survive.
+    expect(next.spec.layers[0]._sqlroomsBinding).not.toHaveProperty(
+      'generatedTransform',
+    );
+    expect(next.spec.layers[0]._sqlroomsBinding).not.toHaveProperty(
+      'geometryColumn',
+    );
   });
 
   it('clears a generated binding on a layer that omits the dataset key', () => {

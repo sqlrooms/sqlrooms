@@ -9,7 +9,7 @@ import {
 import {BugIcon, PlusIcon, XIcon} from 'lucide-react';
 import React, {Suspense, useEffect, useState} from 'react';
 import {useRoomStore} from '../roomStoreHooks';
-import {aiDevtoolsEnabled} from '../runtimeEnvironment';
+import {aiDevtoolsEnabled, embeddedAiEnabled} from '../runtimeEnvironment';
 import {CliChatSelector} from './selectors/CliChatSelector';
 import {AssistantChatContainer} from './AssistantChatContainer';
 import {AssistantSettingsDialog} from './AssistantSettingsDialog';
@@ -39,7 +39,17 @@ const AssistantDebugButton: React.FC<{
   </Button>
 );
 
-export const AssistantPanel: React.FC = () => {
+export const AssistantPanel: React.FC = () =>
+  embeddedAiEnabled ? (
+    <EmbeddedAssistantPanel />
+  ) : (
+    <div className="text-muted-foreground p-4 text-sm">
+      Use Claude Code in your terminal to work with this workspace. Query
+      approval requests appear in the browser.
+    </div>
+  );
+
+const EmbeddedAssistantPanel: React.FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.getCurrentSession()?.id || null,
   );

@@ -19,7 +19,7 @@ export function CliWorkspaceTopbar() {
       : undefined,
   );
   const currentSessionId = useRoomStore(
-    (state) => state.ai.config.currentSessionId,
+    (state) => state.ai?.config.currentSessionId,
   );
   const sessionArtifacts = useSessionArtifacts(currentSessionId);
   const setShowArtifactChooser = useRoomStore(

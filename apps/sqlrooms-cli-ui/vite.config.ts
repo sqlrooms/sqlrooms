@@ -64,6 +64,7 @@ function getSqlroomsPackageAliases(): ViteAlias[] {
 }
 
 export default defineConfig({
+  base: './',
   plugins: [react(), topLevelAwait(), wasm(), scaffoldsPlugin(), tailwindcss()],
   resolve: {
     alias: [

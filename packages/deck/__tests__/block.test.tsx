@@ -2,7 +2,7 @@ import {describe, expect, jest, test} from '@jest/globals';
 import {getTableIdentity} from '@sqlrooms/duckdb';
 import {createBaseRoomSlice, RoomStateProvider} from '@sqlrooms/room-store';
 import {TooltipProvider} from '@sqlrooms/ui';
-import React, {act} from 'react';
+import React, {act, type ReactNode} from 'react';
 import {createRoot} from 'react-dom/client';
 import {createStore} from 'zustand/vanilla';
 import {createDeckMapsSlice} from '../src/DeckMapsSlice';
@@ -12,6 +12,18 @@ import {resolveDeckMapStyle} from '../src/basemap';
 jest.unstable_mockModule('@sqlrooms/documents', () => ({
   useBlockSettingsStore: () => undefined,
   BlockCaptionEditor: () => null,
+  BlockHeader: ({
+    children,
+    actions,
+  }: {
+    children?: ReactNode;
+    actions?: ReactNode;
+  }) => (
+    <div>
+      {children}
+      {actions}
+    </div>
+  ),
   // Stub the shared searchable selector with a native <select> so the test
   // can drive table selection through the same DataTable-based onChange the
   // real component exposes.

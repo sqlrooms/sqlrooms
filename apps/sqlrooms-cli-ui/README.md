@@ -35,8 +35,10 @@ uv run --project python/sqlrooms sqlrooms \
   /tmp/sqlrooms-smoke.duckdb
 ```
 
-Open the UI URL printed in the terminal. It should be
-`http://127.0.0.1:3000` or the next free port.
+Open the temporary single-use launch link printed in the interactive terminal.
+A bare base URL requires a fresh launch link. See the
+[authentication contract](../../python/sqlrooms/AUTHENTICATION.md) for session
+renewal, native handoff, and explicit development origin mapping.
 
 The bare CLI command works only after installing the CLI somewhere on your
 `PATH`:
@@ -95,21 +97,16 @@ Open the printed UI URL, drag in the CSV fixture listed above, create a
 document/chart/dashboard, then restart against the same `/tmp/sqlrooms-smoke.duckdb` and
 confirm the imported data and workspace state come back.
 
-1. Choose the package target:
-   - `sqlrooms` for the CLI package and bundled UI.
-   - `sqlrooms-server` for the DuckDB websocket server package.
-   - `all` when both packages should be released in dependency order.
-2. Version the selected package or packages explicitly:
+1. Use `sqlrooms` for the consolidated CLI, UI, and native runtime. The old
+   `sqlrooms-server` distribution is retired; see the [migration guide](../../python/sqlrooms/MIGRATION.md).
+2. Version the package explicitly:
 
    ```bash
    pnpm cli:version --target sqlrooms --bump patch
-   pnpm cli:version --target sqlrooms-server --set 0.2.0
-   pnpm cli:version --target all --bump minor
    ```
 
-   Hatch reads package versions from each package's `package.json`. When
-   `sqlrooms-server` is versioned, the workflow also updates the
-   `sqlrooms-server>=...` dependency floor in `python/sqlrooms/pyproject.toml`.
+   Hatch reads the version from `python/sqlrooms/package.json`. `--target all`
+   is an equivalent spelling for the single maintained release target.
 
 3. Format the Python CLI packages before running publish checks:
 
@@ -134,8 +131,7 @@ confirm the imported data and workspace state come back.
    ```
 
    Publishing runs validation, builds the package, then uploads the built
-   distributions with Twine. Use `--target all` only when both packages are part
-   of the release.
+   distributions with Twine. `--target all` selects the same consolidated package.
 
 ## Dev mode (UI + Python server together)
 
@@ -150,12 +146,22 @@ This starts:
 - the Python API server on `http://127.0.0.1:4273` with `--experimental` and without serving static UI, or the next free port
 - the Vite UI on `http://localhost:3100`, or the next free port, proxying `/api`, `/config.json`, and `/ws` to the selected Python API port
 - a per-session dev database named after the selected UI port, for example `sqlrooms-3100.db`
+- an authorized browser tab, opened after Vite is ready using a single-use launch ticket
+
+Use the temporary launch link printed in the terminal when opening another tab.
+The bare Vite URL cannot authorize a new browser session. Pass `--no-open-browser`
+to print the interactive-terminal link without opening a tab. Restarting the
+backend requires a fresh link; reloads retain the current page credential.
 
 If you want fixed ports, pass them to the Python server:
 
 ```bash
-pnpm dev cli -- --port 4274 --ws-port 4002
+pnpm dev cli -- --port 4274
 ```
+
+For a public proxy, `--external-url` takes precedence over `SQLROOMS_EXTERNAL_URL`.
+The launcher uses the Vite origin only when neither is set. A matching
+`SQLROOMS_EXTERNAL_WS_URL` can be supplied, or omitted to derive the WebSocket route.
 
 ## Dev mode (separate terminals)
 
@@ -186,7 +192,7 @@ pnpm --filter sqlrooms-cli-app build
 
 This builds the UI into `apps/sqlrooms-cli-ui/dist`.
 
-To copy it into the Python package bundle directory (so the published `sqlrooms` wheel can serve it), run:
+To prepare the Python package assets (the UI bundle and Claude plugin), run:
 
 ```bash
 cd python/sqlrooms
@@ -334,3 +340,42 @@ Iframe-backed content is still unsupported.
 Pre-release CRDT snapshots and saved AI run context are not migrated across
 document naming changes. Reset incompatible development sync state and saved
 sessions when upgrading. Existing local workspace migrations remain supported.
+
+### Headless external harness evaluation
+
+The browser and both evaluation targets share `createCliDomainSlice`. CLI MCP
+capabilities accept an injected store through `createCliCapabilityRuntime`; the
+browser retains its query approval policy. `block-document.inspect-block` reads a document block using explicit `artifactId`
+and `blockId`, resolving backing state through the registered block type. Maps
+register a reader; other stateful types without readers fail explicitly.
+The isolated host projects command discovery to require explicit document IDs;
+the browser retains its optional current-document read behavior.
+
+See [external harness evaluation](evals/EXTERNAL_HARNESS.md) for the Codex/MCP run
+command, isolated fixture policy, evidence, and fidelity limits. This does not
+change production AI/persistence behavior; browser external mode is a separate
+launcher option described below.
+
+### External Claude execution
+
+The Python launcher supports `sqlrooms --claude --profile document-charts-maps
+./my-project.duckdb` (opening or creating the database). It serves this browser app in `executionMode: "external"`,
+waits for the production MCP bridge, and attaches a native Claude Code terminal
+session. Capability profiles remain independent of execution mode. AI slices,
+model tools, chat actions and AI-settings autosave are absent in external mode;
+dormant saved conversations/settings round-trip through existing persistence.
+Manual authoring remains active. Verified reads of workspace tables run without
+prompting. External or unverified SELECTs and database-writing commands require
+per-request browser approval. CLI data commands materialize local files through
+`db.import-file`, or one SELECT through `db.create-table-from-query`, preserving
+existing tables unless replacement is explicit. `room.add-url-data-source` is
+removed from the CLI registry. See [data import](../../python/sqlrooms/AGENT_WORKSPACES.md#importing-data).
+
+`skills/sqlrooms` is the canonical guidance source for both external harnesses.
+`build-claude-plugin.mjs` generates the distributable plugin in the Python package
+from those files and `claude-plugin` metadata. The Python package's `build:ui`
+step runs this generator after the cached UI build, including when CI or deployment
+builds the wheel directly with `uv build`. Generated
+copies are ignored;
+edit the canonical source and rebuild. See the [launcher guide](../../python/sqlrooms/README.md#interactive-claude-code-workspace)
+and [evaluation adapter](evals/EXTERNAL_HARNESS.md#claude-code-adapter).

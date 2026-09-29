@@ -7,6 +7,7 @@ import uuid
 from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
+from sqlrooms.server.access import AccessDenied
 
 # Keep paired with packages/mcp/src/protocol.ts for every wire-format change.
 MCP_BRIDGE_PROTOCOL_VERSION = 1
@@ -26,10 +27,13 @@ class McpBridgeBroker:
         self,
         token: str,
         *,
+        security=None,
         request_timeout: float = 30.0,
         lease_timeout: float = 30.0,
     ):
         self._token = token
+        self.security = security
+        self._page_token = None
         self._request_timeout = request_timeout
         self._lease_timeout = lease_timeout
         self._connection: WebSocket | None = None
@@ -43,7 +47,13 @@ class McpBridgeBroker:
         self._send_lock = asyncio.Lock()
 
     def status(self) -> dict[str, Any]:
-        ready = self._ready and not self._lease_is_stale()
+        authorized = True
+        if self.security:
+            try:
+                self.security.access.verify(self._page_token, "bridge")
+            except AccessDenied:
+                authorized = False
+        ready = authorized and self._ready and not self._lease_is_stale()
         return {
             "status": "ready" if ready else "waiting",
             "pageId": self._page_id,
@@ -56,14 +66,24 @@ class McpBridgeBroker:
         }
 
     async def handle_websocket(self, websocket: WebSocket) -> None:
-        await websocket.accept()
-        try:
-            authenticated = await asyncio.wait_for(websocket.receive_json(), timeout=5)
-        except WebSocketDisconnect:
-            return
-        except Exception:
-            await websocket.close(code=4401, reason="authentication required")
-            return
+        if self.security:
+            result = await self.security.authenticate_socket(
+                websocket, "bridge", message_type="bridge.authenticate"
+            )
+            if result is None:
+                return
+            token, authenticated = result
+        else:
+            await websocket.accept()
+            try:
+                authenticated = await asyncio.wait_for(
+                    websocket.receive_json(), timeout=5
+                )
+            except WebSocketDisconnect:
+                return
+            except Exception:
+                await websocket.close(code=4401, reason="authentication required")
+                return
 
         page_id = (
             authenticated.get("pageId") if isinstance(authenticated, dict) else None
@@ -75,8 +95,11 @@ class McpBridgeBroker:
             or authenticated.get("type") != "bridge.authenticate"
             or not isinstance(page_id, str)
             or not isinstance(token, str)
-            or not hmac.compare_digest(
-                token.encode("utf-8"), self._token.encode("utf-8")
+            or (
+                self.security is None
+                and not hmac.compare_digest(
+                    token.encode("utf-8"), self._token.encode("utf-8")
+                )
             )
         ):
             await websocket.close(code=4401, reason="unauthorized")
@@ -113,9 +136,15 @@ class McpBridgeBroker:
                     return
             self._connection = websocket
             self._page_id = page_id
+            self._page_token = token
             self._ready = False
             self._touch()
 
+        watcher = (
+            asyncio.create_task(self.security.watch_socket(websocket, token, "bridge"))
+            if self.security
+            else None
+        )
         try:
             await self._send_json(
                 websocket,
@@ -130,6 +159,8 @@ class McpBridgeBroker:
                 except ValueError:
                     # A malformed frame must not tear down an authenticated lease.
                     continue
+                if self.security:
+                    self.security.access.verify(token, "bridge")
                 self._touch()
                 if not isinstance(payload, dict):
                     continue
@@ -148,9 +179,12 @@ class McpBridgeBroker:
                     return
                 elif message_type == "bridge.response":
                     self._resolve_response(payload)
-        except WebSocketDisconnect:
+        except (WebSocketDisconnect, AccessDenied):
             pass
         finally:
+            if watcher:
+                watcher.cancel()
+                await asyncio.gather(watcher, return_exceptions=True)
             async with self._connection_lock:
                 if self._connection is websocket:
                     self._connection = None
@@ -172,7 +206,7 @@ class McpBridgeBroker:
         timeout: float | None = None,
     ) -> Any:
         connection = self._connection
-        if not self._ready or connection is None or self._lease_is_stale():
+        if self.status()["status"] != "ready" or connection is None:
             self._ready = False
             raise McpBridgeError(
                 "room_not_ready",

@@ -6,9 +6,9 @@ import {useRoomStore} from '../../roomStoreHooks';
 export function useCliArtifactSidebarTabs() {
   const artifactsConfig = useRoomStore((state) => state.artifacts.config);
   const artifactTypes = useRoomStore((state) => state.artifacts.artifactTypes);
-  const aiSessions = useRoomStore((state) => state.ai.config.sessions);
+  const aiSessions = useRoomStore((state) => state.ai?.config.sessions);
   const sessionArtifactLinks = useRoomStore(
-    (state) => state.artifactAi.config.sessionArtifactLinks,
+    (state) => state.artifactAi?.config.sessionArtifactLinks,
   );
   const currentArtifactId = useRoomStore(
     (state) => state.artifacts.config.currentArtifactId,
@@ -34,8 +34,8 @@ export function useCliArtifactSidebarTabs() {
 
   const runningSessionCountsByArtifact = useMemo(() => {
     return getRunningAiSessionCountsByArtifact({
-      sessions: aiSessions,
-      sessionArtifactLinks,
+      sessions: aiSessions ?? [],
+      sessionArtifactLinks: sessionArtifactLinks ?? [],
     });
   }, [sessionArtifactLinks, aiSessions]);
 

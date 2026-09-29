@@ -59,7 +59,12 @@
     },
     "apps/*": {},
     "apps/sqlrooms-cli-ui": {
-      "entry": ["src/main.{ts,tsx}", "src/evals/promptfooProvider.ts"],
+      "entry": [
+        "src/main.{ts,tsx}",
+        "src/evals/promptfooProvider.ts",
+        "src/evals/external/runExternalSuite.ts",
+        "claude-plugin/headers.mjs"
+      ],
       "ignoreDependencies": ["@duckdb/node-api"]
     }
   }

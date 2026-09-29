@@ -23,7 +23,12 @@ type TestRoomState = BaseRoomStoreState &
 
 function createTestStore({
   allowedBlockTypes,
+  readState,
 }: {
+  readState?: (context: {
+    state: TestRoomState;
+    blockInstanceId: string;
+  }) => unknown;
   allowedBlockTypes?: Parameters<
     typeof createBlockDocumentCommands<TestRoomState>
   >[0]['allowedBlockTypes'];
@@ -53,6 +58,7 @@ function createTestStore({
       statefulBlockTypes: [
         {
           blockType: 'dashboard',
+          readState,
           label: 'Dashboard',
           defaultTitle: 'Embedded Dashboard',
           ensureState: ({blockInstanceId, title}) => {
@@ -67,6 +73,144 @@ function createTestStore({
 }
 
 describe('block document commands', () => {
+  it('inspects inline blocks and registered backing state without changing the document', async () => {
+    const reads: string[] = [];
+    const backingState = {title: 'Backing dashboard', charts: []};
+    const {store, ensuredStatefulBlocks} = createTestStore({
+      readState: ({blockInstanceId}) => {
+        reads.push(blockInstanceId);
+        return backingState;
+      },
+    });
+    const artifactId = store
+      .getState()
+      .artifacts.createArtifact({type: 'block-document'});
+    store.getState().blockDocuments.appendBlocks(artifactId, [
+      {id: 'note', type: 'paragraph', text: [{type: 'text', text: 'A note'}]},
+      {
+        id: 'chart',
+        type: 'chart',
+        tableName: 'events',
+        config: {title: 'Inline chart'},
+      },
+      {
+        id: 'dashboard-block',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'backing-dashboard',
+      },
+    ]);
+    const before = JSON.stringify(store.getState().blockDocuments.config);
+    const blocks = store.getState().blockDocuments.getBlocks(artifactId);
+    for (const block of blocks) {
+      const result = await store
+        .getState()
+        .commands.invokeCommand('block-document.inspect-block', {
+          artifactId,
+          blockId: block.id,
+        });
+      expect(result).toMatchObject({success: true});
+      expect(result.data).toEqual({
+        artifactId,
+        block,
+        ...(block.type === 'statefulBlock' ? {backingState} : {}),
+      });
+    }
+    expect(reads).toEqual(['backing-dashboard']);
+    expect(ensuredStatefulBlocks).toEqual([]);
+    expect(JSON.stringify(store.getState().blockDocuments.config)).toBe(before);
+  });
+
+  it('validates the explicit document and block before accessing backing state', async () => {
+    const reads: string[] = [];
+    const {store} = createTestStore({
+      readState: ({blockInstanceId}) => {
+        reads.push(blockInstanceId);
+        return {};
+      },
+    });
+    const artifactId = store
+      .getState()
+      .artifacts.createArtifact({type: 'block-document'});
+    const otherId = store
+      .getState()
+      .artifacts.createArtifact({type: 'block-document'});
+    const wrongType = store
+      .getState()
+      .artifacts.createArtifact({type: 'dashboard'});
+    store.getState().blockDocuments.appendBlocks(otherId, [
+      {
+        id: 'other-block',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'backing-dashboard',
+      },
+    ]);
+    const before = JSON.stringify(store.getState().blockDocuments.config);
+    for (const input of [
+      {},
+      {artifactId, blockId: ''},
+      {artifactId: '', blockId: 'other-block'},
+      {artifactId: 'missing', blockId: 'other-block'},
+      {artifactId: wrongType, blockId: 'other-block'},
+      {artifactId, blockId: 'other-block'},
+      {artifactId: otherId, blockId: 'backing-dashboard'},
+    ]) {
+      expect(
+        await store
+          .getState()
+          .commands.invokeCommand('block-document.inspect-block', input),
+      ).toMatchObject({success: false});
+    }
+    expect(reads).toEqual([]);
+    expect(JSON.stringify(store.getState().blockDocuments.config)).toBe(before);
+  });
+
+  it('reports unsupported inspection and missing backing state explicitly', async () => {
+    for (const readState of [undefined, () => undefined]) {
+      const {store, ensuredStatefulBlocks} = createTestStore({readState});
+      const artifactId = store
+        .getState()
+        .artifacts.createArtifact({type: 'block-document'});
+      store.getState().blockDocuments.appendBlocks(artifactId, [
+        {
+          id: 'dashboard-block',
+          type: 'statefulBlock',
+          blockType: 'dashboard',
+          blockInstanceId: 'missing',
+        },
+        {
+          id: 'unregistered-block',
+          type: 'statefulBlock',
+          blockType: 'unregistered',
+          blockInstanceId: 'missing',
+        },
+      ]);
+      const before = JSON.stringify(store.getState().blockDocuments.config);
+      for (const blockId of ['dashboard-block', 'unregistered-block']) {
+        expect(
+          await store
+            .getState()
+            .commands.invokeCommand('block-document.inspect-block', {
+              artifactId,
+              blockId,
+            }),
+        ).toMatchObject({
+          success: false,
+          error: expect.stringContaining(
+            readState && blockId === 'dashboard-block'
+              ? 'was not found'
+              : 'not supported',
+          ),
+        });
+      }
+      expect(ensuredStatefulBlocks).toEqual([]);
+      expect(JSON.stringify(store.getState().blockDocuments.config)).toBe(
+        before,
+      );
+    }
+  });
+
   it('creates, lists, and reads block document artifacts', async () => {
     const {store} = createTestStore();
 

@@ -11,6 +11,7 @@ import mcp.types as types
 from mcp.server import Server, ServerRequestContext
 
 from .mcp_bridge import McpBridgeBroker, McpBridgeError
+from .security import McpAuthorization, TransportSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +19,9 @@ logger = logging.getLogger(__name__)
 class SqlroomsMcpService:
     """Official MCP SDK adapter for the live browser capability catalog."""
 
-    def __init__(self, broker: McpBridgeBroker):
+    def __init__(self, broker: McpBridgeBroker, *, security: TransportSecurity):
         self.broker = broker
+        self.enabled = False
         self.server = Server(
             "SQLRooms",
             on_list_tools=self._list_tools,
@@ -32,6 +34,24 @@ class SqlroomsMcpService:
             host="127.0.0.1",
             max_request_body_size=256 * 1024,
         )
+
+        self.sdk_app = self.app
+        self.app = McpAuthorization(self.app, security)
+
+    async def __call__(self, scope, receive, send):
+        """Serve the existing SDK path without a mount prefix or extra listener."""
+        if not self.enabled:
+            from starlette.responses import JSONResponse
+
+            await JSONResponse({"error": "mcp_disabled"}, status_code=503)(
+                scope, receive, send
+            )
+            return
+        await self.app(scope, receive, send)
+
+    def lifespan(self):
+        """Start the SDK session manager on the parent application's event loop."""
+        return self.sdk_app.router.lifespan_context(self.sdk_app)
 
     async def _list_tools(
         self,
@@ -81,8 +101,9 @@ class SqlroomsMcpService:
         request_id = str(getattr(context, "request_id", "") or "")
         started_at = time.monotonic()
         try:
-            result = await self._request_with_disconnect(
+            result = await self._dispatch(
                 context,
+                params,
                 "tools.call",
                 {
                     "name": params.name,
@@ -127,6 +148,69 @@ class SqlroomsMcpService:
             structured_content=result,
             is_error=is_error,
         )
+
+    async def _dispatch(self, context, params, method, payload):
+        runtime = getattr(self.broker, "agent_runtime", None)
+        if runtime:
+            if runtime.stopping:
+                return {
+                    "ok": False,
+                    "code": "workspace_busy",
+                    "message": "Workspace is closing.",
+                }
+            # Admission and close's idle check run on the same event loop with no
+            # intervening await. Retained operations cover response disconnects.
+            runtime.active_calls += 1
+        try:
+            return await self._dispatch_admitted(context, params, method, payload)
+        finally:
+            if runtime:
+                runtime.active_calls -= 1
+
+    async def _dispatch_admitted(self, context, params, method, payload):
+        from ..agent.storage import WorkspaceError
+        from ..agent.contract import matches_browser
+
+        runtime = getattr(self.broker, "agent_runtime", None)
+        meta = params.meta or {}
+        operation_id = meta.get("sqlrooms/operationId")
+        if runtime and runtime.stopping:
+            return {
+                "ok": False,
+                "code": "workspace_busy",
+                "message": "Workspace is closing.",
+            }
+        if not operation_id or runtime is None:
+            return await self._request_with_disconnect(context, method, payload)
+        caller = getattr(
+            getattr(context.request, "state", None), "sqlrooms_caller", None
+        )
+        if caller is None:
+            return {
+                "ok": False,
+                "code": "unauthorized",
+                "message": "Verified caller required.",
+            }
+        if runtime.stopping:
+            return {
+                "ok": False,
+                "code": "workspace_busy",
+                "message": "Workspace is closing.",
+            }
+
+        async def invoke():
+            if not matches_browser(await self.broker.request("tools.list")):
+                return {
+                    "ok": False,
+                    "code": "incompatible_runtime",
+                    "message": "Reload the browser to use this tool contract.",
+                }
+            return await self.broker.request(method, payload)
+
+        try:
+            return await runtime.operations.run(caller, operation_id, invoke)
+        except WorkspaceError as exc:
+            return exc.result
 
     async def _request_with_disconnect(
         self,

@@ -18,6 +18,7 @@ import type {BlockDocumentsSliceState} from './BlockDocumentsSlice';
 export const BLOCK_DOCUMENT_COMMAND_SUFFIXES = [
   'list',
   'get',
+  'inspect-block',
   'create',
   'append-blocks',
   'insert-blocks',
@@ -51,6 +52,15 @@ export type BlockDocumentStatefulBlockCommandType<TRoomState> = {
   ensureState?: (
     context: BlockDocumentStatefulBlockCommandContext<TRoomState>,
   ) => void;
+  /**
+   * Read JSON-serializable backing state without creating or changing it.
+   * Return undefined when the referenced instance is missing. Omit when this
+   * block type does not support backing-state inspection.
+   */
+  readState?: (context: {
+    state: TRoomState;
+    blockInstanceId: string;
+  }) => unknown;
 };
 
 /**
@@ -420,6 +430,62 @@ export function createBlockDocumentCommands<
           success: true,
           commandId: commandId('get'),
           data: readBlockDocumentData(state, resolved.artifact.id),
+        };
+      },
+    },
+    'inspect-block': {
+      id: commandId('inspect-block'),
+      name: 'Inspect document block',
+      description:
+        'Read an explicitly targeted document block and its backing state, when stored separately. Use the document block ID, not its backing instance ID.',
+      group: commandGroup,
+      keywords: ['block document', 'read', 'inspect', 'block', 'state'],
+      inputSchema: z.object({
+        artifactId: z
+          .string()
+          .min(1)
+          .describe('Target block document artifact ID.'),
+        blockId: z.string().min(1).describe('ID of a block in that document.'),
+      }),
+      metadata: {readOnly: true, idempotent: true, riskLevel: 'low'},
+      execute: ({getState}, input) => {
+        const {artifactId, blockId} = input as z.infer<
+          typeof BlockDocumentBlockIdInput
+        >;
+        const state = getState();
+        const id = commandId('inspect-block');
+        const resolved = resolveBlockDocumentArtifact(state, artifactId, id);
+        if (!resolved.success) return resolved;
+        const block = findBlockById(state, artifactId, blockId);
+        if (!block) return missingBlock(id, blockId);
+        if (block.type !== 'statefulBlock') {
+          return {success: true, commandId: id, data: {artifactId, block}};
+        }
+        const readState = statefulBlockTypesByType.get(
+          block.blockType,
+        )?.readState;
+        if (!readState) {
+          return {
+            success: false,
+            commandId: id,
+            error: `Backing-state inspection is not supported for block type "${block.blockType}".`,
+          };
+        }
+        const backingState = readState({
+          state,
+          blockInstanceId: block.blockInstanceId,
+        });
+        if (backingState === undefined) {
+          return {
+            success: false,
+            commandId: id,
+            error: `Backing state for block "${blockId}" (instance "${block.blockInstanceId}") was not found.`,
+          };
+        }
+        return {
+          success: true,
+          commandId: id,
+          data: {artifactId, block, backingState},
         };
       },
     },
