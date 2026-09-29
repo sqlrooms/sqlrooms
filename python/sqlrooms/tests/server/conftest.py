@@ -37,7 +37,8 @@ asyncio.run(s.start(ready))
             **os.environ,
             "TEST_PORT": str(port),
             "TEST_RECORD": str(root / "record"),
-            "SQLROOMS_AGENT_HOME": str(root / "agent"),
+            "SQLROOMS_HOME": str(root / "home"),
+            "SQLROOMS_WORKSPACES_DIR": str(root / "workspaces"),
         },
     )
     try:

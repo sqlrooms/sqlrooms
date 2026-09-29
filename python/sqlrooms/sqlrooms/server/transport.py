@@ -197,9 +197,9 @@ class DuckDBTransport:
         self.max_outgoing_bytes = max_outgoing_bytes
         self.max_outgoing_messages = max_outgoing_messages
 
-    def publish(self, channel, payload, opcode=OpCode.TEXT):
+    def publish(self, channel, payload, opcode=OpCode.TEXT, *, exclude=None):
         for connection in tuple(self.connections):
-            if channel in connection.channels:
+            if connection is not exclude and channel in connection.channels:
                 connection.send(payload, opcode)
 
     async def handle(self, websocket: WebSocket):
@@ -338,7 +338,7 @@ class DuckDBTransport:
                             "channel": channel,
                             "payload": query.get("payload"),
                         }
-                        self.publish(channel, payload)
+                        self.publish(channel, payload, exclude=connection)
                         connection.send(payload)
                         connection.send({"type": "notifyAck", "channel": channel})
                 elif kind in {"json", "arrow", "exec"} and isinstance(

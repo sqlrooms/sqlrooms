@@ -31,7 +31,8 @@ PY
 
 Open the returned link. The example exchanges its fragment ticket, removes it
 from the address bar, checks the backend binding and renews a tab-local page
-credential. A backend restart needs a fresh link. Do not put native credentials
+credential one minute before expiry, renewing immediately when a reload restores
+a credential with less than a minute remaining. A backend restart needs a fresh link. Do not put native credentials
 or provider keys in `VITE_*` variables or disable authentication.
 
 For sync examples, change the room with `VITE_SYNC_ROOM_ID`; snapshots persist

@@ -450,3 +450,37 @@ def test_server_command_uses_same_no_ui_launcher(monkeypatch):
     assert instances[0]["serve_ui"] is False
     assert instances[0]["open_browser"] is False
     assert instances[0]["port"] == 4080
+
+
+@pytest.mark.parametrize(
+    ("options", "message"),
+    [
+        (["--ws-port", "4000"], "Use --port"),
+        (["--mcp-port", "4000"], "Use --port"),
+        (["--mcp"], "--mcp requires the browser UI"),
+        (["--profile", "unknown"], "Unknown SQLRooms capability profile"),
+    ],
+)
+def test_server_command_propagates_launcher_validation_errors(options, message):
+    result = runner.invoke(
+        app, ["server", "--db-path", ":memory:", "--no-config", *options]
+    )
+    assert result.exit_code == 1
+    assert message in result.output
+
+
+def test_server_command_propagates_startup_failure(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(
+        "sqlrooms.cli.SqlroomsHttpServer",
+        lambda **kwargs: SimpleNamespace(
+            start=AsyncMock(side_effect=RuntimeError("Database startup failed"))
+        ),
+    )
+    result = runner.invoke(
+        app, ["server", "--db-path", ":memory:", "--port", "4080", "--no-config"]
+    )
+    assert result.exit_code == 1
+    assert "Database startup failed" in result.output

@@ -790,11 +790,15 @@ def server_command(
 ):
     """Run the same workspace runtime without UI assets or browser launch.
 
-    Additional launcher options (including --mcp, --host and --meta-db) are
+    Additional launcher options (including --host and --meta-db) are
     forwarded to the normal launcher. Use `sqlrooms --help` for that full list.
     A database literally named server can be opened as ./server.
     """
     args = ["--db-path", db_path, "--no-ui", "--no-open-browser"]
     if port is not None:
         args += ["--port", str(port)]
-    typer.main.get_command(app).main(args=[*args, *ctx.args], standalone_mode=False)
+    exit_code = typer.main.get_command(app).main(
+        args=[*args, *ctx.args], standalone_mode=False
+    )
+    if isinstance(exit_code, int) and exit_code:
+        raise typer.Exit(code=exit_code)

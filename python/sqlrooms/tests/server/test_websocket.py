@@ -80,44 +80,35 @@ async def test_ws_cancel(server_proc):
 
 
 @pytest.mark.asyncio
-async def test_ws_subscribe_notify(server_proc):
+@pytest.mark.parametrize("sender_subscribed", [True, False])
+async def test_ws_subscribe_notify(server_proc, sender_subscribed):
     port = server_proc["port"]
     token = server_proc["token"]
-    async with aiohttp.ClientSession() as session:
-        async with authenticated_socket(session, port, token) as ws:
-            await ws.send_str(
-                json.dumps({"type": "subscribe", "channel": "table:orders"})
-            )
-            # ack
-            msg = await ws.receive()
-            assert msg.type == aiohttp.WSMsgType.TEXT
-            ack = json.loads(msg.data)
-            assert ack.get("type") == "subscribed"
-            assert ack.get("channel") == "table:orders"
+    channel = "table:orders"
+    async with (
+        aiohttp.ClientSession() as session,
+        authenticated_socket(session, port, token) as sender,
+        authenticated_socket(session, port, token) as subscriber,
+    ):
+        for ws in [sender, subscriber] if sender_subscribed else [subscriber]:
+            await ws.send_json({"type": "subscribe", "channel": channel})
+            assert await ws.receive_json(timeout=2) == {
+                "type": "subscribed",
+                "channel": channel,
+            }
 
-            # publish
-            await ws.send_str(
-                json.dumps(
-                    {
-                        "type": "notify",
-                        "channel": "table:orders",
-                        "payload": {"op": "update"},
-                    }
-                )
-            )
-            # Expect immediate echo notify to sender
-            for _ in range(20):
-                msg = await ws.receive()
-                if msg.type == aiohttp.WSMsgType.TEXT:
-                    try:
-                        payload = json.loads(msg.data)
-                    except Exception:
-                        continue
-                    if (
-                        payload.get("type") == "notify"
-                        and payload.get("channel") == "table:orders"
-                    ):
-                        assert payload.get("payload", {}).get("op") == "update"
-                        break
-            else:
-                pytest.fail("Did not receive published notify")
+        payload = {"type": "notify", "channel": channel, "payload": {"op": "update"}}
+        await sender.send_json(payload)
+        # Both subscribed and unsubscribed senders get exactly one echo, then ack.
+        assert await sender.receive_json(timeout=2) == payload
+        assert await sender.receive_json(timeout=2) == {
+            "type": "notifyAck",
+            "channel": channel,
+        }
+        assert await subscriber.receive_json(timeout=2) == payload
+        # A subscribe acknowledgement is a barrier after all earlier fan-out frames.
+        await subscriber.send_json({"type": "subscribe", "channel": channel})
+        assert await subscriber.receive_json(timeout=2) == {
+            "type": "subscribed",
+            "channel": channel,
+        }

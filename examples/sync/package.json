@@ -7,6 +7,7 @@
     "build": "tsc -b && vite build",
     "dev": "vite",
     "preview": "vite preview",
+    "test": "node --test ../auth.test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
