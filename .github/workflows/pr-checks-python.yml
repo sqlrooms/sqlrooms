@@ -7,12 +7,14 @@ on:
     paths:
       - 'python/**'
       - 'apps/sqlrooms-cli-ui/**'
+      - 'apps/roomie-cli-ui/**'
       - '.github/workflows/pr-checks-python.yml'
   pull_request:
     types: [opened, edited, synchronize, reopened]
     paths:
       - 'python/**'
       - 'apps/sqlrooms-cli-ui/**'
+      - 'apps/roomie-cli-ui/**'
       - '.github/workflows/pr-checks-python.yml'
 
 jobs:

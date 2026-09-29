@@ -99,6 +99,18 @@ def test_authenticated_browser_upload_writes_sanitized_file(server):
         assert path == server.upload_dir / "cars_data.csv"
         assert path.read_bytes() == payload
 
+        second_payload = b"city,value\nBasel,2\n"
+        second = client.post(
+            "/api/upload",
+            headers={"Authorization": "Bearer " + token},
+            files={"file": ("cars data.csv", second_payload)},
+        )
+        assert second.status_code == 200
+        second_path = Path(second.json()["path"])
+        assert second_path == server.upload_dir / "cars_data-1.csv"
+        assert path.read_bytes() == payload
+        assert second_path.read_bytes() == second_payload
+
 
 def test_shared_database_preserves_sqlrooms_state_and_has_no_sync(server):
     with duckdb.connect(server.duckdb_database) as db:

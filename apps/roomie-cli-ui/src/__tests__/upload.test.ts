@@ -45,4 +45,24 @@ describe('browser file upload', () => {
     ).rejects.toThrow('invalid server path');
     expect(connector.loadFile).not.toHaveBeenCalled();
   });
+
+  it('accepts valid server paths containing spaces and Unicode', async () => {
+    const connector = {
+      loadFile: jest.fn(async (_file: string | File, _tableName: string) => {}),
+    };
+    await uploadBrowserFile(
+      new File(['value\n1\n'], 'values.csv'),
+      'values',
+      connector,
+      async () =>
+        ({
+          ok: true,
+          json: async () => ({path: '/tmp/Roomie Zürich/uploads/values.csv'}),
+        }) as Response,
+    );
+    expect(connector.loadFile).toHaveBeenCalledWith(
+      '/tmp/Roomie Zürich/uploads/values.csv',
+      'values',
+    );
+  });
 });

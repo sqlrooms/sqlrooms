@@ -1,8 +1,6 @@
 import type {DuckDbConnector} from '@sqlrooms/duckdb';
 import {authorizedFetch} from './auth';
 
-const SAFE_SERVER_PATH_RE = /^[A-Za-z0-9_\-./:\\]+$/;
-
 /** Authenticated fetch shape used by the browser upload flow. */
 export type UploadFetcher = (
   url: string,
@@ -10,7 +8,7 @@ export type UploadFetcher = (
 ) => Promise<Response>;
 
 function validateServerPath(value: unknown): string {
-  if (typeof value !== 'string' || !value || !SAFE_SERVER_PATH_RE.test(value))
+  if (typeof value !== 'string' || !value)
     throw new Error('Upload returned an invalid server path.');
   const normalized = value.replace(/\\/g, '/');
   if (normalized.split('/').includes('..'))

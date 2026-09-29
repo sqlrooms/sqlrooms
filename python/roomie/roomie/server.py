@@ -38,10 +38,19 @@ def _safe_upload_name(name: str | None) -> str:
     return safe if safe not in {"", ".", ".."} else "upload.dat"
 
 
-async def _write_upload(file: UploadFile, target: Path) -> None:
-    with target.open("wb") as output:
-        while chunk := await file.read(UPLOAD_COPY_CHUNK_SIZE):
-            output.write(chunk)
+async def _write_unique_upload(file: UploadFile, directory: Path, name: str) -> Path:
+    source = Path(name)
+    index = 0
+    while True:
+        suffix = "" if index == 0 else f"-{index}"
+        target = directory / f"{source.stem}{suffix}{source.suffix}"
+        try:
+            with target.open("xb") as output:
+                while chunk := await file.read(UPLOAD_COPY_CHUNK_SIZE):
+                    output.write(chunk)
+            return target
+        except FileExistsError:
+            index += 1
 
 
 class RoomieServer:
@@ -175,8 +184,9 @@ class RoomieServer:
 
         @app.post("/api/upload")
         async def upload_file(file: UploadFile = File(...)):
-            target = self.upload_dir / _safe_upload_name(file.filename)
-            await _write_upload(file, target)
+            target = await _write_unique_upload(
+                file, self.upload_dir, _safe_upload_name(file.filename)
+            )
             return {"path": str(target)}
 
         self.agent_runtime.routes(app)
