@@ -2,6 +2,7 @@ import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 import {
   applyDeckMapPointBinding,
   applyDeckMapTableSelection,
+  createDeckMapArcTransformSql,
   createDeckMapCentroidTransformSql,
   createDeckMapPointTransformSql,
   normalizeDeckMapPointConfig,
@@ -876,6 +877,7 @@ describe('applyDeckMapTableSelection', () => {
     ],
   };
 
+  /** Mirrors what `normalizeDeckMapPointLayers` writes for a generated point map. */
   function createPointMapConfig() {
     return {
       spec: {
@@ -886,6 +888,12 @@ describe('applyDeckMapTableSelection', () => {
             _sqlroomsBinding: {
               dataset: 'points',
               geometryColumn: '__sqlrooms_geom',
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              generatedTransform: {
+                kind: 'point' as const,
+                geometryColumn: '__sqlrooms_geom',
+              },
             },
           },
         ],
@@ -941,22 +949,17 @@ describe('applyDeckMapTableSelection', () => {
   });
 
   it('drops an unusable transform when the same table is re-selected', () => {
-    const config = applyDeckMapTableSelection(
-      createPointMapConfig(),
-      h3CellsTable,
-    );
+    // A config persisted mid-repair: the table already points at h3_cells
+    // while the generated transform and its marker are still in place.
+    const base = createPointMapConfig();
     const broken = {
-      ...config,
+      ...base,
       datasets: {
-        h3_cells: {
-          ...config.datasets.h3_cells,
+        points: {
+          ...base.datasets.points,
           source: {
-            ...config.datasets.h3_cells!.source,
-            transformSql: createDeckMapPointTransformSql({
-              longitudeColumn: 'Long',
-              latitudeColumn: 'Lat',
-              geometryColumn: '__sqlrooms_geom',
-            }),
+            ...base.datasets.points.source,
+            tableName: '"main"."h3_cells"',
           },
         },
       },
@@ -1064,7 +1067,57 @@ describe('applyDeckMapTableSelection', () => {
     expect(spec.layers[0]._sqlroomsBinding).toEqual({dataset: 'h3_cells'});
   });
 
-  it('keeps an authored transform that only resembles the generated one', () => {
+  it('keeps a generated transform authored before the marker existed', () => {
+    // Legacy configs carry no `generatedTransform`, so the transform is
+    // treated as authored and preserved. The map stays repairable through
+    // settings because failed schema inspection falls back to source columns.
+    const base = createPointMapConfig();
+    const legacyBinding = {
+      ...base.spec.layers[0]._sqlroomsBinding,
+    } as Record<string, unknown>;
+    delete legacyBinding.generatedTransform;
+    const legacy = {
+      ...base,
+      spec: {
+        layers: [{...base.spec.layers[0], _sqlroomsBinding: legacyBinding}],
+      },
+    };
+
+    const next = applyDeckMapTableSelection(legacy, h3CellsTable);
+
+    expect(next.datasets.h3_cells?.source).toMatchObject({
+      transformSql: base.datasets.points.source.transformSql,
+    });
+  });
+
+  it('keeps a generated transform whose inputs the marker does not record', () => {
+    // Bindability is unknown without the coordinate keys, and a working
+    // transform is worth more than an automatic repair.
+    const base = createPointMapConfig();
+    const binding = base.spec.layers[0]._sqlroomsBinding;
+    const partial = {
+      ...base,
+      spec: {
+        layers: [
+          {
+            ...base.spec.layers[0],
+            _sqlroomsBinding: {
+              dataset: binding.dataset,
+              geometryColumn: binding.geometryColumn,
+              generatedTransform: binding.generatedTransform,
+            },
+          },
+        ],
+      },
+    };
+
+    expect(
+      applyDeckMapTableSelection(partial, h3CellsTable).datasets.h3_cells
+        ?.source,
+    ).toMatchObject({transformSql: base.datasets.points.source.transformSql});
+  });
+
+  it('keeps a transform no layer records as generated', () => {
     const authoredTransformSql = [
       'SELECT *, ST_AsWKB(ST_Point("easting", "northing")) AS "__sqlrooms_geom"',
       `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
@@ -1106,27 +1159,6 @@ describe('applyDeckMapTableSelection', () => {
     });
   });
 
-  it('drops a generated transform stored with a trailing semicolon', () => {
-    const config = createPointMapConfig();
-    const stored = {
-      ...config,
-      datasets: {
-        points: {
-          ...config.datasets.points,
-          source: {
-            ...config.datasets.points.source,
-            transformSql: `  ${config.datasets.points.source.transformSql} ; `,
-          },
-        },
-      },
-    };
-
-    expect(
-      applyDeckMapTableSelection(stored, h3CellsTable).datasets.h3_cells
-        ?.source,
-    ).toEqual({tableName: '"main"."h3_cells"'});
-  });
-
   it('clears a generated binding when the dataset omits geometryColumn', () => {
     const config = {
       spec: {
@@ -1136,6 +1168,12 @@ describe('applyDeckMapTableSelection', () => {
             _sqlroomsBinding: {
               dataset: 'points',
               geometryColumn: '__sqlrooms_geom',
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              generatedTransform: {
+                kind: 'point' as const,
+                geometryColumn: '__sqlrooms_geom',
+              },
             },
           },
         ],
@@ -1214,7 +1252,15 @@ describe('applyDeckMapTableSelection', () => {
         layers: [
           {
             '@@type': 'GeoArrowScatterplotLayer',
-            _sqlroomsBinding: {geometryColumn: '__sqlrooms_geom'},
+            _sqlroomsBinding: {
+              geometryColumn: '__sqlrooms_geom',
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              generatedTransform: {
+                kind: 'point' as const,
+                geometryColumn: '__sqlrooms_geom',
+              },
+            },
           },
         ],
       },
@@ -1245,7 +1291,15 @@ describe('applyDeckMapTableSelection', () => {
           {
             '@@type': 'GeoArrowScatterplotLayer',
             getPosition: '@@=__sqlrooms_geom',
-            _sqlroomsBinding: {dataset: 'points'},
+            _sqlroomsBinding: {
+              dataset: 'points',
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              generatedTransform: {
+                kind: 'point' as const,
+                geometryColumn: '__sqlrooms_geom',
+              },
+            },
           },
         ],
       },
@@ -1275,7 +1329,16 @@ describe('applyDeckMapTableSelection', () => {
         layers: [
           {
             '@@type': 'GeoArrowH3HexagonLayer',
-            _sqlroomsBinding: {dataset: 'points', hexagonColumn: 'h3'},
+            _sqlroomsBinding: {
+              dataset: 'points',
+              hexagonColumn: 'h3',
+              longitudeColumn: 'Long',
+              latitudeColumn: 'Lat',
+              generatedTransform: {
+                kind: 'point' as const,
+                geometryColumn: '__sqlrooms_geom',
+              },
+            },
           },
         ],
       },
@@ -1342,6 +1405,12 @@ describe('applyDeckMapTableSelection', () => {
               _sqlroomsBinding: {
                 dataset: 'rides_2024',
                 geometryColumn: '__sqlrooms_geom',
+                longitudeColumn: 'pickup_lon',
+                latitudeColumn: 'pickup_lat',
+                generatedTransform: {
+                  kind: 'point' as const,
+                  geometryColumn: '__sqlrooms_geom',
+                },
               },
             },
           ],
@@ -1368,37 +1437,63 @@ describe('applyDeckMapTableSelection', () => {
     },
   );
 
-  it('clears arc geometry accessors when dropping a transform', () => {
+  it('drops a generated arc transform and both its geometry columns', () => {
     const config = {
       spec: {
         layers: [
           {
             '@@type': 'GeoArrowArcLayer',
-            getSourcePosition: '@@=__sqlrooms_geom',
-            getTargetPosition: '@@=__sqlrooms_geom',
-            _sqlroomsBinding: {dataset: 'points'},
+            getSourcePosition: '@@=__sqlrooms_source_geom',
+            getTargetPosition: '@@=__sqlrooms_target_geom',
+            _sqlroomsBinding: {
+              dataset: 'trips',
+              sourceGeometryColumn: '__sqlrooms_source_geom',
+              targetGeometryColumn: '__sqlrooms_target_geom',
+              sourceLongitudeColumn: 'from_lon',
+              sourceLatitudeColumn: 'from_lat',
+              targetLongitudeColumn: 'to_lon',
+              targetLatitudeColumn: 'to_lat',
+              generatedTransform: {
+                kind: 'arc' as const,
+                sourceGeometryColumn: '__sqlrooms_source_geom',
+                targetGeometryColumn: '__sqlrooms_target_geom',
+              },
+            },
           },
         ],
       },
       datasets: {
-        points: {
+        trips: {
           source: {
-            tableName: '"main"."taxes"',
-            transformSql: createDeckMapPointTransformSql({
-              longitudeColumn: 'Long',
-              latitudeColumn: 'Lat',
-              geometryColumn: '__sqlrooms_geom',
+            tableName: '"main"."trips"',
+            transformSql: createDeckMapArcTransformSql({
+              sourceLongitudeColumn: 'from_lon',
+              sourceLatitudeColumn: 'from_lat',
+              targetLongitudeColumn: 'to_lon',
+              targetLatitudeColumn: 'to_lat',
+              sourceGeometryColumn: '__sqlrooms_source_geom',
+              targetGeometryColumn: '__sqlrooms_target_geom',
             }),
           },
-          geometryColumn: '__sqlrooms_geom',
         },
+      },
+      fitToData: {
+        dataset: 'trips',
+        geometryColumns: ['__sqlrooms_source_geom', '__sqlrooms_target_geom'],
       },
     };
 
     const next = applyDeckMapTableSelection(config, h3CellsTable);
 
+    expect(next.datasets.h3_cells?.source).toEqual({
+      tableName: '"main"."h3_cells"',
+    });
     expect(next.spec.layers[0]).not.toHaveProperty('getSourcePosition');
     expect(next.spec.layers[0]).not.toHaveProperty('getTargetPosition');
+    expect(next.spec.layers[0]._sqlroomsBinding).toEqual({
+      dataset: 'h3_cells',
+    });
+    expect(next.fitToData).not.toHaveProperty('geometryColumns');
   });
 
   it('keeps a source-backed h3 fit column when dropping a transform', () => {

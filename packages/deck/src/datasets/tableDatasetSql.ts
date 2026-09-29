@@ -12,15 +12,7 @@ export class DeckTableDatasetInvalidTableNameError extends Error {
   }
 }
 
-/**
- * Normalizes an authored transform to the form that is actually compiled.
- *
- * Surrounding whitespace and terminal semicolons are stripped, so two spellings
- * that normalize alike execute alike. Callers that compare a stored transform
- * against generated SQL must normalize through this to stay in step with
- * {@link createDeckTableDatasetSql}.
- */
-export function normalizeDeckTableTransformSql(transformSql: string): string {
+function cleanTransformSql(transformSql: string): string {
   return transformSql.trim().replace(/(?:\s*;+\s*)+$/, '');
 }
 
@@ -58,7 +50,7 @@ export function createDeckTableDatasetSql(
     return `SELECT * FROM ${tableReference}`;
   }
 
-  const transformSql = normalizeDeckTableTransformSql(input.transformSql);
+  const transformSql = cleanTransformSql(input.transformSql);
   if (
     !new RegExp(`\\b${DECK_TABLE_DATASET_SOURCE_RELATION}\\b`, 'i').test(
       transformSql,
