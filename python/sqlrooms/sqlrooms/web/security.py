@@ -205,7 +205,8 @@ class McpAuthorization:
             from starlette.datastructures import Headers
 
             try:
-                self.security.authorize(Headers(scope=scope), "mcp")
+                caller = self.security.authorize(Headers(scope=scope), "mcp")
+                scope.setdefault("state", {})["sqlrooms_caller"] = caller
             except AccessDenied as exc:
                 await JSONResponse(
                     {"error": exc.code},

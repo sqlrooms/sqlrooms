@@ -61,9 +61,11 @@ unless you explicitly use external proxy settings.
 
 The MCP listener uses the official stateless Streamable HTTP transport. The
 browser must remain open and initialized because the live room owns the tool
-catalog and execution state. Every MCP SQL query requires an allow-once dialog
-in that browser. This approval and the one-statement `SELECT` check are not a
-SQL sandbox; only approve SQL from a client and request you trust.
+catalog and execution state. Verified reads of workspace tables run without a
+prompt. External or unverified SELECTs and database-writing commands require
+per-request approval in that browser. This approval and the one-statement
+`SELECT` check are not a SQL sandbox; only approve SQL from a client and request
+you trust.
 
 There is intentionally no `sqlrooms add`, `sqlrooms import`, or
 `sqlrooms doctor` command in the first public CLI. Drag-and-drop import is the
@@ -256,8 +258,13 @@ arguments or shared agent configuration. See [local authentication](AUTHENTICATI
 for browser launch tickets, native clients, expiry, and platform support.
 
 The browser owns the workspace. Keep it open; manually edited content is visible
-through MCP. Every MCP query still requires the existing browser approval, and
-commands retain their existing validation. Disconnects fail pending operations;
+through MCP. Verified reads of workspace tables run without a prompt. External or unverified
+SELECTs and database-writing commands require per-request browser approval.
+Use `db.import-file` to materialize local CSV/Parquet/JSON files and
+`db.create-table-from-query` for derived tables; both preserve existing tables
+unless replacement is explicit. The CLI does not expose `room.add-url-data-source`.
+See [data import and approvals](AGENT_WORKSPACES.md#importing-data).
+Commands retain their existing validation. Disconnects fail pending operations;
 the launcher reports disconnect/reconnect without replaying edits. On Claude
 exit or cancellation, the launcher stops the HTTP/MCP listeners and reaps its
 Claude child. It does not close browser windows or terminate unrelated sessions.
@@ -283,3 +290,17 @@ for tested behavior and outstanding real-Claude authentication requirements.
 All CLI listeners require authentication, including localhost callers. Public base
 URLs show a bootstrap recovery screen. See [local authentication](AUTHENTICATION.md)
 for the private native credential file and development proxy configuration.
+
+## Agent-managed workspaces
+
+Run `sqlrooms agent setup --client claude-desktop` or `--client claude-code` to
+preview one-time integration. The stable `sqlrooms agent connect` MCP adapter can
+list saved projects, create named persistent workspaces, reuse live browsers, and
+reopen by saved workspace ID. `sqlrooms agent status` reports redacted diagnostics.
+Claude Code setup offers a recommended trust option for the known SQLRooms MCP
+tools, avoiding duplicate Claude prompts while retaining SQLRooms browser approvals.
+Use `--no-trust-tools` to opt out; existing user permissions and restrictions are
+preserved. See [tool permissions](AGENT_WORKSPACES.md#claude-code-tool-permissions).
+
+See [agent-managed workspaces](AGENT_WORKSPACES.md) for setup, profiles, explicit
+instance routing, recovery, lifecycle, and current verification limitations.

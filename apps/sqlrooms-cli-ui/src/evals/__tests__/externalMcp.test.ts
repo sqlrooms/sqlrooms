@@ -115,7 +115,7 @@ it('discovers and executes through real MCP, enforces fixture policy and closes 
       await call('query', {
         sql: "select * from read_csv('/tmp/nonexistent.csv')",
       }),
-    ).toMatchObject({ok: false, code: 'query_failed'});
+    ).toMatchObject({ok: false, code: 'permission_denied'});
     expect(
       await call('execute_command', {
         commandId: 'room.add-sql-data-source',

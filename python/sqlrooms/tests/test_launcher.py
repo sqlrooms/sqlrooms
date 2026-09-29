@@ -124,7 +124,12 @@ def test_mcp_status_rejects_invalid_bearer_even_with_other_header(server):
 
 
 @pytest.mark.asyncio
-async def test_mcp_listener_lifecycle_is_repeatable(server):
+@pytest.mark.parametrize("managed", [False, True])
+async def test_mcp_listener_lifecycle_is_repeatable(server, managed):
+    if managed:
+        from sqlrooms.agent.process import reserve_listener
+
+        server._reserved_mcp_socket = reserve_listener("127.0.0.1", server.mcp_port)
     first = await server._start_mcp()
     repeated = await server._start_mcp()
 
@@ -761,7 +766,7 @@ def test_duckdb_backend_late_success_clears_timeout_status(server, monkeypatch):
     )
     monkeypatch.setattr(
         "sqlrooms.web.launcher.duckdb_ws_server",
-        lambda *_args, **_kwargs: None,
+        lambda *_args, **kwargs: kwargs["on_listen"](43210),
     )
     server._duckdb_start_error = TimeoutError("Timed out starting")
 

@@ -121,6 +121,7 @@ import {
   createDuckDbPersistStorage,
   saveAiSettingsToServer,
   uploadFileToServer,
+  resolveLocalFile,
 } from './serverApi';
 import {
   AppBuilderProjectConfig,
@@ -834,6 +835,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         })(set, get, store),
 
         ...createCliDomainSlice({
+          metaNamespace: runtimeConfig.metaNamespace,
+          resolveLocalFile: (input, signal) =>
+            resolveLocalFile(input, runtimeConfig, signal),
           profile: cliCapabilityProfile,
           artifactTypes: cliArtifactTypes,
           shell: {

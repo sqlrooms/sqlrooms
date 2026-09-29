@@ -25,6 +25,14 @@ def _verify_wheel(path: Path) -> None:
     with ZipFile(path) as wheel:
         names = set(wheel.namelist())
 
+    if (
+        "sqlrooms/mcp_tool_contract.json" not in names
+        or "sqlrooms/__main__.py" not in names
+    ):
+        raise RuntimeError(
+            f"{path} is missing the managed connector contract or module entrypoint"
+        )
+
     index_path = "sqlrooms/web/static/index.html"
     if index_path not in names:
         raise RuntimeError(f"{path} is missing {index_path}")
