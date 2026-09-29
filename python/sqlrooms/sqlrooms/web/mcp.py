@@ -21,6 +21,7 @@ class SqlroomsMcpService:
 
     def __init__(self, broker: McpBridgeBroker, *, security: TransportSecurity):
         self.broker = broker
+        self.enabled = False
         self.server = Server(
             "SQLRooms",
             on_list_tools=self._list_tools,
@@ -34,7 +35,23 @@ class SqlroomsMcpService:
             max_request_body_size=256 * 1024,
         )
 
+        self.sdk_app = self.app
         self.app = McpAuthorization(self.app, security)
+
+    async def __call__(self, scope, receive, send):
+        """Serve the existing SDK path without a mount prefix or extra listener."""
+        if not self.enabled:
+            from starlette.responses import JSONResponse
+
+            await JSONResponse({"error": "mcp_disabled"}, status_code=503)(
+                scope, receive, send
+            )
+            return
+        await self.app(scope, receive, send)
+
+    def lifespan(self):
+        """Start the SDK session manager on the parent application's event loop."""
+        return self.sdk_app.router.lifespan_context(self.sdk_app)
 
     async def _list_tools(
         self,

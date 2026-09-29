@@ -16,7 +16,7 @@ import pytest
 def live_runtime(tmp_path_factory):
     directory = tmp_path_factory.mktemp("auth-listeners")
     ports = []
-    for _ in range(3):
+    for _ in range(1):
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             ports.append(sock.getsockname()[1])
@@ -25,18 +25,12 @@ def live_runtime(tmp_path_factory):
 import asyncio, json, os
 from pathlib import Path
 from sqlrooms.web.launcher import SqlroomsHttpServer
-from sqlrooms.server import db_async
-from sqlrooms.server.cache import QueryCache
-from sqlrooms.server.server import server
 root = Path(os.environ["AUTH_TEST_DIRECTORY"])
-http_port, ws_port, mcp_port = json.loads(os.environ["AUTH_TEST_PORTS"])
-runtime = SqlroomsHttpServer(":memory:", "127.0.0.1", http_port, ws_port, mcp_port=mcp_port, serve_ui=False, open_browser=False, mcp_enabled=True, capability_profile="experimental", sync_enabled=True)
+http_port, = json.loads(os.environ["AUTH_TEST_PORTS"])
+runtime = SqlroomsHttpServer(":memory:", "127.0.0.1", http_port, None, serve_ui=False, open_browser=False, mcp_enabled=True, capability_profile="experimental", sync_enabled=True)
 runtime.access.page_ttl = 8
 # Exercise the production server startup while avoiding extension downloads.
-original_init = db_async.init_global_connection
-def init_without_extensions(database, **kwargs):
-    return original_init(database)
-db_async.init_global_connection = init_without_extensions
+runtime.runtime.extensions = []
 async def ready():
     fd = os.open(root / "record.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w") as output:
@@ -77,7 +71,7 @@ asyncio.run(runtime.start(ready))
 
 
 @pytest.mark.asyncio
-async def test_real_crdt_proxy_authentication_and_binary_sync(live_runtime):
+async def test_real_crdt_authentication_and_binary_sync(live_runtime):
     import base64
     from loro import LoroDoc, ExportMode
 
@@ -124,21 +118,23 @@ async def test_real_crdt_proxy_authentication_and_binary_sync(live_runtime):
 
 
 @pytest.mark.asyncio
-async def test_real_direct_and_proxy_admission_upload_renewal_and_expiry(live_runtime):
+async def test_real_native_and_browser_admission_upload_renewal_and_expiry(
+    live_runtime,
+):
     import pyarrow as pa
 
     ports, record = live_runtime
     origin = f"http://127.0.0.1:{ports[0]}"
-    direct = f"ws://127.0.0.1:{ports[1]}"
+    direct = origin + "/ws/duckdb"
     async with aiohttp.ClientSession(
         timeout=aiohttp.ClientTimeout(total=15)
     ) as session:
-        # Direct upgrade rejects browser Origins, even loopback ones.
+        # Upgrade rejects Origins outside the exact allowlist.
         with pytest.raises(aiohttp.WSServerHandshakeError):
-            await session.ws_connect(direct, origin=origin)
+            await session.ws_connect(direct, origin="https://wrong.invalid")
         async with session.ws_connect(direct) as raw:
             await raw.send_bytes(b"\x00\x00\x00\x00unauthorized")
-            assert (await raw.receive_json())["error"] == "unauthorized"
+            assert (await raw.receive()).type == aiohttp.WSMsgType.CLOSE
         async with session.ws_connect(direct) as raw:
             await raw.send_json({"type": "auth", "token": record["native"]})
             assert (await raw.receive_json()) == {"type": "authAck"}
@@ -160,13 +156,12 @@ async def test_real_direct_and_proxy_admission_upload_renewal_and_expiry(live_ru
             assert await direct_page.receive_json() == {"type": "authAck"}
             await sql.send_json({"type": "auth", "token": page["token"]})
             assert await sql.receive_json() == {"type": "authAck"}
-            # This can queue before the upstream handshake; only the result, not
-            # the upstream ack or credentials, may be relayed to the browser.
+            # Query results preserve IDs over the direct authenticated ASGI socket.
             await sql.send_json(
-                {"type": "json", "sql": "SELECT 7 as answer", "queryId": "proxy"}
+                {"type": "json", "sql": "SELECT 7 as answer", "queryId": "browser"}
             )
             result = await sql.receive_json()
-            assert result["queryId"] == "proxy"
+            assert result["queryId"] == "browser"
             assert json.loads(result["data"])[0]["answer"] == 7
             await bridge.send_json(
                 {
@@ -225,9 +220,9 @@ async def test_real_direct_and_proxy_admission_upload_renewal_and_expiry(live_ru
                 aiohttp.WSMsgType.CLOSE,
                 aiohttp.WSMsgType.CLOSED,
             }
-            assert (await direct_page.receive_json(timeout=2))[
-                "error"
-            ] == "unauthorized"
+            assert (
+                await direct_page.receive(timeout=2)
+            ).type == aiohttp.WSMsgType.CLOSE
             async with session.post(
                 origin + "/api/auth/renew",
                 headers={"Authorization": "Bearer " + page["token"]},

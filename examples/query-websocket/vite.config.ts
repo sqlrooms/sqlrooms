@@ -4,6 +4,25 @@ import react from '@vitejs/plugin-react';
 // import {VitePWA} from 'vite-plugin-pwa';
 
 export default defineConfig({
+  build: {target: 'esnext'},
+  server: {
+    port: 5173,
+    strictPort: true,
+    proxy: {
+      '/auth.json': {target: 'http://127.0.0.1:4000', changeOrigin: true},
+      '/api': {target: 'http://127.0.0.1:4000', changeOrigin: true},
+      '/ws/duckdb': {
+        target: 'ws://127.0.0.1:4000',
+        ws: true,
+        changeOrigin: true,
+      },
+      '/ws/mcp-bridge': {
+        target: 'ws://127.0.0.1:4000',
+        ws: true,
+        changeOrigin: true,
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),

@@ -64,8 +64,7 @@ def test_browser_lifecycle_errors_reach_manager(
         str(tmp_path / "workspace.duckdb"),
         "127.0.0.1",
         43000,
-        43001,
-        mcp_port=43002,
+        None,
         open_browser=False,
         serve_ui=False,
     )
@@ -149,17 +148,13 @@ async def test_catalog_failure_only_blocks_managed_launch_and_cleanup_continues(
         str(tmp_path / "workspace.duckdb"),
         "127.0.0.1",
         43000,
-        43001,
-        mcp_port=43002,
+        None,
         serve_ui=False,
         open_browser=False,
     )
     server.agent_runtime.managed = managed
     server.agent_runtime.catalog.path.write_text("{broken", encoding="utf-8")
-    monkeypatch.setattr(server, "_start_duckdb_backend", server._duckdb_ready.set)
-    monkeypatch.setattr(
-        process, "reserve_managed_listeners", lambda _: (Mock(), Mock())
-    )
+    monkeypatch.setattr(process, "reserve_managed_listeners", lambda _: Mock())
     monkeypatch.setattr(
         registry, "remove", Mock(side_effect=RuntimeError("storage unavailable"))
     )
@@ -183,11 +178,17 @@ async def test_catalog_failure_only_blocks_managed_launch_and_cleanup_continues(
         should_exit = False
 
         async def serve(self, **kwargs):
-            while not self.should_exit:
-                await asyncio.sleep(0.001)
+            async with self.app.router.lifespan_context(self.app):
+                while not self.should_exit:
+                    await asyncio.sleep(0.001)
 
     http = Http()
-    monkeypatch.setattr("sqlrooms.web.launcher.uvicorn.Server", lambda _: http)
+
+    def http_server(config):
+        http.app = config.app
+        return http
+
+    monkeypatch.setattr("sqlrooms.web.launcher.uvicorn.Server", http_server)
 
     async def session():
         await published.wait()
@@ -203,8 +204,9 @@ async def test_catalog_failure_only_blocks_managed_launch_and_cleanup_continues(
     else:
         assert await asyncio.wait_for(server.start(session), 2) == 7
     assert http.should_exit
-    stop.assert_awaited_once()
-    close.assert_awaited_once()
+    stop.assert_awaited()
+    close.assert_awaited()
+    assert server.runtime.closed
     assert not server.credential_file.path.exists()
     with pytest.raises(AccessDenied):
         server.access.verify(token, "read")

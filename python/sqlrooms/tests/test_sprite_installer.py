@@ -52,7 +52,7 @@ def test_generated_sprite_runner_uses_supported_bind_host(tmp_path):
         tmp_path / "test.duckdb",
         args[args.index("--host") + 1],
         int(args[args.index("--port") + 1]),
-        int(args[args.index("--ws-port") + 1]),
+        None,
         serve_ui=False,
     )
     assert server.host == "127.0.0.1"

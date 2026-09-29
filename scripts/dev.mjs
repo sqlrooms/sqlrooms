@@ -155,17 +155,14 @@ function parsePortOption(args, name) {
 async function getCliDevPorts(args) {
   const {host, proxyHost} = getCliDevHosts(args);
   const explicitApiPort = parsePortOption(args, '--port');
-  const explicitWsPort = parsePortOption(args, '--ws-port');
   const reservedPorts = new Set(
-    [CLI_DEV_UI_DEFAULT_PORT, explicitWsPort].filter(
-      (port) => typeof port === 'number',
-    ),
+    [CLI_DEV_UI_DEFAULT_PORT].filter((port) => typeof port === 'number'),
   );
   const apiPort =
     explicitApiPort ??
     (await findAvailablePort(CLI_DEV_API_DEFAULT_PORT, host, reservedPorts));
   const uiReservedPorts = new Set(
-    [apiPort, explicitWsPort].filter((port) => typeof port === 'number'),
+    [apiPort].filter((port) => typeof port === 'number'),
   );
   const uiPort = await findAvailablePort(
     CLI_DEV_UI_DEFAULT_PORT,
@@ -383,7 +380,7 @@ if (target === 'cli') {
   if (!exiting) {
     startProcess(
       'sqlrooms CLI UI dev server',
-      ['--host', '--port', String(uiPort)],
+      ['--host', '--port', String(uiPort), '--strictPort'],
       {
         command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
         cwd: path.resolve('apps/sqlrooms-cli-ui'),
@@ -393,6 +390,35 @@ if (target === 'cli') {
         },
       },
     );
+    try {
+      await waitForCliApi(`http://localhost:${uiPort}/`, {
+        signal: cliStartupController.signal,
+      });
+      startProcess(
+        'authorized SQLRooms dev launch',
+        [
+          'run',
+          'python',
+          'scripts/open_dev.py',
+          `http://${proxyHost}:${apiPort}`,
+          ...(cliArgs.includes('--no-open-browser')
+            ? ['--no-open-browser']
+            : []),
+        ],
+        {
+          command: 'uv',
+          cwd: path.resolve('python/sqlrooms'),
+          allowCleanExit: true,
+        },
+      );
+    } catch (error) {
+      if (!exiting) {
+        exiting = true;
+        stopChildren();
+        console.error('SQLRooms CLI UI failed to become ready.', error);
+        process.exit(1);
+      }
+    }
   }
 } else {
   startProcess(

@@ -1,5 +1,3 @@
-import asyncio
-import logging
 import socket
 from urllib.parse import urljoin, urlsplit
 
@@ -13,7 +11,6 @@ from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnector
 from sqlrooms.web.launcher import SqlroomsHttpServer
 from sqlrooms.web.launcher import _can_bind_port
 from sqlrooms.web.launcher import _pick_free_port
-from sqlrooms.web.launcher import _relay_duckdb_websockets
 from sqlrooms.web.launcher import _write_ai_settings_to_toml
 from sqlrooms.web.launcher import _write_db_connectors_to_toml
 from sqlrooms.web.launcher import _write_upload_to_path
@@ -74,28 +71,6 @@ def test_api_config(server):
     )
 
 
-def test_auto_ws_port_reserves_explicit_mcp_port(tmp_path, monkeypatch):
-    calls = []
-
-    def fake_pick_free_port(host, start_port=None, *, reserved_ports=None):
-        calls.append((host, start_port, reserved_ports))
-        return 43101
-
-    monkeypatch.setattr("sqlrooms.web.launcher._pick_free_port", fake_pick_free_port)
-
-    server = SqlroomsHttpServer(
-        db_path=tmp_path / "test.db",
-        host="127.0.0.1",
-        port=4173,
-        ws_port=None,
-        mcp_port=43100,
-        open_browser=False,
-    )
-
-    assert server.ws_port == 43101
-    assert calls[0][2] == {4173, 43100}
-
-
 def test_mcp_lifecycle_status_requires_session_token(server):
     client = TestClient(server._build_app(), base_url=server._ui_url())
 
@@ -124,12 +99,7 @@ def test_mcp_status_rejects_invalid_bearer_even_with_other_header(server):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("managed", [False, True])
-async def test_mcp_listener_lifecycle_is_repeatable(server, managed):
-    if managed:
-        from sqlrooms.agent.process import reserve_listener
-
-        server._reserved_mcp_socket = reserve_listener("127.0.0.1", server.mcp_port)
+async def test_mcp_endpoint_enable_disable_is_repeatable(server):
     first = await server._start_mcp()
     repeated = await server._start_mcp()
 
@@ -143,34 +113,12 @@ async def test_mcp_listener_lifecycle_is_repeatable(server, managed):
     assert (await server._stop_mcp())["status"] == "off"
 
 
-@pytest.mark.asyncio
-async def test_mcp_start_normalizes_uvicorn_system_exit(server, monkeypatch):
-    class FailingUvicornServer:
-        started = False
-        should_exit = False
-
-        def __init__(self, _config):
-            pass
-
-        async def serve(self):
-            raise SystemExit(1)
-
-    monkeypatch.setattr("sqlrooms.web.launcher.uvicorn.Server", FailingUvicornServer)
-
-    with pytest.raises(RuntimeError, match="exit code 1"):
-        await server._start_mcp()
-
-    assert server._mcp_last_error == "MCP listener failed to start (exit code 1)."
-    assert server._mcp_server is None
-    assert server._mcp_task is None
-
-
 def test_api_config_uses_same_origin_ws_proxy(tmp_path):
     server = SqlroomsHttpServer(
         db_path=tmp_path / "test.db",
         host="127.0.0.1",
         port=4173,
-        ws_port=48174,
+        ws_port=None,
         open_browser=False,
     )
     app = server._build_app()
@@ -182,78 +130,22 @@ def test_api_config_uses_same_origin_ws_proxy(tmp_path):
     assert response.json()["crdtWsUrl"] == "ws://127.0.0.1:4173/ws/duckdb"
 
 
-def test_duckdb_websocket_proxy_requires_auth(server):
-    client = authorized_client(server)
-
-    with pytest.raises(WebSocketDisconnect) as exc_info:
-        with client.websocket_connect("/ws/duckdb") as ws:
-            ws.receive_text()
-
-    assert exc_info.value.code == 1008
-
-
-def test_duckdb_websocket_proxy_accepts_first_message_auth(server, caplog):
-    caplog.set_level(logging.WARNING, logger="sqlrooms.web.launcher")
-    client = authorized_client(server)
-
-    with client.websocket_connect("/ws/duckdb") as ws:
-        ws.send_json({"type": "auth", "token": server.session_token})
-
-        assert ws.receive_json() == {"type": "authAck"}
+def test_duckdb_websocket_requires_auth(server):
+    with authorized_client(server) as client:
         with pytest.raises(WebSocketDisconnect) as exc_info:
-            ws.receive_text()
+            with client.websocket_connect("/ws/duckdb") as ws:
+                ws.send_json({"type": "json", "sql": "SELECT 1"})
+                ws.receive_text()
+        assert exc_info.value.code == 1008
 
-    assert exc_info.value.code == 1013
-    assert "DuckDB websocket backend unavailable" in caplog.text
-    assert "DuckDB websocket proxy failed" not in caplog.text
 
-
-@pytest.mark.asyncio
-async def test_duckdb_websocket_relay_cleans_up_on_cancellation(server):
-    class BlockingClientWebSocket:
-        def __init__(self):
-            self.started = asyncio.Event()
-            self.cancelled = False
-
-        async def receive(self):
-            self.started.set()
-            try:
-                await asyncio.Event().wait()
-            except asyncio.CancelledError:
-                self.cancelled = True
-                raise
-
-    class BlockingUpstreamWebSocket:
-        def __init__(self):
-            self.started = asyncio.Event()
-            self.cancelled = False
-
-        def __aiter__(self):
-            return self
-
-        async def __anext__(self):
-            self.started.set()
-            try:
-                await asyncio.Event().wait()
-            except asyncio.CancelledError:
-                self.cancelled = True
-                raise
-
-    client_ws = BlockingClientWebSocket()
-    upstream_ws = BlockingUpstreamWebSocket()
-    relay = asyncio.create_task(
-        _relay_duckdb_websockets(
-            client_ws, upstream_ws, server.security, server.session_token
-        )
-    )
-    await asyncio.gather(client_ws.started.wait(), upstream_ws.started.wait())
-
-    relay.cancel()
-    await relay
-
-    assert relay.cancelled() is False
-    assert client_ws.cancelled is True
-    assert upstream_ws.cancelled is True
+def test_duckdb_websocket_accepts_first_message_auth(server):
+    with authorized_client(server) as client:
+        with client.websocket_connect("/ws/duckdb") as ws:
+            ws.send_json({"type": "auth", "token": server.session_token})
+            assert ws.receive_json() == {"type": "authAck"}
+            ws.send_json({"type": "json", "sql": "SELECT 1", "queryId": "direct"})
+            assert ws.receive_json()["queryId"] == "direct"
 
 
 def test_mcp_browser_bridge_requires_auth(server):
@@ -337,7 +229,7 @@ def test_ui_url_wraps_ipv6_host(tmp_path):
         db_path=tmp_path / "test.db",
         host="::1",
         port=4173,
-        ws_port=48174,
+        ws_port=None,
         open_browser=False,
     )
 
@@ -356,7 +248,7 @@ def test_startup_fails_when_configured_ui_bundle_is_missing(tmp_path):
         db_path=tmp_path / "test.db",
         host="127.0.0.1",
         port=0,
-        ws_port=48174,
+        ws_port=None,
         open_browser=False,
         ui_dir=str(tmp_path / "missing-ui"),
     )
@@ -374,7 +266,7 @@ def test_serves_ui_index_without_browser_cache(tmp_path):
         db_path=tmp_path / "test.db",
         host="127.0.0.1",
         port=0,
-        ws_port=48174,
+        ws_port=None,
         open_browser=False,
         ui_dir=str(ui_dir),
     )
@@ -395,7 +287,7 @@ def test_serves_ui_index_for_head_requests(tmp_path):
         db_path=tmp_path / "test.db",
         host="127.0.0.1",
         port=0,
-        ws_port=48174,
+        ws_port=None,
         open_browser=False,
         ui_dir=str(ui_dir),
     )
@@ -418,7 +310,7 @@ def test_serves_static_ui_assets(tmp_path):
         db_path=tmp_path / "test.db",
         host="127.0.0.1",
         port=0,
-        ws_port=48174,
+        ws_port=None,
         open_browser=False,
         ui_dir=str(ui_dir),
     )
@@ -441,7 +333,7 @@ def test_serves_static_ui_assets_for_head_requests(tmp_path):
         db_path=tmp_path / "test.db",
         host="127.0.0.1",
         port=0,
-        ws_port=48174,
+        ws_port=None,
         open_browser=False,
         ui_dir=str(ui_dir),
     )
@@ -465,7 +357,7 @@ def test_redirects_stale_vite_entry_assets(tmp_path, mount):
         db_path=tmp_path / "test.db",
         host="127.0.0.1",
         port=0,
-        ws_port=48174,
+        ws_port=None,
         open_browser=False,
         ui_dir=str(ui_dir),
     )
@@ -508,7 +400,7 @@ def test_missing_non_entry_asset_returns_404(tmp_path):
         db_path=tmp_path / "test.db",
         host="127.0.0.1",
         port=0,
-        ws_port=48174,
+        ws_port=None,
         open_browser=False,
         ui_dir=str(ui_dir),
     )
@@ -528,7 +420,7 @@ def test_unknown_api_paths_do_not_fall_back_to_spa(tmp_path):
         db_path=tmp_path / "test.db",
         host="127.0.0.1",
         port=0,
-        ws_port=48174,
+        ws_port=None,
         open_browser=False,
         ui_dir=str(ui_dir),
     )
@@ -716,73 +608,13 @@ def test_pick_free_port_fails_fast_for_invalid_host():
         _pick_free_port("not-a-bindable-host.invalid", 4173)
 
 
-def test_duckdb_backend_start_failure_is_propagated(server, monkeypatch):
-    def fail_init_global_connection(*_args, **_kwargs):
-        raise RuntimeError("duckdb lock held")
-
-    monkeypatch.setattr(
-        "sqlrooms.web.launcher.db_async.init_global_connection",
-        fail_init_global_connection,
-    )
-
-    server._start_duckdb_backend()
-
-    app = server._build_app()
-    client = authorized_client(server, app)
-    response = client.get("/api/status")
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "degraded"
-    duckdb_status = data["components"]["duckdbWebSocket"]
-    assert duckdb_status["status"] == "error"
-    assert duckdb_status["message"] == "DuckDB websocket backend failed to start"
-    assert duckdb_status["error"] == "Database startup failed"
-    assert "details" not in duckdb_status
-
-
-def test_duckdb_backend_slow_start_remains_starting(server, monkeypatch):
-    class FakeThread:
-        def __init__(self, *_args, **_kwargs):
-            pass
-
-        def start(self):
-            pass
-
-    monkeypatch.setattr("sqlrooms.web.launcher.threading.Thread", FakeThread)
-    monkeypatch.setattr(server._duckdb_ready, "wait", lambda timeout=None: False)
-
-    server._start_duckdb_backend()
-
-    duckdb_status = server._runtime_status()["components"]["duckdbWebSocket"]
-    assert server._duckdb_start_error is None
-    assert duckdb_status["status"] == "starting"
-
-
-def test_duckdb_backend_late_success_clears_timeout_status(server, monkeypatch):
-    monkeypatch.setattr(
-        "sqlrooms.web.launcher.db_async.init_global_connection",
-        lambda *_args, **_kwargs: None,
-    )
-    monkeypatch.setattr(
-        "sqlrooms.web.launcher.duckdb_ws_server",
-        lambda *_args, **kwargs: kwargs["on_listen"](43210),
-    )
-    server._duckdb_start_error = TimeoutError("Timed out starting")
-
-    server._run_duckdb_server()
-
-    assert server._duckdb_start_error is None
-    assert server._runtime_status()["status"] == "ready"
-
-
 def test_api_config_with_external_urls(tmp_path):
     db_path = tmp_path / "test.db"
     server = SqlroomsHttpServer(
         db_path=db_path,
         host="127.0.0.1",
         port=8080,
-        ws_port=4000,
+        ws_port=None,
         open_browser=False,
         external_url="https://demo.sprites.dev/",
         external_ws_url="wss://demo.sprites.dev/ws/duckdb",
@@ -803,7 +635,7 @@ def test_api_config_derives_ws_url_from_external_url(tmp_path):
         db_path=db_path,
         host="127.0.0.1",
         port=8080,
-        ws_port=4000,
+        ws_port=None,
         open_browser=False,
         external_url="https://demo.sprites.dev/",
     )
@@ -823,7 +655,7 @@ def test_api_config_derives_proxy_ws_url_from_local_external_url(tmp_path):
         db_path=db_path,
         host="127.0.0.1",
         port=8080,
-        ws_port=4000,
+        ws_port=None,
         open_browser=False,
         external_url="http://localhost:4173",
     )
@@ -1425,3 +1257,73 @@ def test_api_auth_requires_token_for_non_loopback(server):
         }
     )
     assert server._require_api_auth(request) is not None
+
+
+def test_mcp_uses_exact_shared_path_and_parent_session_lifespan(server):
+    server.mcp_enabled_default = True
+    app = server._build_app()
+    with TestClient(app, base_url=server._ui_url()) as client:
+        headers = {
+            "Authorization": "Bearer " + server.session_token,
+            "Accept": "application/json, text/event-stream",
+        }
+        assert client.post("/mcp", json={}).status_code == 401
+        response = client.post(
+            "/mcp",
+            headers=headers,
+            json={
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-11-25",
+                    "capabilities": {},
+                    "clientInfo": {"name": "test-client", "version": "1"},
+                },
+            },
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["result"]["serverInfo"]["name"] == "SQLRooms"
+        page = server.access.redeem(server.access.ticket())
+        assert (
+            client.post(
+                "/mcp",
+                headers={**headers, "Authorization": "Bearer " + page["token"]},
+                json={},
+            ).status_code
+            == 403
+        )
+        assert client.post("/api/mcp/stop", headers=headers).status_code == 200
+        assert client.post("/mcp", headers=headers, json={}).status_code == 503
+        assert client.post("/api/mcp/start", headers=headers).status_code == 200
+        assert (
+            client.post(
+                "/mcp",
+                headers=headers,
+                json={"jsonrpc": "2.0", "id": 2, "method": "ping"},
+            ).status_code
+            == 200
+        )
+        assert server._mcp_url() == server._ui_url() + "/mcp"
+
+
+@pytest.mark.asyncio
+async def test_launcher_reports_lifespan_persistence_failure(server, monkeypatch):
+    """Uvicorn logs lifespan errors and returns; the launcher must still fail."""
+    from sqlrooms.web import launcher
+
+    class FailedShutdownServer:
+        started = False
+        should_exit = False
+
+        def __init__(self, config):
+            self.config = config
+
+        async def serve(self, **kwargs):
+            server._app_resources.failure = OSError("checkpoint failed")
+
+    monkeypatch.setattr(launcher.uvicorn, "Server", FailedShutdownServer)
+    monkeypatch.setattr(server, "_assert_ui_available", lambda: None)
+    with pytest.raises(RuntimeError, match="persistence failed"):
+        await server.start()
+    assert server.access._credentials == {}

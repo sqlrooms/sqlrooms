@@ -32,9 +32,7 @@ def status():
         value = {
             "python": sys.executable,
             "module": "sqlrooms",
-            "versions": {
-                name: version(name) for name in ("sqlrooms", "sqlrooms-server", "mcp")
-            },
+            "versions": {name: version(name) for name in ("sqlrooms", "mcp")},
             "catalog": str(home() / "workspaces.json"),
             "managedRoot": str(managed_root()),
             **Manager().list(limit=200),

@@ -1,6 +1,6 @@
 # Local authentication
 
-The CLI binds HTTP, MCP, and DuckDB listeners to loopback. Every workspace
+The CLI binds one HTTP/WebSocket/MCP listener to loopback. Every workspace
 operation requires a credential, including requests from localhost. This boundary
 protects against unsolicited web pages and accidental local callers; it does not
 sandbox SQL or isolate hostile processes running as the same OS user.
@@ -52,7 +52,7 @@ Send `Authorization: Bearer <token>` on native HTTP requests. On the direct Duck
 websocket send `{"type":"auth","token":"<token>"}` first, and consume `authAck`
 before sending SQL or binary frames. Authentication has a five-second deadline and
 4 KiB handshake limit. Native clients without Origin still require authentication.
-The CLI's direct backend rejects browser Origins; the browser uses `/ws/duckdb`.
+Native clients and allowed browser Origins use the same `/ws/duckdb` endpoint.
 
 Foreground Claude receives only the credential-file path and a header-helper
 command. Its `headersHelper` reads the protected file and verifies the MCP endpoint,
@@ -80,13 +80,13 @@ validation are unchanged.
 | HTTP MCP discovery and tool calls                        | Native `mcp`, on every request                         |
 | Browser bridge                                           | Page `bridge`, plus the existing single-page lease     |
 | DuckDB domain messages                                   | `query`, per connection and every JSON/binary dispatch |
-| Backend `/healthz`, `/readyz`                            | Public minimal text                                    |
-| Backend `/version`                                       | Authenticated when backend auth is enabled             |
+| `/healthz`, `/readyz`                                    | Public minimal JSON                                    |
+| `/version`                                               | Authenticated `read`                                   |
 
-The proxy consumes browser auth messages and separately authenticates upstream with
-a server-only query credential, consuming its acknowledgement before forwarding
-frames. Credentials cannot be supplied through websocket query strings. Repeated
-browser auth frames never enter the native boundary.
+The direct ASGI handler consumes the initial auth frame and validates the same
+credential on dispatch and delivery. There is no internal relay or extra listener.
+Private connection identities prevent a delayed result from reaching a replacement
+socket. Native and page credentials retain their distinct operation scopes.
 
 HTTP responses are no-store and no-referrer. Host and Origin checks supplement
 credentials. Forwarded identity headers and routing identifiers never establish
@@ -120,13 +120,18 @@ The Sprite installer keeps the SQLRooms listener on loopback and configures the
 Sprite HTTP proxy's service port. It polls public `/healthz`; opening the workspace
 still requires a ticket obtained through the private native credential handoff.
 
-`LocalAccess.invalidate()` revokes native, upstream, and page credentials and all
+`LocalAccess.invalidate()` revokes native, connector, and page credentials and all
 outstanding tickets. Shutdown invokes it and deletes the native handoff file, even
 on startup failure. A future successful Save As must invalidate the source binding,
 issue destination authority, replace its private runtime record, and explicitly
-bootstrap/retarget consumers. This PR does not implement Save As, managed catalogs,
-cloud login, OAuth, or a generic role system.
+bootstrap/retarget consumers. Managed catalogs retain these same credentials and binding checks. This change
+does not implement Save As, cloud login, OAuth, or a generic role system.
 
-The standalone `sqlrooms-server` API keeps its existing optional-auth compatibility;
-applications using it directly must configure authentication and allowed transports.
-The CLI always supplies the verifier and explicit allowlists.
+The consolidated `sqlrooms server` command requires the same authentication and
+Host/Origin checks as the UI launcher. There is no optional-auth standalone listener
+or internal relay credential. Native clients and pages use `/ws/duckdb` on the
+API port and send an initial `{"type":"auth","token":"..."}` frame. Read the
+native token from the private credential file; do not put it in browser code.
+The same origin does not grant page credentials native MCP or lifecycle authority.
+Authenticated direct SQL clients retain their existing broad database access;
+browser MCP approval is not a SQL firewall for these clients.

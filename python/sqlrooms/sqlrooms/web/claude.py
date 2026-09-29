@@ -55,8 +55,8 @@ async def wait_for_workspace(server: SqlroomsHttpServer, timeout: float = 90) ->
             raise RuntimeError(
                 "SQLRooms MCP listener stopped or failed before the browser became ready."
             )
-        if server._duckdb_start_error:
-            raise RuntimeError("SQLRooms database failed to start.")
+        if server.runtime.closing:
+            raise RuntimeError("SQLRooms database failed to start or is closing.")
         if status["enabled"] and status["bridge"]["status"] == "ready":
             return
         await asyncio.sleep(0.1)

@@ -75,5 +75,8 @@ jobs:
       - name: Verify sqlrooms wheel
         run: python sqlrooms/scripts/verify_wheel.py dist/sqlrooms-*.whl
 
+      - name: Verify isolated runtime and sdist installs
+        run: python sqlrooms/scripts/verify_distribution.py dist/sqlrooms-*.whl dist/sqlrooms-*.tar.gz
+
       - name: Run tests
         run: uv run pytest

@@ -9,7 +9,7 @@ TOOL_VERSION = CONTRACT["version"]
 TOOL_HASH = hashlib.sha256(
     json.dumps(CONTRACT, sort_keys=True, separators=(",", ":")).encode()
 ).hexdigest()
-CONTROL_VERSION = 1
+CONTROL_VERSION = 2
 
 
 def matches_browser(tools):
