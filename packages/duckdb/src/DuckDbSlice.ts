@@ -33,6 +33,7 @@ import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 import {
   loadSchemaCatalog,
   LoadSchemaCatalogFilterFunction,
+  filterSchemaCatalog,
   loadTableSchemas,
   LoadTableSchemasFilter,
   LoadTableSchemasFilterFunction,
@@ -398,17 +399,18 @@ export function createDuckDbSlice({
   let refreshPromise: Promise<DataTable[]> | null = null;
   let pendingSchemaRefresh = false;
   const effectiveSchemaCatalogFilter =
-    loadSchemaCatalogFilter ??
-    (loadTableSchemasFilter === null
-      ? null
-      : (((entry, metadata) => {
-          if (entry.type === 'table') {
-            return loadTableSchemasFilter
-              ? loadTableSchemasFilter(entry.table, metadata)
-              : true;
-          }
-          return defaultLoadSchemaCatalogFilter(entry);
-        }) satisfies LoadSchemaCatalogFilterFunction));
+    loadSchemaCatalogFilter !== undefined
+      ? loadSchemaCatalogFilter
+      : loadTableSchemasFilter === null
+        ? null
+        : (((entry, metadata) => {
+            if (entry.type === 'table') {
+              return loadTableSchemasFilter
+                ? loadTableSchemasFilter(entry.table, metadata)
+                : true;
+            }
+            return defaultLoadSchemaCatalogFilter(entry);
+          }) satisfies LoadSchemaCatalogFilterFunction);
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
     (set, get, store) => {
       const parseTableReferenceParts = (
@@ -897,7 +899,6 @@ export function createDuckDbSlice({
                     }),
                   );
                   schemasWithTables = await loadSchemaCatalog(connector, {
-                    filterFunction: effectiveSchemaCatalogFilter,
                     defaultDatabase: currentDatabase,
                   });
                 } while (pendingSchemaRefresh);
@@ -911,7 +912,12 @@ export function createDuckDbSlice({
                   );
                 const currentTables = get().db.tables;
                 const currentSchemaTrees = get().db.schemaTrees;
-                const newSchemaTrees = createDbSchemaTrees(schemasWithTables);
+                const newSchemaTrees = createDbSchemaTrees(
+                  filterSchemaCatalog(
+                    schemasWithTables,
+                    effectiveSchemaCatalogFilter,
+                  ),
+                );
 
                 if (
                   !deepEquals(newTables, currentTables) ||

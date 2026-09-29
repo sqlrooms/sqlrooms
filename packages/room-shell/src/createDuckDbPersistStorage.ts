@@ -13,6 +13,7 @@ const PERSIST_DEBOUNCE_MS = 300;
 /** DuckDB persistence with an explicit successful-restoration boundary. */
 export type DuckDbPersistStorage<TPersisted> = PersistStorage<TPersisted> & {
   controller: PersistenceController<string>;
+  /** Await before closing or reloading; rejects if the pending write fails. */
   flush: () => Promise<void>;
   /** Enables writes and schedules any changes retained by a successful restore. */
   completeHydration: (state: TPersisted) => void;
@@ -64,7 +65,12 @@ export function createDuckDbPersistStorage<TPersisted>(
   // before runtime changes are allowed to replace the saved workspace.
   let hydrated = false;
   const ensure = () => {
-    ensured = ensured ?? ensureUiStateTable(connector, namespace);
+    ensured =
+      ensured ??
+      ensureUiStateTable(connector, namespace).catch((error) => {
+        ensured = null;
+        throw error;
+      });
     return ensured;
   };
   const persistence = createRoomStorePersistence<
@@ -113,9 +119,17 @@ export function createDuckDbPersistStorage<TPersisted>(
     if (handlersRegistered || typeof window === 'undefined') return;
     handlersRegistered = true;
     const flushNow = () => {
-      void persistence.flush('final-flush');
+      // Best effort only; the controller retains failures for the save UI.
+      void persistence.flush('final-flush').catch(() => {});
     };
-    window.addEventListener('beforeunload', flushNow);
+    window.addEventListener('beforeunload', (event) => {
+      const {dirty, saving} = persistence.controller.getState();
+      if (dirty || saving) {
+        event.preventDefault();
+        event.returnValue = '';
+        flushNow();
+      }
+    });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
         flushNow();

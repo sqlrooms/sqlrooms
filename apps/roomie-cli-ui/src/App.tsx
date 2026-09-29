@@ -93,8 +93,12 @@ export function App() {
         <button
           className="roomie-action"
           onClick={async () => {
-            await storage.flush();
-            if (!storage.controller.getState().error) location.reload();
+            try {
+              await storage.flush();
+              if (!storage.controller.getState().error) location.reload();
+            } catch (e) {
+              setError(String(e));
+            }
           }}
         >
           Reload

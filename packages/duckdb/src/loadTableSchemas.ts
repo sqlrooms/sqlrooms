@@ -82,7 +82,6 @@ export async function loadSchemaCatalog(
   const {filterFunction, defaultDatabase, ...filter} = options;
   const result = await connector.query(buildSchemaCatalogQuery(filter));
   const groups = new Map<string, SchemaWithTables>();
-  const includedDatabases = new Set<string>();
   const keyOf = (database: string, schema: string) =>
     `${database}\x00${schema}`;
 
@@ -90,18 +89,6 @@ export async function loadSchemaCatalog(
     const database = String(result.getChild('database')?.get(i) ?? '').trim();
     const schema = String(result.getChild('schema')?.get(i) ?? '').trim();
     if (!database || !schema) continue;
-
-    if (!includedDatabases.has(database)) {
-      if (filterFunction?.({type: 'database', database}) === false) {
-        continue;
-      } else {
-        includedDatabases.add(database);
-      }
-    }
-
-    if (filterFunction?.({type: 'schema', database, schema}) === false) {
-      continue;
-    }
 
     const key = keyOf(database, schema);
     let group = groups.get(key);
@@ -112,16 +99,40 @@ export async function loadSchemaCatalog(
     }
 
     const table = parseSchemaCatalogTableRow(result, i, {defaultDatabase});
-    if (
-      table &&
-      (!filterFunction ||
-        filterFunction({type: 'table', table: table.table}, table))
-    ) {
+    if (table) {
       group.tables.push(table);
     }
   }
 
-  return Array.from(groups.values());
+  return filterSchemaCatalog(Array.from(groups.values()), filterFunction);
+}
+
+/** Apply visibility rules to loaded metadata without another database query. @internal */
+export function filterSchemaCatalog(
+  schemas: SchemaWithTables[],
+  filterFunction?: LoadSchemaCatalogFilterFunction | null,
+): SchemaWithTables[] {
+  if (!filterFunction) return schemas;
+  const includedDatabases = new Map<string, boolean>();
+  return schemas
+    .filter(({database, schema}) => {
+      if (!includedDatabases.has(database)) {
+        includedDatabases.set(
+          database,
+          filterFunction({type: 'database', database}),
+        );
+      }
+      return (
+        includedDatabases.get(database) &&
+        filterFunction({type: 'schema', database, schema})
+      );
+    })
+    .map((schema) => ({
+      ...schema,
+      tables: schema.tables.filter((table) =>
+        filterFunction({type: 'table', table: table.table}, table),
+      ),
+    }));
 }
 
 function isDuckDbPlaceholderViewColumn(

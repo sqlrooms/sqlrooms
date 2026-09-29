@@ -148,7 +148,7 @@ export async function initializeRoomie() {
   await roomStore.getState().room.initialize();
   await roomStore.getState().db.refreshTableSchemas();
   const state = roomStore.getState();
-  validateWorkspaceRenderSources(state);
+  await validateWorkspaceRenderSources(state);
   for (const settings of Object.values(state.tableExplorers.config.byId))
     await validateTableFilters(state.db, settings.filters);
   roomStore.getState().commands.unregisterCommands('@sqlrooms/room-shell');

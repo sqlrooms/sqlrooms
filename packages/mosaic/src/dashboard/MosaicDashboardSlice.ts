@@ -791,12 +791,15 @@ export type {CreateMosaicDashboardSliceProps};
 // Immer must not traverse mutable vgplot handles when unrelated config changes.
 // A non-draftable holder preserves chart identity and the public record API;
 // cache updates still replace the holder so store subscriptions see changes.
-class RetainedChartCache {
-  [runtimeKey: string]: RetainedVgPlotChart;
+const retainedChartCachePrototype = Object.create(null);
 
-  constructor(entries: Record<string, RetainedVgPlotChart> = {}) {
-    Object.defineProperties(this, Object.getOwnPropertyDescriptors(entries));
-  }
+function createRetainedChartCache(
+  entries: Record<string, RetainedVgPlotChart> = {},
+): Record<string, RetainedVgPlotChart> {
+  return Object.create(
+    retainedChartCachePrototype,
+    Object.getOwnPropertyDescriptors(entries),
+  );
 }
 
 export function createMosaicDashboardSlice(
@@ -807,7 +810,7 @@ export function createMosaicDashboardSlice(
       mosaicDashboard: {
         config: createDefaultMosaicDashboardConfig(props.config),
         runtime: {
-          retainedChartsByPanelId: new RetainedChartCache(),
+          retainedChartsByPanelId: createRetainedChartCache(),
           panelIssuesByPanelId: {},
           panelClients: {},
         },
@@ -1051,7 +1054,7 @@ export function createMosaicDashboardSlice(
               ...state.mosaicDashboard,
               runtime: {
                 ...state.mosaicDashboard.runtime,
-                retainedChartsByPanelId: new RetainedChartCache({
+                retainedChartsByPanelId: createRetainedChartCache({
                   ...state.mosaicDashboard.runtime.retainedChartsByPanelId,
                   [runtimeKey]: chart,
                 }),
@@ -1130,7 +1133,7 @@ export function createMosaicDashboardSlice(
             get().mosaicDashboard.runtime.retainedChartsByPanelId[runtimeKey];
           destroyDashboardRuntimeChart(existing);
           set((state) => {
-            const nextRetainedChartsByPanelId = new RetainedChartCache(
+            const nextRetainedChartsByPanelId = createRetainedChartCache(
               state.mosaicDashboard.runtime.retainedChartsByPanelId,
             );
             const nextPanelIssuesByPanelId = {
@@ -1178,7 +1181,7 @@ export function createMosaicDashboardSlice(
           }
 
           set((state) => {
-            const nextRetainedChartsByPanelId = new RetainedChartCache(
+            const nextRetainedChartsByPanelId = createRetainedChartCache(
               state.mosaicDashboard.runtime.retainedChartsByPanelId,
             );
             const nextPanelIssuesByPanelId = {
@@ -1221,7 +1224,7 @@ export function createMosaicDashboardSlice(
               ...state.mosaicDashboard,
               runtime: {
                 ...state.mosaicDashboard.runtime,
-                retainedChartsByPanelId: new RetainedChartCache(),
+                retainedChartsByPanelId: createRetainedChartCache(),
                 panelIssuesByPanelId: {},
                 panelClients: {},
               },

@@ -25,6 +25,9 @@ predicates, validated as ordinary local SELECT expressions before agent changes
 or hydration. Restored filters appear as a saved baseline; Reset clears them
 before choosing a replacement. Column selection, sorting and page size are
 editable through Edit blocks → data-table settings.
+Saved references to dropped or renamed tables open with an inline block error so
+documents remain editable. Existing disallowed sources still fail validation,
+including views and attached tables hidden from selectors.
 
 `pnpm --filter roomie-cli-app test` runs schema, command-boundary and filter
 persistence regressions. `pnpm roomie:build` builds the dependency graph, browser

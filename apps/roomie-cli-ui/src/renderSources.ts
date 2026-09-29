@@ -29,9 +29,11 @@ export function isRoomieRenderTable(
 export function renderSourceError(
   db: Pick<DuckDbSliceState['db'], 'findTable' | 'currentDatabase'>,
   tableName?: string,
+  {allowMissing = false}: {allowMissing?: boolean} = {},
 ): string | undefined {
   if (!tableName) return undefined;
   const table = db.findTable(tableName);
+  if (!table && allowMissing) return undefined;
   if (!table || !isRoomieRenderTable(table.table, table, db.currentDatabase))
     return 'Charts and table explorers require a physical table in this workspace. Import or materialize the source first.';
 }
@@ -40,8 +42,9 @@ export function renderSourceError(
 export function validateRenderSource(
   db: Parameters<typeof renderSourceError>[0],
   tableName?: string,
+  options?: Parameters<typeof renderSourceError>[2],
 ) {
-  const error = renderSourceError(db, tableName);
+  const error = renderSourceError(db, tableName, options);
   if (error) throw new Error(error);
 }
 
@@ -62,28 +65,48 @@ export function validateBlockRenderSources(
 function validateDocumentRenderSources(
   db: Parameters<typeof renderSourceError>[0],
   node: BlockDocumentNode,
+  options?: Parameters<typeof renderSourceError>[2],
 ) {
   if (node.type.startsWith('blockDocument')) {
     const block = blockDocumentNodeToBlock(node);
     if (block && (block.type === 'chart' || block.type === 'statefulBlock'))
-      validateRenderSource(db, block.tableName);
+      validateRenderSource(db, block.tableName, options);
   }
   for (const child of node.content ?? [])
-    validateDocumentRenderSources(db, child);
+    validateDocumentRenderSources(db, child, options);
 }
 
-/** Validate every saved analytical source before rendering or enabling persistence. */
-export function validateWorkspaceRenderSources(
+/** Reject disallowed saved sources; missing tables remain repairable in the UI. */
+export async function validateWorkspaceRenderSources(
   state: Pick<RoomState, 'db' | 'blockDocuments' | 'mosaicDashboard'>,
 ) {
+  const unresolved = new Set<string | QualifiedTableName>();
+  const db: Parameters<typeof renderSourceError>[0] = {
+    currentDatabase: state.db.currentDatabase,
+    findTable: (name) => {
+      const table = state.db.findTable(name);
+      if (!table) unresolved.add(name);
+      return table;
+    },
+  };
   for (const document of Object.values(state.blockDocuments.config.artifacts))
     for (const node of document.content.content)
-      validateDocumentRenderSources(state.db, node);
+      validateDocumentRenderSources(db, node, {allowMissing: true});
   for (const dashboard of Object.values(
     state.mosaicDashboard.config.dashboardsById,
   ))
     validateRenderSource(
-      state.db,
+      db,
       dashboard.selectedTable ?? dashboard.lastSelectedTable,
+      {allowMissing: true},
     );
+  // findTable uses the selectable-table list. A source hidden by that list
+  // must not be mistaken for a dropped table during restoration.
+  for (const name of unresolved) {
+    if (await state.db.checkTableExists(name)) {
+      throw new Error(
+        'Saved analytical sources require a physical table in this workspace.',
+      );
+    }
+  }
 }

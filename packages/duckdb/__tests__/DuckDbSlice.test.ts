@@ -511,6 +511,56 @@ describe('DuckDbSlice', () => {
   });
 
   describe('refreshTableSchemas', () => {
+    it.each(['database', 'schema', 'table'])(
+      'keeps selectable tables when the catalog hides their %s',
+      async (hiddenType) => {
+        const filtered = createTestStore({
+          loadTableSchemasFilter: (name) => name.table === 'selectable_rows',
+          loadSchemaCatalogFilter: (entry) => entry.type !== hiddenType,
+        });
+        try {
+          await filtered.getState().db.initialize();
+          const connector = await filtered.getState().db.getConnector();
+          await connector.query('CREATE TABLE selectable_rows (value INT)');
+          const tables = await filtered.getState().db.refreshTableSchemas();
+          expect(tables.map((table) => table.table.table)).toEqual([
+            'selectable_rows',
+          ]);
+          expect(
+            (await filtered.getState().db.loadTableSchemas()).map((table) =>
+              getTableIdentity(table.table),
+            ),
+          ).toEqual(tables.map((table) => getTableIdentity(table.table)));
+          expect(
+            filtered.getState().db.findTable('selectable_rows'),
+          ).toBeDefined();
+          expect(
+            JSON.stringify(filtered.getState().db.schemaTrees),
+          ).not.toContain('selectable_rows');
+        } finally {
+          await filtered.getState().db.destroy();
+        }
+      },
+    );
+
+    it('disables catalog filtering with null while keeping the table filter', async () => {
+      const filtered = createTestStore({
+        loadTableSchemasFilter: () => false,
+        loadSchemaCatalogFilter: null,
+      });
+      try {
+        await filtered.getState().db.initialize();
+        const connector = await filtered.getState().db.getConnector();
+        await connector.query('CREATE TABLE catalog_only (value INT)');
+        expect(await filtered.getState().db.refreshTableSchemas()).toEqual([]);
+        expect(JSON.stringify(filtered.getState().db.schemaTrees)).toContain(
+          'catalog_only',
+        );
+      } finally {
+        await filtered.getState().db.destroy();
+      }
+    });
+
     it('filters selectable tables using metadata while retaining an independent catalog', async () => {
       const filtered = createTestStore({
         loadTableSchemasFilter: (name, metadata) =>

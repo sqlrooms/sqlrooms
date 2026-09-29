@@ -4,11 +4,8 @@ Roomie is a local DuckDB workspace for documents containing interactive Mosaic
 charts, table explorers, dashboards, and sandboxed HTML apps. AI runs in your
 external Claude Code or Codex host through MCP.
 
-This implementation is stacked on SQLRooms #928 (which depends on #927).
-Publication is blocked until a SQLRooms release containing the shared runtime and
-application adapters is available. The initial release requirement is
-`sqlrooms>=0.1.6,<0.2`; the stack is tested with a locally built prerequisite wheel.
-Do not publish Roomie against the existing 0.1.5 runtime.
+Roomie requires `sqlrooms>=0.1.6,<0.2`, which provides the shared runtime and
+application adapters.
 
 ```sh
 roomie analysis.duckdb

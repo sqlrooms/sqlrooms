@@ -84,6 +84,8 @@ the catalog should retain relations excluded from table selectors, such as views
 that remain available for SQL inspection. Table callbacks also receive metadata
 as a second argument; database/schema callbacks do not. When omitted, the table
 filter applies to catalog table entries too. `null` disables the respective filter.
+Hiding a database, schema, or table from the catalog does not remove tables
+accepted by `loadTableSchemasFilter` from `db.tables`.
 
 ### Monitoring WebSocket DuckDB Connections
 
