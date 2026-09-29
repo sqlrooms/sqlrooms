@@ -19,7 +19,7 @@ You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui
 - `tools` – an AI SDK `ToolSet` (created via the `tool()` helper from `ai`)
 - `getInstructions`
 - `toolRenderers` (optional) – a `ToolRendererRegistry` mapping tool names to React components
-- `getAvailableModels` (optional) – returns selectable `{provider, value}` pairs so new sessions can fall back to the first available model when the configured default is missing
+- `getAvailableModels` (optional) – returns selectable `{provider, value}` pairs so new sessions can fall back to the first available model when the configured default is missing, and so `hasResolvableModel` knows which models this app offers. It is consulted on every readiness check, which React selectors run on each store update, so return a memoized or module-level array rather than rebuilding one per call.
 - `getCustomModel` (optional) – returns a pre-constructed AI SDK `LanguageModel`, bypassing the OpenAI-compatible fallback entirely. Use this when a model is produced some other way, e.g. an app streaming through a server-side model proxy so no API key ever reaches the browser.
 
 The built-in OpenAI-compatible chat transport sends images returned by tools as
@@ -29,6 +29,8 @@ text results are preserved, and persisted chat messages are unchanged. Custom
 models keep their own native tool-output handling.
 
 Send readiness (`ai.hasResolvableModel()`) reflects whichever of these paths can produce a model, so apps relying solely on `getCustomModel` do not need to register a phantom entry in `@sqlrooms/ai-settings`'s model list just to satisfy the composer's UI check. The predicate only checks that `getCustomModel` **was configured**; it never calls it.
+
+It consults the model registries in the order a session's selection is actually resolved: `getAvailableModels` first when one is supplied, then `@sqlrooms/ai-settings`, then a plain "the session names a provider and a model" check. An app that owns its own model list therefore only has to supply `getAvailableModels` — the same option new sessions already resolve against — for the composer to agree with it. This matters because mounting `@sqlrooms/ai-settings` installs a stock provider registry whether or not the app manages models there, so the slice's presence alone cannot say who owns model listing; without `getAvailableModels`, that stock registry would veto every selection the app made through `setAiModel` or `defaultProvider`/`defaultModel`, and the composer would report "No model selected" as soon as a session existed.
 
 Its counterpart `ai.requiresApiKey()` reports whether the path in effect needs a browser-held key at all — `false` when a `chatEndPoint` is configured (the remote transport sends server-side, so no key reaches the browser), and `false` when `getCustomModel` is configured **and currently returns a model**, since that model carries its own credentials. A configured factory returning `undefined` still needs a key, because the transport then falls back to the built-in OpenAI-compatible client. Unlike `hasResolvableModel()`, this predicate therefore invokes the factory: guessing optimistically about readiness only risks a failed send, but guessing optimistically about credentials hides the only UI for entering one. The result is cached per resolved provider/model pair — keyed, so returning to a previously selected model does not re-probe — meaning a mounted composer asks the factory once per distinct selection rather than once per store update. Keep it idempotent for a given selection. The composer's `needsApiKey` is gated on it, so an app behind a server-side proxy is never asked for a key it has no use for.
 
@@ -820,6 +822,28 @@ surfaces that should watch the current session and trigger the helper after new
 user messages. The hook handles debouncing and duplicate-generation guards.
 Apps can pass `enabled`, `isDefaultSessionName`, and `getPromptOptions` to keep
 app-specific readiness checks and model choices outside the shared package.
+
+`ai.sendPrompt` reports a failed model call by resolving with a placeholder
+string rather than throwing, so a caller that treats the response as content
+cannot tell it apart from a real answer. Pass `onError` in its options to
+observe the failure itself:
+
+```ts
+let failed = false;
+const text = await sendPrompt(prompt, {onError: () => (failed = true)});
+```
+
+`generateSessionTitle` does exactly this and, instead of using the failed
+response as a name, renames the session to `Untitled Chat` and returns
+`{status: 'generation-failed'}`. That name is matched by
+`isDefaultGeneratedSessionName`, so the next user message can still replace it
+with a real title — a transient model failure costs the chat nothing
+permanent. Pass `existingSessionNames` to number repeats (`Untitled Chat 1`,
+...) so two failures do not produce the same name.
+
+Judging failure from `onError` rather than from the response text means a
+conversation that legitimately produces the placeholder wording as its title is
+still renamed normally.
 
 ## Local Agent Chat
 

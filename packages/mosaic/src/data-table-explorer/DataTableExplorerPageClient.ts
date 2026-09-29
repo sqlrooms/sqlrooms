@@ -11,6 +11,25 @@ import {
   buildDataTableExplorerPageQuery,
 } from './utils';
 import {getMosaicSqlTableReference} from '../mosaicTableReference';
+import {toArrowClientResult} from '../tableInterop';
+
+/**
+ * Converts a Mosaic query result into the Apache Arrow table used by the
+ * explorer UI. Nullish results clear the page; conversion failures are left
+ * for {@link DataTableExplorerPageClient.queryResult} to surface as errors.
+ */
+function toExplorerPageTable(data: unknown): Table | undefined {
+  if (data == null) {
+    return undefined;
+  }
+
+  try {
+    return toArrowClientResult(data);
+  } catch (error) {
+    const cause = error instanceof Error ? error : new Error(String(error));
+    throw new Error('Could not read the data table page.', {cause});
+  }
+}
 
 export type DataTableExplorerPageState = {
   datasetId?: string;
@@ -82,14 +101,20 @@ export class DataTableExplorerPageClient extends MosaicClient {
   }
 
   override queryResult(data: unknown): this {
-    this.error = undefined;
-    this.pageTable = data as Table;
-    this.onStateChange({
-      datasetId: this.datasetId,
-      isLoading: false,
-      pageTable: this.pageTable,
-    });
-    return this;
+    try {
+      this.pageTable = toExplorerPageTable(data);
+      this.error = undefined;
+      this.onStateChange({
+        datasetId: this.datasetId,
+        isLoading: false,
+        pageTable: this.pageTable,
+      });
+      return this;
+    } catch (error) {
+      return this.queryError(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    }
   }
 
   override queryError(error: Error): this {

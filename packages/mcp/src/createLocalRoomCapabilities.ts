@@ -36,6 +36,12 @@ const MCP_EXCLUDED_COMMAND_IDS = new Set([
   'sql-editor.run-query',
 ]);
 
+/** Serializes commands per store, including work that outlived a previous runtime. */
+const commandInvocationQueues = new WeakMap<
+  StoreApi<RoomShellSliceState>,
+  Promise<void>
+>();
+
 /** One exact, non-reusable host approval for a SQL read or database write. */
 export type LocalOperationApproval = {
   kind: 'external-read' | 'write';
@@ -68,7 +74,6 @@ export function createLocalRoomCapabilities({
   trackPendingOperation,
   approveOperation,
 }: CreateLocalRoomCapabilitiesOptions): RoomCapability[] {
-  let commandInvocationQueue = Promise.resolve();
   return [
     createQueryCapability(metaNamespace),
     createListTablesCapability(metaNamespace),
@@ -500,12 +505,16 @@ export function createLocalRoomCapabilities({
     invoke: () => Promise<RoomCommandResult>,
     signal?: AbortSignal,
   ): Promise<RoomCommandResult> {
-    const waitForTurn = commandInvocationQueue;
+    const waitForTurn =
+      commandInvocationQueues.get(roomStore) ?? Promise.resolve();
     let releaseTurn!: () => void;
     const turnFinished = new Promise<void>((resolve) => {
       releaseTurn = resolve;
     });
-    commandInvocationQueue = waitForTurn.then(() => turnFinished);
+    commandInvocationQueues.set(
+      roomStore,
+      waitForTurn.then(() => turnFinished),
+    );
 
     return waitForTurn.then(async () => {
       if (signal?.aborted) {

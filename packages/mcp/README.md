@@ -43,14 +43,18 @@ The `@sqlrooms/mcp/browser-auth` entry exports
 credential, binding and session-storage key. It redeems `<product>-ticket` URL
 fragments, removes them from browser history, renews page sessions, and provides
 `authorizedFetch` and `pageCredential`. Native credentials remain server-side.
-SQLRooms and Roomie use the same implementation with distinct product settings.
+Transient renewal failures are retried until the current session expires; a 401
+clears authorization. SQLRooms and Roomie use the same implementation with distinct
+product settings.
 
 The `@sqlrooms/mcp/room` entry composes the capability runtime with a room store:
 
 - `createLocalRoomCapabilities` exposes bounded query, table/schema discovery,
   command search, command inspection and command execution. Its optional
   `commandFilter` limits both discovery and execution to the host's chosen
-  command surface, including commands registered after startup.
+  command surface, including commands registered after startup. Commands are
+  serialized per store, even when a replacement runtime starts before a cancelled
+  invocation finishes.
 - `createLocalCapabilityRuntime` applies transport limits and tracks pending
   operations, including commands still settling after cancellation. Await
   `drain()` during persistence-confirmed close.

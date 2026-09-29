@@ -42,6 +42,8 @@ async function authorize() {
     throw new Error(recovery);
   }
   sessionStorage.setItem(key, JSON.stringify(page));
+  const scheduleRenewal = () =>
+    setTimeout(renew, Math.max(0, page.expiresAt * 1000 - Date.now() - 60_000));
   const renew = async () => {
     try {
       const response = await request('/api/auth/renew', {
@@ -54,12 +56,12 @@ async function authorize() {
         throw new Error(recovery);
       page = next;
       sessionStorage.setItem(key, JSON.stringify(page));
-      setTimeout(renew, 60_000);
+      scheduleRenewal();
     } catch {
       sessionStorage.removeItem(key); // Sockets expire; never silently retarget.
     }
   };
-  setTimeout(renew, 60_000);
+  scheduleRenewal();
   return page.token as string;
 }
 

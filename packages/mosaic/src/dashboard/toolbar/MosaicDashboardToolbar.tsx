@@ -4,7 +4,7 @@ import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 import {MosaicDashboardAddPanelDropdown} from './MosaicDashboardAddPanelDropdown';
 import {MosaicDashboardResetFiltersButton} from './MosaicDashboardResetFiltersButton';
 import {MosaicDashboardDataTableSelector} from './MosaicDashboardDataTableSelector';
-import {BlockCaptionEditor} from '../../components/BlockCaptionEditor';
+import {BlockCaptionEditor, BlockHeader} from '@sqlrooms/documents';
 import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {resolveMosaicTableReference} from '../../mosaicTableReference';
 
@@ -42,9 +42,23 @@ export const MosaicDashboardToolbar: FC = () => {
   }
 
   return (
-    <div
-      className="flex items-center justify-between gap-2 border-b px-5 py-2"
+    <BlockHeader
       data-dashboard-toolbar
+      actionsClassName="min-w-0 shrink gap-2 overflow-hidden"
+      actions={
+        <>
+          {selectedTableName ? (
+            <>
+              <MosaicDashboardDataTableSelector dashboardId={dashboardId} />
+              {!readOnly ? (
+                <MosaicDashboardAddPanelDropdown dashboardId={dashboardId} />
+              ) : null}
+              <MosaicDashboardResetFiltersButton dashboardId={dashboardId} />
+            </>
+          ) : null}
+          {headerActions}
+        </>
+      }
     >
       <BlockCaptionEditor
         value={dashboardTitle}
@@ -52,19 +66,6 @@ export const MosaicDashboardToolbar: FC = () => {
         isReadOnly={readOnly}
         onChange={handleTitleChange}
       />
-
-      <div className="flex items-center gap-2 overflow-hidden">
-        {selectedTableName ? (
-          <>
-            <MosaicDashboardDataTableSelector dashboardId={dashboardId} />
-            {!readOnly ? (
-              <MosaicDashboardAddPanelDropdown dashboardId={dashboardId} />
-            ) : null}
-            <MosaicDashboardResetFiltersButton dashboardId={dashboardId} />
-          </>
-        ) : null}
-        {headerActions}
-      </div>
-    </div>
+    </BlockHeader>
   );
 };

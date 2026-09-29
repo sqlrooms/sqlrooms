@@ -21,14 +21,16 @@ def command(*args):
             "client_missing",
             "Claude Code is not installed. Install it explicitly, then rerun setup; no software was installed.",
         )
-    result = subprocess.run(
-        [executable, "plugin", *args], capture_output=True, text=True, timeout=30
-    )
-    if result.returncode:
+    try:
+        result = subprocess.run(
+            [executable, "plugin", *args], capture_output=True, text=True, timeout=30
+        )
+        result.check_returncode()
+    except (OSError, subprocess.SubprocessError):
         raise WorkspaceError(
             "plugin_setup_failed",
             "Claude Code could not complete native plugin setup. Inspect `claude plugin list` and retry setup; the MCP configuration is retained.",
-        )
+        ) from None
     return result.stdout
 
 

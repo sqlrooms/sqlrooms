@@ -16,6 +16,8 @@ export function createBrowserAuthorization({
   let authorization: BrowserAuthorization | undefined;
   let storageKey: string | undefined;
   let renewalTimer: ReturnType<typeof setTimeout> | undefined;
+  const RENEWAL_LEAD_MS = 60_000;
+  const RENEWAL_RETRY_MS = 10_000;
   const RECOVERY = `${name} authorization is required. Open a fresh launch link from its terminal or authorized local client.`;
 
   /** Resolve an instance route under the launch page's directory, including proxy mounts. */
@@ -83,9 +85,11 @@ export function createBrowserAuthorization({
     return response;
   }
 
-  function scheduleRenewal() {
+  function scheduleRenewal(delayMs?: number) {
     clearTimeout(renewalTimer);
     if (!authorization) return;
+    const remainingMs = authorization.expiresAt * 1000 - Date.now();
+    if (remainingMs <= 0) return;
     renewalTimer = setTimeout(
       async () => {
         try {
@@ -107,11 +111,16 @@ export function createBrowserAuthorization({
           storeSession(next);
           scheduleRenewal();
         } catch {
-          // Failed renewal never extends local expiry. Existing sockets expire at
-          // the same server deadline; recovery requires a fresh launch ticket.
+          // Failed renewal never extends local expiry. Retry transient failures
+          // until the current deadline; a 401 clears authorization and stops it.
+          // Afterwards, recovery requires a fresh launch ticket.
+          scheduleRenewal(RENEWAL_RETRY_MS);
         }
       },
-      Math.max(1000, authorization.expiresAt * 1000 - Date.now() - 60_000),
+      Math.min(
+        remainingMs,
+        delayMs ?? Math.max(1000, remainingMs - RENEWAL_LEAD_MS),
+      ),
     );
   }
 

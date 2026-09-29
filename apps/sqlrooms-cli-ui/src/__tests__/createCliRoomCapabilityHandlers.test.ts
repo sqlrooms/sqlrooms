@@ -403,44 +403,57 @@ describe('CLI room capability handlers', () => {
     );
   });
 
-  test('keeps the command queue occupied until an aborted invocation settles', async () => {
-    let finishFirst!: (result: {success: boolean; commandId: string}) => void;
-    invokeCommandWithPolicy.mockImplementationOnce(
-      async () =>
-        await new Promise<{success: boolean; commandId: string}>((resolve) => {
-          finishFirst = resolve;
-        }),
-    );
-    const executeCapability = capability('execute_command');
-    const firstController = new AbortController();
-    const firstInvocation = executeCapability.execute(
-      {commandId: 'workspace.stuck'},
-      {surface: 'mcp-http', signal: firstController.signal},
-    );
-    await flushQueuedInvocations();
-    expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(1);
+  test.each([false, true])(
+    'keeps the command queue occupied until an aborted invocation settles (replacement runtime: %s)',
+    async (replaceRuntime) => {
+      let finishFirst!: (result: {success: boolean; commandId: string}) => void;
+      invokeCommandWithPolicy.mockImplementationOnce(
+        async () =>
+          await new Promise<{success: boolean; commandId: string}>(
+            (resolve) => {
+              finishFirst = resolve;
+            },
+          ),
+      );
+      const store = {getState: () => state} as any;
+      const createExecuteCapability = () =>
+        createCliRoomCapabilities({store}).find(
+          (entry) => entry.name === 'execute_command',
+        )!;
+      const executeCapability = createExecuteCapability();
+      const firstController = new AbortController();
+      const firstInvocation = executeCapability.execute(
+        {commandId: 'workspace.stuck'},
+        {surface: 'mcp-http', signal: firstController.signal},
+      );
+      await flushQueuedInvocations();
+      expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(1);
 
-    const secondInvocation = executeCapability.execute(
-      {commandId: 'workspace.refresh'},
-      {surface: 'mcp-http'},
-    );
-    await flushQueuedInvocations();
-    expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(1);
+      const nextCapability = replaceRuntime
+        ? createExecuteCapability()
+        : executeCapability;
+      const secondInvocation = nextCapability.execute(
+        {commandId: 'workspace.refresh'},
+        {surface: 'mcp-http'},
+      );
+      await flushQueuedInvocations();
+      expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(1);
 
-    firstController.abort();
+      firstController.abort();
 
-    await expect(firstInvocation).resolves.toMatchObject({
-      ok: false,
-      code: 'command-cancelled',
-    });
-    await flushQueuedInvocations();
-    expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(1);
+      await expect(firstInvocation).resolves.toMatchObject({
+        ok: false,
+        code: 'command-cancelled',
+      });
+      await flushQueuedInvocations();
+      expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(1);
 
-    finishFirst({success: true, commandId: 'workspace.stuck'});
+      finishFirst({success: true, commandId: 'workspace.stuck'});
 
-    await expect(secondInvocation).resolves.toMatchObject({ok: true});
-    expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(2);
-  });
+      await expect(secondInvocation).resolves.toMatchObject({ok: true});
+      expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(2);
+    },
+  );
 });
 
 test('browser metadata matches the distributed canonical contract in every namespace', async () => {

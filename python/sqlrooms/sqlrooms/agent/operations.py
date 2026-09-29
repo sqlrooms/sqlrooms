@@ -74,6 +74,16 @@ class Operations:
                     "message": "Cancellation requested. An already committed or non-cancellable mutation may have completed.",
                     "operationId": operation_id,
                 }
+            except asyncio.TimeoutError:
+                entry["status"] = "timed_out_outcome_uncertain"
+                result = {
+                    "ok": False,
+                    "code": "timeout",
+                    "message": "The operation timed out; a mutation may have completed. Inspect workspace state before submitting another operation; do not replay it.",
+                    "operationId": operation_id,
+                }
+                entry["result"] = result
+                return result
             except Exception:
                 entry["status"] = "failed_outcome_uncertain"
                 raise

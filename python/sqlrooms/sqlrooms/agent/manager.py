@@ -6,7 +6,6 @@ from concurrent.futures import ThreadPoolExecutor
 import os
 from pathlib import Path
 import re
-import subprocess
 import time
 import uuid
 
@@ -195,7 +194,7 @@ class Manager:
                         instance=live,
                     )
                 return self._ready(record, openBrowser)
-            from .process import check_pending, mark_pending, pending_path
+            from .process import check_pending, pending_path, spawn_pending
 
             check_pending(path, settings=self.settings)
             if workspaceId:
@@ -236,7 +235,9 @@ class Manager:
                         "Cannot open the DuckDB file. Check permissions, format, disk space, and other database writers.",
                         databasePath=path,
                     ) from None
-            entry = self.catalog.register(path, name=name if new else None)
+            entry = self.catalog.register(
+                path, name=name if new else None, profile=selected_profile
+            )
             command = self.settings.launch_command(path, selected_profile)
             logs = private_dir(self.settings.home() / "logs")
             log_path = logs / (entry["workspaceId"] + ".log")
@@ -246,17 +247,9 @@ class Manager:
                 self.settings.environment_prefix + "_MANAGED": "1",
                 self.settings.environment_prefix + "_MANAGED_LOG": str(log_path),
             }
-            with open(os.devnull, "wb") as sink:
-                child = subprocess.Popen(
-                    command,
-                    stdin=subprocess.DEVNULL,
-                    stdout=sink,
-                    stderr=sink,
-                    cwd=str(self.settings.home()),
-                    env=env,
-                    start_new_session=True,
-                )
-            mark_pending(path, child.pid, entry["workspaceId"], settings=self.settings)
+            child = spawn_pending(
+                path, entry["workspaceId"], command, env=env, settings=self.settings
+            )
             deadline = time.monotonic() + 15
             while time.monotonic() < deadline:
                 for record in registry.records(settings=self.settings):
