@@ -1,4 +1,3 @@
-/** @jest-environment jsdom */
 import {describe, expect, it, jest} from '@jest/globals';
 import {uploadBrowserFile, type UploadFetcher} from '../upload';
 
