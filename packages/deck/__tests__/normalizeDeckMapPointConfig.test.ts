@@ -1117,6 +1117,63 @@ describe('applyDeckMapTableSelection', () => {
     ).toMatchObject({transformSql: base.datasets.points.source.transformSql});
   });
 
+  it('keeps custom SQL that a stale marker no longer describes', () => {
+    // A source-only resource patch replaces transformSql but keeps the layer
+    // bindings, so the marker outlives the transform it described. Acting on
+    // it would delete the SQL that was just authored.
+    const authoredTransformSql = [
+      'SELECT *, ST_AsWKB(ST_Point("easting", "northing")) AS "__sqlrooms_geom"',
+      `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    ].join(' ');
+    const base = createPointMapConfig();
+    const restated = {
+      ...base,
+      datasets: {
+        points: {
+          ...base.datasets.points,
+          source: {
+            ...base.datasets.points.source,
+            transformSql: authoredTransformSql,
+          },
+        },
+      },
+    };
+    const eastingTable: DataTable = {
+      table: makeQualifiedTableName({schema: 'main', table: 'grids'}),
+      tableName: 'grids',
+      schema: 'main',
+      isView: false,
+      columns: [
+        {name: 'easting', type: 'DOUBLE'},
+        {name: 'northing', type: 'DOUBLE'},
+      ],
+    };
+
+    const next = applyDeckMapTableSelection(restated, eastingTable);
+
+    expect(next.datasets.grids?.source).toMatchObject({
+      transformSql: authoredTransformSql,
+    });
+  });
+
+  it('keeps a dataset id that collides with an Object prototype member', () => {
+    const toStringTable: DataTable = {
+      table: makeQualifiedTableName({schema: 'main', table: 'toString'}),
+      tableName: 'toString',
+      schema: 'main',
+      isView: false,
+      columns: [{name: 'h3', type: 'VARCHAR'}],
+    };
+
+    const next = applyDeckMapTableSelection(
+      createPointMapConfig(),
+      toStringTable,
+    );
+
+    expect(Object.keys(next.datasets)).toEqual(['toString']);
+    expect(next.spec.layers[0]._sqlroomsBinding).toEqual({dataset: 'toString'});
+  });
+
   it('keeps a transform no layer records as generated', () => {
     const authoredTransformSql = [
       'SELECT *, ST_AsWKB(ST_Point("easting", "northing")) AS "__sqlrooms_geom"',

@@ -511,7 +511,15 @@ function renameDeckMapDataset(
   from: string,
   to: string,
 ): DeckMapConfig {
-  if (from === to || !config.datasets?.[from] || config.datasets[to]) {
+  // Own properties only: a table legitimately named `toString` or
+  // `constructor` would otherwise collide with `Object.prototype` and leave
+  // the map carrying the identity of a table it no longer reads.
+  const datasets = config.datasets ?? {};
+  if (
+    from === to ||
+    !Object.hasOwn(datasets, from) ||
+    Object.hasOwn(datasets, to)
+  ) {
     return config;
   }
   const spec = renameDeckMapSpecDataset(config.spec, from, to);
@@ -794,6 +802,33 @@ function readDeckMapGeneratedTransform(
   };
 }
 
+/** Matches a column name as a quoted or bare SQL identifier. */
+function referencesDeckMapColumn(sql: string, column: string) {
+  const escaped = column.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(
+    `"${escaped.replace(/"/g, '""')}"|(?<![\\w"])${escaped}(?![\\w"])`,
+    'i',
+  ).test(sql);
+}
+
+/**
+ * True when `transformSql` still looks like the SQL the marker describes.
+ *
+ * Provenance is written beside the SQL it describes, but a source-only
+ * resource patch replaces `transformSql` while keeping the layer bindings, so
+ * a marker can outlive its transform. Acting on a stale one would delete
+ * freshly authored SQL. Requiring the SQL to mention every column the marker
+ * records fails safe: any doubt leaves the transform alone.
+ */
+function deckMapTransformMatchesMarker(
+  transformSql: string,
+  info: DeckMapGeneratedTransformInfo,
+) {
+  return [...info.generatedColumns, ...info.inputColumns].every((column) =>
+    referencesDeckMapColumn(transformSql, column),
+  );
+}
+
 /** Collects the generated-transform provenance across a dataset's layers. */
 function readDeckMapDatasetGeneratedTransform(
   config: DeckMapConfig,
@@ -862,9 +897,16 @@ function retargetDeckMapDatasetTableName(
   // regenerated dataset could reconstruct a layer's columns, a different
   // question, and gating on it preserved an unusable transform for, say, an H3
   // layer whose hexagon column is source-backed.
-  const candidate =
-    options?.dropUnusableTransform === true && dataset.source.transformSql
+  const transformSql = dataset.source.transformSql;
+  const marked =
+    options?.dropUnusableTransform === true && transformSql
       ? readDeckMapDatasetGeneratedTransform(config, datasetId)
+      : undefined;
+  const candidate =
+    marked &&
+    transformSql &&
+    deckMapTransformMatchesMarker(transformSql, marked)
+      ? marked
       : undefined;
   // Case-insensitively, because DuckDB resolves identifiers that way even when
   // they are quoted — `"pickup_lon"` binds to a `Pickup_Lon` column, so an
