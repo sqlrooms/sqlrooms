@@ -168,10 +168,24 @@ const DeckMapLayerBindingConfig = z.looseObject({
   dataset: z.string().optional(),
   geometryColumn: z.string().optional(),
   geometryEncodingHint: z.enum(['geoarrow', 'wkb', 'wkt']).optional(),
+  longitudeColumn: z.string().optional(),
+  latitudeColumn: z.string().optional(),
   sourceGeometryColumn: z.string().optional(),
   targetGeometryColumn: z.string().optional(),
+  sourceLongitudeColumn: z.string().optional(),
+  sourceLatitudeColumn: z.string().optional(),
+  targetLongitudeColumn: z.string().optional(),
+  targetLatitudeColumn: z.string().optional(),
   timestampColumn: z.string().optional(),
   hexagonColumn: z.string().optional(),
+  generatedTransform: z
+    .object({
+      kind: z.enum(['point', 'centroid', 'arc']),
+      geometryColumn: z.string().optional(),
+      sourceGeometryColumn: z.string().optional(),
+      targetGeometryColumn: z.string().optional(),
+    })
+    .optional(),
 });
 
 const DeckMapLayerSpec = z.looseObject({

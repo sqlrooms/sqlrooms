@@ -289,6 +289,9 @@ describe('createCliBlockDocumentCommands', () => {
     expect(config.spec.layers[0]._sqlroomsBinding).toEqual({
       dataset: 'earthquakes',
       geometryColumn: 'geom',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'latitude',
+      generatedTransform: {kind: 'point', geometryColumn: 'geom'},
     });
     expect(config.fitToData).toMatchObject({
       dataset: 'earthquakes',

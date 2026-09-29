@@ -14,14 +14,32 @@ export const ColorScaleFunction = z.intersection(
 );
 export type ColorScaleFunction = z.infer<typeof ColorScaleFunction>;
 
+/** Records a SQLRooms-generated geometry transform so callers need not parse SQL. */
+export const DeckMapGeneratedTransform = z.object({
+  kind: z.enum(['point', 'centroid', 'arc']),
+  geometryColumn: z.string().min(1).optional(),
+  sourceGeometryColumn: z.string().min(1).optional(),
+  targetGeometryColumn: z.string().min(1).optional(),
+});
+export type DeckMapGeneratedTransform = z.infer<
+  typeof DeckMapGeneratedTransform
+>;
+
 export const LayerBindingConfig = z.object({
   dataset: z.string().min(1).optional(),
   geometryColumn: z.string().min(1).optional(),
   geometryEncodingHint: GeometryEncodingHint.optional(),
+  longitudeColumn: z.string().min(1).optional(),
+  latitudeColumn: z.string().min(1).optional(),
   sourceGeometryColumn: z.string().min(1).optional(),
   targetGeometryColumn: z.string().min(1).optional(),
+  sourceLongitudeColumn: z.string().min(1).optional(),
+  sourceLatitudeColumn: z.string().min(1).optional(),
+  targetLongitudeColumn: z.string().min(1).optional(),
+  targetLatitudeColumn: z.string().min(1).optional(),
   timestampColumn: z.string().min(1).optional(),
   hexagonColumn: z.string().min(1).optional(),
+  generatedTransform: DeckMapGeneratedTransform.optional(),
 });
 export type LayerBindingConfig = z.infer<typeof LayerBindingConfig>;
 

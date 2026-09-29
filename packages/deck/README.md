@@ -454,10 +454,15 @@ exported so hosts can normalize AI-authored configs before calling
 `createOrUpdateDeckMapResource(...)`. Passing structured `pointBinding` to the
 resource helper applies `applyDeckMapPointBinding(...)`: it generates canonical
 WKB point SQL through `createDeckMapPointTransformSql(...)` and aligns the target
-dataset, point layers, brush interaction, and fit binding. The host table lookup
-also supplies source columns so missing coordinate columns and a generated
-geometry alias that would duplicate an existing column are rejected before
-durable state is written. For a single table-backed dataset, its canonical table
+dataset, point layers, brush interaction, and fit binding. Choosing a native
+geometry column on a scatterplot, heatmap, or column layer builds centroid WKB
+SQL so Point geometries stay points and polygon/line footprints become
+representative points instead of failing the Point-position check. Encoded
+columns are decoded before `ST_Centroid`. The host
+table lookup also supplies source columns so missing coordinate columns and a
+generated geometry alias that would duplicate an existing column are rejected
+before durable state is written. For a single table-backed dataset, its canonical
+table
 identity must also match the selected table because that selection overrides the
 authored dataset source at render time. This is the preferred path for standard
 table-backed longitude/latitude maps; raw `transformSql` remains available for
@@ -639,8 +644,11 @@ Currently supported SQLRooms binding fields are:
 - `dataset`: binds the layer to one dataset id
 - `geometryColumn`: overrides geometry column detection for that layer
 - `geometryEncodingHint`: helps geometry detection when the source table needs it
+- `longitudeColumn` / `latitudeColumn`: point, heatmap, and column lon/lat
 - `sourceGeometryColumn`: source point geometry for `GeoArrowArcLayer`
 - `targetGeometryColumn`: target point geometry for `GeoArrowArcLayer`
+- `sourceLongitudeColumn` / `sourceLatitudeColumn` / `targetLongitudeColumn` / `targetLatitudeColumn`: arc lon/lat
+- `generatedTransform`: records a SQLRooms-generated point, centroid, or arc transform
 - `timestampColumn`: timestamp list column for `GeoArrowTripsLayer`
 - `hexagonColumn`: H3 index column for `GeoArrowH3HexagonLayer`
 

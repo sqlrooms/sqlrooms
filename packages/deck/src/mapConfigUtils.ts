@@ -1,4 +1,5 @@
 import {
+  getColumnTypeCategory,
   getRawSqlTableReference,
   makeQualifiedTableName,
   quoteParsedRawSqlTableReference,
@@ -269,6 +270,76 @@ export function createDeckMapPointTransformSql(options: {
   ].join(' ');
 }
 
+/**
+ * SQL that yields a `GEOMETRY` value for a geometry-ish column. `ST_Centroid`
+ * rejects encoded columns, and the decode differs by type: plain `BLOB` only
+ * accepts `ST_GeomFromWKB`, while `GEOMETRY`, `WKB_BLOB`, and WKT text all
+ * accept a `::GEOMETRY` cast.
+ */
+function decodeDeckMapGeometryExpression(
+  geometryColumn: string,
+  geometryColumnType?: string,
+) {
+  const quotedGeometry = quoteDeckMapSqlIdentifier(geometryColumn);
+  return geometryColumnType &&
+    getColumnTypeCategory(geometryColumnType) === 'binary'
+    ? `ST_GeomFromWKB(${quotedGeometry})`
+    : `${quotedGeometry}::GEOMETRY`;
+}
+
+/**
+ * Builds WKB point SQL from a source geometry column via `ST_Centroid`.
+ * Point geometries are unchanged; polygons/lines become representative points
+ * so scatterplot/heatmap/column layers can bind the same field.
+ *
+ * Pass `geometryColumnType` so WKB-encoded columns are decoded correctly.
+ */
+export function createDeckMapCentroidTransformSql(options: {
+  geometryColumn: string;
+  geometryColumnType?: string;
+}) {
+  const quotedGeometry = quoteDeckMapSqlIdentifier(options.geometryColumn);
+  const geometry = decodeDeckMapGeometryExpression(
+    options.geometryColumn,
+    options.geometryColumnType,
+  );
+  return [
+    `SELECT * REPLACE (ST_AsWKB(ST_Centroid(${geometry})) AS ${quotedGeometry})`,
+    `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+  ].join(' ');
+}
+
+/**
+ * Builds the standard origin/destination lon/lat → WKB arc transform SQL.
+ */
+export function createDeckMapArcTransformSql(options: {
+  sourceLongitudeColumn: string;
+  sourceLatitudeColumn: string;
+  targetLongitudeColumn: string;
+  targetLatitudeColumn: string;
+  sourceGeometryColumn: string;
+  targetGeometryColumn: string;
+}) {
+  const quotedSourceLongitude = quoteDeckMapSqlIdentifier(
+    options.sourceLongitudeColumn,
+  );
+  const quotedSourceLatitude = quoteDeckMapSqlIdentifier(
+    options.sourceLatitudeColumn,
+  );
+  const quotedTargetLongitude = quoteDeckMapSqlIdentifier(
+    options.targetLongitudeColumn,
+  );
+  const quotedTargetLatitude = quoteDeckMapSqlIdentifier(
+    options.targetLatitudeColumn,
+  );
+
+  return [
+    `SELECT *, ST_AsWKB(ST_Point(${quotedSourceLongitude}, ${quotedSourceLatitude})) AS ${quoteDeckMapSqlIdentifier(options.sourceGeometryColumn)}, ST_AsWKB(ST_Point(${quotedTargetLongitude}, ${quotedTargetLatitude})) AS ${quoteDeckMapSqlIdentifier(options.targetGeometryColumn)}`,
+    `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    `WHERE ${quotedSourceLongitude} IS NOT NULL AND ${quotedSourceLatitude} IS NOT NULL AND ${quotedTargetLongitude} IS NOT NULL AND ${quotedTargetLatitude} IS NOT NULL`,
+  ].join(' ');
+}
+
 const DECK_MAP_POINT_LAYER_TYPES = new Set([
   'GeoArrowScatterplotLayer',
   'GeoArrowHeatmapLayer',
@@ -414,6 +485,8 @@ function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
   datasetId: string;
   datasetIds: string[];
   geometryColumn: string;
+  longitudeColumn: string;
+  latitudeColumn: string;
 }): T {
   let changed = false;
   const layers = options.layers.map((layer) => {
@@ -439,8 +512,6 @@ function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
       ? layer._sqlroomsBinding
       : {};
     const geometryBinding = {...binding};
-    delete geometryBinding.longitudeColumn;
-    delete geometryBinding.latitudeColumn;
     const pointLayer = {...layer};
     delete pointLayer.getPosition;
 
@@ -453,6 +524,12 @@ function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
             ? binding.dataset
             : options.datasetId,
         geometryColumn: options.geometryColumn,
+        longitudeColumn: options.longitudeColumn,
+        latitudeColumn: options.latitudeColumn,
+        generatedTransform: {
+          kind: 'point' as const,
+          geometryColumn: options.geometryColumn,
+        },
       },
     };
   });
@@ -531,6 +608,8 @@ export function applyDeckMapPointBinding<
                 datasetId,
                 datasetIds,
                 geometryColumn,
+                longitudeColumn,
+                latitudeColumn,
               }),
             }
           : {}),
@@ -682,6 +761,8 @@ export function normalizeDeckMapPointConfig<
           datasetId,
           datasetIds,
           geometryColumn,
+          longitudeColumn: coordinateColumns.longitudeColumn,
+          latitudeColumn: coordinateColumns.latitudeColumn,
         }),
       };
     }
