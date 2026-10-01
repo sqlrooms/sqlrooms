@@ -287,6 +287,47 @@ describe('normalizeDeckMapPointConfig', () => {
     ).toThrow(/GeoArrowTripsLayer cannot render/);
   });
 
+  it('rejects point binding when the trips layer is hidden', () => {
+    const transformSql =
+      'SELECT trip_id, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY t))) AS geom FROM __sqlrooms_source GROUP BY trip_id';
+    expect(() =>
+      applyDeckMapPointBinding({
+        config: {
+          spec: {
+            layers: [
+              {
+                '@@type': 'GeoArrowTripsLayer',
+                visible: false,
+                _sqlroomsBinding: {
+                  dataset: 'trips',
+                  geometryColumn: 'geom',
+                  timestampColumn: 'timestamps',
+                },
+              },
+            ],
+          },
+          datasets: {
+            trips: {
+              source: {tableName: 'trips', transformSql},
+              geometryColumn: 'geom',
+            },
+          },
+        },
+        pointBinding: {
+          dataset: 'trips',
+          longitudeColumn: 'lon',
+          latitudeColumn: 'lat',
+        },
+        sourceColumns: [
+          {name: 'trip_id', type: 'VARCHAR'},
+          {name: 'lon', type: 'DOUBLE'},
+          {name: 'lat', type: 'DOUBLE'},
+          {name: 't', type: 'DOUBLE'},
+        ],
+      }),
+    ).toThrow(/GeoArrowTripsLayer cannot render/);
+  });
+
   it('repairs a generated geometry alias that is missing from the table', () => {
     const config = {
       spec: {

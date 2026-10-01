@@ -398,9 +398,11 @@ const PATH_OR_TRIPS_LAYER_TYPES = new Set([
 ]);
 
 /**
- * Layer type when this dataset is rendered as an animated trip or a path.
- * Point WKB cannot satisfy those layers, so lon/lat point injection must not
- * replace their geometry.
+ * Layer type when this dataset is bound to an animated trip or a path,
+ * including a hidden layer. Point WKB cannot satisfy those layers, so
+ * lon/lat point injection must not replace their geometry. Visibility is
+ * ignored because the rewrite changes the shared dataset SQL, and showing
+ * the layer again would then render points.
  */
 function pathOrTripsLayerTypeForDataset(
   config: {spec?: unknown; datasets?: Record<string, unknown>},
@@ -410,7 +412,7 @@ function pathOrTripsLayerTypeForDataset(
   if (!spec || !Array.isArray(spec.layers)) return undefined;
   const datasetIds = Object.keys(config.datasets ?? {});
   for (const layer of spec.layers) {
-    if (!isDeckMapConfigRecord(layer) || layer.visible === false) continue;
+    if (!isDeckMapConfigRecord(layer)) continue;
     const layerType = layer['@@type'];
     if (
       typeof layerType !== 'string' ||
