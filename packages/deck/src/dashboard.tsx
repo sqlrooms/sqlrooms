@@ -48,7 +48,7 @@ import {
   createDeckMapBoundsQuery,
 } from './useDeckMapFitToBounds';
 import {useDeckMapDatasets} from './useDeckMapDatasets';
-import {applyExtrusionScaleToGroundExtent} from './extrusionScale';
+import {relaxDeckMapElevation} from './extrusionScale';
 import {DeckMapDashboardSettings} from './DashboardMapSettings';
 import {
   createDeckMapDashboardPanelConfigForTable,
@@ -573,19 +573,14 @@ function DeckMapDashboardRenderer({
     handleRenderingError,
   } = useDeckMapDatasets({dashboardId, panel});
 
-  const handleFittedBounds = useCallback(
-    (
-      bounds: readonly [readonly [number, number], readonly [number, number]],
-    ) => {
-      if (!mapConfig) return;
-      const next = applyExtrusionScaleToGroundExtent(mapConfig, bounds);
-      if (next === mapConfig) return;
-      updatePanel(dashboardId, panel.id, {
-        config: next as unknown as Record<string, unknown>,
-      });
-    },
-    [dashboardId, mapConfig, panel.id, updatePanel],
-  );
+  const handleFitSuccess = useCallback(() => {
+    if (!mapConfig) return;
+    const next = relaxDeckMapElevation(mapConfig);
+    if (next === mapConfig) return;
+    updatePanel(dashboardId, panel.id, {
+      config: next as unknown as Record<string, unknown>,
+    });
+  }, [dashboardId, mapConfig, panel.id, updatePanel]);
 
   const {fitToData} = useDeckMapFitToBounds({
     panelId: panel.id,
@@ -593,7 +588,7 @@ function DeckMapDashboardRenderer({
     panel,
     container,
     deckMapRef,
-    onFittedBounds: handleFittedBounds,
+    onFitSuccess: handleFitSuccess,
   });
 
   const handleBrushEvent = useCallback(

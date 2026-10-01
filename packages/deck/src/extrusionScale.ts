@@ -4,91 +4,14 @@ import {
   type DeckMapLayerRecord,
 } from './mapLayerConfigUtils';
 
-/**
- * Tallest extruded column, as a fraction of the shorter ground side.
- * About 12% stays inside a pitched fit-to-data view instead of filling it.
- */
-export const EXTRUSION_HEIGHT_EXTENT_FRACTION = 0.12;
-
-const METERS_PER_DEGREE_LAT = 111_320;
-
-/** `[[minLon, minLat], [maxLon, maxLat]]`, the same shape fit-to-data returns. */
-export type GroundExtentBounds = readonly [
-  readonly [number, number],
-  readonly [number, number],
-];
+/** Meters the settings panel uses as the top of a visual elevation scale. */
+const VISUAL_ELEVATION_RANGE_MAX = 200;
 
 /**
- * Shorter side of a lon/lat bounding box, in meters.
- * Longitude is scaled by the cosine of the mid-latitude.
- *
- * @returns `0` when the box is empty or the coordinates are not finite.
+ * `elevationScale` at or above this is an extra multiplier (the assistant's
+ * usual 50–100), not a slider tweak around 1.
  */
-export function shorterGroundExtentMeters(bounds: GroundExtentBounds): number {
-  const [[minLon, minLat], [maxLon, maxLat]] = bounds;
-  if (
-    ![minLon, minLat, maxLon, maxLat].every(
-      (value) => typeof value === 'number' && Number.isFinite(value),
-    )
-  ) {
-    return 0;
-  }
-  const midLat = (minLat + maxLat) / 2;
-  const heightMeters = Math.abs(maxLat - minLat) * METERS_PER_DEGREE_LAT;
-  const widthMeters =
-    Math.abs(maxLon - minLon) *
-    METERS_PER_DEGREE_LAT *
-    Math.cos((midLat * Math.PI) / 180);
-  return Math.min(heightMeters, Math.abs(widthMeters));
-}
-
-/**
- * `elevationScale` that makes a scaled `getElevation` peak at
- * {@link EXTRUSION_HEIGHT_EXTENT_FRACTION} of the shorter ground side.
- *
- * Deck.gl draws `getElevation * elevationScale` meters. A scale range of
- * `[0, 200]` is already meters, so the returned scale is
- * `targetMeters / rangeMax`, not an extra exaggeration on top of a large value.
- *
- * @param elevationRangeMax - Largest value the elevation accessor returns.
- * @returns `undefined` when the extent or range cannot produce a positive scale.
- */
-export function elevationScaleForGroundExtent(
-  bounds: GroundExtentBounds,
-  elevationRangeMax: number,
-): number | undefined {
-  if (!(elevationRangeMax > 0) || !Number.isFinite(elevationRangeMax)) {
-    return undefined;
-  }
-  const shorter = shorterGroundExtentMeters(bounds);
-  if (!(shorter > 0)) return undefined;
-  const scale =
-    (shorter * EXTRUSION_HEIGHT_EXTENT_FRACTION) / elevationRangeMax;
-  if (!Number.isFinite(scale) || !(scale > 0)) return undefined;
-  return scale;
-}
-
-/**
- * Records a slider edit so a later fit does not replace `elevationScale`.
- */
-export function setManualElevationScale(
-  layer: DeckMapLayerRecord,
-  elevationScale: number,
-): DeckMapLayerRecord {
-  const binding = layer._sqlroomsBinding;
-  const bindingRecord =
-    binding && typeof binding === 'object' && !Array.isArray(binding)
-      ? (binding as Record<string, unknown>)
-      : {};
-  return {
-    ...layer,
-    elevationScale,
-    _sqlroomsBinding: {
-      ...bindingRecord,
-      elevationScaleManual: true,
-    },
-  };
-}
+const STACKED_ELEVATION_SCALE = 10;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -99,46 +22,24 @@ function isManualElevationScale(layer: DeckMapLayerRecord): boolean {
   return Boolean(isRecord(binding) && binding.elevationScaleManual === true);
 }
 
-/** Meters the settings panel uses as the top of a visual elevation scale. */
-const VISUAL_ELEVATION_RANGE_MAX = 200;
-
 /**
- * `elevationScale` at or above this is an extra multiplier (the assistant's
- * usual 50–100), not a slider tweak around 1.
+ * Records a slider edit so a later fit does not remove `elevationScale`.
  */
-const STACKED_ELEVATION_SCALE = 10;
-
-const COLUMN_ELEVATION = /^@@=([A-Za-z_][\w]*)$/;
-
-function isScaleElevation(
-  getElevation: unknown,
-): getElevation is Record<string, unknown> {
-  if (!isRecord(getElevation)) return false;
-  const fn = getElevation['@@function'] ?? getElevation['@@type'];
-  return fn === 'scale' || fn === 'scaleLinear';
-}
-
-function visualElevation(field: string): Record<string, unknown> {
+export function setManualElevationScale(
+  layer: DeckMapLayerRecord,
+  elevationScale: number,
+): DeckMapLayerRecord {
+  const binding = isRecord(layer._sqlroomsBinding)
+    ? layer._sqlroomsBinding
+    : {};
   return {
-    '@@function': 'scale',
-    field,
-    type: 'linear',
-    domain: 'auto',
-    range: [0, VISUAL_ELEVATION_RANGE_MAX],
+    ...layer,
+    elevationScale,
+    _sqlroomsBinding: {
+      ...binding,
+      elevationScaleManual: true,
+    },
   };
-}
-
-/** Largest positive output of a scale elevation accessor. */
-function scaledElevationRangeMax(getElevation: unknown): number | undefined {
-  if (!isScaleElevation(getElevation)) return undefined;
-  const range = getElevation.range;
-  if (!Array.isArray(range) || range.length < 2) return undefined;
-  const r0 = range[0];
-  const r1 = range[1];
-  if (typeof r0 !== 'number' || typeof r1 !== 'number') return undefined;
-  if (!Number.isFinite(r0) || !Number.isFinite(r1)) return undefined;
-  const max = Math.max(r0, r1);
-  return max > 0 ? max : undefined;
 }
 
 function readElevationScale(layer: DeckMapLayerRecord): number | undefined {
@@ -152,11 +53,42 @@ function readElevationScale(layer: DeckMapLayerRecord): number | undefined {
   return scale !== undefined && Number.isFinite(scale) ? scale : undefined;
 }
 
+function isScaleElevation(
+  getElevation: unknown,
+): getElevation is Record<string, unknown> {
+  if (!isRecord(getElevation)) return false;
+  const fn = getElevation['@@function'] ?? getElevation['@@type'];
+  return fn === 'scale' || fn === 'scaleLinear';
+}
+
+/** Largest positive output of a scale elevation accessor. */
+function scaledElevationRangeMax(getElevation: unknown): number | undefined {
+  if (!isScaleElevation(getElevation) || !Array.isArray(getElevation.range)) {
+    return undefined;
+  }
+  const max = Math.max(
+    Number(getElevation.range[0]),
+    Number(getElevation.range[1]),
+  );
+  return max > 0 && Number.isFinite(max) ? max : undefined;
+}
+
+function visualElevation(field: string): Record<string, unknown> {
+  return {
+    '@@function': 'scale',
+    field,
+    type: 'linear',
+    domain: 'auto',
+    range: [0, VISUAL_ELEVATION_RANGE_MAX],
+  };
+}
+
 /**
- * Turns an assistant `elevationScale` of 10+ into a visual scale the fit path
- * can size. A scale range that already exists is left for the caller to
- * rescale. `@@=column` and a missing elevation become a 0–200m scale.
- * Real meter columns (`elevationScale` omitted or near 1) stay as they are.
+ * Removes an assistant `elevationScale` of 10 or more.
+ *
+ * A scale range is already meters, so the extra multiplier is deleted.
+ * `@@=column` and a missing elevation become a 0–200m scale. Real meter
+ * columns (`elevationScale` omitted or near 1) stay as they are.
  */
 export function relaxStackedElevationScale(
   layer: DeckMapLayerRecord,
@@ -166,18 +98,17 @@ export function relaxStackedElevationScale(
   }
   const scale = readElevationScale(layer);
   if (scale === undefined || scale < STACKED_ELEVATION_SCALE) return layer;
-  if (scaledElevationRangeMax(layer.getElevation) !== undefined) return layer;
 
-  const elevation = layer.getElevation;
   const next: DeckMapLayerRecord = {...layer};
   delete next.elevationScale;
+  if (scaledElevationRangeMax(layer.getElevation) !== undefined) return next;
 
+  const elevation = layer.getElevation;
   if (typeof elevation === 'string') {
-    const field = elevation.trim().match(COLUMN_ELEVATION)?.[1];
+    const field = /^@@=([A-Za-z_]\w*)$/.exec(elevation.trim())?.[1];
     if (field) next.getElevation = visualElevation(field);
     return next;
   }
-
   if (isScaleElevation(elevation)) {
     next.getElevation = {
       ...elevation,
@@ -191,76 +122,24 @@ export function relaxStackedElevationScale(
     };
     return next;
   }
-
-  if (!isRecord(elevation)) {
-    next.getElevation = VISUAL_ELEVATION_RANGE_MAX;
-  }
+  if (!isRecord(elevation)) next.getElevation = VISUAL_ELEVATION_RANGE_MAX;
   return next;
 }
 
-function nearlyEqual(left: number, right: number): boolean {
-  return (
-    Math.abs(left - right) <=
-    1e-9 * Math.max(1, Math.abs(left), Math.abs(right))
-  );
-}
-
 /**
- * Rewrites `elevationScale` on extruded layers so the tallest column tracks
- * the fitted ground extent.
- *
- * A stacked multiplier (`elevationScale` of 10 or more, including on a raw
- * `@@=column`) is replaced. Layers marked with `elevationScaleManual` keep
- * that edit. Raw meter columns with no extra multiplier stay as they are.
+ * Removes stacked elevation multipliers from extruded layers.
  * Returns the same config when nothing changes.
  */
-export function applyExtrusionScaleToGroundExtent(
-  config: DeckMapConfig,
-  bounds: GroundExtentBounds,
-): DeckMapConfig {
-  if (!isRecord(config.spec)) return config;
-  const layers = config.spec.layers;
-  if (!Array.isArray(layers)) return config;
-
+export function relaxDeckMapElevation(config: DeckMapConfig): DeckMapConfig {
+  if (!isRecord(config.spec) || !Array.isArray(config.spec.layers)) {
+    return config;
+  }
   let changed = false;
-  const nextLayers = layers.map((layer) => {
+  const layers = config.spec.layers.map((layer) => {
     if (!isRecord(layer)) return layer;
-    let next = relaxStackedElevationScale(layer);
-    let layerChanged = next !== layer;
-
-    if (!isManualElevationScale(next) && getDeckMapLayerExtruded(next)) {
-      const rangeMax =
-        scaledElevationRangeMax(next.getElevation) ??
-        (next !== layer &&
-        typeof next.getElevation === 'number' &&
-        next.getElevation > 0
-          ? next.getElevation
-          : undefined);
-      if (rangeMax !== undefined) {
-        const scale = elevationScaleForGroundExtent(bounds, rangeMax);
-        if (
-          scale !== undefined &&
-          !(
-            typeof next.elevationScale === 'number' &&
-            nearlyEqual(next.elevationScale, scale)
-          )
-        ) {
-          next = {...next, elevationScale: scale};
-          layerChanged = true;
-        }
-      }
-    }
-
-    if (layerChanged) changed = true;
-    return layerChanged ? next : layer;
+    const next = relaxStackedElevationScale(layer);
+    if (next !== layer) changed = true;
+    return next;
   });
-
-  if (!changed) return config;
-  return {
-    ...config,
-    spec: {
-      ...config.spec,
-      layers: nextLayers,
-    },
-  };
+  return changed ? {...config, spec: {...config.spec, layers}} : config;
 }

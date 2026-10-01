@@ -459,10 +459,6 @@ export function useDeckMapFitController(options: {
   autoFit?: boolean;
   onSuccess?: () => void;
   onError?: (error: Error) => void;
-  /** Called with fitted lon/lat bounds after a successful bounds query. */
-  onFittedBounds?: (
-    bounds: readonly [readonly [number, number], readonly [number, number]],
-  ) => void;
 }) {
   const {
     scopeId,
@@ -474,7 +470,6 @@ export function useDeckMapFitController(options: {
     autoFit = false,
     onSuccess,
     onError,
-    onFittedBounds,
   } = options;
   const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
   const [containerSize, setContainerSize] = useState({width: 0, height: 0});
@@ -598,7 +593,6 @@ export function useDeckMapFitController(options: {
             maxZoom: fitToData.maxZoom,
           }),
         );
-        onFittedBounds?.(bounds);
         markHandled();
         onSuccess?.();
       } catch (error) {
@@ -639,7 +633,6 @@ export function useDeckMapFitController(options: {
     fitKey,
     fitToData,
     onError,
-    onFittedBounds,
     onSuccess,
     requestVersion,
     retryNonce,

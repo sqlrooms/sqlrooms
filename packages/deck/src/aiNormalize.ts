@@ -173,34 +173,12 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
       }
     }
 
-    // A scale range is already meters. Drop a second elevationScale so fit can
-    // size columns to the ground extent. A raw @@=column plus elevationScale
-    // of 10+ (the usual 100x) is the same mistake — turn it into that scale.
+    // A scale range is already meters. Drop a second elevationScale of 10+
+    // (the usual 100x). A raw @@=column plus that multiplier becomes a scale.
     {
       const relaxed = relaxStackedElevationScale(l);
       if (relaxed !== l) {
         l = relaxed;
-        layerChanged = true;
-      }
-      const elevation = l.getElevation;
-      const binding = l._sqlroomsBinding;
-      const manual =
-        binding &&
-        typeof binding === 'object' &&
-        !Array.isArray(binding) &&
-        (binding as Record<string, unknown>).elevationScaleManual === true;
-      const elevationFunction =
-        elevation && typeof elevation === 'object' && !Array.isArray(elevation)
-          ? ((elevation as Record<string, unknown>)['@@function'] ??
-            (elevation as Record<string, unknown>)['@@type'])
-          : undefined;
-      if (
-        !manual &&
-        l.elevationScale !== undefined &&
-        (elevationFunction === 'scale' || elevationFunction === 'scaleLinear')
-      ) {
-        l = {...l};
-        delete l.elevationScale;
         layerChanged = true;
       }
     }
