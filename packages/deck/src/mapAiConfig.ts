@@ -80,7 +80,7 @@ export const DeckMapResourceToolParameters = z.object({
   title: z.string().optional().default('Map'),
   config: DeckMapResourceConfigParameter,
   pointBinding: DeckMapPointBindingParameter.optional().describe(
-    'Structured point provenance for a table-backed dataset. Prefer this over authoring transformSql when longitude and latitude columns should become WKB point geometry.',
+    'Structured point provenance for a Scatterplot, Heatmap, or Column layer. Prefer this over authoring transformSql when longitude and latitude columns should become WKB point geometry. Do not use for GeoArrowPathLayer or GeoArrowTripsLayer.',
   ),
   tableName: z.string().optional(),
   replaceLayers: z

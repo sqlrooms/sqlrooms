@@ -392,6 +392,45 @@ function deckMapLayerTargetsDataset(options: {
   return options.datasetIds.length === 1 && options.layer.data === undefined;
 }
 
+const PATH_OR_TRIPS_LAYER_TYPES = new Set([
+  'GeoArrowPathLayer',
+  'GeoArrowTripsLayer',
+]);
+
+/**
+ * Layer type when this dataset is rendered as an animated trip or a path.
+ * Point WKB cannot satisfy those layers, so lon/lat point injection must not
+ * replace their geometry.
+ */
+function pathOrTripsLayerTypeForDataset(
+  config: {spec?: unknown; datasets?: Record<string, unknown>},
+  datasetId: string,
+): string | undefined {
+  const spec = parseDeckMapSpecRecord(config.spec);
+  if (!spec || !Array.isArray(spec.layers)) return undefined;
+  const datasetIds = Object.keys(config.datasets ?? {});
+  for (const layer of spec.layers) {
+    if (!isDeckMapConfigRecord(layer) || layer.visible === false) continue;
+    const layerType = layer['@@type'];
+    if (
+      typeof layerType !== 'string' ||
+      !PATH_OR_TRIPS_LAYER_TYPES.has(layerType)
+    ) {
+      continue;
+    }
+    if (
+      deckMapLayerTargetsDataset({
+        layer,
+        datasetId,
+        datasetIds,
+      })
+    ) {
+      return layerType;
+    }
+  }
+  return undefined;
+}
+
 /**
  * True when retained layers still need columns that
  * {@link createDeckMapConfigForTable} cannot reconstruct. Binding keys are
@@ -568,6 +607,12 @@ export function applyDeckMapPointBinding<
       `Point binding dataset "${datasetId}" must use source.tableName.`,
     );
   }
+  const pathOrTripsLayer = pathOrTripsLayerTypeForDataset(config, datasetId);
+  if (pathOrTripsLayer) {
+    throw new Error(
+      `Point binding creates Point geometry, which ${pathOrTripsLayer} cannot render. Omit pointBinding and keep the layer's authored linestring SQL.`,
+    );
+  }
 
   const geometryColumn =
     pointBinding.geometryColumn?.trim() || DEFAULT_GEOMETRY_COLUMN;
@@ -709,6 +754,7 @@ export function normalizeDeckMapPointConfig<
       !tableName ||
       source?.sqlQuery ||
       source?.transformSql ||
+      pathOrTripsLayerTypeForDataset(config, datasetId) ||
       (configuredGeometryColumn &&
         configuredGeometryColumn !== DEFAULT_GEOMETRY_COLUMN)
     ) {
