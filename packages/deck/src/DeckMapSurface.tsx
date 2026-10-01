@@ -16,6 +16,7 @@ import {
 } from './mapConfig';
 import {getDeckMapDataPolicy, type DeckMapDataPolicy} from './mapDataPolicy';
 import {getDeckMapResourceConfigIssues} from './mapResourceAuthoring';
+import {applyExtrusionScaleToGroundExtent} from './extrusionScale';
 import {
   getDeckMapDatasetSource,
   resolveDeckMapFitToData,
@@ -132,6 +133,8 @@ export type DeckMapSurfaceProps = {
 export function DeckMapSurface({
   mapId,
   map,
+  readOnly,
+  onUpdateMap,
   onReportIssue,
   onClearIssue,
   fitRequestVersion = 0,
@@ -213,6 +216,16 @@ export function DeckMapSurface({
     () => onClearIssue('fit-error'),
     [onClearIssue],
   );
+  const handleFittedBounds = useCallback(
+    (
+      bounds: readonly [readonly [number, number], readonly [number, number]],
+    ) => {
+      if (readOnly) return;
+      const next = applyExtrusionScaleToGroundExtent(map.config, bounds);
+      if (next !== map.config) onUpdateMap({config: next});
+    },
+    [map.config, onUpdateMap, readOnly],
+  );
   useDeckMapFitController({
     scopeId: mapId,
     fitToData,
@@ -223,6 +236,7 @@ export function DeckMapSurface({
     autoFit: true,
     onSuccess: handleFitSuccess,
     onError: handleFitError,
+    onFittedBounds: handleFittedBounds,
   });
 
   if (configIssues.length > 0) {

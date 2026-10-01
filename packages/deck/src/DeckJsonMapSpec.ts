@@ -40,6 +40,16 @@ export const LayerBindingConfig = z.object({
   timestampColumn: z.string().min(1).optional(),
   hexagonColumn: z.string().min(1).optional(),
   generatedTransform: DeckMapGeneratedTransform.optional(),
+  /**
+   * When true, fit-to-data does not replace this layer's `elevationScale`.
+   * Set by the extrusion slider.
+   */
+  elevationScaleManual: z.boolean().optional(),
+  /**
+   * When true, fit-to-data does not cap this column layer's `radius`.
+   * Set by the column radius slider.
+   */
+  radiusManual: z.boolean().optional(),
 });
 export type LayerBindingConfig = z.infer<typeof LayerBindingConfig>;
 

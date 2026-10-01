@@ -89,6 +89,7 @@ import {
   replaceDeckMapLayerColorScalesWithFlat,
   replaceDeckMapLayerColorScaleWithFlat,
 } from './mapLayerConfigUtils';
+import {setManualElevationScale} from './extrusionScale';
 import {
   DeckMapCodeViewerPanel,
   DeckMapCodeViewToggleButton,
@@ -1045,10 +1046,9 @@ const AppearanceExtrusionPanel: FC<{
             onValueChange={(values) => {
               const value = values[0] ?? 1;
               applyConfig(
-                updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => ({
-                  ...nextLayer,
-                  elevationScale: value,
-                })),
+                updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) =>
+                  setManualElevationScale(nextLayer, value),
+                ),
               );
             }}
           />

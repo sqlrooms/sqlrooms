@@ -42,8 +42,12 @@ export function useDeckMapFitToBounds(options: {
   panel: MosaicDashboardPanelConfigType;
   container: HTMLElement | null;
   deckMapRef: RefObject<DeckJsonMapHandle | null>;
+  onFittedBounds?: (
+    bounds: readonly [readonly [number, number], readonly [number, number]],
+  ) => void;
 }) {
-  const {panelId, dashboard, panel, container, deckMapRef} = options;
+  const {panelId, dashboard, panel, container, deckMapRef, onFittedBounds} =
+    options;
   const mapConfig = asDeckJsonMapConfig(panel.config);
   const fitToData = useMemo(
     () => resolveDeckMapFitToData(mapConfig),
@@ -88,6 +92,7 @@ export function useDeckMapFitToBounds(options: {
     deckMapRef,
     requestVersion,
     autoFit: true,
+    onFittedBounds,
   });
 
   return {fitToData};

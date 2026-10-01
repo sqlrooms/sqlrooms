@@ -570,9 +570,21 @@ export function setDeckMapLayerColumnRadius(
   layerIndex: number,
   radiusMeters: number,
 ): DeckMapConfig {
-  return updateDeckMapLayer(config, layerIndex, (layer) =>
-    applyDeckMapColumnRadiusMeters(layer, radiusMeters),
-  );
+  return updateDeckMapLayer(config, layerIndex, (layer) => {
+    const next = applyDeckMapColumnRadiusMeters(layer, radiusMeters);
+    const binding = next._sqlroomsBinding;
+    const bindingRecord =
+      binding && typeof binding === 'object' && !Array.isArray(binding)
+        ? (binding as Record<string, unknown>)
+        : {};
+    return {
+      ...next,
+      _sqlroomsBinding: {
+        ...bindingRecord,
+        radiusManual: true,
+      },
+    };
+  });
 }
 
 function readGeneratedTransform(binding: Record<string, unknown>):
