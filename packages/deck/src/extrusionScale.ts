@@ -1,6 +1,7 @@
 import type {DeckMapConfig} from './mapConfig';
 import {
   getDeckMapLayerExtruded,
+  usesColumnRadiusSetting,
   type DeckMapLayerRecord,
 } from './mapLayerConfigUtils';
 
@@ -93,7 +94,14 @@ function visualElevation(field: string): Record<string, unknown> {
 export function relaxStackedElevationScale(
   layer: DeckMapLayerRecord,
 ): DeckMapLayerRecord {
-  if (isManualElevationScale(layer) || !getDeckMapLayerExtruded(layer)) {
+  // Column layers keep their elevationScale. Stripping it leaves a short
+  // stub that reads as a flat disk. H3 and extruded polygons are the case
+  // where an extra multiplier covers the map.
+  if (
+    isManualElevationScale(layer) ||
+    !getDeckMapLayerExtruded(layer) ||
+    usesColumnRadiusSetting(layer['@@type'])
+  ) {
     return layer;
   }
   const scale = readElevationScale(layer);

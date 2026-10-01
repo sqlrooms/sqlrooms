@@ -71,39 +71,17 @@ describe('relaxDeckMapElevation', () => {
     expect(layerAt(next).elevationScale).toBeUndefined();
   });
 
-  test('turns a raw column count plus 100x into a 0–200m scale', () => {
-    const next = relaxDeckMapElevation(
-      configWith([
-        {
-          '@@type': 'GeoArrowColumnLayer',
-          radius: 50,
-          elevationScale: 100,
-          getElevation: '@@=count',
-        },
-      ]),
-    );
-    const layer = layerAt(next);
-    expect(layer.radius).toBe(50);
-    expect(layer.elevationScale).toBeUndefined();
-    expect(layer.getElevation).toMatchObject({
-      '@@function': 'scale',
-      field: 'count',
-      range: [0, 200],
-    });
-    expect(relaxDeckMapElevation(next)).toBe(next);
-  });
-
-  test('drops a 100x multiplier on a column layer that omits extruded', () => {
-    const next = relaxDeckMapElevation(
-      configWith([
-        {
-          '@@type': 'GeoArrowColumnLayer',
-          getElevation: scaleElevation(),
-          elevationScale: 80,
-        },
-      ]),
-    );
-    expect(layerAt(next).elevationScale).toBeUndefined();
+  test('leaves a column layer elevation scale alone', () => {
+    const input = configWith([
+      {
+        '@@type': 'GeoArrowColumnLayer',
+        radius: 50,
+        elevationScale: 100,
+        getElevation: '@@=count',
+      },
+    ]);
+    expect(relaxDeckMapElevation(input)).toBe(input);
+    expect(layerAt(input).elevationScale).toBe(100);
   });
 
   test('leaves a flat polygon and a raw meter column alone', () => {
