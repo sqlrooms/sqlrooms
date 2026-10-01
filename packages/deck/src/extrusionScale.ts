@@ -1,7 +1,6 @@
 import type {DeckMapConfig} from './mapConfig';
 import {
   getDeckMapLayerExtruded,
-  usesColumnRadiusSetting,
   type DeckMapLayerRecord,
 } from './mapLayerConfigUtils';
 
@@ -10,12 +9,6 @@ import {
  * About 12% stays inside a pitched fit-to-data view instead of filling it.
  */
 export const EXTRUSION_HEIGHT_EXTENT_FRACTION = 0.12;
-
-/**
- * Column disk radius, as a fraction of the shorter ground side.
- * About 2% stays narrower than the extruded height so disks do not cover a small site.
- */
-export const COLUMN_RADIUS_EXTENT_FRACTION = 0.02;
 
 const METERS_PER_DEGREE_LAT = 111_320;
 
@@ -47,25 +40,6 @@ export function shorterGroundExtentMeters(bounds: GroundExtentBounds): number {
     METERS_PER_DEGREE_LAT *
     Math.cos((midLat * Math.PI) / 180);
   return Math.min(heightMeters, Math.abs(widthMeters));
-}
-
-/**
- * Column radius in meters, capped so a disk is
- * {@link COLUMN_RADIUS_EXTENT_FRACTION} of the shorter ground side.
- *
- * @param radiusMeters - Authored radius. Missing or non-positive becomes the cap.
- * @returns `undefined` when the extent cannot produce a positive radius.
- */
-export function columnRadiusForGroundExtent(
-  bounds: GroundExtentBounds,
-  radiusMeters?: number,
-): number | undefined {
-  const shorter = shorterGroundExtentMeters(bounds);
-  if (!(shorter > 0)) return undefined;
-  const cap = shorter * COLUMN_RADIUS_EXTENT_FRACTION;
-  if (!Number.isFinite(cap) || !(cap > 0)) return undefined;
-  if (radiusMeters === undefined || !(radiusMeters > 0)) return cap;
-  return Math.min(radiusMeters, cap);
 }
 
 /**
@@ -123,11 +97,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isManualElevationScale(layer: DeckMapLayerRecord): boolean {
   const binding = layer._sqlroomsBinding;
   return Boolean(isRecord(binding) && binding.elevationScaleManual === true);
-}
-
-function isManualColumnRadius(layer: DeckMapLayerRecord): boolean {
-  const binding = layer._sqlroomsBinding;
-  return Boolean(isRecord(binding) && binding.radiusManual === true);
 }
 
 /** Meters the settings panel uses as the top of a visual elevation scale. */
@@ -241,10 +210,8 @@ function nearlyEqual(left: number, right: number): boolean {
  * the fitted ground extent.
  *
  * A stacked multiplier (`elevationScale` of 10 or more, including on a raw
- * `@@=column`) is replaced. Column disk radius is capped to
- * {@link COLUMN_RADIUS_EXTENT_FRACTION} of the same extent.
- * Layers marked with `elevationScaleManual` or `radiusManual` keep that edit.
- * Raw meter columns with no extra multiplier stay as they are.
+ * `@@=column`) is replaced. Layers marked with `elevationScaleManual` keep
+ * that edit. Raw meter columns with no extra multiplier stay as they are.
  * Returns the same config when nothing changes.
  */
 export function applyExtrusionScaleToGroundExtent(
@@ -281,24 +248,6 @@ export function applyExtrusionScaleToGroundExtent(
           next = {...next, elevationScale: scale};
           layerChanged = true;
         }
-      }
-    }
-
-    if (
-      usesColumnRadiusSetting(next['@@type']) &&
-      !isManualColumnRadius(next)
-    ) {
-      const authored =
-        typeof next.radius === 'number' && next.radius > 0
-          ? next.radius
-          : undefined;
-      const radius = columnRadiusForGroundExtent(bounds, authored);
-      if (
-        radius !== undefined &&
-        !(typeof next.radius === 'number' && nearlyEqual(next.radius, radius))
-      ) {
-        next = {...next, radius, radiusUnits: 'meters'};
-        layerChanged = true;
       }
     }
 

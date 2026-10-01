@@ -1,7 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
 import type {DeckMapConfig} from '../src/mapConfig';
 import {
-  COLUMN_RADIUS_EXTENT_FRACTION,
   EXTRUSION_HEIGHT_EXTENT_FRACTION,
   applyExtrusionScaleToGroundExtent,
   elevationScaleForGroundExtent,
@@ -209,13 +208,13 @@ describe('applyExtrusionScaleToGroundExtent', () => {
     );
   });
 
-  test('caps a column disk and replaces a 100x elevation on a raw column', () => {
+  test('replaces a 100x elevation on a raw column layer', () => {
     const shorter = shorterGroundExtentMeters(SITE_2KM);
     const next = applyExtrusionScaleToGroundExtent(
       configWith([
         {
           '@@type': 'GeoArrowColumnLayer',
-          radius: 5000,
+          radius: 50,
           elevationScale: 100,
           getElevation: '@@=count',
         },
@@ -223,7 +222,7 @@ describe('applyExtrusionScaleToGroundExtent', () => {
       SITE_2KM,
     );
     const layer = (next.spec as {layers: Record<string, unknown>[]}).layers[0]!;
-    expect(layer.radius).toBeCloseTo(shorter * COLUMN_RADIUS_EXTENT_FRACTION);
+    expect(layer.radius).toBe(50);
     expect(layer.elevationScale).not.toBe(100);
     expect(layer.elevationScale).toBeCloseTo(
       (shorter * EXTRUSION_HEIGHT_EXTENT_FRACTION) / 200,
@@ -234,27 +233,6 @@ describe('applyExtrusionScaleToGroundExtent', () => {
       range: [0, 200],
     });
     expect(applyExtrusionScaleToGroundExtent(next, SITE_2KM)).toBe(next);
-  });
-
-  test('keeps a column radius the user set and a radius already under the cap', () => {
-    const manual = {
-      '@@type': 'GeoArrowColumnLayer',
-      radius: 5000,
-      _sqlroomsBinding: {dataset: 'sites', radiusManual: true},
-    };
-    const manualConfig = configWith([manual]);
-    expect(applyExtrusionScaleToGroundExtent(manualConfig, SITE_2KM)).toBe(
-      manualConfig,
-    );
-
-    const modest = {
-      '@@type': 'GeoArrowColumnLayer',
-      radius: 20,
-    };
-    const modestConfig = configWith([modest]);
-    expect(applyExtrusionScaleToGroundExtent(modestConfig, SITE_2KM)).toBe(
-      modestConfig,
-    );
   });
 
   test('scales a column layer that omits extruded', () => {
