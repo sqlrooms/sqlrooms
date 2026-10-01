@@ -11,5 +11,9 @@ export function createDuckDbDatabaseAiAdapter<TState extends DuckDbSliceState>(
   return {
     getTables: () => store.getState().db.tables,
     findTable: (tableName) => store.getState().db.findTable(tableName),
+    executeSql: async (sql) => {
+      const handle = await store.getState().db.executeSql(sql);
+      return handle ? await handle : null;
+    },
   };
 }

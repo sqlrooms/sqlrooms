@@ -7,6 +7,10 @@ import {
 } from './datasetSourceUtils';
 import {assertDeckMapResourceConfig} from './mapResourceAuthoring';
 import {
+  avoidConstantVisualFields,
+  type VisualQueryTable,
+} from './visualFieldVariance';
+import {
   applyDeckMapPointBinding,
   type DeckMapConfigColumn,
   type DeckMapPointBinding,
@@ -50,6 +54,8 @@ export type CreateOrUpdateDeckMapResourceHost = {
   ) =>
     | {tableIdentity: string; columns: readonly DeckMapConfigColumn[]}
     | undefined;
+  /** Optional SQL runner used to reject constant color and elevation columns. */
+  query?: (sql: string) => Promise<VisualQueryTable | null>;
   prepareConfig?: (options: {
     config: DeckMapConfig;
     existingMapConfig?: DeckMapConfig;
@@ -153,8 +159,11 @@ export async function createOrUpdateDeckMapResource(
         replaceDatasets: params.replaceDatasets,
       })
     : params.config;
+  const variedConfig = host.query
+    ? await avoidConstantVisualFields(preparedConfig, host.query)
+    : preparedConfig;
   const pointBindingDataset = params.pointBinding
-    ? preparedConfig.datasets[params.pointBinding.dataset.trim()]
+    ? variedConfig.datasets[params.pointBinding.dataset.trim()]
     : undefined;
   const pointBindingTable = isDeckMapTableDatasetSource(
     pointBindingDataset?.source,
@@ -172,11 +181,11 @@ export async function createOrUpdateDeckMapResource(
   }
   const pointBoundConfig = params.pointBinding
     ? applyDeckMapPointBinding({
-        config: preparedConfig,
+        config: variedConfig,
         pointBinding: params.pointBinding,
         sourceColumns: pointBindingTable?.columns ?? [],
       })
-    : preparedConfig;
+    : variedConfig;
   const resolvedConfig = resolveTableDatasetSources(host, pointBoundConfig);
   assertDeckMapResourceConfig(resolvedConfig);
   const tableName =

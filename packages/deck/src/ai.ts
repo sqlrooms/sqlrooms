@@ -28,6 +28,7 @@ import {
 import {getDeckMapSharedAiContractRules} from './mapAiSharedInstructions';
 import {prepareAiDeckMapConfig} from './aiNormalize';
 import type {PrepareAiDeckMapConfigOptions} from './aiNormalize';
+import {avoidConstantVisualFields} from './visualFieldVariance';
 import {assertDeckMapResourceConfig} from './mapResourceAuthoring';
 import {asDeckJsonMapConfig, withPreservedDeckMapStyle} from './mapConfig';
 
@@ -440,10 +441,16 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
       try {
         // Prepare/validate before mutating dashboard selection so a rejected
         // config does not switch the active table as a side effect.
-        const config = cloneConfig(params.config, {
+        const prepared = cloneConfig(params.config, {
           resolveTable: (name) => databaseAdapter.findTable(name),
           stripCatalogNames,
         });
+        const config = databaseAdapter.executeSql
+          ? await avoidConstantVisualFields(
+              prepared,
+              databaseAdapter.executeSql,
+            )
+          : prepared;
         const title = params.title || 'Map';
         const tableName =
           params.tableName ?? getFirstDatasetSourceTableName(config);
