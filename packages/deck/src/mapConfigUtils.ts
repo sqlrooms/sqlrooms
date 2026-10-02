@@ -582,6 +582,11 @@ function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
  * Applies a structured longitude/latitude point binding to a native Deck map
  * config. The generated geometry SQL intentionally comes from the same
  * canonical helper used by first-party map builders.
+ *
+ * Point binding is for Scatterplot, Heatmap, and Column layers. Throws when
+ * the dataset is used by a `GeoArrowPathLayer` or `GeoArrowTripsLayer`,
+ * including a hidden layer. Those callers must omit the binding and keep the
+ * authored linestring SQL, because this helper would replace it with Point WKB.
  */
 export function applyDeckMapPointBinding<
   T extends DeckMapDashboardPanelConfig,
