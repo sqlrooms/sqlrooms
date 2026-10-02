@@ -835,6 +835,53 @@ describe('Deck map resource authoring contract', () => {
     });
   });
 
+  test('still accepts a polygon map when fitToData omits the geometry column', () => {
+    expect(
+      getDeckMapResourceConfigIssues({
+        configMode: 'basic',
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowPolygonLayer',
+              id: 'buildings-height',
+              _sqlroomsBinding: {dataset: 'buildings'},
+              extruded: true,
+            },
+          ],
+        },
+        datasets: {
+          buildings: {
+            source: {tableName: '"main"."buildings_australia"'},
+          },
+        },
+        fitToData: {dataset: 'buildings'},
+      }),
+    ).toEqual([]);
+  });
+
+  test('accepts polygon fitToData that names the geometry column', () => {
+    expect(
+      getDeckMapResourceConfigIssues({
+        configMode: 'basic',
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowPolygonLayer',
+              id: 'buildings-flood',
+              _sqlroomsBinding: {dataset: 'buildings'},
+            },
+          ],
+        },
+        datasets: {
+          buildings: {
+            source: {tableName: '"main"."buildings_australia"'},
+          },
+        },
+        fitToData: {dataset: 'buildings', geometryColumn: 'geom'},
+      }),
+    ).toEqual([]);
+  });
+
   test('keeps the reusable instructions aligned with durable invariants', () => {
     const instructions = getDeckMapResourceAiInstructions();
 
@@ -851,6 +898,7 @@ describe('Deck map resource authoring contract', () => {
     expect(instructions).toContain('Do not author transformSql');
     expect(instructions).toContain('COLOR SCALE FIELD VARIANCE');
     expect(instructions).toContain('omit maxZoom');
+    expect(instructions).toContain('fitToData.geometryColumn');
     expect(instructions).toContain('min = max');
     expect(instructions).toContain('3D CAMERA');
     expect(instructions).toContain('pitch 45–60');

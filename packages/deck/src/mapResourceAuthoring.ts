@@ -6,10 +6,11 @@ import {
   formatColorSchemePromptLists,
 } from '@sqlrooms/color-scales/colorSchemeNames';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
-import type {DeckMapConfig, DeckMapDatasetSource} from './mapConfig';
 import {
   isDeckMapSqlDatasetSource,
   isDeckMapTableDatasetSource,
+  type DeckMapConfig,
+  type DeckMapDatasetSource,
 } from './mapConfig';
 import {hasSelectStarAsWkbCollision} from './selectStarAsWkbCollision';
 import {getDeckMapSharedAiContractRules} from './mapAiSharedInstructions';
