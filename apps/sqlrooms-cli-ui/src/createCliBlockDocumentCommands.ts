@@ -453,10 +453,6 @@ export function createCliBlockDocumentCommands({
                   }
                 : undefined;
             },
-            query: async (sql) => {
-              const handle = await state.db.executeSql(sql);
-              return handle ? await handle : null;
-            },
             prepareConfig: ({
               config,
               existingMapConfig,
