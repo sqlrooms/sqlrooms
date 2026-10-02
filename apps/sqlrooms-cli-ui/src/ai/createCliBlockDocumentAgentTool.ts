@@ -205,7 +205,7 @@ For incremental edits to an existing document app, such as changing title, label
 
 ### Direct Requests
 When user asks for specific charts (e.g., "create histogram of depth and magnitude"):
-1. DO NOT run exploratory queries - go straight to creating charts
+1. DO NOT run exploratory queries - go straight to creating charts. Maps are the exception only when you are choosing the color or elevation column: call the query tool with SELECT min(column), max(column), count(DISTINCT column). If the user asked to visualize a specific column, use that column and skip the check.
 2. Call ${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}* for each chart mentioned
 3. Add text blocks only for brief context or summaries, if needed
 4. Done after ALL requested charts are created
@@ -216,7 +216,7 @@ When user asks for specific charts (e.g., "create histogram of depth and magnitu
 
 **Map requests:** ${
     mapBlocksEnabled
-      ? `If user asks to add a map to a document, use the direct document map block tool. If updating an existing document map, use the current document snapshot and pass the map resource ID to the map tool.`
+      ? `If the user asks to add a map to a document and names a column, use that column and do not run a min/max check. If you are choosing the color or elevation column, first call the query tool with SELECT min(column), max(column), count(DISTINCT column) and use a column only when min < max. Then use the direct document map block tool. If updating an existing document map, use the current document snapshot and pass the map resource ID to the map tool.`
       : `If user asks to add a map to an existing document/dashboard, consult the current document snapshot. If a dashboard block exists, call ${KnownBlockDocumentTools.embedded_dashboard_agent} with that dashboardId and an intent to create or update a map panel. If no dashboard block exists, create one first with ${KnownBlockDocumentTools.add_dashboard_block}.`
   }
 
@@ -291,7 +291,7 @@ Success patterns:
 - Use ${KnownBlockDocumentTools.add_dashboard_block} + ${KnownBlockDocumentTools.embedded_dashboard_agent} (two-step) when user explicitly asks for dashboard or when coordinated multi-view analysis would enhance exploration
 ${
   mapBlocksEnabled
-    ? `- For map requests, use the direct document map block tool; use the current document snapshot when updating an existing map and pass its statefulBlock.blockInstanceId as mapId`
+    ? `- For a new map, run min/max only when you are choosing the color or elevation column. If the user named a column, use it and skip that check. For an update, use the current document snapshot and pass statefulBlock.blockInstanceId as mapId`
     : `- For map requests, consult the current document snapshot, then ${KnownBlockDocumentTools.embedded_dashboard_agent} so the map is added as a dashboard panel`
 }
 ${htmlAppBlocksEnabled ? `- For document app requests, use ${KnownBlockDocumentTools.add_html_app_block} + ${KnownBlockDocumentTools.embedded_html_app_agent} so the app is embedded in the document` : ''}
