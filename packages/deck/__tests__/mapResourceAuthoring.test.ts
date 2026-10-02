@@ -836,50 +836,72 @@ describe('Deck map resource authoring contract', () => {
   });
 
   test('still accepts a polygon map when fitToData omits the geometry column', () => {
-    expect(
-      getDeckMapResourceConfigIssues({
-        configMode: 'basic',
-        spec: {
-          layers: [
-            {
-              '@@type': 'GeoArrowPolygonLayer',
-              id: 'buildings-height',
-              _sqlroomsBinding: {dataset: 'buildings'},
-              extruded: true,
-            },
-          ],
-        },
-        datasets: {
-          buildings: {
-            source: {tableName: '"main"."buildings_australia"'},
+    const config = {
+      configMode: 'basic' as const,
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            id: 'buildings-height',
+            _sqlroomsBinding: {dataset: 'buildings'},
+            extruded: true,
           },
+        ],
+      },
+      datasets: {
+        buildings: {
+          source: {tableName: '"main"."buildings_australia"'},
         },
-        fitToData: {dataset: 'buildings'},
-      }),
-    ).toEqual([]);
+      },
+      fitToData: {dataset: 'buildings'},
+    };
+    expect(getDeckMapResourceConfigIssues(config)).toEqual([]);
+    expect(() => assertDeckMapResourceConfig(config)).toThrow(
+      /fitToData\.geometryColumn: GeoArrowPolygonLayer fit-to-bounds requires fitToData\.geometryColumn/,
+    );
   });
 
   test('accepts polygon fitToData that names the geometry column', () => {
-    expect(
-      getDeckMapResourceConfigIssues({
-        configMode: 'basic',
+    const config = {
+      configMode: 'basic' as const,
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            id: 'buildings-flood',
+            _sqlroomsBinding: {dataset: 'buildings'},
+          },
+        ],
+      },
+      datasets: {
+        buildings: {
+          source: {tableName: '"main"."buildings_australia"'},
+        },
+      },
+      fitToData: {dataset: 'buildings', geometryColumn: 'geom'},
+    };
+    expect(getDeckMapResourceConfigIssues(config)).toEqual([]);
+    expect(() => assertDeckMapResourceConfig(config)).not.toThrow();
+  });
+
+  test('does not require geometryColumn for an H3 fit', () => {
+    expect(() =>
+      assertDeckMapResourceConfig({
         spec: {
           layers: [
             {
-              '@@type': 'GeoArrowPolygonLayer',
-              id: 'buildings-flood',
-              _sqlroomsBinding: {dataset: 'buildings'},
+              '@@type': 'GeoArrowH3HexagonLayer',
+              id: 'hex',
+              _sqlroomsBinding: {dataset: 'hexes', hexagonColumn: 'h3'},
             },
           ],
         },
         datasets: {
-          buildings: {
-            source: {tableName: '"main"."buildings_australia"'},
-          },
+          hexes: {source: {tableName: 'hexes'}},
         },
-        fitToData: {dataset: 'buildings', geometryColumn: 'geom'},
+        fitToData: {dataset: 'hexes'},
       }),
-    ).toEqual([]);
+    ).not.toThrow();
   });
 
   test('keeps the reusable instructions aligned with durable invariants', () => {
