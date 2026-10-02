@@ -6,11 +6,13 @@ import {
   formatColorSchemePromptLists,
 } from '@sqlrooms/color-scales/colorSchemeNames';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
-import type {DeckMapConfig, DeckMapDatasetSource} from './mapConfig';
 import {
   isDeckMapSqlDatasetSource,
   isDeckMapTableDatasetSource,
+  type DeckMapConfig,
+  type DeckMapDatasetSource,
 } from './mapConfig';
+import {resolveDeckMapFitToData} from './mapFit';
 import {hasSelectStarAsWkbCollision} from './selectStarAsWkbCollision';
 import {getDeckMapSharedAiContractRules} from './mapAiSharedInstructions';
 import {DECK_MAP_LAYER_TYPE_OPTIONS} from './mapLayerConfigUtils';
@@ -381,6 +383,14 @@ const DECK_MAP_LAYER_CLASS_ALIASES: Record<string, string> = {
 const DECK_MAP_SUPPORTED_LAYER_TYPES = new Set<string>(
   DECK_MAP_LAYER_TYPE_OPTIONS.map((option) => option.value),
 );
+
+/** Layers that fit from a geometry column. Lon/lat, arc, and H3 fits are separate. */
+const FIT_GEOMETRY_LAYER_TYPES = new Set([
+  'GeoArrowPolygonLayer',
+  'GeoArrowPathLayer',
+  'GeoArrowTripsLayer',
+  'GeoJsonLayer',
+]);
 
 const COLOR_SCALE_ACCESSOR_PROPS = [
   'getFillColor',
@@ -833,9 +843,59 @@ export function getDeckMapResourceConfigIssues(
   return issues;
 }
 
+/**
+ * Authoring-only fit check. The map surface still draws a config that omits
+ * `geometryColumn`; the assistant write is rejected so it can retry.
+ */
+export function getDeckMapAuthoringFitIssues(
+  config: DeckMapConfig,
+): DeckMapResourceConfigIssue[] {
+  const resolved = resolveDeckMapFitToData(config);
+  if (!resolved?.dataset) return [];
+  if (
+    resolved.geometryColumn ||
+    (resolved.geometryColumns && resolved.geometryColumns.length > 0) ||
+    resolved.h3Column ||
+    (resolved.longitudeColumn && resolved.latitudeColumn)
+  ) {
+    return [];
+  }
+
+  const {layers} = parseSpec(config);
+  const geometryLayer = layers.find((layer) => {
+    if (layer.visible === false) return false;
+    const layerType = layer['@@type'];
+    if (
+      typeof layerType !== 'string' ||
+      !FIT_GEOMETRY_LAYER_TYPES.has(layerType)
+    ) {
+      return false;
+    }
+    const binding = isPlainObject(layer._sqlroomsBinding)
+      ? layer._sqlroomsBinding
+      : undefined;
+    if (typeof binding?.dataset === 'string') {
+      return binding.dataset === resolved.dataset;
+    }
+    const datasetIds = Object.keys(config.datasets);
+    return datasetIds.length === 1 && datasetIds[0] === resolved.dataset;
+  });
+  if (!geometryLayer) return [];
+
+  return [
+    {
+      path: 'fitToData.geometryColumn',
+      message: `${String(geometryLayer['@@type'])} fit-to-bounds requires fitToData.geometryColumn. Without it the layer still draws, but the view is not framed: the bounds query looks for Longitude and Latitude. For a GeoJSON table loaded with ST_Read set fitToData to {"dataset":"${resolved.dataset}","geometryColumn":"geom"} and datasets.${resolved.dataset}.geometryColumn to "geom".`,
+    },
+  ];
+}
+
 /** Rejects invalid durable map writes after sparse patches have been merged. */
 export function assertDeckMapResourceConfig(config: DeckMapConfig): void {
-  const issues = getDeckMapResourceConfigIssues(config);
+  const issues = [
+    ...getDeckMapResourceConfigIssues(config),
+    ...getDeckMapAuthoringFitIssues(config),
+  ];
   if (issues.length > 0) throw new DeckMapResourceConfigError(issues);
 }
 
