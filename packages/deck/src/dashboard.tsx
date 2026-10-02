@@ -48,6 +48,7 @@ import {
   createDeckMapBoundsQuery,
 } from './useDeckMapFitToBounds';
 import {useDeckMapDatasets} from './useDeckMapDatasets';
+import {relaxDeckMapElevation} from './extrusionScale';
 import {DeckMapDashboardSettings} from './DashboardMapSettings';
 import {
   createDeckMapDashboardPanelConfigForTable,
@@ -540,6 +541,9 @@ function DeckMapDashboardRenderer({
   const clearPanelIssue = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.clearPanelIssue,
   );
+  const updatePanel = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.updatePanel,
+  );
 
   // Clear runtime issues when the active table or panel config changes so
   // the map can recover (e.g., after switching tables or AI updating the map).
@@ -569,12 +573,22 @@ function DeckMapDashboardRenderer({
     handleRenderingError,
   } = useDeckMapDatasets({dashboardId, panel});
 
+  const handleFitSuccess = useCallback(() => {
+    if (!mapConfig) return;
+    const next = relaxDeckMapElevation(mapConfig);
+    if (next === mapConfig) return;
+    updatePanel(dashboardId, panel.id, {
+      config: next as unknown as Record<string, unknown>,
+    });
+  }, [dashboardId, mapConfig, panel.id, updatePanel]);
+
   const {fitToData} = useDeckMapFitToBounds({
     panelId: panel.id,
     dashboard,
     panel,
     container,
     deckMapRef,
+    onFitSuccess: handleFitSuccess,
   });
 
   const handleBrushEvent = useCallback(

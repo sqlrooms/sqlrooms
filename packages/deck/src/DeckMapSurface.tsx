@@ -16,6 +16,7 @@ import {
 } from './mapConfig';
 import {getDeckMapDataPolicy, type DeckMapDataPolicy} from './mapDataPolicy';
 import {getDeckMapResourceConfigIssues} from './mapResourceAuthoring';
+import {relaxDeckMapElevation} from './extrusionScale';
 import {
   getDeckMapDatasetSource,
   resolveDeckMapFitToData,
@@ -132,6 +133,8 @@ export type DeckMapSurfaceProps = {
 export function DeckMapSurface({
   mapId,
   map,
+  readOnly,
+  onUpdateMap,
   onReportIssue,
   onClearIssue,
   fitRequestVersion = 0,
@@ -209,10 +212,12 @@ export function DeckMapSurface({
       }),
     [onReportIssue],
   );
-  const handleFitSuccess = useCallback(
-    () => onClearIssue('fit-error'),
-    [onClearIssue],
-  );
+  const handleFitSuccess = useCallback(() => {
+    onClearIssue('fit-error');
+    if (readOnly) return;
+    const next = relaxDeckMapElevation(map.config);
+    if (next !== map.config) onUpdateMap({config: next});
+  }, [map.config, onClearIssue, onUpdateMap, readOnly]);
   useDeckMapFitController({
     scopeId: mapId,
     fitToData,
