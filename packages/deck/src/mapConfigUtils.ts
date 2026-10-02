@@ -397,6 +397,47 @@ function deckMapLayerTargetsDataset(options: {
   return options.datasetIds.length === 1 && options.layer.data === undefined;
 }
 
+const PATH_OR_TRIPS_LAYER_TYPES = new Set([
+  'GeoArrowPathLayer',
+  'GeoArrowTripsLayer',
+]);
+
+/**
+ * Layer type when this dataset is bound to an animated trip or a path,
+ * including a hidden layer. Point WKB cannot satisfy those layers, so
+ * lon/lat point injection must not replace their geometry. Visibility is
+ * ignored because the rewrite changes the shared dataset SQL, and showing
+ * the layer again would then render points.
+ */
+function pathOrTripsLayerTypeForDataset(
+  config: {spec?: unknown; datasets?: Record<string, unknown>},
+  datasetId: string,
+): string | undefined {
+  const spec = parseDeckMapSpecRecord(config.spec);
+  if (!spec || !Array.isArray(spec.layers)) return undefined;
+  const datasetIds = Object.keys(config.datasets ?? {});
+  for (const layer of spec.layers) {
+    if (!isDeckMapConfigRecord(layer)) continue;
+    const layerType = layer['@@type'];
+    if (
+      typeof layerType !== 'string' ||
+      !PATH_OR_TRIPS_LAYER_TYPES.has(layerType)
+    ) {
+      continue;
+    }
+    if (
+      deckMapLayerTargetsDataset({
+        layer,
+        datasetId,
+        datasetIds,
+      })
+    ) {
+      return layerType;
+    }
+  }
+  return undefined;
+}
+
 /**
  * True when retained layers still need columns that
  * {@link createDeckMapConfigForTable} cannot reconstruct. Binding keys are
@@ -1038,6 +1079,11 @@ function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
  * Applies a structured longitude/latitude point binding to a native Deck map
  * config. The generated geometry SQL intentionally comes from the same
  * canonical helper used by first-party map builders.
+ *
+ * Point binding is for Scatterplot, Heatmap, and Column layers. Throws when
+ * the dataset is used by a `GeoArrowPathLayer` or `GeoArrowTripsLayer`,
+ * including a hidden layer. Those callers must omit the binding and keep the
+ * authored linestring SQL, because this helper would replace it with Point WKB.
  */
 export function applyDeckMapPointBinding<
   T extends DeckMapDashboardPanelConfig,
@@ -1063,6 +1109,12 @@ export function applyDeckMapPointBinding<
   if (!isDeckMapTableDatasetSource(dataset.source)) {
     throw new Error(
       `Point binding dataset "${datasetId}" must use source.tableName.`,
+    );
+  }
+  const pathOrTripsLayer = pathOrTripsLayerTypeForDataset(config, datasetId);
+  if (pathOrTripsLayer) {
+    throw new Error(
+      `Point binding creates Point geometry, which ${pathOrTripsLayer} cannot render. Omit pointBinding and keep the layer's authored linestring SQL.`,
     );
   }
 
@@ -1206,6 +1258,7 @@ export function normalizeDeckMapPointConfig<
       !tableName ||
       source?.sqlQuery ||
       source?.transformSql ||
+      pathOrTripsLayerTypeForDataset(config, datasetId) ||
       (configuredGeometryColumn &&
         configuredGeometryColumn !== DEFAULT_GEOMETRY_COLUMN)
     ) {

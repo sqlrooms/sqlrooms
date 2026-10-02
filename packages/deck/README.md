@@ -465,13 +465,18 @@ before durable state is written. For a single table-backed dataset, its canonica
 table
 identity must also match the selected table because that selection overrides the
 authored dataset source at render time. This is the preferred path for standard
-table-backed longitude/latitude maps; raw `transformSql` remains available for
-custom spatial transforms.
+table-backed longitude/latitude Scatterplot, Heatmap, and Column maps; raw
+`transformSql` remains available for custom spatial transforms.
+`pointBinding` is not valid for a dataset used by `GeoArrowPathLayer` or
+`GeoArrowTripsLayer`, including when that layer is hidden.
+`applyDeckMapPointBinding(...)` throws in that case. Omit `pointBinding` and
+keep the layer's authored linestring SQL.
 `normalizeDeckMapPointConfig(...)` only adds
 the standard lon/lat point transform to table-backed datasets that do not
 already declare `geometryColumn`, `source.sqlQuery`, or `source.transformSql`
 and whose resolved table does not expose a native geometry column; native
-geometry, polygon, line, and pre-transformed datasets are preserved.
+geometry, polygon, line, pre-transformed datasets, and datasets used by a path
+or trips layer are preserved.
 When regenerating a map with one existing dataset, its dataset ID is retained
 and geometry bindings are refreshed so custom layers continue to address the
 same dataset after a table switch. Authored arc, H3, and trips

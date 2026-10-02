@@ -848,6 +848,7 @@ describe('Deck map resource authoring contract', () => {
     expect(instructions).toContain('will not invent centroids');
     expect(instructions).toContain('SELECT *, ST_AsWKB(col) AS col');
     expect(instructions).toContain('pointBinding');
+    expect(instructions).toContain('not Path or Trips');
     expect(instructions).toContain('Do not author transformSql');
     expect(instructions).toContain('COLOR SCALE FIELD VARIANCE');
     expect(instructions).toContain('omit maxZoom');
