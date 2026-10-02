@@ -602,9 +602,13 @@ describe('createDeckMapDashboardTool', () => {
     expect(shared).not.toContain('WebGL');
     expect(shared).not.toContain('pointBinding');
     expect(shared).not.toContain('replaceLayers');
+    // Catalog visibility is host-configured through stripCatalogNames, not a
+    // validator invariant, so the prohibition stays on the dashboard surface.
+    expect(shared).not.toContain('database/catalog prefix');
     expect(instructions).toContain('list_dashboard_panels');
     expect(instructions).toContain('WebGL');
     expect(instructions).toContain('dashboard.selectedTable');
+    expect(instructions).toContain('database/catalog prefix');
   });
 
   it('provides default dashboard slice options with the deck map panel action', () => {

@@ -877,7 +877,6 @@ describe('Deck map resource authoring contract', () => {
     expect(instructions).toContain('sourceGeometryColumn');
     expect(instructions).toContain('numeric getRadius with radiusUnits');
     expect(instructions).toContain('single SELECT statement');
-    expect(instructions).toContain('database/catalog prefix');
     expect(instructions).toContain('fitToData must be a FLAT object');
   });
 
