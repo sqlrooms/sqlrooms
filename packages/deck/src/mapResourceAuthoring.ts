@@ -3,7 +3,6 @@ import {
   categoricalSchemes,
   continuousDivergingSchemes,
   continuousSequentialSchemes,
-  formatColorSchemePromptLists,
 } from '@sqlrooms/color-scales/colorSchemeNames';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
 import type {DeckMapConfig, DeckMapDatasetSource} from './mapConfig';
@@ -13,7 +12,10 @@ import {
 } from './mapConfig';
 import {hasSelectStarAsWkbCollision} from './selectStarAsWkbCollision';
 import {getDeckMapSharedAiContractRules} from './mapAiSharedInstructions';
-import {DECK_MAP_LAYER_TYPE_OPTIONS} from './mapLayerConfigUtils';
+import {
+  DECK_MAP_LAYER_CLASS_ALIASES,
+  DECK_MAP_LAYER_TYPE_OPTIONS,
+} from './mapLayerConfigUtils';
 
 export type DeckMapResourceConfigIssue = {
   path: string;
@@ -366,17 +368,6 @@ function parseSpec(config: DeckMapConfig): {
     issues: [],
   };
 }
-
-const DECK_MAP_LAYER_CLASS_ALIASES: Record<string, string> = {
-  ScatterplotLayer: 'GeoArrowScatterplotLayer',
-  HeatmapLayer: 'GeoArrowHeatmapLayer',
-  ColumnLayer: 'GeoArrowColumnLayer',
-  PathLayer: 'GeoArrowPathLayer',
-  PolygonLayer: 'GeoArrowPolygonLayer',
-  ArcLayer: 'GeoArrowArcLayer',
-  TripsLayer: 'GeoArrowTripsLayer',
-  H3HexagonLayer: 'GeoArrowH3HexagonLayer',
-};
 
 const DECK_MAP_SUPPORTED_LAYER_TYPES = new Set<string>(
   DECK_MAP_LAYER_TYPE_OPTIONS.map((option) => option.value),
@@ -846,20 +837,15 @@ export function assertDeckMapResourceConfig(config: DeckMapConfig): void {
 export function getDeckMapResourceAiInstructions(): string {
   return `## Direct document Deck map resources
 
-When authoring a document map config, use the resource-native Deck JSON contract:
-- A new map must contain at least one config.datasets entry and at least one spec.layers entry.
-- Every dataset must define source.tableName, source.tableName plus source.transformSql, or source.sqlQuery. Never put sql directly on the dataset object.
-- Bind every layer to a dataset with _sqlroomsBinding.dataset. Never use data: "@@#datasetId" or an implicit single-dataset binding as a durable resource binding.
-- Use supported Deck JSON layer classes such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, GeoArrowColumnLayer, GeoArrowH3HexagonLayer, or GeoJsonLayer. Prefer typed GeoArrow* layers when geometry type is known; GeoJsonLayer is valid for table-backed WKB/GeoJSON via _sqlroomsBinding.
-- For a standard table-backed longitude/latitude point map (Scatterplot, Heatmap, or Column — not Path or Trips), pass the tool's top-level pointBinding with dataset, longitudeColumn, and latitudeColumn. Do not author transformSql, geometryColumn, geometryEncodingHint, or layer geometryColumn for that dataset; the resource writer generates and aligns canonical WKB point geometry. Set geometryColumn in pointBinding only when the default __sqlrooms_geom name is unsuitable.
 ${getDeckMapSharedAiContractRules()}
+
+Document map resource rules (in addition to the shared rules above):
+- A new map must contain at least one config.datasets entry and at least one spec.layers entry.
+- For a standard table-backed longitude/latitude point map (Scatterplot, Heatmap, or Column — not Path or Trips), pass the tool's top-level pointBinding with dataset, longitudeColumn, and latitudeColumn. Do not author transformSql, geometryColumn, geometryEncodingHint, or layer geometryColumn for that dataset; the resource writer generates and aligns canonical WKB point geometry. Set geometryColumn in pointBinding only when the default __sqlrooms_geom name is unsuitable. Never use pointBinding for GeoArrowPathLayer or GeoArrowTripsLayer, and do not replace their authored transformSql with a lon/lat point transform.
 - For table-backed datasets, also pass the same table through the tool's top-level tableName field. A selected table does not replace the required dataset source.
-- transformSql must be a single SELECT and must read from __sqlrooms_source. Use source.sqlQuery only for a standalone pinned query.
-- Use configMode "basic" for a straightforward single-layer map (including extruded column/polygon maps with one elevation column via "@@=col" or a scale accessor). Use "custom" only for advanced properties the basic settings cannot represent; custom mode disables the settings panel and does not relax dataset-source or layer-binding requirements.
-- Prefer data-driven color when a useful varying column exists: getFillColor (or getColor/getSourceColor/getTargetColor for arcs) with {"@@function":"colorScale","field":"<column>","type":"sequential"|"quantile"|"categorical","scheme":"<name>","domain":"auto"}. Use quantile for skewed numeric, sequential for uniform, categorical for strings. Skip numeric columns where min = max (or all zeros) unless the user names that column; otherwise use flat fill. Exact scheme names (case-sensitive): ${formatColorSchemePromptLists()} — do not invent names. Viridis/Plasma/Inferno require type "sequential"; quantile/quantize schemes must be ColorBrewer ramps (YlOrRd, Blues, …).
 - For updates, sparse config patches are allowed because they are merged with the existing resource. For creates, never send empty datasets or layers.
 - When updating only visual properties (color scale, scheme, radius, width, elevation scale, visibility, opacity), send datasets as an empty object {} so the tool schema stays valid and merge keeps the existing dataset registry. Do not omit datasets entirely. Never re-send bare source.tableName without transformSql/sqlQuery — that overwrites geometry SQL and breaks the map. Include real dataset entries only when changing a data source.
-- To remove existing layers or datasets, set replaceLayers and/or replaceDatasets to true and send the complete desired list or registry. Omit them for additive sparse updates. For layer-type switches, set replaceLayers: true with only the new layer — do not keep the old layer as visible: false.
+- To remove existing layers or datasets, set replaceLayers and/or replaceDatasets to true and send the complete desired list or registry. Omit them for additive sparse updates. For layer-type switches, set replaceLayers: true with only the new layer.
 - If a map write reports an invalid resource config, repair the reported paths and retry the same direct map operation; do not replace it with a dashboard-backed map.
 
 Minimal table-backed point map shape:

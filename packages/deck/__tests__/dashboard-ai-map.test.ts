@@ -10,6 +10,7 @@ import {
   createDeckMapDashboardTool,
   getDashboardWithDeckMapAiInstructions,
 } from '../src/ai';
+import {getDeckMapSharedAiContractRules} from '../src/mapAiSharedInstructions';
 import {createDeckMapBoundsQuery} from '../src/dashboard';
 import {createDeckMapDashboardSliceOptions} from '../src/dashboardIntegration';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '../src/dashboardConfig';
@@ -583,6 +584,27 @@ describe('createDeckMapDashboardTool', () => {
     expect(instructions).toContain('3D CAMERA');
     expect(instructions).toContain('pitch 45–60');
     expect(instructions).toContain('omitted counts as extruded');
+  });
+
+  it('keeps dashboard instructions aligned with the shared contract', () => {
+    expect(getDashboardWithDeckMapAiInstructions()).toContain(
+      getDeckMapSharedAiContractRules(),
+    );
+  });
+
+  it('keeps dashboard-only mechanics out of the shared contract', () => {
+    const shared = getDeckMapSharedAiContractRules();
+    const instructions = getDashboardWithDeckMapAiInstructions();
+
+    // Panel lifecycle and selected-table semantics do not apply to document maps.
+    expect(shared).not.toContain('create_dashboard_map');
+    expect(shared).not.toContain('list_dashboard_panels');
+    expect(shared).not.toContain('WebGL');
+    expect(shared).not.toContain('pointBinding');
+    expect(shared).not.toContain('replaceLayers');
+    expect(instructions).toContain('list_dashboard_panels');
+    expect(instructions).toContain('WebGL');
+    expect(instructions).toContain('dashboard.selectedTable');
   });
 
   it('provides default dashboard slice options with the deck map panel action', () => {

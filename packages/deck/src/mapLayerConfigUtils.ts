@@ -42,6 +42,21 @@ export const DECK_MAP_LAYER_TYPE_OPTIONS: ReadonlyArray<{
   {value: 'GeoJsonLayer', label: 'GeoJSON'},
 ];
 
+/**
+ * Unprefixed deck.gl class names that are not registered in the Deck JSON
+ * converter, mapped to the GeoArrow class that should be used instead.
+ */
+export const DECK_MAP_LAYER_CLASS_ALIASES: Readonly<Record<string, string>> = {
+  ScatterplotLayer: 'GeoArrowScatterplotLayer',
+  HeatmapLayer: 'GeoArrowHeatmapLayer',
+  ColumnLayer: 'GeoArrowColumnLayer',
+  PathLayer: 'GeoArrowPathLayer',
+  PolygonLayer: 'GeoArrowPolygonLayer',
+  ArcLayer: 'GeoArrowArcLayer',
+  TripsLayer: 'GeoArrowTripsLayer',
+  H3HexagonLayer: 'GeoArrowH3HexagonLayer',
+};
+
 export const DECK_MAP_COLOR_ACCESSOR_OPTIONS: ReadonlyArray<{
   value: DeckMapLayerColorAccessor;
   label: string;
