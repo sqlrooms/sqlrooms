@@ -62,8 +62,9 @@ ${chartToolsInstructions}
 When user provides specific instructions:
 1. Parse intent -> identify panel type
 2. If the user asks to change, update, edit, replace, or fix an existing panel, call ${KnownDashboardTools.list_dashboard_panels} first and pass the target panelId to the appropriate chart or map tool.
-3. Call appropriate tool with settings
-4. Done
+3. Before creating a map, run min/max only when you are choosing which column to color or extrude: call query with SELECT min(column), max(column), count(DISTINCT column), and use a column only when min < max. If the user asked to visualize a specific column, use that column and skip this check.
+4. Call appropriate tool with settings
+5. Done
 
 ### Exploratory Requests
 When user asks to discover insights:
