@@ -26,6 +26,7 @@ export function getDeckMapSharedAiContractRules(): string {
   return `Shared Deck map authoring rules (every map surface):
 
 DATASETS AND SQL
+- A new map must contain at least one config.datasets entry and at least one spec.layers entry.
 - Every dataset must define source.tableName, source.tableName plus source.transformSql, or source.sqlQuery. Never put sql directly on the dataset object.
 - transformSql must read from ${src}, not from the authored table name, so the dataset follows table selection. Use source.sqlQuery only for a standalone literal query that should stay pinned to the authored SQL.
 - transformSql and sqlQuery must contain ONLY a single SELECT statement. Never include INSTALL, LOAD, CREATE, or other DDL/meta-commands — dataset SQL is wrapped in a subquery at runtime. The h3 and spatial extensions are pre-loaded at startup.
@@ -38,6 +39,7 @@ LAYER CLASSES AND GEOMETRY
 - Bind every layer to a config.datasets entry with _sqlroomsBinding.dataset. Never use data: "@@#datasetId" or an implicit single-dataset binding as a durable layer binding.
 - Only create a layer when the table holds data suitable for it, or when transformSql/sqlQuery can produce that shape. Do not build a path layer from point-only data without aggregation, a polygon layer from point coordinates, or an arc layer without origin-destination pairs.
 - Point data (lon/lat columns or Point geometry): GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, or GeoArrowColumnLayer. These require Point positions — do not bind them to Polygon/MultiPolygon geom. Prefer GeoArrowPolygonLayer for Polygon and GeoJsonLayer for WKB/WKT MultiPolygon, or use transformSql with ST_AsWKB(ST_Centroid(geom)) / ST_PointOnSurface(geom) when the user wants points (e.g. SELECT * EXCLUDE (geom), ST_AsWKB(ST_Centroid(geom)) AS geom FROM ${src}). The runtime will not invent centroids.
+- Longitude/latitude columns become point geometry with transformSql, for example: "SELECT *, ST_AsWKB(ST_Point(\\"Longitude\\", \\"Latitude\\")) AS \\"__sqlrooms_geom\\" FROM ${src} WHERE \\"Longitude\\" IS NOT NULL AND \\"Latitude\\" IS NOT NULL". Set geometryColumn to the alias used in the AS clause and geometryEncodingHint to "wkb".
 - Polygon data (building footprints, boundaries, areas, parcels, zones): GeoArrowPolygonLayer for uniform Polygon columns. Use GeoJsonLayer for WKB/WKT MultiPolygon columns so separate polygon parts retain their nesting.
 - Mixed Point/LineString/Polygon columns: use GeoJsonLayer. Typed GeoArrowPolygon/Path/Scatterplot layers need a uniform geometry type. To keep one class, filter with WHERE ST_GeometryType(geom) IN (...) then use the matching typed layer.
 - Line data (roads, routes, paths, rivers): GeoArrowPathLayer. Requires LineString geometry (or a single-part MultiLineString); explode or merge multi-part MultiLineString with ST_Dump / ST_LineMerge first. If linestring geom already exists, use it directly (or SELECT * EXCLUDE (geom), ST_AsWKB(geom) AS geom ... WHERE ST_GeometryType(geom) = 'LINESTRING'). For one row per waypoint (path_id/route_id + order + lon/lat), aggregate with transformSql: "SELECT path_id, label, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order))) AS geom FROM ${src} GROUP BY path_id, label".
@@ -74,6 +76,7 @@ CONFIG MODE AND SCOPE
   - "custom": multiple layers, free-form data-driven accessors, custom color arrays, advanced deck.gl props (opacity, transitions, material, highlightColor), layer extensions, or anything else the UI configurator cannot represent. The settings panel is disabled for custom configs; users edit JSON instead. Custom mode does not relax dataset-source or layer-binding requirements.
   - Decision rule: if the map can be fully expressed with a single layer, a basic color scale, numeric radius/width, and an optional single elevation column, use "basic". Extruded GeoArrowColumnLayer and polygon maps with one elevation field must stay "basic" so the settings panel remains available.
 - Create maps with a SINGLE layer unless the user explicitly asks for multiple layers. If multiple layers would serve the request better, ask the user to confirm first.
+- Browsers limit active WebGL contexts (typically 8–16 per page) and every rendered map uses one. Do NOT create more than 4–5 maps on a single page — exceeding the limit makes older maps lose their rendering context and show errors. For many datasets, prefer combining compatible layers into fewer maps over one map per dataset.
 - When switching a layer type, send only the new layer. Never keep the old layer as visible: false.
 - Maps default to a 100000-row runtime data limit; set config.dataPolicy.maxRows only when a map genuinely needs its own limit.`;
 }

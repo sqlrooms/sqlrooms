@@ -599,16 +599,28 @@ describe('createDeckMapDashboardTool', () => {
     // Panel lifecycle and selected-table semantics do not apply to document maps.
     expect(shared).not.toContain('create_dashboard_map');
     expect(shared).not.toContain('list_dashboard_panels');
-    expect(shared).not.toContain('WebGL');
     expect(shared).not.toContain('pointBinding');
     expect(shared).not.toContain('replaceLayers');
     // Catalog visibility is host-configured through stripCatalogNames, not a
     // validator invariant, so the prohibition stays on the dashboard surface.
     expect(shared).not.toContain('database/catalog prefix');
     expect(instructions).toContain('list_dashboard_panels');
-    expect(instructions).toContain('WebGL');
     expect(instructions).toContain('dashboard.selectedTable');
     expect(instructions).toContain('database/catalog prefix');
+  });
+
+  it('shares rules that apply to any rendered map surface', () => {
+    const shared = getDeckMapSharedAiContractRules();
+
+    // Validator-enforced on both surfaces via assertDeckMapResourceConfig.
+    expect(shared).toContain('at least one config.datasets entry');
+    // Document map blocks render the same DeckJsonMap, so the context budget
+    // is a per-page browser limit rather than a dashboard panel limit.
+    expect(shared).toContain('WebGL');
+    expect(shared).not.toContain('map panels in a single dashboard');
+    // The lon/lat point recipe is needed wherever pointBinding is unavailable.
+    expect(shared).toContain('ST_AsWKB(ST_Point(');
+    expect(shared).toContain('__sqlrooms_geom');
   });
 
   it('provides default dashboard slice options with the deck map panel action', () => {

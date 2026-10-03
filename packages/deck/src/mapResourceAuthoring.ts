@@ -840,7 +840,6 @@ export function getDeckMapResourceAiInstructions(): string {
 ${getDeckMapSharedAiContractRules()}
 
 Document map resource rules (in addition to the shared rules above):
-- A new map must contain at least one config.datasets entry and at least one spec.layers entry.
 - For a standard table-backed longitude/latitude point map (Scatterplot, Heatmap, or Column — not Path or Trips), pass the tool's top-level pointBinding with dataset, longitudeColumn, and latitudeColumn. Do not author transformSql, geometryColumn, geometryEncodingHint, or layer geometryColumn for that dataset; the resource writer generates and aligns canonical WKB point geometry. Set geometryColumn in pointBinding only when the default __sqlrooms_geom name is unsuitable. Never use pointBinding for GeoArrowPathLayer or GeoArrowTripsLayer, and do not replace their authored transformSql with a lon/lat point transform.
 - For table-backed datasets, also pass the same table through the tool's top-level tableName field. A selected table does not replace the required dataset source.
 - For updates, sparse config patches are allowed because they are merged with the existing resource. For creates, never send empty datasets or layers.

@@ -850,18 +850,20 @@ surface-specific layer, so the two surfaces cannot teach different contracts:
 
 - `getDeckMapSharedAiContractRules()` (internal) holds the surface-agnostic
   core: dataset and SQL rules, layer classes and geometry recipes, sizes,
-  elevation and camera, color scales, view fitting, basemap, and config mode.
+  elevation and camera, color scales, view fitting, basemap, config mode, and
+  the per-page WebGL context budget.
 - `DECK_MAP_AI_INSTRUCTIONS` (via `@sqlrooms/deck/mosaic`) adds only dashboard
   mechanics: tool names, selected-table semantics, full-config panel updates,
-  the WebGL panel budget, and the `list_dashboard_panels` render check.
+  and the `list_dashboard_panels` render check.
 - `getDeckMapResourceAiInstructions()` adds only document-resource mechanics:
   `pointBinding`, sparse patch merging, and `replaceLayers` / `replaceDatasets`.
 
 When adding a rule, place it by this test: if
-`getDeckMapResourceConfigIssues` can reject it, or if it describes the
-DuckDB-to-GeoArrow dataset pipeline, it belongs in the shared core, because both
-surfaces validate writes through `assertDeckMapResourceConfig`. Only rules that
-are meaningless on the other surface belong in a surface layer.
+`getDeckMapResourceConfigIssues` can reject it, if it describes the
+DuckDB-to-GeoArrow dataset pipeline, or if it constrains the `DeckJsonMap`
+renderer, it belongs in the shared core, because both surfaces validate writes
+through `assertDeckMapResourceConfig` and render through the same component.
+Only rules that are meaningless on the other surface belong in a surface layer.
 
 ## Runtime Props and Children
 
