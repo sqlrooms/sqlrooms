@@ -5,6 +5,7 @@ import {createStore} from 'zustand/vanilla';
 import type {DataTableExplorerCountState} from './DataTableExplorerCountClient';
 import type {DataTableExplorerPageState} from './DataTableExplorerPageClient';
 import type {
+  DataTableExplorerColumnKind,
   DataTableExplorerPaginationState,
   DataTableExplorerSorting,
   DataTableExplorerSummaryState,
@@ -57,7 +58,10 @@ export type DataTableExplorerStoreState = {
   syncPageSize: (pageSize: number) => void;
   totalCount: DataTableExplorerCountState;
   clearSummaries: () => void;
-  initializeSummaries: (fields: arrow.Field[]) => void;
+  initializeSummaries: (
+    fields: arrow.Field[],
+    columnKinds?: Record<string, DataTableExplorerColumnKind>,
+  ) => void;
   resetPageIndex: () => void;
 };
 
@@ -203,11 +207,14 @@ export function createDataTableExplorerStore(options: {
         }),
       );
     },
-    initializeSummaries: (fields) => {
+    initializeSummaries: (fields, columnKinds) => {
       set((state) =>
         produce(state, (draft) => {
           draft.summaries = Object.fromEntries(
-            fields.map((field) => [field.name, createEmptySummaryState(field)]),
+            fields.map((field) => [
+              field.name,
+              createEmptySummaryState(field, columnKinds?.[field.name]),
+            ]),
           );
         }),
       );

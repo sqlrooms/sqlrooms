@@ -7,11 +7,13 @@ import {
   buildDistinctCountQuery,
   buildDataTableExplorerBaseQuery,
   buildDataTableExplorerPageQuery,
+  createEmptySummaryState,
   fieldInfoToDataTableExplorerField,
   getDataTableExplorerValueType,
   isDataTableExplorerHistogramType,
   isDataTableExplorerUnsupportedSummaryType,
   normalizeDataTableExplorerPagination,
+  resolveDataTableExplorerColumnKind,
   serializeCategoryBucketKey,
   rowsFromQueryResult,
   splitHistogramBins,
@@ -233,5 +235,55 @@ describe('dataTableExplorer utils', () => {
         toArray: () => [{value: 1}, {value: 2}],
       }),
     ).toEqual([{value: 1}, {value: 2}]);
+  });
+});
+
+describe('resolveDataTableExplorerColumnKind', () => {
+  const numberField = new arrow.Field('depth', new arrow.Float64(), true);
+  const stringField = new arrow.Field('name', new arrow.Utf8(), true);
+  const binaryField = new arrow.Field('blob', new arrow.Binary(), true);
+
+  it('derives the kind from the Arrow type when no resolver is given', () => {
+    expect(resolveDataTableExplorerColumnKind(numberField)).toBe('histogram');
+    expect(resolveDataTableExplorerColumnKind(stringField)).toBe('category');
+    expect(resolveDataTableExplorerColumnKind(binaryField)).toBe('unsupported');
+  });
+
+  it("keeps the type-driven kind when the resolver returns 'auto'", () => {
+    expect(resolveDataTableExplorerColumnKind(numberField, () => 'auto')).toBe(
+      'histogram',
+    );
+  });
+
+  it("always honors 'none'", () => {
+    for (const field of [numberField, stringField, binaryField]) {
+      expect(resolveDataTableExplorerColumnKind(field, () => 'none')).toBe(
+        'none',
+      );
+    }
+  });
+
+  it('honors compatible overrides and rejects incompatible ones', () => {
+    // Numeric column forced to category buckets: allowed.
+    expect(
+      resolveDataTableExplorerColumnKind(numberField, () => 'category'),
+    ).toBe('category');
+    // Histogram on a string column would produce broken bin queries.
+    expect(
+      resolveDataTableExplorerColumnKind(stringField, () => 'histogram'),
+    ).toBe('category');
+    // Unsupported types cannot be summarized at all.
+    expect(
+      resolveDataTableExplorerColumnKind(binaryField, () => 'category'),
+    ).toBe('unsupported');
+  });
+
+  it("creates a summary-less empty state for 'none' columns", () => {
+    expect(createEmptySummaryState(numberField, 'none')).toEqual({
+      isLoading: false,
+      kind: 'none',
+    });
+    // Without an explicit kind the type-driven default still applies.
+    expect(createEmptySummaryState(numberField).kind).toBe('histogram');
   });
 });

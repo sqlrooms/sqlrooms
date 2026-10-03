@@ -13,6 +13,7 @@ import {
 import {DataTableExplorerPageClient} from './DataTableExplorerPageClient';
 import {DataTableExplorerUnsupportedSummaryClient} from './DataTableExplorerUnsupportedSummaryClient';
 import type {
+  DataTableExplorerColumnKind,
   DataTableExplorerSummaryState,
   DataTableExplorerSqlTableReference,
   DataTableExplorerSorting,
@@ -21,8 +22,7 @@ import type {DataTableExplorerStore} from './createDataTableExplorerStore';
 import {
   fieldInfoToDataTableExplorerField,
   getDataTableExplorerValueType,
-  isDataTableExplorerHistogramType,
-  isDataTableExplorerUnsupportedSummaryType,
+  resolveDataTableExplorerColumnKind,
 } from './utils';
 
 function toError(error: unknown): Error {
@@ -184,6 +184,10 @@ export function connectDataTableExplorerCountClient(options: {
  *
  * @param options.categoryLimit Maximum number of category buckets to expose before
  * grouping the remainder into an overflow bucket.
+ * @param options.columnKinds Resolved summary kind per field name. Fields
+ * missing from the map fall back to the Arrow-type-driven default. Columns
+ * resolved to `'none'` get no summary clients, so no summary queries run for
+ * them.
  * @param options.connection Ready Mosaic connection that owns summary client
  * registration.
  * @param options.fields Active Arrow fields to summarize.
@@ -197,6 +201,7 @@ export function connectDataTableExplorerCountClient(options: {
  */
 export function connectDataTableExplorerSummaryClients(options: {
   categoryLimit: number;
+  columnKinds?: Record<string, DataTableExplorerColumnKind>;
   connection: ReadyConnection;
   fields: arrow.Field[];
   selection: Selection;
@@ -207,6 +212,7 @@ export function connectDataTableExplorerSummaryClients(options: {
 }) {
   const {
     categoryLimit,
+    columnKinds,
     connection,
     fields,
     selection,
@@ -216,14 +222,20 @@ export function connectDataTableExplorerSummaryClients(options: {
     tableReference,
   } = options;
 
-  store.getState().initializeSummaries(fields);
+  store.getState().initializeSummaries(fields, columnKinds);
 
   const clients: MosaicClient[] = fields.flatMap((field): MosaicClient[] => {
+    const kind =
+      columnKinds?.[field.name] ?? resolveDataTableExplorerColumnKind(field);
     const update = (summary: DataTableExplorerSummaryState) => {
       store.getState().setSummary(field.name, summary);
     };
 
-    if (isDataTableExplorerUnsupportedSummaryType(field.type)) {
+    if (kind === 'none') {
+      return [];
+    }
+
+    if (kind === 'unsupported') {
       return [
         new DataTableExplorerUnsupportedSummaryClient({
           field,
@@ -235,7 +247,7 @@ export function connectDataTableExplorerSummaryClients(options: {
       ];
     }
 
-    if (isDataTableExplorerHistogramType(field.type)) {
+    if (kind === 'histogram') {
       const summaryClient = new DataTableExplorerHistogramClient({
         field,
         onStateChange: update,

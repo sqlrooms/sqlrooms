@@ -17,6 +17,7 @@ import {
   getMosaicRawSqlTableReference,
   getMosaicSqlTableReference,
 } from '../mosaicTableReference';
+import {resolveDataTableExplorerColumnKind} from './utils';
 
 /**
  * Aggregates Mosaic-backed schema, rows, counts, and summaries into the stable
@@ -28,6 +29,7 @@ export function useDataTableExplorer(
   const {
     categoryLimit = 20,
     columns,
+    getColumnKind,
     initialSorting = [],
     pageSize = 100,
     selection: providedSelection,
@@ -91,8 +93,28 @@ export function useDataTableExplorer(
     tableIdentity,
     tableReference,
   });
+  // Value-keyed memo: resolved kinds stay referentially stable across renders
+  // even when getColumnKind is an inline lambda, so the summary-client
+  // lifecycle only re-runs when a column's resolved kind actually changes.
+  const columnKindEntries = fields.map(
+    (field) =>
+      [
+        field.name,
+        resolveDataTableExplorerColumnKind(field, getColumnKind),
+      ] as const,
+  );
+  const columnKindsKey = columnKindEntries
+    .map(([name, kind]) => `${name}:${kind}`)
+    .join('|');
+  const columnKinds = useMemo(
+    () => Object.fromEntries(columnKindEntries),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [columnKindsKey],
+  );
+
   useDataTableExplorerLifecycles({
     categoryLimit,
+    columnKinds,
     columns,
     connection,
     fieldNames,
@@ -110,6 +132,7 @@ export function useDataTableExplorer(
     tableReference,
   });
   const dataTableExplorerColumns = useDataTableExplorerColumns({
+    columnKinds,
     fields,
     summaries,
   });
