@@ -692,6 +692,12 @@ contains status/log presentation, while nested rich outputs are rendered once
 through `turn.hoistedOutputs` in decomposed layouts. The pre-wired `Timeline`
 keeps owning both when the default source-order layout is used.
 
+A tool that runs a sub-agent can hoist its own result too, for example a card
+for the artifact the sub-agent built. List it in `hoistedRenderers`, as for any
+other tool; once it finishes, and if its renderer's `shouldHoist` (when it has
+one) accepts the output, its result is hoisted ahead of its nested outputs. The
+`Timeline` draws it after the agent's activity.
+
 For finer composition, iterate semantic items and render their pre-wired leaf
 components. Tool items expose state, agent, and hoist metadata:
 

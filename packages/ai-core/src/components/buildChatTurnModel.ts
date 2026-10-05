@@ -404,6 +404,19 @@ export function buildChatTurnModel(options: {
       }
       collectNestedToolCallIds(nested, agentProgress, timingIds);
 
+      // A listed agent tool can hoist its own result too (e.g. a card for the
+      // artifact its sub-agent built), ahead of its nested outputs.
+      isHoisted = canHoistToolPart(
+        toolPart,
+        toolName,
+        toolRenderers,
+        hoistableToolNames,
+      );
+      if (isHoisted) {
+        if (firstHoistPartIndex === null) firstHoistPartIndex = i;
+        hoisted.push(hoistableFromToolPart(toolPart, toolName));
+      }
+
       const nestedHoisted = collectHoistableRenderers(
         nested,
         agentProgress,

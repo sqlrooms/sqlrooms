@@ -581,7 +581,23 @@ export function createChatTurnPresentation({
         if (segment.kind === 'agent-tool') {
           const Content = timelineAgentContentByIndex.get(segment.index);
           if (!Content) return null;
-          return <Content key={`tool-${segment.part.toolCallId}`} />;
+          // The agent's own hoisted result, if its renderer opted in, follows
+          // its activity the way a tool group's outputs follow theirs.
+          const OwnOutput = outputById.get(segment.part.toolCallId)?.Content;
+          return (
+            <React.Fragment key={`tool-${segment.part.toolCallId}`}>
+              <Content />
+              {OwnOutput && (
+                <div
+                  className="empty:hidden"
+                  data-testid="chat-turn-hoisted"
+                  data-tool-call-id={segment.part.toolCallId}
+                >
+                  <OwnOutput />
+                </div>
+              )}
+            </React.Fragment>
+          );
         }
 
         const {part, index} = segment;
