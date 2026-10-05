@@ -23,9 +23,13 @@ import {computeTimeSpan} from './buildChatTurnModel';
 import {HighlightedChatSearchText} from './ChatSearch';
 import {
   canHoistAgentToolCall,
+  toHoistableToolCall,
   type HoistableToolCall,
 } from './collectHoistableRenderers';
-import {useRenderNestedHoistedOutputs} from './NestedHoistedOutputsContext';
+import {
+  RenderNestedHoistedOutputsProvider,
+  useRenderNestedHoistedOutputs,
+} from './NestedHoistedOutputsContext';
 import {ToolCallErrorBoundary} from './tools/ToolResultErrorBoundary';
 
 // ---------------------------------------------------------------------------
@@ -529,17 +533,7 @@ const FlatSegmentList: React.FC<{
                   <AgentToolActivityLogLine toolCall={tc} />
                 )}
                 {hasInlineRenderer && (
-                  <HoistedToolCallRenderer
-                    item={{
-                      toolCallId: tc.toolCallId,
-                      toolName: tc.toolName,
-                      output: tc.output,
-                      input: tc.input,
-                      errorText: tc.errorText,
-                      state: tc.state,
-                      approvalId: tc.approvalId,
-                    }}
-                  />
+                  <HoistedToolCallRenderer item={toHoistableToolCall(tc)} />
                 )}
               </React.Fragment>
             );
@@ -555,15 +549,7 @@ const FlatSegmentList: React.FC<{
             return (
               <HoistedOutput
                 key={`hoisted-${tc.toolCallId}`}
-                item={{
-                  toolCallId: tc.toolCallId,
-                  toolName: tc.toolName,
-                  output: tc.output,
-                  input: tc.input,
-                  errorText: tc.errorText,
-                  state: tc.state,
-                  approvalId: tc.approvalId,
-                }}
+                item={toHoistableToolCall(tc)}
               />
             );
           });
@@ -617,6 +603,13 @@ const FlatSegmentList: React.FC<{
         const {toolCall, nestedCalls} = seg;
         const isComplete =
           toolCall.state === 'success' || toolCall.state === 'error';
+        // A listed agent hoists its own result too, ahead of its activity
+        // (the same order as the turn's hoisted outputs).
+        const isHoisted = canHoistAgentToolCall(
+          toolCall,
+          toolRenderers,
+          hoistableSet,
+        );
         const presentedToolCall =
           toolCall.agentToolCalls === nestedCalls
             ? toolCall
@@ -630,11 +623,17 @@ const FlatSegmentList: React.FC<{
 
         return (
           <React.Fragment key={toolCall.toolCallId}>
+            {isHoisted && renderNestedHoistedOutputs ? (
+              // Its own nested outputs are drawn below, not inside the card.
+              <RenderNestedHoistedOutputsProvider value={false}>
+                <HoistedOutput item={toHoistableToolCall(toolCall)} />
+              </RenderNestedHoistedOutputsProvider>
+            ) : null}
             {ToolActivity ? (
               <ToolActivity
                 toolCall={presentedToolCall}
                 isAgent
-                isHoisted={false}
+                isHoisted={isHoisted}
               />
             ) : (
               <AgentToolSummaryLine

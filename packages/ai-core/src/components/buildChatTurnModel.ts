@@ -387,7 +387,18 @@ export function buildChatTurnModel(options: {
       isAwaitingApproval = true;
     }
 
-    let isHoisted = false;
+    // A listed tool is hoisted whether or not it ran a sub-agent (e.g. a card
+    // for the artifact its sub-agent built); an agent's own result comes ahead
+    // of its nested outputs.
+    const isHoisted = canHoistToolPart(
+      toolPart,
+      toolName,
+      toolRenderers,
+      hoistableToolNames,
+    );
+    if (isHoisted) {
+      hoisted.push(hoistableFromToolPart(toolPart, toolName));
+    }
 
     const agentToolCalls = isAgent
       ? getAgentNestedCalls(toolPart, agentProgress)
@@ -403,42 +414,20 @@ export function buildChatTurnModel(options: {
         isAwaitingApproval = true;
       }
       collectNestedToolCallIds(nested, agentProgress, timingIds);
-
-      // A listed agent tool can hoist its own result too (e.g. a card for the
-      // artifact its sub-agent built), ahead of its nested outputs.
-      isHoisted = canHoistToolPart(
-        toolPart,
-        toolName,
-        toolRenderers,
-        hoistableToolNames,
+      hoisted.push(
+        ...collectHoistableRenderers(
+          nested,
+          agentProgress,
+          toolRenderers,
+          hoistableToolNames,
+        ),
       );
-      if (isHoisted) {
-        if (firstHoistPartIndex === null) firstHoistPartIndex = i;
-        hoisted.push(hoistableFromToolPart(toolPart, toolName));
-      }
-
-      const nestedHoisted = collectHoistableRenderers(
-        nested,
-        agentProgress,
-        toolRenderers,
-        hoistableToolNames,
-      );
-      if (nestedHoisted.length > 0) {
-        if (firstHoistPartIndex === null) firstHoistPartIndex = i;
-        hoisted.push(...nestedHoisted);
-      }
     } else {
       leafToolCount += 1;
-      isHoisted = canHoistToolPart(
-        toolPart,
-        toolName,
-        toolRenderers,
-        hoistableToolNames,
-      );
-      if (isHoisted) {
-        if (firstHoistPartIndex === null) firstHoistPartIndex = i;
-        hoisted.push(hoistableFromToolPart(toolPart, toolName));
-      }
+    }
+
+    if (firstHoistPartIndex === null && hoisted.length > 0) {
+      firstHoistPartIndex = i;
     }
 
     activity.push({

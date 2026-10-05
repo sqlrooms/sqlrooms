@@ -92,12 +92,18 @@ export const ToolPartRenderer = ({
   toolCallId,
   hideToolCallInfo,
   hideAgentSummary,
+  ownOutputHoisted,
 }: {
   part: UIMessagePart;
   toolCallId: string;
   hideToolCallInfo?: boolean;
   /** Omits the parent agent row when a presentation slot renders it. */
   hideAgentSummary?: boolean;
+  /**
+   * For an agent whose own output is drawn in a hoisted region: show only its
+   * sub-agent activity here, never the tool's own component a second time.
+   */
+  ownOutputHoisted?: boolean;
 }) => {
   const tools = useStoreWithAi((s) => s.ai.tools);
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
@@ -139,12 +145,14 @@ export const ToolPartRenderer = ({
   // Render the ToolComponent directly for:
   // - Tools without execute (legacy no-execute pattern)
   // - Tools in approval states (needsApproval pattern)
+  // unless it is already drawn in a hoisted region.
   if (
-    (!hasExecute &&
+    !ownOutputHoisted &&
+    ((!hasExecute &&
       (state === 'input-streaming' ||
         state === 'input-available' ||
         state === 'output-available')) ||
-    (isApprovalState && ToolComponent)
+      (isApprovalState && ToolComponent))
   ) {
     return (
       <div>
@@ -163,9 +171,10 @@ export const ToolPartRenderer = ({
   }
 
   // Otherwise, render <ToolResult>
-  if (hasExecute) {
+  if (hasExecute || ownOutputHoisted) {
     const agentOutput = output as {agentToolCalls?: unknown[]} | undefined;
     const isAgentTool =
+      ownOutputHoisted ||
       toolName.startsWith('agent-') ||
       (storeProgress?.length ?? 0) > 0 ||
       (agentOutput?.agentToolCalls?.length ?? 0) > 0;
