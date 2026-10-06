@@ -173,6 +173,10 @@ export const ToolPartRenderer = ({
   // Otherwise, render <ToolResult>
   if (hasExecute || ownOutputHoisted) {
     const agentOutput = output as {agentToolCalls?: unknown[]} | undefined;
+    // With its own output hoisted, the row only shows its sub-agent's steps,
+    // so it draws nothing when there are none.
+    const steps = storeProgress ?? agentOutput?.agentToolCalls;
+    if (ownOutputHoisted && !steps?.length) return null;
     const isAgentTool =
       ownOutputHoisted ||
       toolName.startsWith('agent-') ||

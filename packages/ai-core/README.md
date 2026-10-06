@@ -699,6 +699,12 @@ follows the same rules as any other listed tool, at any depth: its renderer's
 nested outputs, and its activity row keeps only the sub-agent's activity. The
 default `Timeline` draws that result ahead of the activity.
 
+A hoisted slot shows the result only. The turn draws the sub-agent's steps in
+its activity, so a `FlatAgentRenderer` that a hoisted renderer embeds draws
+nothing there, and a renderer that shows its own progress needs no change. A
+listed passthrough tool (`isPassthroughTool`) hoists its result the same way:
+passthrough only drops its activity row and lifts its steps into the caller's.
+
 For finer composition, iterate semantic items and render their pre-wired leaf
 components. Tool items expose state, agent, and hoist metadata:
 

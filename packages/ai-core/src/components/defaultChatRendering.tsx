@@ -45,7 +45,10 @@ import {
   OrchestratorToolLogLine,
 } from './FlatAgentRenderer';
 import {MessageContent} from './MessageContent';
-import {RenderNestedHoistedOutputsProvider} from './NestedHoistedOutputsContext';
+import {
+  InsideHoistedOutputProvider,
+  RenderNestedHoistedOutputsProvider,
+} from './NestedHoistedOutputsContext';
 import {ToolPartRenderer} from './ToolPartRenderer';
 import {
   getToolName,
@@ -491,12 +494,13 @@ export function createChatTurnPresentation({
   );
 
   const outputItems: ChatOutputItem[] = model.hoisted.map((item) => {
-    // A hoisted agent result must not draw its nested outputs again: they are
-    // hoisted alongside it.
+    // The slot shows the result only. An agent tree its renderer embeds is
+    // drawn by the turn already: its steps in the activity, its outputs
+    // hoisted alongside.
     const Content = bindContent(`output:${item.toolCallId}`, () => (
-      <RenderNestedHoistedOutputsProvider value={false}>
+      <InsideHoistedOutputProvider value>
         <HoistedOutput item={item} />
-      </RenderNestedHoistedOutputsProvider>
+      </InsideHoistedOutputProvider>
     ));
     return {
       id: item.toolCallId,

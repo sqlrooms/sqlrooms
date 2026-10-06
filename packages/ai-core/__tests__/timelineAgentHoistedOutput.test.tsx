@@ -5,7 +5,8 @@
  * that hoists its own result (its renderer opts in) must show that result
  * there too, in its hoisted slot ahead of the agent's activity row: the same
  * order as `turn.hoistedOutputs`. That the row then skips the tool's own
- * component is covered by ToolPartRenderer.test.tsx.
+ * component is covered by ToolPartRenderer.test.tsx, and the whole path with
+ * the real components by hoistedAgentOutputRendering.test.tsx.
  */
 import {jest} from '@jest/globals';
 import {TransformStream} from 'node:stream/web';
