@@ -23,9 +23,14 @@ import {computeTimeSpan} from './buildChatTurnModel';
 import {HighlightedChatSearchText} from './ChatSearch';
 import {
   canHoistAgentToolCall,
+  toHoistableToolCall,
   type HoistableToolCall,
 } from './collectHoistableRenderers';
-import {useRenderNestedHoistedOutputs} from './NestedHoistedOutputsContext';
+import {
+  InsideHoistedOutputProvider,
+  useIsInsideHoistedOutput,
+  useRenderNestedHoistedOutputs,
+} from './NestedHoistedOutputsContext';
 import {ToolCallErrorBoundary} from './tools/ToolResultErrorBoundary';
 
 // ---------------------------------------------------------------------------
@@ -98,7 +103,13 @@ type ToolGroupSegment = {
   tools: AgentToolCall[];
 };
 
-type FlatSegment = AgentSegment | ToolGroupSegment;
+/** The hoisted output of a passthrough call, whose own row is dropped. */
+type OutputSegment = {
+  kind: 'output';
+  toolCall: AgentToolCall;
+};
+
+type FlatSegment = AgentSegment | ToolGroupSegment | OutputSegment;
 
 function stripTrailingEllipsis(text: string): string {
   return text.replace(/(?:\s*(?:\.\.\.|…))+\s*$/u, '').trimEnd();
@@ -391,12 +402,15 @@ function getNestedCalls(
 //   agent calls => AgentSegment (recursed at render time)
 // Tools flagged as passthrough by the host app are collapsed: their children
 // are flattened into the caller's segment list so no summary line is emitted.
+// A passthrough call that hoists still shows its own output, ahead of its
+// children's, where the tree draws hoisted outputs (`isHoisted` is given).
 // ---------------------------------------------------------------------------
 
 function buildFlatSegments(
   calls: AgentToolCall[],
   agentProgress: Record<string, AgentToolCall[]>,
   isPassthroughTool?: (tc: AgentToolCall) => boolean,
+  isHoisted?: (tc: AgentToolCall) => boolean,
 ): FlatSegment[] {
   const segments: FlatSegment[] = [];
   let pendingTools: AgentToolCall[] = [];
@@ -410,11 +424,16 @@ function buildFlatSegments(
 
   for (const tc of calls) {
     if (isPassthroughTool?.(tc)) {
+      if (isHoisted?.(tc)) {
+        flushTools();
+        segments.push({kind: 'output', toolCall: tc});
+      }
       const nested = getNestedCalls(tc, agentProgress);
       const nestedSegments = buildFlatSegments(
         nested,
         agentProgress,
         isPassthroughTool,
+        isHoisted,
       );
       for (const seg of nestedSegments) {
         if (seg.kind === 'tool-group') {
@@ -471,9 +490,20 @@ const FlatSegmentList: React.FC<{
   const HoistedOutput =
     rendering?.components.HoistedOutput ?? HoistedToolCallRenderer;
   const renderNestedHoistedOutputs = useRenderNestedHoistedOutputs();
+  const canHoist = (tc: AgentToolCall) =>
+    canHoistAgentToolCall(tc, toolRenderers, hoistableSet);
+  // The slot shows the call's result only: this tree draws its steps and
+  // nested outputs.
+  const renderHoistedOutput = (tc: AgentToolCall) => (
+    <InsideHoistedOutputProvider key={`hoisted-${tc.toolCallId}`} value>
+      <HoistedOutput item={toHoistableToolCall(tc)} />
+    </InsideHoistedOutputProvider>
+  );
   return (
     <>
       {segments.map((seg, idx) => {
+        if (seg.kind === 'output') return renderHoistedOutput(seg.toolCall);
+
         if (seg.kind === 'tool-group') {
           const anyPending = seg.tools.some(
             (t) => t.state === 'pending' || t.state === 'approval-requested',
@@ -529,44 +559,15 @@ const FlatSegmentList: React.FC<{
                   <AgentToolActivityLogLine toolCall={tc} />
                 )}
                 {hasInlineRenderer && (
-                  <HoistedToolCallRenderer
-                    item={{
-                      toolCallId: tc.toolCallId,
-                      toolName: tc.toolName,
-                      output: tc.output,
-                      input: tc.input,
-                      errorText: tc.errorText,
-                      state: tc.state,
-                      approvalId: tc.approvalId,
-                    }}
-                  />
+                  <HoistedToolCallRenderer item={toHoistableToolCall(tc)} />
                 )}
               </React.Fragment>
             );
           });
 
-          const hoistedOutputs = seg.tools.map((tc) => {
-            const isHoisted = canHoistAgentToolCall(
-              tc,
-              toolRenderers,
-              hoistableSet,
-            );
-            if (!isHoisted) return null;
-            return (
-              <HoistedOutput
-                key={`hoisted-${tc.toolCallId}`}
-                item={{
-                  toolCallId: tc.toolCallId,
-                  toolName: tc.toolName,
-                  output: tc.output,
-                  input: tc.input,
-                  errorText: tc.errorText,
-                  state: tc.state,
-                  approvalId: tc.approvalId,
-                }}
-              />
-            );
-          });
+          const hoistedOutputs = seg.tools.map((tc) =>
+            canHoist(tc) ? renderHoistedOutput(tc) : null,
+          );
 
           if (embedInParentActivity) {
             // Embed mode: the host already wraps nested activity in its own
@@ -617,6 +618,9 @@ const FlatSegmentList: React.FC<{
         const {toolCall, nestedCalls} = seg;
         const isComplete =
           toolCall.state === 'success' || toolCall.state === 'error';
+        // A listed agent hoists its own result too, ahead of its activity
+        // (the same order as the turn's hoisted outputs).
+        const isHoisted = canHoist(toolCall);
         const presentedToolCall =
           toolCall.agentToolCalls === nestedCalls
             ? toolCall
@@ -626,15 +630,19 @@ const FlatSegmentList: React.FC<{
           nestedCalls,
           agentProgress,
           isPassthroughTool,
+          renderNestedHoistedOutputs ? canHoist : undefined,
         );
 
         return (
           <React.Fragment key={toolCall.toolCallId}>
+            {isHoisted && renderNestedHoistedOutputs
+              ? renderHoistedOutput(toolCall)
+              : null}
             {ToolActivity ? (
               <ToolActivity
                 toolCall={presentedToolCall}
                 isAgent
-                isHoisted={false}
+                isHoisted={isHoisted}
               />
             ) : (
               <AgentToolSummaryLine
@@ -800,6 +808,8 @@ export const FlatAgentRenderer: React.FC<{
   const hoistedRendererNames = useHoistedRenderers();
   const nestedActivityMode = useResolvedChatNestedActivityMode();
   const {isPassthroughTool} = useToolRenderBehavior();
+  const renderNestedHoistedOutputs = useRenderNestedHoistedOutputs();
+  const isInsideHoistedOutput = useIsInsideHoistedOutput();
   const embedInParentActivity = nestedActivityMode === 'embed';
 
   const displayCalls = agentProgress[toolCallId] ?? agentToolCalls;
@@ -810,8 +820,23 @@ export const FlatAgentRenderer: React.FC<{
   );
 
   const segments = useMemo(
-    () => buildFlatSegments(displayCalls, agentProgress, isPassthroughTool),
-    [displayCalls, agentProgress, isPassthroughTool],
+    () =>
+      buildFlatSegments(
+        displayCalls,
+        agentProgress,
+        isPassthroughTool,
+        renderNestedHoistedOutputs
+          ? (tc) => canHoistAgentToolCall(tc, toolRenderers, hoistableSet)
+          : undefined,
+      ),
+    [
+      displayCalls,
+      agentProgress,
+      isPassthroughTool,
+      renderNestedHoistedOutputs,
+      toolRenderers,
+      hoistableSet,
+    ],
   );
 
   const parentToolCall = useMemo(
@@ -832,6 +857,10 @@ export const FlatAgentRenderer: React.FC<{
     isPassthroughTool &&
     isPassthroughTool(parentToolCall)
   );
+
+  // Embedded in a hoisted renderer, the tree repeats what the turn already
+  // draws: its steps in the activity, its outputs in their own slots.
+  if (isInsideHoistedOutput) return null;
 
   return (
     <div className="mt-1 flex w-full min-w-0 flex-col gap-1.5 overflow-hidden text-[0.9em]">

@@ -56,14 +56,27 @@ export function canHoistAgentToolCall(
   );
 }
 
+/** The hoisted-region item for a normalized tool call. */
+export function toHoistableToolCall(tc: AgentToolCall): HoistableToolCall {
+  return {
+    toolCallId: tc.toolCallId,
+    toolName: tc.toolName,
+    output: tc.output,
+    input: tc.input,
+    errorText: tc.errorText,
+    state: tc.state,
+    approvalId: tc.approvalId,
+  };
+}
+
 /**
  * Recursively walk an AgentToolCall tree and collect every tool call that
  * has a registered renderer AND is in the explicit hoistable set.
  * Results are returned in depth-first order so they appear in the natural
  * execution sequence.
  *
- * Agent tool calls (name starts with `agent-`) are never themselves
- * hoisted — only their leaf tool calls with renderers are collected.
+ * A call that runs a sub-agent is collected too when it is listed, ahead of
+ * its own nested outputs; its nested calls are always walked.
  *
  * @param hoistableToolNames - Set of tool names whose renderers should be
  *   hoisted. If empty, nothing is hoisted (safe default). This is typically
@@ -80,27 +93,20 @@ export function collectHoistableRenderers(
 
   const visit = (calls: AgentToolCall[]) => {
     for (const tc of calls) {
+      if (
+        !seen.has(tc.toolCallId) &&
+        canHoistAgentToolCall(tc, toolRenderers, hoistableToolNames)
+      ) {
+        seen.add(tc.toolCallId);
+        result.push(toHoistableToolCall(tc));
+      }
+
       const isAgent =
         tc.toolName.startsWith('agent-') ||
         (agentProgress[tc.toolCallId]?.length ?? 0) > 0 ||
         (tc.agentToolCalls?.length ?? 0) > 0;
-
       if (isAgent) {
-        const nestedCalls =
-          agentProgress[tc.toolCallId] ?? tc.agentToolCalls ?? [];
-        visit(nestedCalls);
-      } else if (canHoistAgentToolCall(tc, toolRenderers, hoistableToolNames)) {
-        if (seen.has(tc.toolCallId)) continue;
-        seen.add(tc.toolCallId);
-        result.push({
-          toolCallId: tc.toolCallId,
-          toolName: tc.toolName,
-          output: tc.output,
-          input: tc.input,
-          errorText: tc.errorText,
-          state: tc.state,
-          approvalId: tc.approvalId,
-        });
+        visit(agentProgress[tc.toolCallId] ?? tc.agentToolCalls ?? []);
       }
     }
   };

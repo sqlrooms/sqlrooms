@@ -570,4 +570,190 @@ describe('buildChatTurnRenderPlan', () => {
     expect(plan.hoisted.map((item) => item.toolCallId)).toEqual(['memoized-1']);
     expect(states).toEqual(['success']);
   });
+
+  describe('agent tools with their own hoisted output', () => {
+    // A tool that runs a sub-agent (live progress or `agentToolCalls` in its
+    // output) can still have a rich result of its own, e.g. a card for the
+    // artifact the sub-agent built.
+    const chartCall: AgentToolCall = {
+      toolCallId: 'chart-1',
+      toolName: 'chart',
+      state: 'success',
+      output: {spec: {}},
+    };
+    const queryCall: AgentToolCall = {
+      toolCallId: 'query-1',
+      toolName: 'query',
+      state: 'success',
+      output: {rows: 1},
+    };
+    const cardRenderer = Object.assign(() => null, {
+      shouldHoist: ({output}: {output: unknown}) =>
+        (output as {success?: boolean} | undefined)?.success === true,
+    });
+    const renderers: ToolRendererRegistry = {
+      ...toolRenderers,
+      buildMap: cardRenderer,
+    };
+    const hoistableWithAgent = new Set([...hoistable, 'buildMap']);
+
+    function agentPart(output: unknown, state = 'output-available') {
+      return toolPart('buildMap', {toolCallId: 'build-1', state, output});
+    }
+
+    function plan(
+      parts: UIMessagePart[],
+      agentProgress: Record<string, AgentToolCall[]>,
+      opts: {
+        renderers?: ToolRendererRegistry;
+        hoistableToolNames?: ReadonlySet<string>;
+      } = {},
+    ) {
+      return buildChatTurnRenderPlan({
+        parts,
+        agentProgress,
+        toolRenderers: opts.renderers ?? renderers,
+        hoistableToolNames: opts.hoistableToolNames ?? hoistableWithAgent,
+      });
+    }
+
+    it('hoists a listed agent tool ahead of its nested outputs', () => {
+      // Production shape: nested calls live only in agentProgress.
+      const result = plan([agentPart({success: true})], {
+        'build-1': [chartCall],
+      });
+
+      expect(result.hoisted.map((h) => h.toolCallId)).toEqual([
+        'build-1',
+        'chart-1',
+      ]);
+      expect(result.activity[0]).toMatchObject({
+        kind: 'tool',
+        isAgent: true,
+        isHoisted: true,
+      });
+    });
+
+    it('recognizes the agent from nested calls persisted in its output', () => {
+      const result = plan(
+        [agentPart({success: true, agentToolCalls: [chartCall]})],
+        {},
+      );
+
+      expect(result.hoisted.map((h) => h.toolCallId)).toEqual([
+        'build-1',
+        'chart-1',
+      ]);
+    });
+
+    it('splits text around the agent result when it is the only hoist', () => {
+      const result = plan(
+        [
+          text('Building the map'),
+          agentPart({success: true}),
+          text('Map is ready'),
+        ],
+        {'build-1': [queryCall]},
+      );
+
+      expect(result.hoisted.map((h) => h.toolCallId)).toEqual(['build-1']);
+      expect(result.responseText.map((t) => t.text)).toEqual([
+        'Building the map',
+      ]);
+      expect(result.summaryText.map((t) => t.text)).toEqual(['Map is ready']);
+    });
+
+    it('keeps an agent tool unhoisted when its renderer.shouldHoist declines', () => {
+      const result = plan([agentPart({success: false})], {
+        'build-1': [chartCall],
+      });
+
+      expect(result.hoisted.map((h) => h.toolCallId)).toEqual(['chart-1']);
+      expect(result.activity[0]).toMatchObject({
+        isAgent: true,
+        isHoisted: false,
+      });
+    });
+
+    it('does not hoist an agent tool that is not listed', () => {
+      const result = plan(
+        [agentPart({success: true})],
+        {
+          'build-1': [chartCall],
+        },
+        {hoistableToolNames: hoistable},
+      );
+
+      expect(result.hoisted.map((h) => h.toolCallId)).toEqual(['chart-1']);
+    });
+
+    it('does not hoist an agent tool while it is still running', () => {
+      const result = plan([agentPart(undefined, 'input-available')], {
+        'build-1': [chartCall],
+      });
+
+      expect(result.hoisted.map((h) => h.toolCallId)).toEqual(['chart-1']);
+      expect(result.activity[0]).toMatchObject({
+        isAgent: true,
+        isHoisted: false,
+      });
+    });
+
+    it('hoists an agent approval request like any listed tool', () => {
+      // Its activity row then skips the tool's own component, so the
+      // approval UI is drawn once.
+      const approvalRenderer = Object.assign(() => null, {
+        shouldHoist: ({state}: {state: string}) =>
+          state === 'approval-requested',
+      });
+      const result = plan(
+        [
+          toolPart('agent-review', {
+            toolCallId: 'review-1',
+            state: 'approval-requested',
+          }),
+        ],
+        {},
+        {
+          renderers: {...renderers, 'agent-review': approvalRenderer},
+          hoistableToolNames: new Set([...hoistable, 'agent-review']),
+        },
+      );
+
+      expect(result.hoisted).toEqual([
+        expect.objectContaining({
+          toolCallId: 'review-1',
+          state: 'approval-requested',
+        }),
+      ]);
+      expect(result.activity[0]).toMatchObject({
+        isAgent: true,
+        isHoisted: true,
+      });
+    });
+
+    it('hoists a listed agent nested inside another agent', () => {
+      const nestedAgent: AgentToolCall = {
+        toolCallId: 'build-1',
+        toolName: 'buildMap',
+        state: 'success',
+        output: {success: true},
+        agentToolCalls: [chartCall],
+      };
+      const result = plan(
+        [
+          toolPart('agent-orchestrator', {
+            toolCallId: 'orchestrator-1',
+            output: {agentToolCalls: [nestedAgent]},
+          }),
+        ],
+        {},
+      );
+
+      expect(result.hoisted.map((h) => h.toolCallId)).toEqual([
+        'build-1',
+        'chart-1',
+      ]);
+    });
+  });
 });
