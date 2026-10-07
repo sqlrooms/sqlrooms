@@ -95,12 +95,19 @@ export async function saveAiSettingsToServer(
   }
 }
 
-const SAFE_PATH_RE = /^[A-Za-z0-9_\-./:\\]+$/;
+/**
+ * Characters that must not appear in a server path interpolated into a
+ * single-quoted DuckDB literal (`read_ipc('${filePath}')`).
+ *
+ * Spaces and ordinary filename punctuation are allowed. Quotes end the
+ * literal, semicolons and backticks can start another statement if quoting
+ * fails, and `*`, `?`, `[]`, and `{}` are DuckDB pathname globs.
+ */
+const DISALLOWED_PATH_RE = /['"`;\u0000-\u001f\u007f*?[\]{}]/;
 
 /**
- * Validate and sanitize a server-returned file path to prevent SQL injection
- * when the path is later interpolated into DuckDB queries
- * (e.g. `read_ipc('${filePath}')`).
+ * Validate a server-returned file path before it is interpolated into DuckDB
+ * queries (e.g. `read_ipc('${filePath}')`).
  */
 function validateServerPath(raw: unknown): string {
   if (typeof raw !== 'string' || raw.length === 0) {
@@ -109,7 +116,7 @@ function validateServerPath(raw: unknown): string {
 
   const normalized = raw.replace(/\\/g, '/');
 
-  if (!SAFE_PATH_RE.test(normalized)) {
+  if (DISALLOWED_PATH_RE.test(normalized)) {
     throw new Error(
       `Server returned an upload path with disallowed characters: ${normalized}`,
     );
