@@ -578,8 +578,13 @@ function DeckMapDashboardRenderer({
     deckMapRef,
   });
   const sizedSpec = useMemo(
-    () => sizeDeckMapExtrusionToExtent(mapConfig?.spec ?? {}, fittedBounds),
-    [fittedBounds, mapConfig?.spec],
+    () =>
+      sizeDeckMapExtrusionToExtent(
+        mapConfig?.spec ?? {},
+        fittedBounds,
+        fitToData?.dataset,
+      ),
+    [fitToData?.dataset, fittedBounds, mapConfig?.spec],
   );
 
   const handleBrushEvent = useCallback(

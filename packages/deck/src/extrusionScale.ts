@@ -1,4 +1,5 @@
 import {
+  getDeckMapLayerDatasetId,
   getDeckMapLayerExtruded,
   type DeckMapLayerRecord,
 } from './mapLayerConfigUtils';
@@ -106,15 +107,20 @@ export function relaxStackedElevationScale(
   return next;
 }
 
-/** Diameter in meters of the circle enclosing a longitude/latitude box. */
+/**
+ * Diameter in meters of the circle enclosing a longitude/latitude box.
+ *
+ * Bounds come from MIN/MAX, which cannot express an antimeridian crossing, so
+ * such data reports the full width. The viewport fits that same box, keeping
+ * the height proportional to what is on screen.
+ */
 function groundDiameterMeters(bounds: DeckMapGroundBounds): number {
   const [[west, south], [east, north]] = bounds;
-  const lonSpan = Math.abs(east - west);
-  // Data straddling the antimeridian reports a span of nearly 360 degrees.
-  const lonDegrees = lonSpan > 180 ? 360 - lonSpan : lonSpan;
   const midLat = (south + north) / 2;
   const width =
-    lonDegrees * METERS_PER_DEGREE_LAT * Math.cos((midLat * Math.PI) / 180);
+    Math.abs(east - west) *
+    METERS_PER_DEGREE_LAT *
+    Math.cos((midLat * Math.PI) / 180);
   const height = Math.abs(north - south) * METERS_PER_DEGREE_LAT;
   return Math.hypot(width, height);
 }
@@ -132,11 +138,14 @@ function groundDiameterMeters(bounds: DeckMapGroundBounds): number {
  *
  * @param spec - Deck JSON spec, or a serialized spec which is returned as is.
  * @param bounds - Fitted data bounds, or null before a fit has run.
+ * @param fittedDataset - Dataset the bounds describe. Layers bound to another
+ * dataset keep their own scale, since the bounds do not describe their extent.
  * @returns The spec, or the same reference when no layer changes.
  */
 export function sizeDeckMapExtrusionToExtent(
   spec: string | Record<string, unknown>,
   bounds: DeckMapGroundBounds | null | undefined,
+  fittedDataset?: string | null,
 ): string | Record<string, unknown> {
   if (!bounds || !isRecord(spec) || !Array.isArray(spec.layers)) return spec;
   const diameter = groundDiameterMeters(bounds);
@@ -146,6 +155,10 @@ export function sizeDeckMapExtrusionToExtent(
   let changed = false;
   const layers = spec.layers.map((layer) => {
     if (!isRecord(layer) || !getDeckMapLayerExtruded(layer)) return layer;
+    const layerDataset = getDeckMapLayerDatasetId(layer);
+    if (fittedDataset && layerDataset && layerDataset !== fittedDataset) {
+      return layer;
+    }
     const rangeMax = scaledElevationRangeMax(layer.getElevation);
     if (rangeMax === undefined) return layer;
     const elevationScale =

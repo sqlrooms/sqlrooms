@@ -204,13 +204,31 @@ describe('sizeDeckMapExtrusionToExtent', () => {
     expect(layer.elevationScale).toBeCloseTo(25, 2);
   });
 
-  test('reads a dataset straddling the antimeridian as a local extent', () => {
+  test('reads a globe-spanning dataset as the wide extent it is', () => {
     const layer = sizedLayer({layers: [h3Layer({elevationScale: undefined})]}, [
-      [179.95, 0],
-      [-179.95, 0],
+      [-170, 0],
+      [170, 0],
     ]);
-    // 0.1 degrees of relief, not the 359.9 degrees the raw span reports.
-    expect(layer.elevationScale).toBeCloseTo(27.83, 1);
+    // 340 degrees of ground, not the 20 a wrap-around reading would give.
+    expect(layer.elevationScale).toBeCloseTo((340 * 111320 * 0.5) / 200, 0);
+  });
+
+  test('leaves layers bound to another dataset at their own scale', () => {
+    const city = h3Layer({
+      elevationScale: undefined,
+      _sqlroomsBinding: {dataset: 'city'},
+    });
+    const country = h3Layer({
+      elevationScale: undefined,
+      _sqlroomsBinding: {dataset: 'country'},
+    });
+    const next = sizeDeckMapExtrusionToExtent(
+      {layers: [country, city]},
+      equatorBounds(10_000),
+      'country',
+    ) as {layers: Record<string, unknown>[]};
+    expect(next.layers[0]!.elevationScale).toBeCloseTo(25, 2);
+    expect(next.layers[1]).toBe(city);
   });
 
   test('leaves real meter elevations and flat layers alone', () => {

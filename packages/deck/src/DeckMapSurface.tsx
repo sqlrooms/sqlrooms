@@ -226,8 +226,13 @@ export function DeckMapSurface({
     onError: handleFitError,
   });
   const sizedSpec = useMemo(
-    () => sizeDeckMapExtrusionToExtent(map.config.spec, fittedBounds),
-    [fittedBounds, map.config.spec],
+    () =>
+      sizeDeckMapExtrusionToExtent(
+        map.config.spec,
+        fittedBounds,
+        fitToData?.dataset,
+      ),
+    [fitToData?.dataset, fittedBounds, map.config.spec],
   );
 
   if (configIssues.length > 0) {
