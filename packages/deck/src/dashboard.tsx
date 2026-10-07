@@ -48,6 +48,7 @@ import {
   createDeckMapBoundsQuery,
 } from './useDeckMapFitToBounds';
 import {useDeckMapDatasets} from './useDeckMapDatasets';
+import {sizeDeckMapExtrusionToExtent} from './extrusionScale';
 import {DeckMapDashboardSettings} from './DashboardMapSettings';
 import {
   createDeckMapDashboardPanelConfigForTable,
@@ -569,13 +570,22 @@ function DeckMapDashboardRenderer({
     handleRenderingError,
   } = useDeckMapDatasets({dashboardId, panel});
 
-  const {fitToData} = useDeckMapFitToBounds({
+  const {fitToData, fittedBounds} = useDeckMapFitToBounds({
     panelId: panel.id,
     dashboard,
     panel,
     container,
     deckMapRef,
   });
+  const sizedSpec = useMemo(
+    () =>
+      sizeDeckMapExtrusionToExtent(
+        mapConfig?.spec ?? {},
+        fittedBounds,
+        fitToData?.dataset,
+      ),
+    [fitToData?.dataset, fittedBounds, mapConfig?.spec],
+  );
 
   const handleBrushEvent = useCallback(
     (info: DeckMapInteractionEvent) => {
@@ -702,7 +712,7 @@ function DeckMapDashboardRenderer({
           <DeckJsonMap
             ref={deckMapRef}
             className="h-full w-full px-0.5 pb-0.5"
-            spec={mapConfig.spec}
+            spec={sizedSpec}
             datasets={
               mapConfig
                 ? createDeckMapDashboardDatasets(mapConfig, datasetStates)

@@ -902,6 +902,82 @@ describe('normalizeAiDeckMapConfig — scaleLinear', () => {
     });
   });
 
+  test('drops a stacked elevationScale on a scaled elevation', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {dataset: 'ds', hexagonColumn: 'h3'},
+            extruded: true,
+            elevationScale: 100,
+            getElevation: {
+              '@@function': 'scale',
+              field: 'count',
+              type: 'linear',
+              domain: 'auto',
+              range: [0, 200],
+            },
+          },
+        ],
+        {ds: {source: {tableName: 'sites'}}},
+      ),
+    );
+    expect(getLayer(result).elevationScale).toBeUndefined();
+    expect(getLayer(result).getElevation).toMatchObject({
+      '@@function': 'scale',
+      range: [0, 200],
+    });
+  });
+
+  test('keeps a slider-sized elevationScale on a scaled elevation', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {dataset: 'ds', hexagonColumn: 'h3'},
+            extruded: true,
+            elevationScale: 4,
+            getElevation: {
+              '@@function': 'scale',
+              field: 'count',
+              type: 'linear',
+              domain: 'auto',
+              range: [0, 200],
+            },
+          },
+        ],
+        {ds: {source: {tableName: 'sites'}}},
+      ),
+    );
+    expect(getLayer(result).elevationScale).toBe(4);
+  });
+
+  test('turns @@=column plus elevationScale 100 into a visual scale', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {dataset: 'ds', hexagonColumn: 'h3'},
+            extruded: true,
+            elevationScale: 100,
+            getElevation: '@@=count',
+          },
+        ],
+        {ds: {source: {tableName: 'sites'}}},
+      ),
+    );
+    const layer = getLayer(result);
+    expect(layer.elevationScale).toBeUndefined();
+    expect(layer.getElevation).toMatchObject({
+      '@@function': 'scale',
+      field: 'count',
+      range: [0, 200],
+    });
+  });
+
   test('does not rewrite getRadius scaleLinear (unsupported size scale)', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(

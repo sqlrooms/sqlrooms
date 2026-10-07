@@ -7,30 +7,7 @@ import {
 } from '@sqlrooms/color-scales';
 import type * as arrow from 'apache-arrow';
 import type {DeckColorScaleConfig} from './colorScaleFunction';
-
-function resolveFieldName(
-  schemaOwner: arrow.Table | arrow.RecordBatch,
-  requestedField: string,
-) {
-  const exactMatch = schemaOwner.schema.fields.find(
-    (field) => field.name === requestedField,
-  )?.name;
-  if (exactMatch) {
-    return exactMatch;
-  }
-
-  const caseInsensitiveMatches = schemaOwner.schema.fields
-    .map((field) => field.name)
-    .filter(
-      (fieldName) => fieldName.toLowerCase() === requestedField.toLowerCase(),
-    );
-
-  if (caseInsensitiveMatches.length === 1) {
-    return caseInsensitiveMatches[0]!;
-  }
-
-  return undefined;
-}
+import {resolveScaleFieldName} from './scaleFunction';
 
 function getRowValue(row: unknown, fieldName: string) {
   if (!row || typeof row !== 'object') {
@@ -79,7 +56,7 @@ function getGeoArrowOrRowValue(options: {
     };
     const batch = objectInfo.data?.data;
     const batchFieldName = batch
-      ? resolveFieldName(batch, fieldName)
+      ? resolveScaleFieldName(batch, fieldName)
       : undefined;
 
     if (batch && batchFieldName) {
@@ -107,7 +84,7 @@ function getColumnValues(vector: arrow.Vector) {
 }
 
 function getColumn(table: arrow.Table, field: string) {
-  const resolvedFieldName = resolveFieldName(table, field);
+  const resolvedFieldName = resolveScaleFieldName(table, field);
   if (!resolvedFieldName) {
     throw new Error(`Unknown colorScale field "${field}".`);
   }
