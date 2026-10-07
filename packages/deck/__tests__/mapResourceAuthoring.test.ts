@@ -1,5 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
 import type {DeckMapConfig} from '../src/mapConfig';
+import {getDeckMapSharedAiContractRules} from '../src/mapAiSharedInstructions';
 import {
   assertDeckMapResourceConfig,
   getDeckMapResourceAiInstructions,
@@ -848,14 +849,41 @@ describe('Deck map resource authoring contract', () => {
     expect(instructions).toContain('will not invent centroids');
     expect(instructions).toContain('SELECT *, ST_AsWKB(col) AS col');
     expect(instructions).toContain('pointBinding');
+    expect(instructions).toContain('not Path or Trips');
     expect(instructions).toContain('Do not author transformSql');
     expect(instructions).toContain('COLOR SCALE FIELD VARIANCE');
-    expect(instructions).toContain('omit maxZoom');
-    expect(instructions).toContain('min = max');
+    expect(instructions).toContain('Omit fitToData.maxZoom');
+    expect(instructions).toContain('min < max');
     expect(instructions).toContain('3D CAMERA');
     expect(instructions).toContain('pitch 45–60');
     expect(instructions).toContain('omitted counts as extruded');
     expect(instructions).not.toContain('Mosaic');
+  });
+
+  test('teaches the document surface every rule the validator rejects', () => {
+    const instructions = getDeckMapResourceAiInstructions();
+
+    // Each phrase below corresponds to an issue getDeckMapResourceConfigIssues
+    // can raise, so both surfaces must state the rule up front.
+    expect(instructions).toContain('not registered Deck JSON classes');
+    expect(instructions).toContain('"ScatterplotLayer"');
+    expect(instructions).toContain('is "@@function" (not "@@type")');
+    expect(instructions).toContain('"field" (not "column")');
+    expect(instructions).toContain('non-empty numeric "thresholds" array');
+    expect(instructions).toContain('CRITICAL geometryColumn rule');
+    expect(instructions).toContain('ST_MakeLine(LIST(');
+    expect(instructions).toContain('must GROUP BY the trip/path/route id');
+    expect(instructions).toContain('_sqlroomsBinding.timestampColumn');
+    expect(instructions).toContain('sourceGeometryColumn');
+    expect(instructions).toContain('numeric getRadius with radiusUnits');
+    expect(instructions).toContain('single SELECT statement');
+    expect(instructions).toContain('fitToData must be a FLAT object');
+  });
+
+  test('keeps document instructions aligned with the shared contract', () => {
+    expect(getDeckMapResourceAiInstructions()).toContain(
+      getDeckMapSharedAiContractRules(),
+    );
   });
 
   test('rejects TripsLayer LIST aggregation without GROUP BY', () => {
