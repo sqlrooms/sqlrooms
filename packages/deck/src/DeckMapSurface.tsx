@@ -15,8 +15,11 @@ import {
   isDeckMapTableDatasetSource,
 } from './mapConfig';
 import {getDeckMapDataPolicy, type DeckMapDataPolicy} from './mapDataPolicy';
+import {
+  sizeDeckMapExtrusionToExtent,
+  type DeckMapGroundBounds,
+} from './extrusionScale';
 import {getDeckMapResourceConfigIssues} from './mapResourceAuthoring';
-import {relaxDeckMapElevation} from './extrusionScale';
 import {
   getDeckMapDatasetSource,
   resolveDeckMapFitToData,
@@ -133,8 +136,6 @@ export type DeckMapSurfaceProps = {
 export function DeckMapSurface({
   mapId,
   map,
-  readOnly,
-  onUpdateMap,
   onReportIssue,
   onClearIssue,
   fitRequestVersion = 0,
@@ -212,12 +213,18 @@ export function DeckMapSurface({
       }),
     [onReportIssue],
   );
-  const handleFitSuccess = useCallback(() => {
-    onClearIssue('fit-error');
-    if (readOnly) return;
-    const next = relaxDeckMapElevation(map.config);
-    if (next !== map.config) onUpdateMap({config: next});
-  }, [map.config, onClearIssue, onUpdateMap, readOnly]);
+  const [fitBounds, setFitBounds] = useState<DeckMapGroundBounds | null>(null);
+  const handleFitSuccess = useCallback(
+    (bounds?: DeckMapGroundBounds) => {
+      onClearIssue('fit-error');
+      setFitBounds(bounds ?? null);
+    },
+    [onClearIssue],
+  );
+  const sizedSpec = useMemo(
+    () => sizeDeckMapExtrusionToExtent(map.config.spec, fitBounds),
+    [fitBounds, map.config.spec],
+  );
   useDeckMapFitController({
     scopeId: mapId,
     fitToData,
@@ -248,7 +255,7 @@ export function DeckMapSurface({
     <div ref={setContainer} className="h-full min-h-[320px]">
       <DeckJsonMap
         ref={deckMapRef}
-        spec={map.config.spec}
+        spec={sizedSpec}
         datasets={datasets}
         mapStyle={map.config.mapStyle}
         mapProps={map.config.mapProps}

@@ -1,12 +1,25 @@
-import type {DeckMapConfig} from './mapConfig';
 import {
   getDeckMapLayerExtruded,
-  usesColumnRadiusSetting,
   type DeckMapLayerRecord,
 } from './mapLayerConfigUtils';
 
 /** Meters the settings panel uses as the top of a visual elevation scale. */
 const VISUAL_ELEVATION_RANGE_MAX = 200;
+
+/** Meters in one degree of latitude. */
+const METERS_PER_DEGREE_LAT = 111320;
+
+/**
+ * Height of the tallest column as a fraction of the diameter of the circle
+ * enclosing the data. A dataset spanning 10km gets 5km of relief.
+ */
+const EXTRUSION_HEIGHT_EXTENT_FRACTION = 0.5;
+
+/** Longitude/latitude bounding box as `[[west, south], [east, north]]`. */
+export type DeckMapGroundBounds = readonly [
+  readonly [number, number],
+  readonly [number, number],
+];
 
 /**
  * `elevationScale` at or above this is an extra multiplier (the assistant's
@@ -16,31 +29,6 @@ const STACKED_ELEVATION_SCALE = 10;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
-
-function isManualElevationScale(layer: DeckMapLayerRecord): boolean {
-  const binding = layer._sqlroomsBinding;
-  return Boolean(isRecord(binding) && binding.elevationScaleManual === true);
-}
-
-/**
- * Records a slider edit so a later fit does not remove `elevationScale`.
- */
-export function setManualElevationScale(
-  layer: DeckMapLayerRecord,
-  elevationScale: number,
-): DeckMapLayerRecord {
-  const binding = isRecord(layer._sqlroomsBinding)
-    ? layer._sqlroomsBinding
-    : {};
-  return {
-    ...layer,
-    elevationScale,
-    _sqlroomsBinding: {
-      ...binding,
-      elevationScaleManual: true,
-    },
-  };
 }
 
 function readElevationScale(layer: DeckMapLayerRecord): number | undefined {
@@ -95,16 +83,7 @@ function visualElevation(field: string): Record<string, unknown> {
 export function relaxStackedElevationScale(
   layer: DeckMapLayerRecord,
 ): DeckMapLayerRecord {
-  // Column layers keep their elevationScale. Stripping it leaves a short
-  // stub that reads as a flat disk. H3 and extruded polygons are the case
-  // where an extra multiplier covers the map.
-  if (
-    isManualElevationScale(layer) ||
-    !getDeckMapLayerExtruded(layer) ||
-    usesColumnRadiusSetting(layer['@@type'])
-  ) {
-    return layer;
-  }
+  if (!getDeckMapLayerExtruded(layer)) return layer;
   const scale = readElevationScale(layer);
   if (scale === undefined || scale < STACKED_ELEVATION_SCALE) return layer;
 
@@ -136,20 +115,53 @@ export function relaxStackedElevationScale(
   return next;
 }
 
+/** Diameter in meters of the circle enclosing a longitude/latitude box. */
+function groundDiameterMeters(bounds: DeckMapGroundBounds): number {
+  const [[west, south], [east, north]] = bounds;
+  const lonSpan = Math.abs(east - west);
+  // Data straddling the antimeridian reports a span of nearly 360 degrees.
+  const lonDegrees = lonSpan > 180 ? 360 - lonSpan : lonSpan;
+  const midLat = (south + north) / 2;
+  const width =
+    lonDegrees * METERS_PER_DEGREE_LAT * Math.cos((midLat * Math.PI) / 180);
+  const height = Math.abs(north - south) * METERS_PER_DEGREE_LAT;
+  return Math.hypot(width, height);
+}
+
 /**
- * Removes stacked elevation multipliers from extruded layers.
- * Returns the same config when nothing changes.
+ * Scales extruded layers so the top of a visual elevation scale reaches
+ * {@link EXTRUSION_HEIGHT_EXTENT_FRACTION} of the data's ground extent,
+ * keeping height differences readable at any zoom.
+ *
+ * This derives the rendered spec and never rewrites the stored config. A
+ * layer's own `elevationScale` stays in effect as a multiplier on top, so the
+ * extrusion slider still overrides the normalized height. Layers whose
+ * elevation is already in real meters (`@@=column` or a constant) are left
+ * alone.
+ *
+ * @param spec - Deck JSON spec, or a serialized spec which is returned as is.
+ * @param bounds - Fitted data bounds, or null before a fit has run.
+ * @returns The spec, or the same reference when no layer changes.
  */
-export function relaxDeckMapElevation(config: DeckMapConfig): DeckMapConfig {
-  if (!isRecord(config.spec) || !Array.isArray(config.spec.layers)) {
-    return config;
-  }
+export function sizeDeckMapExtrusionToExtent(
+  spec: string | Record<string, unknown>,
+  bounds: DeckMapGroundBounds | null | undefined,
+): string | Record<string, unknown> {
+  if (!bounds || !isRecord(spec) || !Array.isArray(spec.layers)) return spec;
+  const diameter = groundDiameterMeters(bounds);
+  if (!Number.isFinite(diameter) || diameter <= 0) return spec;
+  const targetHeight = diameter * EXTRUSION_HEIGHT_EXTENT_FRACTION;
+
   let changed = false;
-  const layers = config.spec.layers.map((layer) => {
-    if (!isRecord(layer)) return layer;
-    const next = relaxStackedElevationScale(layer);
-    if (next !== layer) changed = true;
-    return next;
+  const layers = spec.layers.map((layer) => {
+    if (!isRecord(layer) || !getDeckMapLayerExtruded(layer)) return layer;
+    const rangeMax = scaledElevationRangeMax(layer.getElevation);
+    if (rangeMax === undefined) return layer;
+    const elevationScale =
+      (targetHeight / rangeMax) * (readElevationScale(layer) ?? 1);
+    if (elevationScale === layer.elevationScale) return layer;
+    changed = true;
+    return {...layer, elevationScale};
   });
-  return changed ? {...config, spec: {...config.spec, layers}} : config;
+  return changed ? {...spec, layers} : spec;
 }

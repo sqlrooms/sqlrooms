@@ -902,7 +902,7 @@ describe('normalizeAiDeckMapConfig — scaleLinear', () => {
     });
   });
 
-  test('drops elevationScale on a scaled elevation so fit can size it', () => {
+  test('drops a stacked elevationScale on a scaled elevation', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
@@ -930,17 +930,13 @@ describe('normalizeAiDeckMapConfig — scaleLinear', () => {
     });
   });
 
-  test('keeps a manual elevationScale on a scaled elevation', () => {
+  test('keeps a slider-sized elevationScale on a scaled elevation', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
           {
             '@@type': 'GeoArrowH3HexagonLayer',
-            _sqlroomsBinding: {
-              dataset: 'ds',
-              hexagonColumn: 'h3',
-              elevationScaleManual: true,
-            },
+            _sqlroomsBinding: {dataset: 'ds', hexagonColumn: 'h3'},
             extruded: true,
             elevationScale: 4,
             getElevation: {

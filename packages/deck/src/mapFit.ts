@@ -10,6 +10,7 @@ import {
   DeckTableDatasetInvalidTableNameError,
   createDeckTableDatasetSql,
 } from './datasets/tableDatasetSql';
+import type {DeckMapGroundBounds} from './extrusionScale';
 import {
   isDeckMapSqlDatasetSource,
   type DeckMapConfig,
@@ -457,7 +458,8 @@ export function useDeckMapFitController(options: {
   deckMapRef: RefObject<DeckJsonMapHandle | null>;
   requestVersion: number;
   autoFit?: boolean;
-  onSuccess?: () => void;
+  /** Receives the fitted data bounds, omitted when the fit needed no query. */
+  onSuccess?: (bounds?: DeckMapGroundBounds) => void;
   onError?: (error: Error) => void;
 }) {
   const {
@@ -594,7 +596,7 @@ export function useDeckMapFitController(options: {
           }),
         );
         markHandled();
-        onSuccess?.();
+        onSuccess?.(bounds);
       } catch (error) {
         if (cancelled) return;
         const fitError =

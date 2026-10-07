@@ -7,6 +7,7 @@ import {
   asDeckJsonMapConfig,
   resolveDeckMapDashboardDatasetSource,
 } from './dashboardConfig';
+import type {DeckMapGroundBounds} from './extrusionScale';
 import {resolveDeckMapFitToData, useDeckMapFitController} from './mapFit';
 import type {DeckJsonMapHandle} from './types';
 
@@ -42,7 +43,7 @@ export function useDeckMapFitToBounds(options: {
   panel: MosaicDashboardPanelConfigType;
   container: HTMLElement | null;
   deckMapRef: RefObject<DeckJsonMapHandle | null>;
-  onFitSuccess?: () => void;
+  onFitSuccess?: (bounds?: DeckMapGroundBounds) => void;
 }) {
   const {panelId, dashboard, panel, container, deckMapRef, onFitSuccess} =
     options;

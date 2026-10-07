@@ -1,8 +1,8 @@
 import {describe, expect, test} from '@jest/globals';
-import type {DeckMapConfig} from '../src/mapConfig';
 import {
-  relaxDeckMapElevation,
-  setManualElevationScale,
+  relaxStackedElevationScale,
+  sizeDeckMapExtrusionToExtent,
+  type DeckMapGroundBounds,
 } from '../src/extrusionScale';
 
 function scaleElevation(rangeMax = 200) {
@@ -28,181 +28,215 @@ function h3Layer(
   };
 }
 
-function configWith(
-  layers: unknown[],
-  configMode?: DeckMapConfig['configMode'],
-): DeckMapConfig {
-  return {
-    spec: {layers},
-    datasets: {},
-    ...(configMode ? {configMode} : {}),
-  };
-}
-
-function layerAt(config: DeckMapConfig, index = 0): Record<string, unknown> {
-  return (config.spec as {layers: Record<string, unknown>[]}).layers[index]!;
-}
-
-describe('relaxDeckMapElevation', () => {
+describe('relaxStackedElevationScale', () => {
   test('drops a 100x multiplier on a scaled H3 elevation', () => {
-    const next = relaxDeckMapElevation(configWith([h3Layer()]));
-    expect(layerAt(next).elevationScale).toBeUndefined();
-    expect(layerAt(next).getElevation).toMatchObject({
+    const next = relaxStackedElevationScale(h3Layer());
+    expect(next.elevationScale).toBeUndefined();
+    expect(next.getElevation).toMatchObject({
       '@@function': 'scale',
       range: [0, 200],
     });
   });
 
   test('drops the multiplier when H3 omits the extruded flag', () => {
-    const next = relaxDeckMapElevation(
-      configWith([h3Layer({extruded: undefined})]),
-    );
-    expect(layerAt(next).elevationScale).toBeUndefined();
+    const next = relaxStackedElevationScale(h3Layer({extruded: undefined}));
+    expect(next.elevationScale).toBeUndefined();
   });
 
   test('drops the multiplier on a scaleLinear elevation accessor', () => {
-    const next = relaxDeckMapElevation(
-      configWith([
-        h3Layer({
-          getElevation: {...scaleElevation(), '@@function': 'scaleLinear'},
-        }),
-      ]),
+    const next = relaxStackedElevationScale(
+      h3Layer({
+        getElevation: {...scaleElevation(), '@@function': 'scaleLinear'},
+      }),
     );
-    expect(layerAt(next).elevationScale).toBeUndefined();
+    expect(next.elevationScale).toBeUndefined();
   });
 
-  test('leaves a column layer elevation scale alone', () => {
-    const input = configWith([
-      {
-        '@@type': 'GeoArrowColumnLayer',
-        radius: 50,
-        elevationScale: 100,
-        getElevation: '@@=count',
-      },
-    ]);
-    expect(relaxDeckMapElevation(input)).toBe(input);
-    expect(layerAt(input).elevationScale).toBe(100);
+  test('drops the multiplier on a column layer too', () => {
+    const next = relaxStackedElevationScale({
+      '@@type': 'GeoArrowColumnLayer',
+      radius: 50,
+      elevationScale: 100,
+      getElevation: '@@=count',
+    });
+    expect(next.elevationScale).toBeUndefined();
+    expect(next.getElevation).toMatchObject({
+      '@@function': 'scale',
+      field: 'count',
+      range: [0, 200],
+    });
   });
 
-  test('leaves a flat polygon and a raw meter column alone', () => {
+  test('leaves a flat polygon alone', () => {
     const polygon = {
       '@@type': 'GeoArrowPolygonLayer',
       getElevation: scaleElevation(),
       elevationScale: 100,
     };
-    const meters = {
-      '@@type': 'GeoArrowH3HexagonLayer',
-      extruded: true,
-      getElevation: '@@=height_m',
-      elevationScale: 1,
-    };
-    const input = configWith([polygon, meters]);
-    expect(relaxDeckMapElevation(input)).toBe(input);
+    expect(relaxStackedElevationScale(polygon)).toBe(polygon);
   });
 
   test('does not change an H3 layer with extrusion turned off', () => {
-    const input = configWith([h3Layer({extruded: false})]);
-    expect(relaxDeckMapElevation(input)).toBe(input);
+    const layer = h3Layer({extruded: false});
+    expect(relaxStackedElevationScale(layer)).toBe(layer);
+  });
+
+  test('leaves a slider-sized multiplier alone', () => {
+    const layer = h3Layer({elevationScale: 4});
+    expect(relaxStackedElevationScale(layer)).toBe(layer);
   });
 
   test('leaves a non-positive elevation range when there is no stacked multiplier', () => {
-    const input = configWith([
-      h3Layer({getElevation: scaleElevation(0), elevationScale: 1}),
-    ]);
-    expect(relaxDeckMapElevation(input)).toBe(input);
-  });
-
-  test('keeps a manual slider value', () => {
-    const layer = setManualElevationScale(h3Layer(), 4);
-    const input = configWith([layer]);
-    const next = relaxDeckMapElevation(input);
-    expect(next).toBe(input);
-    expect(layerAt(next).elevationScale).toBe(4);
+    const layer = h3Layer({
+      getElevation: scaleElevation(0),
+      elevationScale: 1,
+    });
+    expect(relaxStackedElevationScale(layer)).toBe(layer);
   });
 
   test('is idempotent once the multiplier is gone', () => {
-    const once = relaxDeckMapElevation(configWith([h3Layer()]));
-    expect(relaxDeckMapElevation(once)).toBe(once);
-  });
-
-  test('leaves unrelated layers referentially equal', () => {
-    const points = {
-      '@@type': 'GeoArrowScatterplotLayer',
-      getRadius: 4,
-    };
-    const next = relaxDeckMapElevation(configWith([h3Layer(), points]));
-    expect(layerAt(next, 1)).toBe(points);
+    const once = relaxStackedElevationScale(h3Layer());
+    expect(relaxStackedElevationScale(once)).toBe(once);
   });
 
   test('keeps an explicit numeric elevation when dropping a stacked multiplier', () => {
-    const zero = relaxDeckMapElevation(
-      configWith([h3Layer({getElevation: 0, elevationScale: 100})]),
+    const zero = relaxStackedElevationScale(
+      h3Layer({getElevation: 0, elevationScale: 100}),
     );
-    expect(layerAt(zero).elevationScale).toBeUndefined();
-    expect(layerAt(zero).getElevation).toBe(0);
+    expect(zero.elevationScale).toBeUndefined();
+    expect(zero.getElevation).toBe(0);
 
-    const meters = relaxDeckMapElevation(
-      configWith([h3Layer({getElevation: 40, elevationScale: 100})]),
+    const meters = relaxStackedElevationScale(
+      h3Layer({getElevation: 40, elevationScale: 100}),
     );
-    expect(layerAt(meters).elevationScale).toBeUndefined();
-    expect(layerAt(meters).getElevation).toBe(40);
+    expect(meters.elevationScale).toBeUndefined();
+    expect(meters.getElevation).toBe(40);
   });
 
-  test('drops 100x on a missing elevation and on a custom config', () => {
-    const bare = relaxDeckMapElevation(
-      configWith([h3Layer({getElevation: undefined, elevationScale: 100})]),
+  test('drops 100x on a missing elevation and on a raw column accessor', () => {
+    const bare = relaxStackedElevationScale(
+      h3Layer({getElevation: undefined, elevationScale: 100}),
     );
-    expect(layerAt(bare).elevationScale).toBeUndefined();
-    expect(layerAt(bare).getElevation).toBe(200);
+    expect(bare.elevationScale).toBeUndefined();
+    expect(bare.getElevation).toBe(200);
 
-    const raw = relaxDeckMapElevation(
-      configWith([h3Layer({getElevation: '@@=count', elevationScale: 100})]),
+    const raw = relaxStackedElevationScale(
+      h3Layer({getElevation: '@@=count', elevationScale: 100}),
     );
-    expect(layerAt(raw).getElevation).toMatchObject({
+    expect(raw.getElevation).toMatchObject({
       '@@function': 'scale',
       field: 'count',
       range: [0, 200],
     });
-
-    const custom = relaxDeckMapElevation(configWith([h3Layer()], 'custom'));
-    expect(layerAt(custom).elevationScale).toBeUndefined();
   });
 
-  test('leaves a meter column and a string spec alone', () => {
-    const meters = configWith([
-      h3Layer({
-        getElevation: '@@=height_m',
-        elevationScale: 1,
-      }),
-    ]);
-    expect(relaxDeckMapElevation(meters)).toBe(meters);
-
-    const stringSpec: DeckMapConfig = {
-      spec: '{"layers":[]}',
-      datasets: {},
-    };
-    expect(relaxDeckMapElevation(stringSpec)).toBe(stringSpec);
+  test('leaves a raw meter column alone when there is no multiplier', () => {
+    const layer = h3Layer({getElevation: '@@=height_m', elevationScale: 1});
+    expect(relaxStackedElevationScale(layer)).toBe(layer);
   });
 
   test('rewrites a zero range when it is stacked with a 100x multiplier', () => {
-    const next = relaxDeckMapElevation(
-      configWith([
-        h3Layer({getElevation: scaleElevation(0), elevationScale: 100}),
-      ]),
+    const next = relaxStackedElevationScale(
+      h3Layer({getElevation: scaleElevation(0), elevationScale: 100}),
     );
-    expect(layerAt(next).elevationScale).toBeUndefined();
-    expect(layerAt(next).getElevation).toMatchObject({range: [0, 200]});
+    expect(next.elevationScale).toBeUndefined();
+    expect(next.getElevation).toMatchObject({range: [0, 200]});
   });
 });
 
-describe('setManualElevationScale', () => {
-  test('stores the slider value and preserves the existing binding', () => {
-    const next = setManualElevationScale(h3Layer(), 2.5);
-    expect(next.elevationScale).toBe(2.5);
-    expect(next._sqlroomsBinding).toMatchObject({
-      dataset: 'sites',
-      hexagonColumn: 'h3',
-      elevationScaleManual: true,
-    });
+/** East–west box of `meters` at the equator, where 1 degree is 111320 m. */
+function equatorBounds(meters: number): DeckMapGroundBounds {
+  return [
+    [0, 0],
+    [meters / 111320, 0],
+  ];
+}
+
+function sizedLayer(
+  spec: Record<string, unknown>,
+  bounds: DeckMapGroundBounds | null,
+): Record<string, unknown> {
+  const next = sizeDeckMapExtrusionToExtent(spec, bounds) as {
+    layers: Record<string, unknown>[];
+  };
+  return next.layers[0]!;
+}
+
+describe('sizeDeckMapExtrusionToExtent', () => {
+  test('gives a 10km dataset 5km of relief', () => {
+    const layer = sizedLayer(
+      {layers: [h3Layer({elevationScale: undefined})]},
+      equatorBounds(10_000),
+    );
+    // 5000m of relief over a 200m scale range.
+    expect(layer.elevationScale).toBeCloseTo(25, 2);
+  });
+
+  test('scales a smaller site down in proportion', () => {
+    const layer = sizedLayer(
+      {layers: [h3Layer({elevationScale: undefined})]},
+      equatorBounds(2_000),
+    );
+    expect(layer.elevationScale).toBeCloseTo(5, 2);
+  });
+
+  test('keeps the layer elevationScale as a multiplier on top', () => {
+    const layer = sizedLayer(
+      {layers: [h3Layer({elevationScale: 2})]},
+      equatorBounds(10_000),
+    );
+    expect(layer.elevationScale).toBeCloseTo(50, 2);
+  });
+
+  test('sizes a column layer from the same extent', () => {
+    const layer = sizedLayer(
+      {
+        layers: [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            radius: 50,
+            getElevation: scaleElevation(),
+          },
+        ],
+      },
+      equatorBounds(10_000),
+    );
+    expect(layer.elevationScale).toBeCloseTo(25, 2);
+  });
+
+  test('reads a dataset straddling the antimeridian as a local extent', () => {
+    const layer = sizedLayer({layers: [h3Layer({elevationScale: undefined})]}, [
+      [179.95, 0],
+      [-179.95, 0],
+    ]);
+    // 0.1 degrees of relief, not the 359.9 degrees the raw span reports.
+    expect(layer.elevationScale).toBeCloseTo(27.83, 1);
+  });
+
+  test('leaves real meter elevations and flat layers alone', () => {
+    const meters = {
+      '@@type': 'GeoArrowH3HexagonLayer',
+      extruded: true,
+      getElevation: '@@=height_m',
+    };
+    const flat = {'@@type': 'GeoArrowScatterplotLayer', getRadius: 4};
+    const spec = {layers: [meters, flat]};
+    expect(sizeDeckMapExtrusionToExtent(spec, equatorBounds(10_000))).toBe(
+      spec,
+    );
+  });
+
+  test('returns the spec unchanged without bounds or for a string spec', () => {
+    const spec = {layers: [h3Layer()]};
+    expect(sizeDeckMapExtrusionToExtent(spec, null)).toBe(spec);
+    expect(
+      sizeDeckMapExtrusionToExtent('{"layers":[]}', equatorBounds(10_000)),
+    ).toBe('{"layers":[]}');
+  });
+
+  test('returns the same spec when the sized scale is already in place', () => {
+    // A 400m extent puts the top of a 200m range at its own range max.
+    const spec = {layers: [h3Layer({elevationScale: 1})]};
+    expect(sizeDeckMapExtrusionToExtent(spec, equatorBounds(400))).toBe(spec);
   });
 });
