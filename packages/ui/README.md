@@ -176,9 +176,10 @@ function ElevationScaleControl() {
 ```
 
 Unlike `Slider`, it takes and returns a single `number` rather than an array.
-Typed values are clamped to `[min, max]` and snapped to `step`, so the input
-cannot produce a value the slider is unable to represent. `Enter` or blur
-commits, `Escape` discards.
+Typed values are clamped to `[min, max]` and snapped to the grid that starts at
+`min`, so the input cannot produce a value the slider is unable to represent.
+`Enter` or blur commits, `Escape` discards. On devices without hover the toggle
+is always visible, since there is no other way to discover manual entry.
 
 ## Settings Panel Header
 

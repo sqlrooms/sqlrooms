@@ -176,6 +176,68 @@ describe('SliderInput', () => {
     }
   });
 
+  test('snaps onto a grid that starts at a fractional min', () => {
+    const onValueChange = jest.fn();
+    const view = render(
+      <SliderInput
+        min={0.5}
+        max={10}
+        step={1}
+        value={0.5}
+        onValueChange={onValueChange}
+      />,
+    );
+    try {
+      click(view.toggle());
+      type(view.input()!, '1.5');
+      pressKey(view.input()!, 'Enter');
+      expect(onValueChange).toHaveBeenLastCalledWith(1.5);
+    } finally {
+      view.unmount();
+    }
+  });
+
+  test('returns focus to the toggle when leaving the input', () => {
+    const view = render(
+      <SliderInput
+        min={0}
+        max={100}
+        step={1}
+        value={10}
+        onValueChange={noop}
+      />,
+    );
+    try {
+      click(view.toggle());
+      expect(document.activeElement).toBe(view.input());
+      pressKey(view.input()!, 'Enter');
+      expect(document.activeElement).toBe(view.toggle());
+    } finally {
+      view.unmount();
+    }
+  });
+
+  test('commits only once when Enter both commits and blurs the input', () => {
+    const onValueChange = jest.fn();
+    const view = render(
+      <SliderInput
+        min={0}
+        max={100}
+        step={1}
+        value={10}
+        onValueChange={onValueChange}
+      />,
+    );
+    try {
+      click(view.toggle());
+      type(view.input()!, '55');
+      pressKey(view.input()!, 'Enter');
+      expect(onValueChange).toHaveBeenCalledTimes(1);
+    } finally {
+      view.unmount();
+    }
+  });
+
   test('ignores an empty or non-numeric entry', () => {
     const onValueChange = jest.fn();
     const view = render(

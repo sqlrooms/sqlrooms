@@ -5,20 +5,35 @@ import * as React from 'react';
 import {cn} from '../lib/utils';
 import {Slider} from './slider';
 
-/** Decimal places implied by a step, e.g. `0.01` -> `2`, `1e-3` -> `3`. */
-function getStepDecimals(step: number): number {
-  if (!Number.isFinite(step) || Number.isInteger(step)) return 0;
-  const text = String(step);
+/** Decimal places in a number, e.g. `0.01` -> `2`, `1e-3` -> `3`. */
+function getDecimals(value: number): number {
+  if (!Number.isFinite(value) || Number.isInteger(value)) return 0;
+  const text = String(value);
   const exponentIndex = text.indexOf('e-');
-  if (exponentIndex >= 0) return Number(text.slice(exponentIndex + 2));
   const dotIndex = text.indexOf('.');
-  return dotIndex < 0 ? 0 : text.length - dotIndex - 1;
+  const decimals =
+    exponentIndex >= 0
+      ? Number(text.slice(exponentIndex + 2))
+      : dotIndex < 0
+        ? 0
+        : text.length - dotIndex - 1;
+  // `toFixed` rejects anything above 100.
+  return Math.min(decimals, 20);
+}
+
+/**
+ * Decimal places needed to express a point on the grid. The grid starts at
+ * `min`, so a coarse `step` does not imply a coarse value: `min={0.5}` with
+ * `step={1}` has valid values 0.5, 1.5, 2.5, ...
+ */
+function getGridDecimals(min: number, step: number): number {
+  return Math.max(getDecimals(min), getDecimals(step));
 }
 
 /** Round for display without introducing floating point noise. */
-function formatValue(value: number, step: number): string {
+function formatValue(value: number, min: number, step: number): string {
   if (!Number.isFinite(value)) return '';
-  return String(Number(value.toFixed(getStepDecimals(step))));
+  return String(Number(value.toFixed(getGridDecimals(min, step))));
 }
 
 /**
@@ -35,7 +50,7 @@ function snapToStep(
   if (!(step > 0)) return clamped;
   const snapped = min + Math.round((clamped - min) / step) * step;
   return Number(
-    Math.min(Math.max(snapped, min), max).toFixed(getStepDecimals(step)),
+    Math.min(Math.max(snapped, min), max).toFixed(getGridDecimals(min, step)),
   );
 }
 
@@ -89,6 +104,8 @@ export const SliderInput = React.forwardRef<HTMLDivElement, SliderInputProps>(
     // `null` means the slider is shown; a string means the input is shown.
     const [draft, setDraft] = React.useState<string | null>(null);
     const isEditing = draft !== null;
+    const toggleRef = React.useRef<HTMLButtonElement>(null);
+    const skipBlurRef = React.useRef(false);
 
     const commit = () => {
       const parsed = Number(draft);
@@ -97,6 +114,15 @@ export const SliderInput = React.forwardRef<HTMLDivElement, SliderInputProps>(
         if (next !== value) onValueChange(next);
       }
       setDraft(null);
+    };
+
+    // Focusing the toggle before the input unmounts keeps keyboard users in
+    // place; without it focus falls back to the document body.
+    const exitEditing = (commitDraft: boolean) => {
+      skipBlurRef.current = true;
+      if (commitDraft) commit();
+      else setDraft(null);
+      toggleRef.current?.focus();
     };
 
     return (
@@ -120,16 +146,24 @@ export const SliderInput = React.forwardRef<HTMLDivElement, SliderInputProps>(
             value={draft}
             disabled={disabled}
             aria-label={props['aria-label']}
+            aria-labelledby={props['aria-labelledby']}
+            aria-describedby={props['aria-describedby']}
             onChange={(event) => setDraft(event.target.value)}
             onFocus={(event) => event.target.select()}
-            onBlur={commit}
+            onBlur={() => {
+              if (skipBlurRef.current) {
+                skipBlurRef.current = false;
+                return;
+              }
+              commit();
+            }}
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
                 event.preventDefault();
-                commit();
+                exitEditing(true);
               } else if (event.key === 'Escape') {
                 event.preventDefault();
-                setDraft(null);
+                exitEditing(false);
               }
             }}
             className={cn(
@@ -154,20 +188,26 @@ export const SliderInput = React.forwardRef<HTMLDivElement, SliderInputProps>(
           />
         )}
         <button
+          ref={toggleRef}
           type="button"
           disabled={disabled}
           title={isEditing ? 'Use slider' : 'Enter value'}
           aria-label={isEditing ? 'Use slider' : 'Enter value'}
-          // Keep focus on the input so the toggle click is not preceded by a
-          // blur that would exit editing before onClick runs.
-          onMouseDown={(event) => event.preventDefault()}
+          // Keep focus on the input so the toggle activation is not preceded by
+          // a blur that would exit editing before onClick runs. `pointerdown`
+          // covers touch as well as mouse.
+          onPointerDown={(event) => event.preventDefault()}
           onClick={() =>
-            isEditing ? commit() : setDraft(formatValue(value, step))
+            isEditing
+              ? exitEditing(true)
+              : setDraft(formatValue(value, min, step))
           }
           className={cn(
             'text-muted-foreground hover:text-foreground shrink-0 rounded-sm p-0.5 transition-opacity',
             'focus-visible:ring-ring focus-visible:ring-1 focus-visible:outline-hidden',
             'opacity-0 group-hover/slider-input:opacity-100 focus-visible:opacity-100',
+            // Without hover there is no other way to discover manual entry.
+            '[@media(hover:none)]:opacity-100',
             isEditing && 'opacity-100',
             disabled && 'pointer-events-none opacity-0',
           )}
