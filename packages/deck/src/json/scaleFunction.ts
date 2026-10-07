@@ -57,6 +57,36 @@ export function isScaleMarker(value: unknown): value is ScaleMarker {
   );
 }
 
+/**
+ * Resolves a requested column to the name the Arrow table actually uses.
+ *
+ * DuckDB resolves identifiers case-insensitively, so SQL authored against
+ * `height` succeeds while the Arrow schema carries `HEIGHT`. Falls back to a
+ * case-insensitive match when it is unambiguous.
+ *
+ * @param schemaOwner - Table or record batch to resolve against.
+ * @param requestedField - Column name as authored in the scale config.
+ * @returns The schema's own column name, or undefined when there is no match.
+ */
+export function resolveScaleFieldName(
+  schemaOwner: arrow.Table | arrow.RecordBatch,
+  requestedField: string,
+): string | undefined {
+  const exactMatch = schemaOwner.schema.fields.find(
+    (field) => field.name === requestedField,
+  )?.name;
+  if (exactMatch) return exactMatch;
+
+  const caseInsensitiveMatches = schemaOwner.schema.fields
+    .map((field) => field.name)
+    .filter(
+      (fieldName) => fieldName.toLowerCase() === requestedField.toLowerCase(),
+    );
+  return caseInsensitiveMatches.length === 1
+    ? caseInsensitiveMatches[0]
+    : undefined;
+}
+
 function readNumericDomain(vector: arrow.Vector): [number, number] | null {
   let min = Infinity;
   let max = -Infinity;
@@ -84,7 +114,8 @@ export function compileLinearScaleExpression(
   table: arrow.Table,
   scale: LinearScaleConfig,
 ): string | undefined {
-  const field = scale.field.trim();
+  const requested = scale.field.trim();
+  const field = requested ? resolveScaleFieldName(table, requested) : undefined;
   if (!field || !isBindableGeoArrowFieldIdentifier(field)) return undefined;
 
   const vector = table.getChild(field);
@@ -106,7 +137,9 @@ export function compileLinearScaleExpression(
   const [r0, r1] = scale.range;
   const span = d1 - d0;
   if (span === 0) {
-    return `@@=${r0}`;
+    // A constant column has no differences to show; render it at full size
+    // rather than collapsing an extrusion to the usual range start of 0.
+    return `@@=${Math.max(r0, r1)}`;
   }
 
   const lo = Math.min(r0, r1);
@@ -159,7 +192,8 @@ export function compileLinearScaleAccessor(
   table: arrow.Table,
   scale: LinearScaleConfig,
 ): ((value: unknown) => number) | undefined {
-  const field = scale.field.trim();
+  const requested = scale.field.trim();
+  const field = requested ? resolveScaleFieldName(table, requested) : undefined;
   if (!field) return undefined;
 
   const vector = table.getChild(field);
@@ -186,7 +220,7 @@ export function compileLinearScaleAccessor(
 
     const [r0, r1] = range;
     const span = d1 - d0;
-    if (span === 0) return r0;
+    if (span === 0) return Math.max(r0, r1);
     const lo = Math.min(r0, r1);
     const hi = Math.max(r0, r1);
     return Math.max(lo, Math.min(hi, r0 + ((v - d0) / span) * (r1 - r0)));

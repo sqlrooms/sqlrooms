@@ -226,6 +226,19 @@ describe('sizeDeckMapExtrusionToExtent', () => {
     );
   });
 
+  test('leaves a degenerate extent unsized', () => {
+    // A single point has no ground extent to scale against. Viewport padding
+    // must not leak in here as if it were real.
+    const point = 12.5;
+    const spec = {layers: [h3Layer({elevationScale: undefined})]};
+    expect(
+      sizeDeckMapExtrusionToExtent(spec, [
+        [point, point],
+        [point, point],
+      ]),
+    ).toBe(spec);
+  });
+
   test('returns the spec unchanged without bounds or for a string spec', () => {
     const spec = {layers: [h3Layer()]};
     expect(sizeDeckMapExtrusionToExtent(spec, null)).toBe(spec);

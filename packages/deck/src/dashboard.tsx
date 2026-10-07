@@ -48,10 +48,7 @@ import {
   createDeckMapBoundsQuery,
 } from './useDeckMapFitToBounds';
 import {useDeckMapDatasets} from './useDeckMapDatasets';
-import {
-  sizeDeckMapExtrusionToExtent,
-  type DeckMapGroundBounds,
-} from './extrusionScale';
+import {sizeDeckMapExtrusionToExtent} from './extrusionScale';
 import {DeckMapDashboardSettings} from './DashboardMapSettings';
 import {
   createDeckMapDashboardPanelConfigForTable,
@@ -573,23 +570,16 @@ function DeckMapDashboardRenderer({
     handleRenderingError,
   } = useDeckMapDatasets({dashboardId, panel});
 
-  const [fitBounds, setFitBounds] = useState<DeckMapGroundBounds | null>(null);
-  // Stable identity: the fit controller re-runs its effect when this changes.
-  const handleFitSuccess = useCallback(
-    (bounds?: DeckMapGroundBounds) => setFitBounds(bounds ?? null),
-    [],
-  );
-  const {fitToData} = useDeckMapFitToBounds({
+  const {fitToData, fittedBounds} = useDeckMapFitToBounds({
     panelId: panel.id,
     dashboard,
     panel,
     container,
     deckMapRef,
-    onFitSuccess: handleFitSuccess,
   });
   const sizedSpec = useMemo(
-    () => sizeDeckMapExtrusionToExtent(mapConfig?.spec ?? {}, fitBounds),
-    [fitBounds, mapConfig?.spec],
+    () => sizeDeckMapExtrusionToExtent(mapConfig?.spec ?? {}, fittedBounds),
+    [fittedBounds, mapConfig?.spec],
   );
 
   const handleBrushEvent = useCallback(

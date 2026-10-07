@@ -320,14 +320,8 @@ function readDeckMapBounds(result: ArrowTable) {
     return null;
   }
   return [
-    [
-      minLongitude === maxLongitude ? minLongitude - 0.01 : minLongitude,
-      minLatitude === maxLatitude ? minLatitude - 0.01 : minLatitude,
-    ],
-    [
-      minLongitude === maxLongitude ? maxLongitude + 0.01 : maxLongitude,
-      minLatitude === maxLatitude ? maxLatitude + 0.01 : maxLatitude,
-    ],
+    [minLongitude, minLatitude],
+    [maxLongitude, maxLatitude],
   ] as const;
 }
 
@@ -339,13 +333,19 @@ function fitDeckMapView(options: {
   maxZoom?: number;
 }) {
   const {bounds, width, height, padding = 40, maxZoom = 18} = options;
+  const [[west, south], [east, north]] = bounds;
+  // A zero-width axis has no viewport to fit; widen it so fitBounds resolves.
+  const padAxis = (min: number, max: number): [number, number] =>
+    min === max ? [min - 0.01, max + 0.01] : [min, max];
+  const [fitWest, fitEast] = padAxis(west, east);
+  const [fitSouth, fitNorth] = padAxis(south, north);
   const fitted = new WebMercatorViewport({
     width: Math.max(width, 1),
     height: Math.max(height, 1),
   }).fitBounds(
     [
-      [bounds[0][0], bounds[0][1]],
-      [bounds[1][0], bounds[1][1]],
+      [fitWest, fitSouth],
+      [fitEast, fitNorth],
     ],
     {padding},
   ) as WebMercatorViewport & {
@@ -458,8 +458,7 @@ export function useDeckMapFitController(options: {
   deckMapRef: RefObject<DeckJsonMapHandle | null>;
   requestVersion: number;
   autoFit?: boolean;
-  /** Receives the fitted data bounds, omitted when the fit needed no query. */
-  onSuccess?: (bounds?: DeckMapGroundBounds) => void;
+  onSuccess?: () => void;
   onError?: (error: Error) => void;
 }) {
   const {
@@ -490,6 +489,12 @@ export function useDeckMapFitController(options: {
       ? fitState
       : createInitialFitState(fitKey, fitState.handledRequestVersion);
   const fitAttemptsRef = useRef({key: '', count: 0});
+  // Keyed by the fit identity so a source change or a failed fit cannot leave
+  // callers sizing against the previous dataset's extent.
+  const [lastFit, setLastFit] = useState<{
+    key: string;
+    bounds: DeckMapGroundBounds;
+  } | null>(null);
 
   useEffect(() => {
     if (!container) return;
@@ -595,8 +600,9 @@ export function useDeckMapFitController(options: {
             maxZoom: fitToData.maxZoom,
           }),
         );
+        setLastFit({key: fitKey, bounds});
         markHandled();
-        onSuccess?.(bounds);
+        onSuccess?.();
       } catch (error) {
         if (cancelled) return;
         const fitError =
@@ -640,4 +646,9 @@ export function useDeckMapFitController(options: {
     retryNonce,
     source,
   ]);
+
+  return {
+    /** Bounds of the current fit target, or null while none has succeeded. */
+    fittedBounds: lastFit?.key === fitKey ? lastFit.bounds : null,
+  };
 }

@@ -15,10 +15,7 @@ import {
   isDeckMapTableDatasetSource,
 } from './mapConfig';
 import {getDeckMapDataPolicy, type DeckMapDataPolicy} from './mapDataPolicy';
-import {
-  sizeDeckMapExtrusionToExtent,
-  type DeckMapGroundBounds,
-} from './extrusionScale';
+import {sizeDeckMapExtrusionToExtent} from './extrusionScale';
 import {getDeckMapResourceConfigIssues} from './mapResourceAuthoring';
 import {
   getDeckMapDatasetSource,
@@ -213,19 +210,11 @@ export function DeckMapSurface({
       }),
     [onReportIssue],
   );
-  const [fitBounds, setFitBounds] = useState<DeckMapGroundBounds | null>(null);
   const handleFitSuccess = useCallback(
-    (bounds?: DeckMapGroundBounds) => {
-      onClearIssue('fit-error');
-      setFitBounds(bounds ?? null);
-    },
+    () => onClearIssue('fit-error'),
     [onClearIssue],
   );
-  const sizedSpec = useMemo(
-    () => sizeDeckMapExtrusionToExtent(map.config.spec, fitBounds),
-    [fitBounds, map.config.spec],
-  );
-  useDeckMapFitController({
+  const {fittedBounds} = useDeckMapFitController({
     scopeId: mapId,
     fitToData,
     source: fitSource,
@@ -236,6 +225,10 @@ export function DeckMapSurface({
     onSuccess: handleFitSuccess,
     onError: handleFitError,
   });
+  const sizedSpec = useMemo(
+    () => sizeDeckMapExtrusionToExtent(map.config.spec, fittedBounds),
+    [fittedBounds, map.config.spec],
+  );
 
   if (configIssues.length > 0) {
     return (
