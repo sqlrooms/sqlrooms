@@ -19,7 +19,6 @@ import {
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   type DeckMapDashboardPanelConfig,
 } from './dashboardConfig';
-import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
 import {
   getFirstDatasetSourceTableName,
   hasSqlOnlyDatasetSource,
