@@ -134,6 +134,20 @@ describe('relaxDeckMapElevation', () => {
     expect(layerAt(next, 1)).toBe(points);
   });
 
+  test('keeps an explicit numeric elevation when dropping a stacked multiplier', () => {
+    const zero = relaxDeckMapElevation(
+      configWith([h3Layer({getElevation: 0, elevationScale: 100})]),
+    );
+    expect(layerAt(zero).elevationScale).toBeUndefined();
+    expect(layerAt(zero).getElevation).toBe(0);
+
+    const meters = relaxDeckMapElevation(
+      configWith([h3Layer({getElevation: 40, elevationScale: 100})]),
+    );
+    expect(layerAt(meters).elevationScale).toBeUndefined();
+    expect(layerAt(meters).getElevation).toBe(40);
+  });
+
   test('drops 100x on a missing elevation and on a custom config', () => {
     const bare = relaxDeckMapElevation(
       configWith([h3Layer({getElevation: undefined, elevationScale: 100})]),
