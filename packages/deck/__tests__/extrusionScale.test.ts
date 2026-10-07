@@ -118,7 +118,7 @@ describe('relaxStackedElevationScale', () => {
       h3Layer({getElevation: undefined, elevationScale: 100}),
     );
     expect(bare.elevationScale).toBeUndefined();
-    expect(bare.getElevation).toBe(200);
+    expect(bare.getElevation).toBeUndefined();
 
     const raw = relaxStackedElevationScale(
       h3Layer({getElevation: '@@=count', elevationScale: 100}),

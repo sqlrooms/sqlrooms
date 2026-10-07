@@ -75,10 +75,10 @@ function visualElevation(field: string): Record<string, unknown> {
 /**
  * Removes an assistant `elevationScale` of 10 or more.
  *
- * A scale range is already meters, so the extra multiplier is deleted.
- * `@@=column` and a missing elevation become a 0–200m scale. An explicit
- * numeric height, including zero, is kept. Real meter columns
- * (`elevationScale` omitted or near 1) stay as they are.
+ * The multiplier is deleted so {@link sizeDeckMapExtrusionToExtent} can size
+ * the layer instead, and `@@=column` becomes a scale it can size. A constant
+ * height and a real meter column (`elevationScale` omitted or near 1) stay as
+ * they are.
  */
 export function relaxStackedElevationScale(
   layer: DeckMapLayerRecord,
@@ -95,23 +95,14 @@ export function relaxStackedElevationScale(
   if (typeof elevation === 'string') {
     const field = /^@@=([A-Za-z_]\w*)$/.exec(elevation.trim())?.[1];
     if (field) next.getElevation = visualElevation(field);
-    return next;
-  }
-  if (isScaleElevation(elevation)) {
+  } else if (isScaleElevation(elevation)) {
     next.getElevation = {
+      domain: 'auto',
+      type: 'linear',
       ...elevation,
-      '@@function': 'scale',
-      type:
-        elevation.type === 'linear' || elevation.type === undefined
-          ? 'linear'
-          : elevation.type,
-      domain: elevation.domain ?? 'auto',
       range: [0, VISUAL_ELEVATION_RANGE_MAX],
     };
-    return next;
   }
-  if (typeof elevation === 'number' && Number.isFinite(elevation)) return next;
-  if (!isRecord(elevation)) next.getElevation = VISUAL_ELEVATION_RANGE_MAX;
   return next;
 }
 
