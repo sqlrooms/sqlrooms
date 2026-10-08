@@ -184,6 +184,13 @@ export type ChatOutputItem = {
   id: string;
   toolName: string;
   state: ChatToolState;
+  /**
+   * The hoisted call itself, with its input and output, so a custom layout
+   * can group, filter or summarise outputs by what they hold. Always set by
+   * SQLRooms' own presentation; optional so existing item builders still
+   * compile.
+   */
+  call?: HoistableToolCall;
   Content: ChatComponentType;
 };
 
