@@ -724,6 +724,11 @@ function AppActivity({turn}: ChatTurnSlotProps) {
 }
 ```
 
+Hoisted output items also carry their `call` (tool name, input, output and
+state), so a custom `Turn` can group or summarise outputs by what they hold,
+for example drawing one card per artifact, and still fall back to an item's
+pre-wired `Content` for everything else.
+
 Pair a custom `Turn` with leaf-slot overrides as needed. Prefer keeping the
 default turn (or a host-owned turn recipe) and swapping only the slots that
 must differ, unless the regional order itself has to change.
