@@ -6,17 +6,20 @@ import {
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
+  createDefaultAiToolRenderers,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
-import {createRagSlice, createRagTool, RagSliceState} from '@sqlrooms/ai-rag';
-import {createOpenAIEmbeddingProvider} from './embeddings';
+import {
+  createRagSlice,
+  createRagTool,
+  RagSliceState,
+  ragToolRenderer,
+} from '@sqlrooms/ai-rag';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
-  MAIN_VIEW,
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -25,20 +28,17 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {createVegaChartTool} from '@sqlrooms/vega';
+import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
+import {tool} from 'ai';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import {AI_SETTINGS} from './config';
+import {createOpenAIEmbeddingProvider} from './embeddings';
 
-export const RoomPanelTypes = z.enum([
-  'room-details',
-  'data-sources',
-  'view-configuration',
-  MAIN_VIEW,
-] as const);
+export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState &
@@ -76,26 +76,40 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              first: RoomPanelTypes.enum['data-sources'],
-              second: MAIN_VIEW,
-              splitPercentage: 30,
-            },
-          },
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'tabs',
+                id: RoomPanelTypes.enum.left,
+                children: [RoomPanelTypes.enum.data],
+                defaultSize: '20%',
+                maxSize: '50%',
+                minSize: '300px',
+                activeTabIndex: 0,
+                collapsible: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum.main,
+                panel: RoomPanelTypes.enum.main,
+                defaultSize: '80%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
-            [RoomPanelTypes.enum['data-sources']]: {
-              title: 'Data Sources',
+            [RoomPanelTypes.enum.data]: {
+              title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
-              placement: 'sidebar',
             },
-            main: {
+            [RoomPanelTypes.enum.main]: {
               title: 'Main view',
               icon: () => null,
               component: MainView,
-              placement: 'main',
             },
           },
         },
@@ -132,6 +146,14 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           return createDefaultAiInstructions(store);
         },
 
+        // Tool renderers for displaying tool results in the UI
+        toolRenderers: {
+          ...createDefaultAiToolRenderers(),
+          chart: VegaChartToolResult,
+          search_documentation: ragToolRenderer,
+          echo: EchoToolResult,
+        },
+
         // Add custom tools
         tools: {
           ...createDefaultAiTools(store, {query: {}}),
@@ -143,22 +165,16 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           chart: createVegaChartTool(),
 
           // Example of adding a simple echo tool
-          echo: {
-            name: 'echo',
+          echo: tool({
             description: 'A simple echo tool that returns the input text',
-            parameters: z.object({
+            inputSchema: z.object({
               text: z.string().describe('The text to echo back'),
             }),
-            execute: async ({text}: {text: string}) => {
-              return {
-                llmResult: {
-                  success: true,
-                  details: `Echo: ${text}`,
-                },
-              };
-            },
-            component: EchoToolResult,
-          },
+            execute: async ({text}) => ({
+              success: true,
+              details: `Echo: ${text}`,
+            }),
+          }),
         },
       })(set, get, store),
     }),

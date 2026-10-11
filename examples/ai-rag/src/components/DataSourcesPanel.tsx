@@ -1,21 +1,20 @@
 import {RoomPanel} from '@sqlrooms/room-shell';
-import {TableStructurePanel} from '@sqlrooms/sql-editor';
+import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {FileDropzone} from '@sqlrooms/dropzone';
-import {useRoomStore, RoomPanelTypes} from '../store';
+import {useRoomStore} from '../store';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
-import {useToast} from '@sqlrooms/ui';
+import {toast} from '@sqlrooms/ui';
+import type {FC} from 'react';
 
-export const DataSourcesPanel = () => {
+export const DataSourcesPanel: FC = () => {
   const connector = useRoomStore((state) => state.db.connector);
   const refreshTableSchemas = useRoomStore(
     (state) => state.db.refreshTableSchemas,
   );
-  const {toast} = useToast();
-
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
+    <RoomPanel>
       <FileDropzone
-        className="h-[200px] p-5"
+        className="h-50 p-5"
         acceptedFormats={{
           'text/csv': ['.csv'],
           'text/tsv': ['.tsv'],
@@ -27,15 +26,11 @@ export const DataSourcesPanel = () => {
             try {
               const tableName = convertToValidColumnOrTableName(file.name);
               await connector.loadFile(file, tableName);
-              toast({
-                variant: 'default',
-                title: 'Table created',
+              toast.success('Table created', {
                 description: `File ${file.name} loaded as ${tableName}`,
               });
             } catch (error) {
-              toast({
-                variant: 'destructive',
-                title: 'Error',
+              toast.error('Error', {
                 description: `Error loading file ${file.name}: ${error}`,
               });
             }
@@ -47,7 +42,12 @@ export const DataSourcesPanel = () => {
           Files you add will stay local to your browser.
         </div>
       </FileDropzone>
-      <TableStructurePanel />
+      <SchemaExplorer>
+        <SchemaExplorer.Header>
+          <SchemaExplorer.RefreshButton />
+        </SchemaExplorer.Header>
+        <SchemaExplorer.Tree className="h-full" />
+      </SchemaExplorer>
     </RoomPanel>
   );
 };

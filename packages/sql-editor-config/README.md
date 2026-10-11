@@ -1,47 +1,68 @@
-A central configuration and type definitions package that maintains base SQL editor configuration schemas and Zod schema definitions for SQLRooms. It provides TypeScript types and interfaces along with essential constants and utilities used for managing SQL editor state.
-
-## Features
-
-- 📝 **SQL Editor Configuration**: Define and manage room SQL editor configuration schemas.
-- 🔍 **Type Safety**: Strong TypeScript typing for SQL editor configuration objects.
-- ✅ **Validation**: Zod schemas for runtime validation of SQL editor configurations.
+Zod schema and defaults for persisted SQL editor state.
 
 ## Installation
 
 ```bash
 npm install @sqlrooms/sql-editor-config
-# or
-yarn add @sqlrooms/sql-editor-config
 ```
 
-## Basic Usage
+## Exports
 
-### Working with SQL Editor Configuration
+- `SqlEditorSliceConfig`
+- `createDefaultSqlEditorConfig()`
 
-```tsx
+## Basic usage
+
+```ts
 import {
   SqlEditorSliceConfig,
   createDefaultSqlEditorConfig,
 } from '@sqlrooms/sql-editor-config';
 
-// Create a new SQL editor configuration
-const sqlEditorConfig: SqlEditorSliceConfig = createDefaultSqlEditorConfig();
+const defaultSqlEditorConfig = createDefaultSqlEditorConfig();
 
-// This can be part of a bigger room configuration
-interface RoomConfig {
-  // ... other properties
-  sqlEditor: SqlEditorSliceConfig['sqlEditor'];
-}
+const validated = SqlEditorSliceConfig.parse({
+  queries: [
+    {
+      id: 'q1',
+      name: 'Top earthquakes',
+      query: 'SELECT * FROM earthquakes ORDER BY Magnitude DESC LIMIT 100',
+    },
+  ],
+  selectedQueryId: 'q1',
+  openTabs: ['q1'],
+});
 ```
 
-## Advanced Features
+## Migration behavior
 
-- **Schema Extensions**: Extend base schemas for custom room types
-- **Configuration Validation**: Validate configurations at runtime
-- **Serialization**: Convert configurations to/from JSON for storage
+`SqlEditorSliceConfig` includes migration logic for legacy persisted data:
 
-For more information, visit the SQLRooms documentation.
+- if `openTabs` is missing and legacy `closedTabIds` is present, it computes `openTabs`
+- this helps old saved configs continue to load without manual migration steps
 
-```
+## Use with persistence
 
+```ts
+import {SqlEditorSliceConfig} from '@sqlrooms/sql-editor-config';
+import {
+  createRoomStore,
+  persistSliceConfigs,
+  createRoomShellSlice,
+} from '@sqlrooms/room-shell';
+
+const persistence = {
+  name: 'my-editor-storage',
+  sliceConfigSchemas: {
+    sqlEditor: SqlEditorSliceConfig,
+  },
+};
+
+createRoomStore(
+  persistSliceConfigs(persistence, (set, get, store) => ({
+    ...createRoomShellSlice({
+      config: {title: 'Editor App', dataSources: []},
+    })(set, get, store),
+  })),
+);
 ```

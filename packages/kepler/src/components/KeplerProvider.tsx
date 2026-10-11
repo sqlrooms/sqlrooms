@@ -20,6 +20,8 @@ export const KeplerProvider: React.FC<KeplerProviderProps> = ({
   const reduxProviderStore = useStoreWithKepler(
     (state) => state.kepler.__reduxProviderStore,
   );
+  const keplerTheme = useStoreWithKepler((state) => state.kepler.keplerTheme);
+  const resolvedTheme = useMemo(() => keplerTheme ?? darkTheme, [keplerTheme]);
 
   const keplerContext = useMemo(
     () => ({
@@ -35,7 +37,7 @@ export const KeplerProvider: React.FC<KeplerProviderProps> = ({
     <IntlProvider locale="en" messages={messages['en']}>
       <Provider store={reduxProviderStore}>
         <StyleSheetManager shouldForwardProp={shouldForwardProp}>
-          <ThemeProvider theme={darkTheme}>
+          <ThemeProvider theme={resolvedTheme}>
             <KeplerGlContext.Provider value={keplerContext}>
               <>{children}</>
             </KeplerGlContext.Provider>

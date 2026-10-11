@@ -11,7 +11,7 @@
       },
       "package.json": {
         "file": {
-          "contents": "{\n  \"name\": \"vite-react-webcontainer\",\n  \"private\": true,\n  \"version\": \"0.0.0\",\n  \"type\": \"module\",\n  \"scripts\": {\n    \"dev\": \"vite\",\n    \"build\": \"vite build\",\n    \"preview\": \"vite preview --port 5173\"\n  },\n  \"dependencies\": {\n    \"react\": \"^18.3.1\",\n    \"react-dom\": \"^18.3.1\",\n    \"@sqlrooms/room-store\": \"v0.26.0-rc.0\",\n    \"@sqlrooms/duckdb\": \"v0.26.0-rc.0\"\n  },\n  \"devDependencies\": {\n    \"@vitejs/plugin-react\": \"^4.3.0\",\n    \"vite\": \"^5.4.0\"\n  }\n}\n"
+          "contents": "{\n  \"name\": \"vite-react-webcontainer\",\n  \"version\": \"0.0.0\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"scripts\": {\n    \"build\": \"vite build\",\n    \"dev\": \"vite\",\n    \"preview\": \"vite preview --port 5173\"\n  },\n  \"dependencies\": {\n    \"@sqlrooms/duckdb\": \"v0.26.0-rc.0\",\n    \"@sqlrooms/room-store\": \"v0.26.0-rc.0\",\n    \"react\": \"^18.3.1\",\n    \"react-dom\": \"^18.3.1\"\n  },\n  \"devDependencies\": {\n    \"@vitejs/plugin-react\": \"^5.2.0\",\n    \"vite\": \"^8.2.0\"\n  }\n}\n"
         }
       },
       "src": {

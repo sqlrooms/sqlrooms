@@ -1,9 +1,17 @@
 'use client';
 
-import {ChangeEvent, FC, useCallback, useEffect, useRef, useState} from 'react';
+import {
+  ChangeEvent,
+  CSSProperties,
+  FC,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
-import {Input} from './input';
 import {cn} from '../lib/utils';
+import {Input} from './input';
 
 /**
  * Component that allows the user to edit a string.
@@ -38,10 +46,22 @@ import {cn} from '../lib/utils';
 
 export const EditableText: FC<{
   className?: string;
+  style?: CSSProperties;
   isReadOnly?: boolean;
+  editTrigger?: 'click' | 'doubleClick';
   value: string;
   placeholder?: string;
+  /**
+   * Called with the trimmed text when editing is committed (Enter or blur).
+   * Not called when the trimmed text equals the current `value`.
+   */
   onChange: (text: string) => void;
+  /** Called on each keystroke while editing. */
+  onInputChange?: (text: string) => void;
+  autoFocus?: boolean;
+  selectOnFocus?: boolean;
+  /** When false, the input is removed from tab order while not editing. */
+  allowTabFocusWhenNotEditing?: boolean;
 
   /**
    * The editing state when it is initially rendered. Use when you do not need to control its editing state
@@ -56,18 +76,31 @@ export const EditableText: FC<{
   onEditingChange?: (isEditing: boolean) => void;
 }> = ({
   className,
+  style,
   isReadOnly = false,
   defaultEditing = false,
+  editTrigger = 'click',
   isEditing,
   placeholder,
   value,
   onChange,
+  onInputChange,
   onEditingChange,
+  autoFocus,
+  selectOnFocus = false,
+  allowTabFocusWhenNotEditing = true,
 }) => {
   const [isInternalEditing, setInternalIsEditing] = useState(defaultEditing);
   const inputRef = useRef<HTMLInputElement>(null);
   const [internalValue, setInternalValue] = useState(value);
   const internalValueRef = useRef(internalValue);
+  const valueRef = useRef(value);
+  const skipBlurHandlerRef = useRef(false);
+
+  // Keep valueRef in sync
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
 
   useEffect(() => {
     internalValueRef.current = internalValue;
@@ -88,16 +121,18 @@ export const EditableText: FC<{
       setInternalIsEditing(Boolean(isEditing));
       if (isEditing) {
         // When enabling editing from a dropdown menu, there will be a blur event when the dropdown closes,
-        // so we need to wait a bit before making sure the input is focused and selected
+        // so we need to wait a bit before making sure the input is focused and selected.
         const timeoutId = setTimeout(() => {
-          inputRef.current?.select();
           inputRef.current?.focus();
+          if (selectOnFocus) {
+            inputRef.current?.select();
+          }
         }, 200);
         return () => clearTimeout(timeoutId);
       }
     }
     return undefined;
-  }, [isEditing, isInternalEditing]);
+  }, [isEditing, isInternalEditing, selectOnFocus]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSetValue = useCallback(
@@ -105,9 +140,11 @@ export const EditableText: FC<{
       if (isReadOnly || !isInternalEditing) {
         return;
       }
-      return setInternalValue(e.target.value);
+      const nextValue = e.target.value;
+      onInputChange?.(nextValue);
+      return setInternalValue(nextValue);
     },
-    [isInternalEditing, isReadOnly],
+    [isInternalEditing, isReadOnly, onInputChange],
   );
 
   const handleSetEditing = useCallback(
@@ -121,33 +158,79 @@ export const EditableText: FC<{
     [isReadOnly, onEditingChange],
   );
 
+  // Commits the trimmed input, skipping commits that would leave the value
+  // unchanged so that merely focusing and leaving the field is not an edit.
+  const commit = useCallback(() => {
+    const trimmedValue = internalValueRef.current.trim();
+    if (trimmedValue !== valueRef.current) {
+      onChange(trimmedValue);
+    }
+
+    // After onChange, sync internal value back to the prop
+    // If parent rejected the change, value prop stays the same and we reset
+    // If parent accepted the change, value prop updates and we sync to it
+    setInternalValue(valueRef.current);
+    internalValueRef.current = valueRef.current;
+  }, [onChange]);
+
   const handleBlur = useCallback(() => {
+    // Skip if blur was triggered by Enter/Escape key
+    if (skipBlurHandlerRef.current) {
+      skipBlurHandlerRef.current = false;
+      return;
+    }
+
+    commit();
     handleSetEditing(false);
-    onChange(internalValueRef.current?.trim());
-  }, [handleSetEditing, onChange]);
+  }, [commit, handleSetEditing]);
 
   const handleClick = useCallback(() => {
     if (!isInternalEditing) {
+      inputRef.current?.select();
       handleSetEditing(true);
     }
   }, [isInternalEditing, handleSetEditing]);
+
+  const handleFocus = useCallback(() => {
+    if (selectOnFocus && isInternalEditing) {
+      inputRef.current?.select();
+    }
+  }, [isInternalEditing, selectOnFocus]);
+
+  useEffect(() => {
+    if (!isInternalEditing) return;
+    let rafId = requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        if (selectOnFocus) {
+          inputRef.current?.select();
+        }
+      });
+    });
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
+  }, [isInternalEditing, selectOnFocus]);
 
   // Add keydown event listener to handle enter key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.key) {
         case 'Escape':
-          // Reset the internal value to the original value
-          setInternalValue(value);
-          internalValueRef.current = value;
+          // Reset the internal value to the prop value
+          setInternalValue(valueRef.current);
+          internalValueRef.current = valueRef.current;
           handleSetEditing(false);
+          skipBlurHandlerRef.current = true;
           inputRef.current?.blur();
           break;
-        case 'Enter':
+        case 'Enter': {
+          commit();
           handleSetEditing(false);
-          onChange(internalValueRef.current.trim());
+          skipBlurHandlerRef.current = true;
           inputRef.current?.blur();
           break;
+        }
       }
     };
     if (isInternalEditing) {
@@ -156,27 +239,34 @@ export const EditableText: FC<{
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isInternalEditing, onChange, handleSetEditing, value]);
+  }, [isInternalEditing, commit, handleSetEditing]);
 
   return (
     <Input
       ref={inputRef}
       className={cn(
-        'disabled:opacity-1 w-full rounded-sm border-transparent px-1 py-0 focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:cursor-text',
+        'w-full rounded-sm border-transparent px-1 py-0 disabled:opacity-1',
+        'focus:outline-hidden disabled:cursor-text',
         {
-          'select-none bg-transparent': !isInternalEditing,
+          'focus:border-blue-500 focus:ring-blue-500': isInternalEditing,
+          'bg-transparent select-none': !isInternalEditing,
           truncate: !isInternalEditing,
         },
         className,
       )}
       style={{
-        caretColor: isInternalEditing ? undefined : 'transparent',
+        ...(style ?? {}),
+        caretColor: isInternalEditing ? style?.caretColor : 'transparent',
       }}
       value={internalValue}
+      tabIndex={isInternalEditing || allowTabFocusWhenNotEditing ? 0 : -1}
+      autoFocus={autoFocus}
       onChange={handleSetValue}
+      onFocus={handleFocus}
       onBlur={handleBlur}
       disabled={isReadOnly}
-      onClick={handleClick}
+      onClick={editTrigger === 'click' ? handleClick : undefined}
+      onDoubleClick={editTrigger === 'doubleClick' ? handleClick : undefined}
       placeholder={
         !isInternalEditing ? (placeholder ?? 'Click to edit') : undefined
       }

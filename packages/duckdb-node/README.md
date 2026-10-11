@@ -37,6 +37,20 @@ for (const user of users) {
 await connector.destroy();
 ```
 
+## Arrow result types
+
+The connector installs and loads DuckDB's `nanoarrow` community extension
+during initialization, then uses DuckDB's own Arrow IPC conversion for query
+results. Initialization fails if the extension cannot be installed or loaded.
+CI and other restricted-network environments should make the extension
+available in DuckDB's extension cache before creating the connector.
+
+Returned Arrow values follow DuckDB's declared types instead of inferred
+JavaScript types. For example, `BIGINT` values are Arrow `Int64` values exposed
+as JavaScript `bigint`, `DATE` remains `Date32`, and `BLOB` remains `Binary`.
+Callers that serialize query results must handle values such as `bigint`
+explicitly.
+
 ## API
 
 ### `createNodeDuckDbConnector(options?)`

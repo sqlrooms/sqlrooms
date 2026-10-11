@@ -1,10 +1,9 @@
 import {
-  DataTable,
-  DuckDbConnector,
-  DuckDbSliceState,
-  LoadFileOptions,
-  createDuckDbSlice,
-} from '@sqlrooms/duckdb';
+  createDbSlice,
+  type CreateDbSliceProps,
+  DbSliceState,
+} from '@sqlrooms/db';
+import {DataTable, DuckDbConnector, LoadFileOptions} from '@sqlrooms/duckdb';
 import {
   CreateLayoutSliceProps,
   LayoutSliceState,
@@ -25,12 +24,17 @@ import {
 } from '@sqlrooms/room-config';
 import {
   BaseRoomStoreState,
+  CommandSliceState,
   CreateBaseRoomSliceProps,
+  CreateCommandSliceProps,
+  RoomCommand,
   createBaseRoomSlice,
+  createCommandSlice,
   isRoomSliceWithInitialize,
+  registerCommandsForOwner,
+  unregisterCommandsForOwner,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
-import {ErrorBoundary} from '@sqlrooms/ui';
 import {
   ProgressInfo,
   convertToUniqueColumnOrTableName,
@@ -39,6 +43,7 @@ import {
 } from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {ReactNode} from 'react';
+import {z} from 'zod';
 import {StateCreator, StoreApi} from 'zustand';
 import {
   DataSourceState,
@@ -51,9 +56,18 @@ export type RoomShellSliceConfig = BaseRoomConfig;
 
 export type RoomShellStore = StoreApi<RoomShellSliceState>;
 
+/**
+ * Progress, status, and optional failure details for a room-level task.
+ */
 export type TaskProgress = {
+  /** Optional task completion percentage. */
   progress?: number | undefined;
+  /** Required status message shown while the task is active. */
   message: string;
+  /** Optional concise error message when the task fails. */
+  error?: string | undefined;
+  /** Optional detailed diagnostic text for task failures. */
+  errorDetails?: string | undefined;
 };
 
 export type RoomShellSliceState = {
@@ -100,7 +114,10 @@ export type RoomShellSliceState = {
       {fileName}: FileDataSource,
       onProgress: (progress: ProgressInfo) => void,
     ) => Promise<Uint8Array | File>;
-    CustomErrorBoundary: React.ComponentType<{
+    // Optional: consumers that render <RoomShellBase> pass their own boundary;
+    // when absent, RoomShellBase falls back to the default ErrorBoundary. Kept
+    // off the module's static imports so this slice stays UI-free.
+    CustomErrorBoundary?: React.ComponentType<{
       onRetry?: () => void;
       children?: ReactNode;
     }>;
@@ -148,8 +165,9 @@ export type RoomShellSliceState = {
       status?: DataSourceStatus,
     ) => Promise<void>;
   };
-} & DuckDbSliceState &
-  LayoutSliceState;
+} & DbSliceState &
+  LayoutSliceState &
+  CommandSliceState;
 
 /**
  * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
@@ -165,6 +183,8 @@ type CreateRoomShellSliceProps = CreateBaseRoomSliceProps & {
   layout?: CreateLayoutSliceProps;
   fileDataSourceLoader?: RoomShellSliceState['room']['fileDataSourceLoader'];
   CustomErrorBoundary?: RoomShellSliceState['room']['CustomErrorBoundary'];
+  createCommandProps?: CreateCommandSliceProps;
+  createDbProps?: CreateDbSliceProps;
   /** @deprecated Use direct props instead e.g. layout.panels */
   room?: Partial<Pick<LayoutSliceState['layout'], 'panels'>>;
 };
@@ -172,6 +192,64 @@ type CreateRoomShellSliceProps = CreateBaseRoomSliceProps & {
 const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 const INIT_DB_TASK = 'init-db';
 const INIT_ROOM_TASK = 'init-room';
+const ROOM_SHELL_COMMAND_OWNER = '@sqlrooms/room-shell';
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return 'An unknown error occurred.';
+}
+
+function getErrorDetails(error: unknown): string | undefined {
+  if (
+    error &&
+    typeof error === 'object' &&
+    'details' in error &&
+    typeof error.details === 'string'
+  ) {
+    return error.details;
+  }
+  return undefined;
+}
+
+const RoomSetTitleCommandInput = z.object({
+  title: z.string().min(1).describe('Room title.'),
+});
+type RoomSetTitleCommandInput = z.infer<typeof RoomSetTitleCommandInput>;
+
+const RoomSetDescriptionCommandInput = z.object({
+  description: z.string().describe('Room description.'),
+});
+type RoomSetDescriptionCommandInput = z.infer<
+  typeof RoomSetDescriptionCommandInput
+>;
+
+const RoomRemoveDataSourceInput = z.object({
+  tableName: z.string().describe('Table name of the data source to remove.'),
+});
+type RoomRemoveDataSourceInput = z.infer<typeof RoomRemoveDataSourceInput>;
+
+const RoomAddUrlDataSourceInput = z.object({
+  url: z.string().url().describe('URL of the source file to load.'),
+  tableName: z
+    .string()
+    .describe('Target table name where the URL data should be loaded.'),
+  httpMethod: z
+    .string()
+    .optional()
+    .describe('Optional HTTP method for URL fetch.'),
+  headers: z
+    .record(z.string(), z.string())
+    .optional()
+    .describe('Optional HTTP headers for URL fetch.'),
+});
+type RoomAddUrlDataSourceInput = z.infer<typeof RoomAddUrlDataSourceInput>;
+
+const RoomAddSqlDataSourceInput = z.object({
+  query: z.string().describe('SQL query that defines the derived table.'),
+  tableName: z.string().describe('Target table name for query result.'),
+});
+type RoomAddSqlDataSourceInput = z.infer<typeof RoomAddSqlDataSourceInput>;
 
 export function createRoomShellSlice(
   props: CreateRoomShellSliceProps,
@@ -183,7 +261,9 @@ export function createRoomShellSlice(
       layout: layoutProps,
       room: deprecatedRoomProps,
       fileDataSourceLoader,
-      CustomErrorBoundary = ErrorBoundary,
+      CustomErrorBoundary,
+      createCommandProps,
+      createDbProps,
       captureException = (exception) => console.error(exception),
       ...restProps
     } = props;
@@ -199,8 +279,13 @@ export function createRoomShellSlice(
 
     const sliceState: RoomShellSliceState = {
       ...roomSliceState,
-      ...createDuckDbSlice({connector})(set, get, store),
+      ...createDbSlice(
+        connector
+          ? {...createDbProps, duckDb: {...createDbProps?.duckDb, connector}}
+          : createDbProps,
+      )(set, get, store),
       ...createLayoutSlice(createLayoutProps)(set, get, store),
+      ...createCommandSlice(createCommandProps)(set, get, store),
       room: {
         ...roomSliceState.room,
         config: {
@@ -224,39 +309,71 @@ export function createRoomShellSlice(
         },
 
         async initialize() {
-          const {setTaskProgress} = get().room;
-          setTaskProgress(INIT_DB_TASK, {
-            message: 'Initializing database…',
-            progress: undefined,
-          });
-          await get().db.initialize();
-          setTaskProgress(INIT_DB_TASK, undefined);
-
-          setTaskProgress(INIT_ROOM_TASK, {
-            message: 'Loading data sources…',
-            progress: undefined,
-          });
-          await updateReadyDataSources();
-          await maybeDownloadDataSources();
-
-          // Call initialize on all other slices that have an initialize function
-          const slices = Object.entries(store.getState()).filter(
-            ([key, value]) =>
-              key !== 'room' &&
-              key !== 'db' &&
-              isRoomSliceWithInitialize(value),
+          registerCommandsForOwner(
+            store,
+            ROOM_SHELL_COMMAND_OWNER,
+            createRoomShellCommands(),
           );
-          for (const [_, slice] of slices) {
-            if (isRoomSliceWithInitialize(slice)) {
-              await slice.initialize();
+          const {setTaskProgress} = get().room;
+          try {
+            setTaskProgress(INIT_DB_TASK, {
+              message: 'Establishing database connection…',
+              progress: undefined,
+            });
+            try {
+              await get().db.initialize();
+            } catch (error) {
+              setTaskProgress(INIT_DB_TASK, {
+                message: 'Database connection failed',
+                error: getErrorMessage(error),
+                errorDetails: getErrorDetails(error),
+                progress: undefined,
+              });
+              throw error;
             }
-          }
-          const state = store.getState();
-          if (isRoomSliceWithInitialize(state)) {
-            await state.initialize();
-          }
+            setTaskProgress(INIT_DB_TASK, undefined);
 
-          setTaskProgress(INIT_ROOM_TASK, undefined);
+            setTaskProgress(INIT_ROOM_TASK, {
+              message: 'Loading data sources…',
+              progress: undefined,
+            });
+
+            await updateReadyDataSources();
+            await maybeDownloadDataSources();
+
+            setTaskProgress(INIT_ROOM_TASK, {
+              message: 'Initializing room…',
+              progress: undefined,
+            });
+            // Call initialize on all other slices that have an initialize function
+            const slices = Object.entries(store.getState()).filter(
+              ([key, value]) =>
+                key !== 'room' &&
+                key !== 'db' &&
+                isRoomSliceWithInitialize(value),
+            );
+            for (const [sliceName, slice] of slices) {
+              if (isRoomSliceWithInitialize(slice)) {
+                setTaskProgress(INIT_ROOM_TASK, {
+                  message: `Initializing ${sliceName}…`,
+                  progress: undefined,
+                });
+
+                await slice.initialize();
+              }
+            }
+            const state = store.getState();
+            if (isRoomSliceWithInitialize(state)) {
+              await state.initialize();
+            }
+          } finally {
+            setTaskProgress(INIT_ROOM_TASK, undefined);
+          }
+        },
+
+        async destroy() {
+          unregisterCommandsForOwner(store, ROOM_SHELL_COMMAND_OWNER);
+          await roomSliceState.room.destroy();
         },
 
         /** Returns the progress of the last task */
@@ -326,6 +443,7 @@ export function createRoomShellSlice(
         ) {
           const {schema} = get().db;
           const {db} = get();
+          const dbConnectors = get().db.connectors;
           const newTableName =
             tableName !== oldTableName
               ? convertToUniqueColumnOrTableName(
@@ -333,13 +451,23 @@ export function createRoomShellSlice(
                   await db.getTables(schema),
                 )
               : tableName;
-          const {rowCount} = await db.createTableFromQuery(
-            newTableName,
-            query,
-            {
+          let rowCount: number | undefined;
+          if (dbConnectors?.runQuery) {
+            const routed = await dbConnectors.runQuery({
+              sql: query,
+              queryType: 'arrow',
+              materialize: true,
+              materializedName: newTableName,
+              signal: abortSignal,
+            });
+            const relation = routed.relationName || newTableName;
+            rowCount = await db.getTableRowCount(relation as string, schema);
+          } else {
+            const created = await db.createTableFromQuery(newTableName, query, {
               abortSignal,
-            },
-          );
+            });
+            rowCount = created.rowCount;
+          }
           if (rowCount !== undefined) {
             get().db.setTableRowCount(newTableName, rowCount);
           }
@@ -366,7 +494,7 @@ export function createRoomShellSlice(
               };
             }),
           );
-          await get().db.refreshTableSchemas();
+          get().db.refreshTableSchemas();
         },
 
         setRoomFiles: (roomFiles) =>
@@ -418,7 +546,7 @@ export function createRoomShellSlice(
               }
             }),
           );
-          return get().db.findTableByName(tableName);
+          return get().db.findTable(tableName);
         },
         removeSqlQueryDataSource: async (tableName) => {
           await get().room.removeDataSource(tableName);
@@ -443,7 +571,7 @@ export function createRoomShellSlice(
                 delete draft.room.dataSourceStates[tableName];
               }),
             );
-            await db.dropTable(tableName);
+            await db.dropRelation(tableName);
             await db.refreshTableSchemas();
           }
         },
@@ -500,6 +628,9 @@ export function createRoomShellSlice(
       const {tables} = get().db;
       const {dataSourceStates} = get().room;
       const {config} = get().room;
+      if (!config) {
+        return;
+      }
       const {dataSources} = config;
       set((state) =>
         produce(state, (draft) => {
@@ -651,11 +782,21 @@ export function createRoomShellSlice(
         }),
       );
       if (loadedFiles.length) {
-        await get().db.refreshTableSchemas();
+        get().db.refreshTableSchemas();
       }
     }
 
     async function runDataSourceQueries(queries: SqlQueryDataSource[]) {
+      const dbConnectors = (get() as any).db.connectors as
+        | {
+            runQuery?: (args: {
+              sql: string;
+              queryType?: 'arrow' | 'json' | 'exec';
+              materialize?: boolean;
+              materializedName?: string;
+            }) => Promise<{relationName?: string}>;
+          }
+        | undefined;
       for (const ds of queries) {
         try {
           const {tableName, sqlQuery} = ds;
@@ -666,10 +807,23 @@ export function createRoomShellSlice(
               };
             }),
           );
-          const {rowCount} = await get().db.createTableFromQuery(
-            tableName,
-            sqlQuery,
-          );
+          let rowCount: number | undefined;
+          if (dbConnectors?.runQuery) {
+            const routed = await dbConnectors.runQuery({
+              sql: sqlQuery,
+              queryType: 'arrow',
+              materialize: true,
+              materializedName: tableName,
+            });
+            const relation = routed.relationName || tableName;
+            rowCount = await get().db.getTableRowCount(relation as string);
+          } else {
+            const created = await get().db.createTableFromQuery(
+              tableName,
+              sqlQuery,
+            );
+            rowCount = created.rowCount;
+          }
           if (rowCount !== undefined) {
             get().db.setTableRowCount(tableName, rowCount);
           }
@@ -692,8 +846,11 @@ export function createRoomShellSlice(
           // TODO: Make sure the errors are shown
         }
       }
-      await get().db.refreshTableSchemas();
-      await updateReadyDataSources();
+      get()
+        .db.refreshTableSchemas()
+        .then(() => {
+          updateReadyDataSources();
+        });
     }
 
     function updateTotalFileDownloadProgress() {
@@ -714,6 +871,157 @@ export function createRoomShellSlice(
   };
 
   return slice;
+}
+
+type RoomShellCommandStoreState = RoomShellSliceState;
+
+function createRoomShellCommands(): RoomCommand<RoomShellCommandStoreState>[] {
+  return [
+    {
+      id: 'room.set-title',
+      name: 'Set room title',
+      description: 'Update the room title',
+      group: 'Room',
+      keywords: ['room', 'title', 'name'],
+      inputSchema: RoomSetTitleCommandInput,
+      inputDescription: 'Provide a non-empty room title.',
+      ui: {
+        keystrokes: 'Mod+Alt+Shift+T',
+      },
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      execute: ({getState}, input) => {
+        const {title} = input as RoomSetTitleCommandInput;
+        getState().room.setRoomTitle(title);
+        return {
+          success: true,
+          commandId: 'room.set-title',
+          message: `Updated room title to "${title}".`,
+        };
+      },
+    },
+    {
+      id: 'room.set-description',
+      name: 'Set room description',
+      description: 'Update the room description',
+      group: 'Room',
+      keywords: ['room', 'description'],
+      inputSchema: RoomSetDescriptionCommandInput,
+      inputDescription: 'Provide room description text.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      execute: ({getState}, input) => {
+        const {description} = input as RoomSetDescriptionCommandInput;
+        getState().room.setDescription(description);
+        return {
+          success: true,
+          commandId: 'room.set-description',
+          message: 'Updated room description.',
+        };
+      },
+    },
+    {
+      id: 'room.remove-data-source',
+      name: 'Remove data source',
+      description: 'Remove a data source by table name',
+      group: 'Room',
+      keywords: ['room', 'data source', 'remove', 'table'],
+      inputSchema: RoomRemoveDataSourceInput,
+      inputDescription: 'Provide tableName of the data source to remove.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'high',
+        requiresConfirmation: true,
+      },
+      validateInput: (input, {getState}) => {
+        const {tableName} = input as RoomRemoveDataSourceInput;
+        const dataSource = getState().room.config.dataSources.find(
+          (source) => source.tableName === tableName,
+        );
+        if (!dataSource) {
+          throw new Error(
+            `Data source for table "${tableName}" was not found.`,
+          );
+        }
+      },
+      execute: async ({getState}, input) => {
+        const {tableName} = input as RoomRemoveDataSourceInput;
+        await getState().room.removeDataSource(tableName);
+        return {
+          success: true,
+          commandId: 'room.remove-data-source',
+          message: `Removed data source "${tableName}".`,
+        };
+      },
+    },
+    {
+      id: 'room.add-url-data-source',
+      name: 'Add URL data source',
+      description: 'Add a URL data source and start loading it',
+      group: 'Room',
+      keywords: ['room', 'data source', 'url', 'add'],
+      inputSchema: RoomAddUrlDataSourceInput,
+      inputDescription:
+        'Provide url and tableName, with optional httpMethod and headers.',
+      metadata: {
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'medium',
+      },
+      execute: async ({getState}, input) => {
+        const {url, tableName, httpMethod, headers} =
+          input as RoomAddUrlDataSourceInput;
+        await getState().room.addDataSource({
+          type: DataSourceTypes.enum.url,
+          url,
+          tableName,
+          ...(httpMethod ? {httpMethod} : {}),
+          ...(headers ? {headers} : {}),
+        });
+        return {
+          success: true,
+          commandId: 'room.add-url-data-source',
+          message: `Added URL data source "${tableName}".`,
+        };
+      },
+    },
+    {
+      id: 'room.add-sql-data-source',
+      name: 'Add SQL data source',
+      description: 'Create a data source from a SQL query',
+      group: 'Room',
+      keywords: ['room', 'data source', 'sql', 'query', 'add'],
+      inputSchema: RoomAddSqlDataSourceInput,
+      inputDescription: 'Provide query and tableName.',
+      metadata: {
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'medium',
+      },
+      validateInput: (input) => {
+        const {query} = input as RoomAddSqlDataSourceInput;
+        if (!query.trim()) {
+          throw new Error('Query cannot be empty.');
+        }
+      },
+      execute: async ({getState}, input) => {
+        const {query, tableName} = input as RoomAddSqlDataSourceInput;
+        await getState().room.addOrUpdateSqlQueryDataSource(tableName, query);
+        return {
+          success: true,
+          commandId: 'room.add-sql-data-source',
+          message: `Added SQL data source "${tableName}".`,
+        };
+      },
+    },
+  ];
 }
 
 export function useBaseRoomShellStore<RS extends RoomShellSliceState, T>(

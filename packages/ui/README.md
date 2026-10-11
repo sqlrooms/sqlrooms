@@ -51,18 +51,15 @@ function LoginForm() {
 ### Using Hooks
 
 ```tsx
-import {useToast, useDisclosure} from '@sqlrooms/ui';
+import {toast, useDisclosure} from '@sqlrooms/ui';
 
 function MyComponent() {
-  const {toast} = useToast();
   const {isOpen, onOpen, onClose} = useDisclosure();
 
   const handleAction = () => {
     // Perform some action
-    toast({
-      title: 'Success!',
+    toast.success('Success!', {
       description: 'Your action was completed successfully.',
-      variant: 'success',
     });
     onClose();
   };
@@ -93,13 +90,90 @@ function MyComponent() {
 
 ## Available Components
 
-- **Layout**: Card, Resizable, Tabs
-- **Forms**: Button, Checkbox, Input, Select, Slider, Switch, Textarea
+- **Layout**: Card, Resizable, SettingsPanelHeader, Tabs
+- **Forms**: Button, Checkbox, Combobox, Input, Select, Slider, Switch, Textarea
 - **Feedback**: Alert, Progress, Spinner, Toast
-- **Navigation**: Accordion, Breadcrumb, Dropdown Menu
-- **Overlay**: Dialog, Popover, Tooltip
+- **Navigation**: Accordion, Breadcrumb, Dropdown Menu, TabStrip
+- **Overlay**: Dialog, ModifierScrollOverlay, Popover, Tooltip
 - **Data Display**: Badge, Table
 - **Utility**: Error Boundary, Theme Switch
+
+## Combobox
+
+Use the compound `Combobox` component for searchable select dropdowns built on
+the package's Popover and Command primitives.
+
+```tsx
+import {Combobox} from '@sqlrooms/ui';
+
+function MySelector() {
+  const [value, setValue] = useState('');
+  const options = [
+    {value: 'option1', label: 'Option 1'},
+    {value: 'option2', label: 'Option 2'},
+    {value: 'option3', label: 'Option 3'},
+  ];
+  const selectedLabel =
+    options.find((option) => option.value === value)?.label ?? 'Select option';
+
+  return (
+    <Combobox value={value} onChange={setValue}>
+      <Combobox.Trigger>
+        <span>{selectedLabel}</span>
+      </Combobox.Trigger>
+      <Combobox.Content
+        searchable
+        searchPlaceholder="Search..."
+        emptyMessage="No results found."
+      >
+        {options.map((option) => (
+          <Combobox.Item key={option.value} value={option.value}>
+            <span>{option.label}</span>
+          </Combobox.Item>
+        ))}
+      </Combobox.Content>
+    </Combobox>
+  );
+}
+```
+
+Available compound components:
+
+- `Combobox` (root) - Manages state and provides context
+- `Combobox.Trigger` - Button to open the dropdown
+- `Combobox.Content` - Popover content wrapper
+- `Combobox.Item` - Individual selectable item
+
+Pass `disabled` to the root `Combobox` to disable opening the dropdown and
+selecting items.
+
+For advanced composition, the lower-level `useCombobox` hook is also exported.
+
+## Settings Panel Header
+
+Use `SettingsPanelHeader` for compact settings surfaces that should share the
+standard settings icon and optional close affordance.
+
+```tsx
+import {Button, SettingsPanelHeader} from '@sqlrooms/ui';
+import {CodeIcon} from 'lucide-react';
+
+function SettingsPanel({onClose}: {onClose: () => void}) {
+  return (
+    <div className="flex h-full flex-col gap-2 p-2">
+      <SettingsPanelHeader
+        actions={
+          <Button type="button" variant="ghost" size="icon">
+            <CodeIcon className="h-3.5 w-3.5" />
+          </Button>
+        }
+        onClose={onClose}
+      />
+      {/* settings controls */}
+    </div>
+  );
+}
+```
 
 ## Advanced Features
 
@@ -107,5 +181,102 @@ function MyComponent() {
 - **Form Handling**: Integrated with React Hook Form for easy form management
 - **Custom Styling**: Extend components with custom styles using Tailwind CSS
 - **Animation**: Smooth transitions and animations for interactive elements
+- **`ScrollableRow` forwards its ref and passes through extra props** (e.g.
+  `data-*`, `aria-*`, event handlers) to its outermost element, so it can be
+  wrapped by a slot component (such as Radix's `Slot`, re-exported from this
+  package) without silently losing the ref or those props. Note the two refs
+  point at different elements: the forwarded ref is the outer wrapper (the one
+  that also takes `className`), while `scrollRef` is the inner scrolling
+  container, for reading or setting `scrollLeft`.
+
+## Auto-Resize for Textareas
+
+`useAutoResizeTextarea` is the hook behind `Textarea`'s `autoResize` prop,
+exported so it can be applied to a textarea element you did not render
+yourself — for example one rendered by a host application's own text-input
+component. Give it a ref to the textarea and it grows the element's height to
+fit its content, tracks whether the content now exceeds the element's
+`max-height`, and re-measures on container resize.
+
+`resizeToFitContent` schedules the measurement on the next animation frame, so
+the element's height is not yet updated when the call returns.
+
+```tsx
+import {useAutoResizeTextarea} from '@sqlrooms/ui';
+import {useRef} from 'react';
+
+function MyTextarea({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const {hasOverflow, resizeToFitContent} = useAutoResizeTextarea({
+    autoResize: true,
+    textareaRef,
+    value,
+  });
+
+  return (
+    <textarea
+      ref={textareaRef}
+      value={value}
+      onChange={(event) => onChange(event.currentTarget.value)}
+      onInput={() => resizeToFitContent()}
+      className={hasOverflow ? 'overflow-y-auto' : 'overflow-y-hidden'}
+    />
+  );
+}
+```
+
+`Textarea` itself is unchanged: it still accepts `autoResize` and consumes
+this hook internally.
+
+## Native scrolling
+
+Use the `scrollbar-thin` utility for simple native overflow containers that
+should use a thin, theme-aware scrollbar:
+
+```tsx
+<div className="scrollbar-thin overflow-y-auto">{/* content */}</div>
+```
+
+Use `ScrollArea` instead when a surface needs custom horizontal or
+bidirectional scrollbar behavior.
+
+## CopyButton
+
+Copies `text` to the clipboard and swaps to a check mark for `durationMs`.
+Button size follows the `size`/`className` props; `iconClassName` sizes the
+icon independently. `Button` applies its 16px icon default through `:where()`,
+which carries no specificity, so any size class on the icon wins:
+
+```tsx
+<CopyButton
+  text={prompt}
+  className="h-6 w-6"
+  iconClassName="h-3 w-3"
+  tooltipLabel="Copy prompt"
+/>
+```
+
+## TabStrip
+
+`TabStrip` supports a `fontSize` prop for sizing tab labels, inline rename
+inputs, search dropdown content, and built-in subcomponents consistently:
+
+```tsx
+<TabStrip
+  tabs={tabs}
+  openTabs={openTabs}
+  selectedTabId={selectedTabId}
+  fontSize="12px"
+/>
+```
+
+Use `renderSearchItemLabel` when the search dropdown should show custom row
+content, such as a status spinner next to a tab name.
 
 For more information, visit the SQLRooms documentation.

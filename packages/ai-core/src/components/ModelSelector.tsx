@@ -1,5 +1,6 @@
 import React, {useMemo} from 'react';
 import {
+  cn,
   Select,
   SelectContent,
   SelectGroup,
@@ -25,6 +26,58 @@ interface ModelSelectorProps {
   models?: Model[];
 }
 
+const MODEL_KEY_SEPARATOR = '::';
+
+/**
+ * Encodes one part of a model select key.
+ *
+ * We encode provider/model segments before joining to avoid collisions when
+ * either value contains the separator token.
+ */
+const encodeModelKeyPart = (value: string): string => encodeURIComponent(value);
+
+/**
+ * Decodes one part of a model select key.
+ */
+const decodeModelKeyPart = (value: string): string => decodeURIComponent(value);
+
+/**
+ * Builds a stable select value for a provider/model pair.
+ */
+const getModelSelectKey = (provider: string, modelValue: string): string =>
+  `${encodeModelKeyPart(provider)}${MODEL_KEY_SEPARATOR}${encodeModelKeyPart(modelValue)}`;
+
+/**
+ * Parses a select value back to provider/model.
+ *
+ * Returns `null` for malformed input so UI handlers can safely ignore it.
+ */
+const parseModelSelectKey = (
+  selectValue: string,
+): {provider: string; modelValue: string} | null => {
+  const [encodedProvider, encodedModelValue, ...extraParts] =
+    selectValue.split(MODEL_KEY_SEPARATOR);
+  if (!encodedProvider || !encodedModelValue || extraParts.length > 0) {
+    return null;
+  }
+
+  try {
+    return {
+      provider: decodeModelKeyPart(encodedProvider),
+      modelValue: decodeModelKeyPart(encodedModelValue),
+    };
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Select control for choosing the active AI model for the current session.
+ *
+ * Supports duplicate model names across providers by using an encoded,
+ * provider-qualified select key internally while persisting separate
+ * `modelProvider` and `model` values in state.
+ */
 export const ModelSelector: React.FC<ModelSelectorProps> = ({
   className,
   models: passedModels,
@@ -42,17 +95,24 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
 
   const models = passedModels ?? settingsModels;
 
-  const handleModelChange = (value: string) => {
-    const selectedModel = models.find((model) => model.value === value);
-    if (selectedModel) {
-      setAiModel(selectedModel.provider, value);
+  const handleModelChange = (selectValue: string) => {
+    const parsed = parseModelSelectKey(selectValue);
+    if (parsed) {
+      setAiModel(parsed.provider, parsed.modelValue);
     }
   };
 
   if (!currentSession) return null;
 
   const currentModel = currentSession.model;
-  const currentModelDetails = models.find((m) => m.value === currentModel);
+  const currentModelProvider = currentSession.modelProvider;
+  const currentSelectValue = getModelSelectKey(
+    currentModelProvider,
+    currentModel,
+  );
+  const currentModelDetails = models.find(
+    (m) => m.provider === currentModelProvider && m.value === currentModel,
+  );
 
   // Group models by provider
   const modelsByProvider = models.reduce(
@@ -67,23 +127,28 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   );
 
   return (
-    <div className={className}>
-      <Select value={currentModel} onValueChange={handleModelChange}>
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select AI Model">
-            {currentModelDetails?.label ?? ''}
-          </SelectValue>
+    <div className={cn('min-w-0', className)}>
+      <Select
+        value={currentModelDetails ? currentSelectValue : ''}
+        onValueChange={handleModelChange}
+      >
+        <SelectTrigger className="h-8 w-auto max-w-[220px] min-w-0 px-2.5 py-1 text-xs font-medium shadow-none [&>span]:truncate">
+          <SelectValue placeholder="Select model" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="max-h-72">
           {Object.entries(modelsByProvider).map(
             ([provider, providerModels]) => (
               <React.Fragment key={provider}>
                 <SelectGroup>
-                  <SelectLabel className="text-muted-foreground/50 text-center text-sm font-bold">
+                  <SelectLabel className="text-muted-foreground/50 py-1 text-center text-xs font-bold">
                     {capitalize(provider)}
                   </SelectLabel>
                   {providerModels.map((model) => (
-                    <SelectItem key={model.value} value={model.value}>
+                    <SelectItem
+                      key={getModelSelectKey(model.provider, model.value)}
+                      value={getModelSelectKey(model.provider, model.value)}
+                      className="py-1 pr-7 text-xs"
+                    >
                       {model.label}
                     </SelectItem>
                   ))}

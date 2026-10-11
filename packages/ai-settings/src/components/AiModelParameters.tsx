@@ -10,11 +10,19 @@ import {
   DialogTitle,
   DialogDescription,
   useDisclosure,
-  useToast,
+  toast,
 } from '@sqlrooms/ui';
 import {useStoreWithAiSettings} from '../AiSettingsSlice';
 
-export const AiModelParameters: FC = () => {
+export interface AiModelParametersProps {
+  showViewInstructions?: boolean;
+  showTitle?: boolean;
+}
+
+export const AiModelParameters: FC<AiModelParametersProps> = ({
+  showViewInstructions = false,
+  showTitle = true,
+}) => {
   const maxSteps = useStoreWithAiSettings(
     (s) => s.aiSettings.config.modelParameters.maxSteps,
   );
@@ -30,8 +38,6 @@ export const AiModelParameters: FC = () => {
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const {toast} = useToast();
-
   const {isOpen, onOpen, onClose} = useDisclosure();
 
   const handleMaxStepsChange = (value: number) => {
@@ -63,10 +69,8 @@ export const AiModelParameters: FC = () => {
       !allowedTypes.includes(file.type) &&
       !allowedExtensions.includes(fileExtension)
     ) {
-      toast({
-        title: 'Invalid file type',
+      toast.error('Invalid file type', {
         description: 'Please select a text file (.txt, .md, .json)',
-        variant: 'destructive',
       });
       return;
     }
@@ -74,10 +78,8 @@ export const AiModelParameters: FC = () => {
     // Validate file size (max 1MB)
     const maxSize = 1024 * 1024; // 1MB
     if (file.size > maxSize) {
-      toast({
-        title: 'File too large',
+      toast.error('File too large', {
         description: 'File size must be less than 1MB',
-        variant: 'destructive',
       });
       return;
     }
@@ -85,17 +87,14 @@ export const AiModelParameters: FC = () => {
     try {
       const text = await file.text();
       setAdditionalInstruction(text);
-      toast({
-        title: 'File uploaded successfully',
+      toast.success('File uploaded successfully', {
         description:
           'System instructions have been updated from the uploaded file.',
       });
     } catch (error) {
       console.error('Error reading file:', error);
-      toast({
-        title: 'Error reading file',
+      toast.error('Error reading file', {
         description: 'Please try again.',
-        variant: 'destructive',
       });
     }
 
@@ -115,10 +114,12 @@ export const AiModelParameters: FC = () => {
 
   return (
     <div className="space-y-2">
-      <label className="text-md flex items-center gap-2 pb-6 font-medium">
-        <Sliders className="h-4 w-4" />
-        Model Parameters
-      </label>
+      {showTitle && (
+        <label className="text-md flex items-center gap-2 pb-6 font-medium">
+          <Sliders className="h-4 w-4" />
+          Model Parameters
+        </label>
+      )}
       <div className="grid grid-cols-1 gap-4">
         {/* Max Steps */}
         <div className="space-y-2">
@@ -164,15 +165,17 @@ export const AiModelParameters: FC = () => {
               <Upload className="h-4 w-4" />
               Upload File
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleViewFullInstructions}
-              className="flex items-center gap-2"
-            >
-              <Eye className="h-4 w-4" />
-              View Instructions
-            </Button>
+            {showViewInstructions && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleViewFullInstructions}
+                className="flex items-center gap-2"
+              >
+                <Eye className="h-4 w-4" />
+                View Instructions
+              </Button>
+            )}
           </div>
           <Input
             ref={fileInputRef}
@@ -187,7 +190,7 @@ export const AiModelParameters: FC = () => {
       {/* Full Instructions Modal */}
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="flex h-[80vh] max-w-4xl flex-col">
-          <DialogHeader className="flex-shrink-0">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Full System Instructions</DialogTitle>
             <DialogDescription>
               Complete system instructions that will be sent to the AI model,
@@ -197,7 +200,7 @@ export const AiModelParameters: FC = () => {
           </DialogHeader>
           <div className="mt-4 min-h-0 flex-1 overflow-hidden">
             <div className="bg-muted/50 h-full overflow-auto rounded-lg p-4">
-              <pre className="overflow-wrap-anywhere w-full max-w-full break-words font-mono text-sm leading-relaxed">
+              <pre className="overflow-wrap-anywhere w-full max-w-full font-mono text-sm leading-relaxed wrap-break-word">
                 {getFullInstructions()}
               </pre>
             </div>

@@ -1,3 +1,5 @@
+> **Experimental:** This package's API and behavior may change between releases.
+
 Retrieval Augmented Generation (RAG) slice for SQLRooms. Query vector embeddings stored in DuckDB for semantic search and AI-powered applications.
 
 This package is designed to work with [sqlrooms-rag](https://pypi.org/project/sqlrooms-rag/), a Python package that prepares embedding/FTS-index databases for RAG search.
@@ -62,6 +64,46 @@ const results = await store
 
 console.log(results);
 ```
+
+## RAG Tool Usage (AI Integration)
+
+Use `createRagTool()` to expose semantic search as an AI tool in your `createAiSlice()` configuration.
+
+```typescript
+import {createRagSlice, createRagTool} from '@sqlrooms/ai-rag';
+import {createAiSlice, createDefaultAiTools} from '@sqlrooms/ai';
+import {createOpenAIEmbeddingProvider} from './embeddings';
+
+// Create RAG slice (same store)
+...createRagSlice({
+  embeddingsDatabases: [
+    {
+      databaseFilePathOrUrl:
+        window.location.origin + '/rag/duckdb_docs_openai.duckdb',
+      databaseName: 'duckdb_docs',
+      embeddingProvider: createOpenAIEmbeddingProvider(
+        'text-embedding-3-small',
+        1536,
+        () => get().aiSettings.config.providers?.['openai']?.apiKey,
+      ),
+      embeddingDimensions: 1536,
+    },
+  ],
+})(set, get, store),
+
+// Register RAG tool in AI tools map
+...createAiSlice({
+  tools: {
+    ...createDefaultAiTools(store, {query: {}}),
+    search_documentation: createRagTool(),
+  },
+})(set, get, store),
+
+// Make store available globally for rag tool execution
+(globalThis as any).__ROOM_STORE__ = roomStore;
+```
+
+This is the same pattern used in `examples/ai-rag/src/store.ts`.
 
 ## API Reference
 
@@ -402,7 +444,7 @@ python -m sqlrooms_rag.cli prepare-embeddings \
   --model BAAI/bge-small-en-v1.5
 ```
 
-See the [Python package documentation](../../python/rag/README.md) for more details.
+See the [Python package documentation](https://github.com/sqlrooms/sqlrooms/tree/main/python/sqlrooms-rag) for more details.
 
 ## Database Schema
 
@@ -474,11 +516,12 @@ try {
 
 ## Examples
 
-See the [examples/ai](../../examples/ai) directory for complete examples:
+See the [AI RAG example](https://github.com/sqlrooms/examples/tree/main/ai-rag)
+for a complete integration:
 
 - `src/embeddings.ts` - OpenAI embedding provider implementations
-- `src/rag-example.ts` - Comprehensive usage examples
 - `src/store.ts` - Store configuration with RAG
+- `src/components/RagSearchDialog.tsx` - Search UI and result handling
 
 ## License
 

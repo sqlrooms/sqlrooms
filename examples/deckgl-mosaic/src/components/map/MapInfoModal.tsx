@@ -4,7 +4,7 @@ interface MapInfoModalProps {
 
 export function MapInfoModal({onClose}: MapInfoModalProps) {
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="w-96 rounded-md border border-slate-700 bg-[#1f1d1b] p-6 text-slate-200">
         <div className="space-y-3 text-sm leading-relaxed">
           <p>

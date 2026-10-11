@@ -1,10 +1,11 @@
-This package is part of the SQLRooms framework and provides flexible layout components for building complex, resizable, and draggable interfaces.
+Layout slice and renderer for SQLRooms panel-based UIs.
 
-## Overview
+See the [Layout developer guide](https://sqlrooms.org/layout.html) for examples
+of panels, tabs, grids, and docking, and the
+[layout example app](https://github.com/sqlrooms/examples/tree/main/layout)
+for a complete implementation.
 
-The `@sqlrooms/layout` package offers a set of components and utilities for creating dynamic, multi-pane layouts in SQLRooms applications. It's primarily built around the [react-mosaic](https://nomcopter.github.io/react-mosaic/) library, which provides a powerful windowing system similar to the one found in advanced IDEs.
-
-> **Note:** This package uses [react-mosaic](https://nomcopter.github.io/react-mosaic/) which should not be confused with [uwdata/mosaic](https://github.com/uwdata/mosaic) used in the [`@sqlrooms/mosaic`](/api/mosaic/) package for data visualization purposes.
+This package renders layout trees using `react-resizable-panels` for split layouts, `dnd-kit` for dockable panel rearrangement, and `react-grid-layout` for scrollable grid dashboard layouts.
 
 ## Installation
 
@@ -12,78 +13,125 @@ The `@sqlrooms/layout` package offers a set of components and utilities for crea
 npm install @sqlrooms/layout
 ```
 
-## Mosaic Tree Structure
+## Main exports
 
-The mosaic layout is defined by a tree structure where each node is either a string (representing a panel ID) or an object with `direction`, `first`, `second`, and optional `splitPercentage` properties. Here's an example of how a mosaic tree might look:
+- `createLayoutSlice()`, `useStoreWithLayout()`
+- `LayoutRenderer` component — renders a `LayoutNode` tree using resizable panels, tabs, and generic docking
+- `useExpandGridPanel()` — expands a grid child panel horizontally to available row space
+- Grid layout defaults/helpers: `DEFAULT_GRID_COLS`, `DEFAULT_GRID_BREAKPOINTS`, `getResponsiveGridCols()`, `getGridColsForBreakpoint()`
+- Layout helpers:
+  - `visitLayoutLeafNodes`
+  - `getVisibleLayoutPanels`
+  - `removeLayoutNodeByKey`
+  - `findNodeById`, `findTabsNodeForPanel`
+  - `movePanel`
+- Layout config schemas/types re-exported from `@sqlrooms/layout-config`
+
+## Store usage
 
 ```tsx
-// Simple two-panel layout with 30/70 split
-const simpleMosaicTree = {
-  direction: 'row',
-  first: 'data-sources', // Left panel (30% width)
-  second: 'main', // Right panel (70% width)
-  splitPercentage: 30,
-};
+import {LayoutSliceState, createLayoutSlice} from '@sqlrooms/layout';
+import {
+  BaseRoomStoreState,
+  createBaseRoomSlice,
+  createRoomStore,
+} from '@sqlrooms/room-store';
 
-// More complex nested layout
-const complexMosaicTree = {
-  direction: 'row',
-  first: 'data-sources', // Left panel
-  second: {
-    // Right side contains a nested layout
-    direction: 'column',
-    first: 'main', // Top panel
-    second: {
-      // Bottom contains another nested layout
-      direction: 'row',
-      first: 'sql-editor',
-      second: 'visualization',
-      splitPercentage: 50,
-    },
-    splitPercentage: 60,
+function DataPanel() {
+  return <div>Data</div>;
+}
+
+function MainPanel() {
+  return <div>Main</div>;
+}
+
+type State = BaseRoomStoreState & LayoutSliceState;
+
+export const {roomStore, useRoomStore} = createRoomStore<State>(
+  (set, get, store) => ({
+    ...createBaseRoomSlice()(set, get, store),
+    ...createLayoutSlice({
+      config: {
+        type: 'split',
+        direction: 'row',
+        children: [
+          {type: 'panel', id: 'data', defaultSize: '30%'},
+          {type: 'panel', id: 'main', defaultSize: '70%'},
+        ],
+      },
+      panels: {
+        data: {
+          title: 'Data',
+          component: DataPanel,
+        },
+        main: {
+          title: 'Main',
+          component: MainPanel,
+        },
+      },
+    })(set, get, store),
+  }),
+);
+```
+
+## Render callbacks
+
+`createLayoutSlice` accepts optional render callbacks for custom panel and tab strip rendering:
+
+```ts
+createLayoutSlice({
+  config: {
+    /* ... */
   },
-  splitPercentage: 20,
-};
+  panels: {
+    /* ... */
+  },
+  renderPanel: (context) => {
+    // Return custom JSX or undefined to fall back to the default renderer
+  },
+});
 ```
 
-## Components
+## Tabs layout composition
 
-### MosaicLayout
-
-A wrapper around the `Mosaic` component from react-mosaic-component that provides a customized look and feel consistent with SQLRooms styling.
+`TabsLayout.TabContent` accepts `forceMount` to keep all visible tab contents
+mounted while hiding inactive tabs. This is useful for expensive panels that
+should preserve local state or setup work during tab changes:
 
 ```tsx
-import {MosaicLayout} from '@sqlrooms/layout';
-
-// Example usage
-<MosaicLayout
-  renderTile={(id, path) => <YourTileContent id={id} />}
-  value={yourMosaicTree}
-  onChange={handleLayoutChange}
-/>;
+<TabsLayout.TabContentContainer>
+  <TabsLayout.TabContent forceMount />
+</TabsLayout.TabContentContainer>
 ```
 
-### MosaicTile
+## Area-based panel management
 
-A component for rendering individual tiles within the mosaic layout.
+Named `tabs` nodes (with an `id`) act as **areas** that can be managed programmatically:
 
-## Utility Functions
+```tsx
+import {Button} from '@sqlrooms/ui';
 
-The package provides several utility functions for working with mosaic layouts:
+function PanelButtons() {
+  const setActiveTab = useRoomStore((state) => state.layout.setActiveTab);
+  const addTab = useRoomStore((state) => state.layout.addTab);
+  const setCollapsed = useRoomStore((state) => state.layout.setCollapsed);
 
-- `makeMosaicStack`: Creates a stack of mosaic nodes with specified weights and direction
-- `visitMosaicLeafNodes`: Traverses all leaf nodes in a mosaic tree
-- `getVisibleMosaicLayoutPanels`: Gets an array of all visible panel IDs
-- `findMosaicNodePathByKey`: Finds the path to a specific node by its key
-- `removeMosaicNodeByKey`: Removes a node from the mosaic tree by its key
+  return (
+    <div className="flex gap-2">
+      <Button onClick={() => setActiveTab('sidebar', 'data')}>
+        Show Data Panel
+      </Button>
+      <Button onClick={() => addTab('sidebar', 'schema')}>
+        Add Schema Tab
+      </Button>
+      <Button onClick={() => setCollapsed('sidebar', true)}>
+        Collapse Sidebar
+      </Button>
+    </div>
+  );
+}
+```
 
-## Learn More
+## Note
 
-For more information about the underlying react-mosaic library, visit:
-
-- [react-mosaic documentation](https://nomcopter.github.io/react-mosaic/)
-- [react-mosaic GitHub repository](https://github.com/nomcopter/react-mosaic)
-
-## License
-
-MIT
+`@sqlrooms/layout` (panel layout system) is different from `@sqlrooms/mosaic` (UW IDL data visualization package).

@@ -10,7 +10,7 @@ export interface VegaChartContainerProps {
   /**
    * Initial Vega-Lite specification
    */
-  spec: VisualizationSpec;
+  spec: VisualizationSpec | string;
   /**
    * SQL query for data (alternative to arrowTable)
    */

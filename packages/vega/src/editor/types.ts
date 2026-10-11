@@ -84,7 +84,7 @@ export interface VegaEditorContextValue {
  */
 export interface UseVegaChartEditorOptions {
   /** Initial Vega-Lite spec */
-  initialSpec: VisualizationSpec;
+  initialSpec: VisualizationSpec | string;
   /** Initial SQL query */
   initialSql?: string;
   /** Callback when spec changes are applied */

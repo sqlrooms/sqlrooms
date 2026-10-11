@@ -1,16 +1,19 @@
 import {createId} from '@paralleldrive/cuid2';
+import type {DbSliceState} from '@sqlrooms/db';
 import {
-  DuckDbSliceState,
   getSqlErrorWithPointer,
   joinStatements,
   makeLimitQuery,
   separateLastStatement,
-} from '@sqlrooms/duckdb';
+} from '@sqlrooms/db';
 import {
   BaseRoomStoreState,
   createSlice,
+  registerCommandsForOwner,
+  RoomCommand,
   RoomShellSliceState,
   StateCreator,
+  unregisterCommandsForOwner,
   useBaseRoomShellStore,
 } from '@sqlrooms/room-shell';
 import {
@@ -22,23 +25,72 @@ import * as arrow from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
 import {saveAs} from 'file-saver';
 import {produce} from 'immer';
+import {z} from 'zod';
 
+const SQL_EDITOR_COMMAND_OWNER = '@sqlrooms/sql-editor';
+
+export type SqlEditorQuery = SqlEditorSliceConfig['queries'][number];
+
+export type EnsureSqlQueryOptions = {
+  name?: string;
+  query?: string;
+  open?: boolean;
+  select?: boolean;
+};
+
+/**
+ * Lifecycle state and output of a single SQL query execution, keyed by query id
+ * in the editor slice.
+ *
+ * - `loading` results may gain an {@link QueryResult.isWrite | isWrite}
+ *   classification once the statement has been parsed.
+ * - `aborted` results may carry a {@link QueryResult.warning | warning} when
+ *   the connector cannot guarantee the statement was stopped server-side.
+ */
 export type QueryResult =
-  | {status: 'loading'; isBeingAborted?: boolean; controller: AbortController}
-  | {status: 'aborted'}
-  | {status: 'error'; error: string}
+  | {
+      status: 'loading';
+      isBeingAborted?: boolean;
+      controller: AbortController;
+      startedAt?: number;
+      /**
+       * Whether the running statement is a write (non-SELECT or multi-statement).
+       * Stamped once the statement has been parsed (see `runQueryById`);
+       * `undefined` until then. `abortQueryById` reads this to decide whether
+       * cancelling needs a warning: aborting a read is harmless, but the
+       * underlying cancel is best-effort, so a write may still complete on the
+       * backend after the UI reports it aborted.
+       */
+      isWrite?: boolean;
+    }
+  | {
+      status: 'aborted';
+      durationMs?: number;
+      completedAt?: number;
+      /**
+       * User-facing warning shown in the result pane when a write (or a
+       * statement of not-yet-known type) was aborted but the connector cannot
+       * guarantee it was actually stopped server-side. Absent for reads.
+       */
+      warning?: string;
+    }
+  | {status: 'error'; error: string; durationMs?: number; completedAt?: number}
   | {
       status: 'success';
       type: 'pragma' | 'explain' | 'select';
       result: arrow.Table | undefined;
       query: string;
       lastQueryStatement: string;
+      durationMs?: number;
+      completedAt?: number;
     }
   | {
       status: 'success';
       type: 'exec';
       query: string;
       lastQueryStatement: string;
+      durationMs?: number;
+      completedAt?: number;
     };
 
 export function isQueryWithResult(
@@ -57,6 +109,8 @@ export function isQueryWithResult(
 
 export type SqlEditorSliceState = {
   sqlEditor: {
+    initialize?: () => Promise<void>;
+    destroy?: () => Promise<void>;
     config: SqlEditorSliceConfig;
     // Runtime state
     /**
@@ -78,6 +132,40 @@ export type SqlEditorSliceState = {
      * Set the config for the sql editor slice.
      */
     setConfig(config: SqlEditorSliceConfig): void;
+
+    /**
+     * Ensure an id-addressable query exists without requiring it to be an open
+     * workbench tab.
+     */
+    ensureQuery(
+      queryId: string,
+      options?: EnsureSqlQueryOptions,
+    ): SqlEditorQuery;
+
+    /**
+     * Remove an id-addressable query and its runtime result.
+     */
+    removeQuery(queryId: string): void;
+
+    /**
+     * Rename an id-addressable query.
+     */
+    renameQuery(queryId: string, name: string): void;
+
+    /**
+     * Run a query by id, optionally overriding its stored SQL text first.
+     */
+    runQueryById(queryId: string, query?: string): Promise<void>;
+
+    /**
+     * Abort a running query by id.
+     */
+    abortQueryById(queryId: string): void;
+
+    /**
+     * Clear the runtime result for a query id.
+     */
+    clearQueryResult(queryId: string): void;
 
     /**
      * Run the currently selected query.
@@ -179,10 +267,20 @@ export function createSqlEditorSlice({
 } = {}): StateCreator<SqlEditorSliceState> {
   return createSlice<
     SqlEditorSliceState,
-    BaseRoomStoreState & DuckDbSliceState & SqlEditorSliceState
-  >((set, get) => {
+    BaseRoomStoreState & DbSliceState & SqlEditorSliceState
+  >((set, get, store) => {
     return {
       sqlEditor: {
+        initialize: async () => {
+          registerCommandsForOwner(
+            store,
+            SQL_EDITOR_COMMAND_OWNER,
+            createSqlEditorCommands(),
+          );
+        },
+        destroy: async () => {
+          unregisterCommandsForOwner(store, SQL_EDITOR_COMMAND_OWNER);
+        },
         config,
         // Initialize runtime state
         queryResultsById: {},
@@ -198,6 +296,94 @@ export function createSqlEditorSlice({
           );
         },
 
+        ensureQuery: (queryId, options = {}) => {
+          const now = Date.now();
+          const existingQuery = get().sqlEditor.config.queries.find(
+            (query) => query.id === queryId,
+          );
+          const shouldOpen = Boolean(options.open || options.select);
+          const nextQuery: SqlEditorQuery = existingQuery
+            ? {
+                ...existingQuery,
+                ...(options.name !== undefined ? {name: options.name} : {}),
+                ...(options.query !== undefined ? {query: options.query} : {}),
+                ...(options.select ? {lastOpenedAt: now} : {}),
+              }
+            : {
+                id: queryId,
+                name: options.name ?? 'SQL Query',
+                query: options.query ?? '',
+                ...(options.select ? {lastOpenedAt: now} : {}),
+              };
+
+          set((state) =>
+            produce(state, (draft) => {
+              const config = draft.sqlEditor.config;
+              const index = config.queries.findIndex(
+                (query) => query.id === queryId,
+              );
+              if (index >= 0) {
+                config.queries[index] = nextQuery;
+              } else {
+                config.queries.push(nextQuery);
+              }
+              if (shouldOpen && !config.openTabs.includes(queryId)) {
+                config.openTabs.push(queryId);
+              }
+              if (options.select) {
+                config.selectedQueryId = queryId;
+              }
+            }),
+          );
+
+          return nextQuery;
+        },
+
+        removeQuery: (queryId) => {
+          const currentResult = get().sqlEditor.queryResultsById[queryId];
+          if (currentResult?.status === 'loading') {
+            currentResult.controller.abort();
+          }
+
+          set((state) =>
+            produce(state, (draft) => {
+              const config = draft.sqlEditor.config;
+              const wasSelected = config.selectedQueryId === queryId;
+              config.queries = config.queries.filter(
+                (query) => query.id !== queryId,
+              );
+              config.openTabs = config.openTabs.filter((id) => id !== queryId);
+              delete draft.sqlEditor.queryResultsById[queryId];
+
+              if (wasSelected) {
+                const nextSelectedId =
+                  config.openTabs[0] ?? config.queries[0]?.id;
+                if (nextSelectedId) {
+                  config.selectedQueryId = nextSelectedId;
+                  if (!config.openTabs.includes(nextSelectedId)) {
+                    config.openTabs.push(nextSelectedId);
+                  }
+                } else {
+                  config.selectedQueryId = '';
+                }
+              }
+            }),
+          );
+        },
+
+        renameQuery: (queryId, name) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const query = draft.sqlEditor.config.queries.find(
+                (candidate) => candidate.id === queryId,
+              );
+              if (query) {
+                query.name = name || query.name;
+              }
+            }),
+          );
+        },
+
         exportResultsToCsv: (results, filename) => {
           if (!results) return;
           const blob = new Blob([csvFormat(results.toArray())], {
@@ -208,13 +394,16 @@ export function createSqlEditorSlice({
 
         createQueryTab: (initialQuery = '') => {
           const sqlEditorConfig = get().sqlEditor.config;
+          const now = Date.now();
           const newQuery = {
             id: createId(),
             name: generateUniqueName(
-              'Untitled',
+              'Untitled 1',
               sqlEditorConfig.queries.map((q) => q.name),
+              ' ',
             ),
             query: initialQuery,
+            lastOpenedAt: now,
           };
 
           set((state) =>
@@ -229,50 +418,50 @@ export function createSqlEditorSlice({
         },
 
         deleteQueryTab: (queryId) => {
-          const sqlEditorConfig = get().sqlEditor.config;
-          const queries = sqlEditorConfig.queries;
-          const openTabs = sqlEditorConfig.openTabs;
-
-          if (queries.length <= 1) {
-            // Don't delete the last query
-            return;
-          }
-
-          const wasSelected = sqlEditorConfig.selectedQueryId === queryId;
-          const deletingOpenIndex = openTabs.indexOf(queryId);
-          const filteredQueries = queries.filter((q) => q.id !== queryId);
-
           set((state) =>
             produce(state, (draft) => {
-              draft.sqlEditor.config.queries = filteredQueries;
-              draft.sqlEditor.config.openTabs = openTabs.filter(
-                (id) => id !== queryId,
-              );
-              const {[queryId]: _removed, ...rest} =
-                draft.sqlEditor.queryResultsById;
-              draft.sqlEditor.queryResultsById = rest;
+              const config = draft.sqlEditor.config;
+
+              if (config.queries.length <= 1) {
+                // Don't delete the last query
+                return;
+              }
+
+              const wasSelected = config.selectedQueryId === queryId;
+              const deletingOpenIndex = config.openTabs.indexOf(queryId);
+
+              config.queries = config.queries.filter((q) => q.id !== queryId);
+              config.openTabs = config.openTabs.filter((id) => id !== queryId);
+              delete draft.sqlEditor.queryResultsById[queryId];
 
               // If we deleted the selected query, select another one
               if (wasSelected) {
-                const newOpenTabs = draft.sqlEditor.config.openTabs;
-                const remainingQueries = draft.sqlEditor.config.queries;
+                const newOpenTabs = config.openTabs;
+                const remainingQueries = config.queries;
 
                 if (newOpenTabs.length > 0) {
                   // Select from remaining open tabs
-                  const newIndex =
-                    deletingOpenIndex === 0
-                      ? 0
-                      : Math.min(deletingOpenIndex - 1, newOpenTabs.length - 1);
-                  const newSelectedId = newOpenTabs[newIndex];
+                  const baseIndex =
+                    deletingOpenIndex <= 0 ? 0 : deletingOpenIndex - 1;
+                  const newIndex = Math.min(baseIndex, newOpenTabs.length - 1);
+                  const newSelectedId =
+                    newOpenTabs[newIndex] ?? remainingQueries[0]?.id;
                   if (newSelectedId) {
-                    draft.sqlEditor.config.selectedQueryId = newSelectedId;
+                    config.selectedQueryId = newSelectedId;
+                    const newSelectedQuery = config.queries.find(
+                      (q) => q.id === newSelectedId,
+                    );
+                    if (newSelectedQuery) {
+                      newSelectedQuery.lastOpenedAt = Date.now();
+                    }
                   }
                 } else if (remainingQueries.length > 0) {
                   // No open tabs left, open a closed query
                   const queryToOpen = remainingQueries[0];
                   if (queryToOpen) {
-                    draft.sqlEditor.config.openTabs.push(queryToOpen.id);
-                    draft.sqlEditor.config.selectedQueryId = queryToOpen.id;
+                    config.openTabs.push(queryToOpen.id);
+                    config.selectedQueryId = queryToOpen.id;
+                    queryToOpen.lastOpenedAt = Date.now();
                   }
                 }
               }
@@ -281,16 +470,7 @@ export function createSqlEditorSlice({
         },
 
         renameQueryTab: (queryId, newName) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const query = draft.sqlEditor.config.queries.find(
-                (q) => q.id === queryId,
-              );
-              if (query) {
-                query.name = newName || query.name;
-              }
-            }),
-          );
+          get().sqlEditor.renameQuery(queryId, newName);
         },
 
         closeQueryTab: (queryId) => {
@@ -309,6 +489,12 @@ export function createSqlEditorSlice({
                 draft.sqlEditor.config.openTabs.push(queryId);
               }
               draft.sqlEditor.config.selectedQueryId = queryId;
+              const query = draft.sqlEditor.config.queries.find(
+                (q) => q.id === queryId,
+              );
+              if (query) {
+                query.lastOpenedAt = Date.now();
+              }
             }),
           );
         },
@@ -338,6 +524,12 @@ export function createSqlEditorSlice({
           set((state) =>
             produce(state, (draft) => {
               draft.sqlEditor.config.selectedQueryId = queryId;
+              const query = draft.sqlEditor.config.queries.find(
+                (q) => q.id === queryId,
+              );
+              if (query) {
+                query.lastOpenedAt = Date.now();
+              }
             }),
           );
         },
@@ -369,23 +561,11 @@ export function createSqlEditorSlice({
         },
 
         parseAndRunCurrentQuery: async (): Promise<void> =>
-          get().sqlEditor.parseAndRunQuery(get().sqlEditor.getCurrentQuery()),
+          get().sqlEditor.runQueryById(get().sqlEditor.config.selectedQueryId),
 
         abortCurrentQuery: () => {
-          const selectedQueryId = get().sqlEditor.config.selectedQueryId;
-          const currentResult =
-            get().sqlEditor.queryResultsById[selectedQueryId];
-          if (currentResult?.status === 'loading' && currentResult.controller) {
-            currentResult.controller.abort();
-          }
-
-          set((state) =>
-            produce(state, (draft) => {
-              const result = draft.sqlEditor.queryResultsById[selectedQueryId];
-              if (result?.status === 'loading') {
-                result.isBeingAborted = true;
-              }
-            }),
+          get().sqlEditor.abortQueryById(
+            get().sqlEditor.config.selectedQueryId,
           );
         },
 
@@ -397,10 +577,78 @@ export function createSqlEditorSlice({
           );
         },
 
-        parseAndRunQuery: async (query): Promise<void> => {
-          const selectedQueryId = get().sqlEditor.config.selectedQueryId;
-          const existingResult =
-            get().sqlEditor.queryResultsById[selectedQueryId];
+        abortQueryById: (queryId) => {
+          const currentResult = get().sqlEditor.queryResultsById[queryId];
+          if (currentResult?.status !== 'loading') {
+            return;
+          }
+          // Fire the abort signal (best-effort server-side/underlying cancel)…
+          currentResult.controller?.abort();
+
+          // …then transition to `aborted` IMMEDIATELY rather than waiting for the
+          // query promise to reject. The underlying connector may not reject
+          // promptly (e.g. an abort swallowed during a pre-flight parse query, or
+          // a blocked backend fetch), which would otherwise leave the UI stuck on
+          // "Stopping" indefinitely. The finalize `set()` in runQueryById only
+          // writes its result while status === 'loading', so this state change
+          // makes any late settle a no-op — no overwrite, no race.
+          const startedAt = currentResult.startedAt;
+          const now = Date.now();
+          // Cancellation is best-effort: controller.abort() signals the
+          // connector, but not every connector can actually stop an in-flight
+          // statement server-side. Aborting a read is harmless (a late result
+          // is simply discarded), but a write (INSERT/CREATE/DROP/…) may still
+          // complete on the backend after we report it aborted. Warn only in
+          // that case — reads cancel silently, so we don't nag the user. If the
+          // statement type isn't known yet (parsed asynchronously), isWrite is
+          // undefined and we warn conservatively.
+          const mayStillBeWriting = currentResult.isWrite !== false;
+          const warning = mayStillBeWriting
+            ? 'Cancellation requested. The statement may be a write and could ' +
+              'still complete on the server — this connector cannot guarantee ' +
+              'it was stopped.'
+            : undefined;
+          set((state) => ({
+            ...state,
+            sqlEditor: {
+              ...state.sqlEditor,
+              queryResultsById: {
+                ...state.sqlEditor.queryResultsById,
+                [queryId]: {
+                  status: 'aborted',
+                  durationMs: startedAt ? now - startedAt : undefined,
+                  completedAt: now,
+                  ...(warning ? {warning} : {}),
+                },
+              },
+            },
+          }));
+        },
+
+        clearQueryResult: (queryId) => {
+          const currentResult = get().sqlEditor.queryResultsById[queryId];
+          if (currentResult?.status === 'loading') {
+            currentResult.controller.abort();
+          }
+          set((state) =>
+            produce(state, (draft) => {
+              delete draft.sqlEditor.queryResultsById[queryId];
+            }),
+          );
+        },
+
+        parseAndRunQuery: async (query): Promise<void> =>
+          get().sqlEditor.runQueryById(
+            get().sqlEditor.config.selectedQueryId,
+            query,
+          ),
+
+        runQueryById: async (queryId, queryOverride): Promise<void> => {
+          const storedQuery = get().sqlEditor.config.queries.find(
+            (query) => query.id === queryId,
+          );
+          const query = queryOverride ?? storedQuery?.query ?? '';
+          const existingResult = get().sqlEditor.queryResultsById[queryId];
           if (existingResult?.status === 'loading') {
             throw new Error('Query already running');
           }
@@ -408,23 +656,28 @@ export function createSqlEditorSlice({
             return;
           }
 
+          get().sqlEditor.ensureQuery(queryId, {query});
+
           // Create abort controller for this query execution
           const queryController = new AbortController();
+          const startedAt = Date.now();
 
           // First update loading state and clear results
           set((state) =>
             produce(state, (draft) => {
               draft.sqlEditor.selectedTable = undefined;
-              draft.sqlEditor.queryResultsById[selectedQueryId] = {
+              draft.sqlEditor.queryResultsById[queryId] = {
                 status: 'loading',
                 isBeingAborted: false,
                 controller: queryController,
+                startedAt,
               };
             }),
           );
 
           let queryResult: QueryResult;
           try {
+            const dbConnectors = get().db.connectors;
             const connector = await get().db.getConnector();
             const signal = queryController.signal;
 
@@ -445,6 +698,27 @@ export function createSqlEditorSlice({
 
             const isValidSelectQuery = !parsedLastStatement.error;
 
+            // Stamp read/write onto the loading result now that we've parsed the
+            // statement. abortQueryById reads this to decide whether cancelling
+            // needs a "may still be running" warning (writes) or is silent
+            // (reads). A multi-statement query is treated as a write. Guard on
+            // the controller so we don't clobber a result the user already
+            // aborted/re-ran in the brief window before parsing finished.
+            {
+              const isWrite = !isValidSelectQuery || hasMultipleStatements;
+              set((state) =>
+                produce(state, (draft) => {
+                  const r = draft.sqlEditor.queryResultsById[queryId];
+                  if (
+                    r?.status === 'loading' &&
+                    r.controller === queryController
+                  ) {
+                    r.isWrite = isWrite;
+                  }
+                }),
+              );
+            }
+
             if (isValidSelectQuery) {
               // Add limit to the last statement
               const limitedLastStatement = makeLimitQuery(lastQueryStatement, {
@@ -455,13 +729,22 @@ export function createSqlEditorSlice({
                 precedingStatements,
                 limitedLastStatement,
               );
-              const result = await connector.query(queryWithLimit, {signal});
+              const result = dbConnectors?.runQuery
+                ? (
+                    await dbConnectors.runQuery({
+                      sql: queryWithLimit,
+                      queryType: 'arrow',
+                      signal,
+                    })
+                  )?.arrowTable
+                : await connector.query(queryWithLimit, {signal});
               queryResult = {
                 status: 'success',
                 type: 'select',
                 query,
                 lastQueryStatement,
                 result,
+                durationMs: Date.now() - startedAt,
               };
             } else {
               // Run the complete query as it is
@@ -475,7 +758,17 @@ export function createSqlEditorSlice({
                 );
               }
 
-              const result = await connector.query(query, {signal});
+              const result = dbConnectors?.runQuery
+                ? (
+                    await dbConnectors.runQuery({
+                      sql: query,
+                      queryType: /^(EXPLAIN|PRAGMA)/i.test(lastQueryStatement)
+                        ? 'arrow'
+                        : 'exec',
+                      signal,
+                    })
+                  )?.arrowTable
+                : await connector.query(query, {signal});
               // EXPLAIN and PRAGMA are not detected as select queries
               // and we cannot wrap them in a SELECT * FROM,
               // but we can still execute them and return the result
@@ -486,6 +779,7 @@ export function createSqlEditorSlice({
                   query,
                   lastQueryStatement,
                   result,
+                  durationMs: Date.now() - startedAt,
                 };
               } else if (/^(PRAGMA)/i.test(lastQueryStatement)) {
                 queryResult = {
@@ -494,6 +788,7 @@ export function createSqlEditorSlice({
                   query,
                   lastQueryStatement,
                   result,
+                  durationMs: Date.now() - startedAt,
                 };
               } else {
                 queryResult = {
@@ -501,6 +796,7 @@ export function createSqlEditorSlice({
                   type: 'exec',
                   query,
                   lastQueryStatement,
+                  durationMs: Date.now() - startedAt,
                 };
               }
             }
@@ -522,26 +818,45 @@ export function createSqlEditorSlice({
               errorMessage === 'Query aborted' ||
               queryController.signal.aborted
             ) {
-              queryResult = {status: 'aborted'};
+              queryResult = {
+                status: 'aborted',
+                durationMs: Date.now() - startedAt,
+              };
             } else {
               queryResult = {
                 status: 'error',
                 error: errorMessage,
+                durationMs: Date.now() - startedAt,
               };
             }
           }
+          queryResult = {...queryResult, completedAt: Date.now()};
 
           // Update state without Immer since Arrow Tables don't play well with drafts.
-          set((state) => ({
-            ...state,
-            sqlEditor: {
-              ...state.sqlEditor,
-              queryResultsById: {
-                ...state.sqlEditor.queryResultsById,
-                [selectedQueryId]: queryResult,
+          set((state) => {
+            const currentResult = state.sqlEditor.queryResultsById[queryId];
+            const queryStillExists = state.sqlEditor.config.queries.some(
+              (candidate) => candidate.id === queryId,
+            );
+            if (
+              !queryStillExists ||
+              currentResult?.status !== 'loading' ||
+              currentResult.controller !== queryController
+            ) {
+              return state;
+            }
+
+            return {
+              ...state,
+              sqlEditor: {
+                ...state.sqlEditor,
+                queryResultsById: {
+                  ...state.sqlEditor.queryResultsById,
+                  [queryId]: queryResult,
+                },
               },
-            },
-          }));
+            };
+          });
         },
       },
     } satisfies SqlEditorSliceState;
@@ -549,6 +864,287 @@ export function createSqlEditorSlice({
 }
 
 type RoomStateWithSqlEditor = RoomShellSliceState & SqlEditorSliceState;
+
+type SqlEditorCommandStoreState = BaseRoomStoreState &
+  DbSliceState &
+  SqlEditorSliceState;
+
+const SqlEditorRunQueryCommandInput = z.object({
+  query: z.string().describe('SQL query text to run.'),
+});
+type SqlEditorRunQueryCommandInput = z.infer<
+  typeof SqlEditorRunQueryCommandInput
+>;
+
+const SqlEditorTabIdInput = z.object({
+  queryId: z.string().describe('ID of the query tab.'),
+});
+type SqlEditorTabIdInput = z.infer<typeof SqlEditorTabIdInput>;
+
+const SqlEditorRenameTabInput = z.object({
+  queryId: z.string().describe('ID of the query tab to rename.'),
+  name: z.string().min(1).describe('New tab name.'),
+});
+type SqlEditorRenameTabInput = z.infer<typeof SqlEditorRenameTabInput>;
+
+const SqlEditorResultLimitInput = z.object({
+  limit: z.number().int().positive().describe('Row limit for query results.'),
+});
+type SqlEditorResultLimitInput = z.infer<typeof SqlEditorResultLimitInput>;
+
+function createSqlEditorCommands(): RoomCommand<SqlEditorCommandStoreState>[] {
+  const ensureQueryTabExists = (
+    state: SqlEditorCommandStoreState,
+    queryId: string,
+  ) => {
+    if (!state.sqlEditor.config.queries.some((query) => query.id === queryId)) {
+      throw new Error(`Unknown query tab "${queryId}".`);
+    }
+  };
+
+  return [
+    {
+      id: 'sql-editor.run-current-query',
+      name: 'Run current query',
+      description: 'Execute the selected SQL query tab',
+      group: 'SQL Editor',
+      keywords: ['sql', 'run', 'execute', 'query'],
+      metadata: {
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'medium',
+      },
+      ui: {
+        keystrokes: 'Mod+Enter',
+      },
+      isEnabled: ({getState}) => {
+        const state = getState();
+        const selectedQueryId = state.sqlEditor.config.selectedQueryId;
+        const queryResult = state.sqlEditor.queryResultsById[selectedQueryId];
+        return (
+          queryResult?.status !== 'loading' &&
+          state.sqlEditor.getCurrentQuery().trim().length > 0
+        );
+      },
+      execute: async ({getState}) => {
+        await getState().sqlEditor.parseAndRunCurrentQuery();
+        return {
+          success: true,
+          commandId: 'sql-editor.run-current-query',
+          message: 'Executed current query.',
+        };
+      },
+    },
+    {
+      id: 'sql-editor.run-query',
+      name: 'Run query text',
+      description: 'Execute an explicitly provided SQL query',
+      group: 'SQL Editor',
+      keywords: ['sql', 'run', 'execute', 'query', 'text'],
+      inputSchema: SqlEditorRunQueryCommandInput,
+      inputDescription: 'Provide query SQL to execute.',
+      metadata: {
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'medium',
+      },
+      execute: async ({getState}, input) => {
+        const {query} = input as SqlEditorRunQueryCommandInput;
+        await getState().sqlEditor.parseAndRunQuery(query);
+        return {
+          success: true,
+          commandId: 'sql-editor.run-query',
+          message: 'Executed SQL query.',
+        };
+      },
+    },
+    {
+      id: 'sql-editor.abort-current-query',
+      name: 'Abort current query',
+      description: 'Cancel the currently running SQL query',
+      group: 'SQL Editor',
+      keywords: ['sql', 'abort', 'cancel', 'query'],
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      isEnabled: ({getState}) => {
+        const state = getState();
+        const selectedQueryId = state.sqlEditor.config.selectedQueryId;
+        return (
+          state.sqlEditor.queryResultsById[selectedQueryId]?.status ===
+          'loading'
+        );
+      },
+      execute: ({getState}) => {
+        getState().sqlEditor.abortCurrentQuery();
+        return {
+          success: true,
+          commandId: 'sql-editor.abort-current-query',
+          message: 'Abort signal sent to current query.',
+        };
+      },
+    },
+    {
+      id: 'sql-editor.create-query-tab',
+      name: 'Create query tab',
+      description: 'Open a new SQL query tab',
+      group: 'SQL Editor',
+      keywords: ['sql', 'tab', 'new', 'query'],
+      metadata: {
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'low',
+      },
+      execute: ({getState}) => {
+        const newTab = getState().sqlEditor.createQueryTab();
+        return {
+          success: true,
+          commandId: 'sql-editor.create-query-tab',
+          message: `Created query tab "${newTab.name}".`,
+          data: {
+            queryId: newTab.id,
+          },
+        };
+      },
+    },
+    {
+      id: 'sql-editor.select-query-tab',
+      name: 'Select query tab',
+      description: 'Switch active SQL query tab by ID',
+      group: 'SQL Editor',
+      keywords: ['sql', 'tab', 'select', 'switch'],
+      inputSchema: SqlEditorTabIdInput,
+      inputDescription: 'Provide queryId to activate.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      validateInput: (input, {getState}) => {
+        ensureQueryTabExists(
+          getState(),
+          (input as SqlEditorTabIdInput).queryId,
+        );
+      },
+      execute: ({getState}, input) => {
+        const {queryId} = input as SqlEditorTabIdInput;
+        getState().sqlEditor.setSelectedQueryId(queryId);
+        return {
+          success: true,
+          commandId: 'sql-editor.select-query-tab',
+          message: `Selected query tab "${queryId}".`,
+        };
+      },
+    },
+    {
+      id: 'sql-editor.rename-query-tab',
+      name: 'Rename query tab',
+      description: 'Rename a SQL query tab by ID',
+      group: 'SQL Editor',
+      keywords: ['sql', 'tab', 'rename'],
+      inputSchema: SqlEditorRenameTabInput,
+      inputDescription: 'Provide queryId and name.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      validateInput: (input, {getState}) => {
+        ensureQueryTabExists(
+          getState(),
+          (input as SqlEditorRenameTabInput).queryId,
+        );
+      },
+      execute: ({getState}, input) => {
+        const {queryId, name} = input as SqlEditorRenameTabInput;
+        getState().sqlEditor.renameQueryTab(queryId, name);
+        return {
+          success: true,
+          commandId: 'sql-editor.rename-query-tab',
+          message: `Renamed query tab "${queryId}".`,
+        };
+      },
+    },
+    {
+      id: 'sql-editor.delete-query-tab',
+      name: 'Delete query tab',
+      description: 'Delete a SQL query tab by ID',
+      group: 'SQL Editor',
+      keywords: ['sql', 'tab', 'delete', 'remove'],
+      inputSchema: SqlEditorTabIdInput,
+      inputDescription: 'Provide queryId to delete.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'medium',
+        requiresConfirmation: true,
+      },
+      validateInput: (input, {getState}) => {
+        const state = getState();
+        ensureQueryTabExists(state, (input as SqlEditorTabIdInput).queryId);
+        if (state.sqlEditor.config.queries.length <= 1) {
+          throw new Error('Cannot delete the last remaining query tab.');
+        }
+      },
+      execute: ({getState}, input) => {
+        const {queryId} = input as SqlEditorTabIdInput;
+        getState().sqlEditor.deleteQueryTab(queryId);
+        return {
+          success: true,
+          commandId: 'sql-editor.delete-query-tab',
+          message: `Deleted query tab "${queryId}".`,
+        };
+      },
+    },
+    {
+      id: 'sql-editor.clear-query-results',
+      name: 'Clear query results',
+      description: 'Clear all cached SQL query results',
+      group: 'SQL Editor',
+      keywords: ['sql', 'clear', 'results'],
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      isEnabled: ({getState}) =>
+        Object.keys(getState().sqlEditor.queryResultsById).length > 0,
+      execute: ({getState}) => {
+        getState().sqlEditor.clearQueryResults();
+        return {
+          success: true,
+          commandId: 'sql-editor.clear-query-results',
+          message: 'Cleared query results.',
+        };
+      },
+    },
+    {
+      id: 'sql-editor.set-result-limit',
+      name: 'Set query result limit',
+      description: 'Set max rows returned for query result previews',
+      group: 'SQL Editor',
+      keywords: ['sql', 'limit', 'rows', 'result'],
+      inputSchema: SqlEditorResultLimitInput,
+      inputDescription: 'Provide positive integer limit.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      execute: ({getState}, input) => {
+        const {limit} = input as SqlEditorResultLimitInput;
+        getState().sqlEditor.setQueryResultLimit(limit);
+        return {
+          success: true,
+          commandId: 'sql-editor.set-result-limit',
+          message: `Set query result limit to ${limit}.`,
+        };
+      },
+    },
+  ];
+}
 
 export function useStoreWithSqlEditor<T>(
   selector: (state: RoomStateWithSqlEditor) => T,

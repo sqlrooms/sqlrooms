@@ -1,4 +1,4 @@
-import {createRagTool, type RagToolLlmResult} from '@sqlrooms/ai-rag';
+import {executeRagSearch, type RagToolLlmResult} from '@sqlrooms/ai-rag';
 import {
   Button,
   Dialog,
@@ -10,8 +10,6 @@ import {
 } from '@sqlrooms/ui';
 import {useState} from 'react';
 import {roomStore} from '../store';
-
-const ragTool = createRagTool();
 
 /**
  * Individual result item - always visible, no collapsing
@@ -42,7 +40,7 @@ function RagResultItem({
           Score: {result.score.toFixed(3)}
         </span>
       </div>
-      <p className="text-muted-foreground whitespace-pre-wrap font-mono text-xs">
+      <p className="text-muted-foreground font-mono text-xs whitespace-pre-wrap">
         {result.text}
       </p>
       {filePath && (
@@ -121,12 +119,12 @@ export function RagSearchDialog({
     setResult(null);
 
     try {
-      const toolResult = await ragTool.execute({
-        query,
-        topK: 5,
-      });
+      const toolResult = await executeRagSearch(
+        {query, topK: 5},
+        roomStore.getState(),
+      );
 
-      setResult(toolResult.llmResult);
+      setResult(toolResult);
     } catch (error) {
       console.error('RAG search error:', error);
       setResult({
@@ -147,7 +145,7 @@ export function RagSearchDialog({
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col space-y-4">
-          <div className="flex-shrink-0 space-y-4">
+          <div className="shrink-0 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="query">Search Query</Label>
               <div className="flex gap-2">

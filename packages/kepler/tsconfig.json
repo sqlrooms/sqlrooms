@@ -1,7 +1,15 @@
 {
   "extends": "@sqlrooms/preset-typescript/react-library.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@deck.gl/core/src/*": [
+        "../../node_modules/@deck.gl/core/typed/*",
+        "../../../node_modules/@deck.gl/core/typed/*",
+        "../../../../node_modules/@deck.gl/core/typed/*"
+      ]
+    }
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

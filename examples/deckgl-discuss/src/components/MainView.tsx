@@ -4,7 +4,7 @@ import {useRoomStore} from '../store';
 import {AirportFeature, MapView} from './MapView';
 
 export const MainView: React.FC = () => {
-  const table = useRoomStore((s) => s.db.findTableByName('airports'));
+  const table = useRoomStore((s) => s.db.findTable('airports'));
   const {data, error} = useSql<{
     name: string;
     abbrev: string;

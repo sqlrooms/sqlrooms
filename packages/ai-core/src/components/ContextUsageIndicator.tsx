@@ -1,0 +1,295 @@
+import {type BaseRoomStoreState, useRoomStoreApi} from '@sqlrooms/room-store';
+import {Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
+import type {FileUIPart, UIMessage} from 'ai';
+import {useCallback, useMemo, useRef} from 'react';
+import {type AiSliceState, useStoreWithAi} from '../AiSlice';
+import {textAttachmentToModelText} from '../chatAttachments';
+import type {AssistantMessageMetadata} from '../types';
+import {buildConversationText} from '../utils';
+
+const DEFAULT_CONTEXT_WINDOW = 200_000;
+// Cross-provider fallback when image dimensions and tokenizer usage are absent.
+const FALLBACK_IMAGE_TOKEN_ESTIMATE = 4_096;
+const USAGE_WARNING_THRESHOLD = 60;
+const USAGE_CRITICAL_THRESHOLD = 80;
+
+function formatTokenCount(tokens: number): string {
+  if (tokens >= 1_000_000) {
+    return `${(tokens / 1_000_000).toFixed(1)}M`;
+  }
+  if (tokens >= 1_000) {
+    return `${(tokens / 1_000).toFixed(1)}K`;
+  }
+  return String(tokens);
+}
+
+function estimateTokenCount(text: string): number {
+  const normalized = text.trim();
+  if (!normalized) return 0;
+  return Math.ceil(normalized.length / 4);
+}
+
+function getStrokeColor(percentage: number): string {
+  if (percentage > USAGE_CRITICAL_THRESHOLD) return '#ef4444';
+  if (percentage > USAGE_WARNING_THRESHOLD) return '#eab308';
+  return 'currentColor';
+}
+
+type TokenUsageResult = {
+  contextTokens: number;
+  cumulativeTokens: number;
+};
+
+/**
+ * Compute context window usage from conversation messages.
+ *
+ * - contextTokens: the input tokens from the most recent assistant message with
+ *   reported usage. This represents what the model actually received on the last
+ *   turn and approximates what the next request will send (the true context fill).
+ * - cumulativeTokens: sum of all totalTokens across all turns (useful for cost).
+ *
+ * Falls back to text-based estimation when no provider-reported usage exists.
+ */
+function computeTokenUsage(
+  messages: UIMessage[],
+  systemInstructions?: string,
+): TokenUsageResult {
+  let cumulativeTokens = 0;
+  let lastContextTokens = 0;
+  let hasAnyReportedUsage = false;
+  let estimatedConversationTokens = 0;
+
+  for (const msg of messages) {
+    if (msg.role === 'assistant') {
+      const meta = msg.metadata as AssistantMessageMetadata | undefined;
+      const reported = meta?.tokenUsage;
+      if (reported && reported.totalTokens > 0) {
+        cumulativeTokens += reported.totalTokens;
+        // Prefer lastStepInputTokens (single LLM call's prompt) over
+        // inputTokens (which is accumulated across all steps in a multi-step turn).
+        lastContextTokens =
+          reported.lastStepInputTokens && reported.lastStepInputTokens > 0
+            ? reported.lastStepInputTokens
+            : reported.inputTokens;
+        hasAnyReportedUsage = true;
+        continue;
+      }
+    }
+    // Estimate from content for user messages and assistant messages without usage
+    estimatedConversationTokens += estimateMessageTokens(msg);
+  }
+
+  if (!hasAnyReportedUsage) {
+    if (systemInstructions) {
+      estimatedConversationTokens += estimateTokenCount(systemInstructions);
+    }
+    return {
+      contextTokens: estimatedConversationTokens,
+      cumulativeTokens: estimatedConversationTokens,
+    };
+  }
+
+  // Context tokens = last turn's input tokens (what fills the context window now).
+  // inputTokens from reported usage already includes system instructions.
+  const contextTokens = lastContextTokens;
+
+  return {contextTokens, cumulativeTokens};
+}
+
+/** Estimates one persisted message when provider-reported usage is absent. */
+export function estimateMessageTokens(msg: UIMessage): number {
+  let tokens = 4; // per-message overhead
+  for (const part of msg.parts) {
+    if (part.type === 'text') {
+      tokens += estimateTokenCount((part as {text: string}).text);
+    } else if (part.type === 'reasoning') {
+      tokens += estimateTokenCount((part as {text?: string}).text ?? '');
+    } else if (part.type === 'file') {
+      const attachmentText = textAttachmentToModelText(part as FileUIPart);
+      if (attachmentText !== undefined) {
+        tokens += estimateTokenCount(attachmentText);
+      } else if ((part as FileUIPart).mediaType.startsWith('image/')) {
+        tokens += FALLBACK_IMAGE_TOKEN_ESTIMATE;
+      }
+    } else if (
+      typeof part.type === 'string' &&
+      (part.type.startsWith('tool-') || part.type === 'dynamic-tool')
+    ) {
+      tokens += estimateTokenCount(JSON.stringify(part));
+    }
+  }
+  return tokens;
+}
+
+type ContextUsageIndicatorProps = {
+  contextWindow?: number;
+  modelProvider?: string;
+  modelName?: string;
+};
+
+/** Summary prompt and visual evidence used to seed a continuation session. */
+export function createConversationContinuationSeed(
+  summary: string,
+  messages: UIMessage[],
+): {prompt: string; attachments: FileUIPart[]} {
+  const attachments = messages.flatMap((message) =>
+    message.parts.filter(
+      (part): part is FileUIPart =>
+        part.type === 'file' && part.mediaType.startsWith('image/'),
+    ),
+  );
+  return {
+    prompt: `Please use the following context from a previous session and only respond "Got it" to this message:\n\n${summary}`,
+    attachments,
+  };
+}
+
+export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
+  contextWindow = DEFAULT_CONTEXT_WINDOW,
+  modelProvider,
+  modelName,
+}) => {
+  const uiMessages = useStoreWithAi((s) => {
+    const {currentSessionId, sessions} = s.ai.config;
+    return sessions.find((session) => session.id === currentSessionId)
+      ?.uiMessages as UIMessage[] | undefined;
+  });
+  const getFullInstructions = useStoreWithAi((s) => s.ai.getFullInstructions);
+  const sendPrompt = useStoreWithAi((s) => s.ai.sendPrompt);
+  const createSession = useStoreWithAi((s) => s.ai.createSession);
+  const isSummarizing = useStoreWithAi((s) => s.ai.isSummarizing);
+  const setIsSummarizing = useStoreWithAi((s) => s.ai.setIsSummarizing);
+  const storeApi = useRoomStoreApi<BaseRoomStoreState & AiSliceState>();
+
+  const summarizeAbortControllerRef = useRef<AbortController | null>(null);
+
+  const {contextTokens, cumulativeTokens} = useMemo(() => {
+    if (!uiMessages) return {contextTokens: 0, cumulativeTokens: 0};
+    const instructions = getFullInstructions();
+    return computeTokenUsage(uiMessages, instructions);
+  }, [uiMessages, getFullInstructions]);
+
+  const totalTokens = contextTokens;
+  const percentage = Math.min((contextTokens / contextWindow) * 100, 100);
+  const isClickable = percentage > USAGE_CRITICAL_THRESHOLD && !isSummarizing;
+
+  const handleSummarizeAndContinue = useCallback(async () => {
+    if (!uiMessages || uiMessages.length === 0 || isSummarizing) return;
+
+    const abortController = new AbortController();
+    summarizeAbortControllerRef.current = abortController;
+    setIsSummarizing(true);
+    try {
+      const conversationText = buildConversationText(uiMessages);
+      const summary = await sendPrompt(
+        `Summarize the following conversation concisely, preserving key decisions, context, data references, and any pending tasks:\n\n${conversationText}`,
+        {
+          modelProvider,
+          modelName,
+          abortSignal: abortController.signal,
+          useTools: false,
+        },
+      );
+
+      createSession();
+
+      const state = storeApi.getState();
+      const newSessionId = state.ai.config.currentSessionId;
+      if (!newSessionId) return;
+
+      const continuation = createConversationContinuationSeed(
+        summary,
+        uiMessages,
+      );
+      state.ai.setPrompt(newSessionId, continuation.prompt);
+
+      await storeApi
+        .getState()
+        .ai.startAnalysisWhenReady(newSessionId, continuation.attachments);
+    } catch (error) {
+      console.error('Failed to summarize conversation:', error);
+    } finally {
+      setIsSummarizing(false);
+      summarizeAbortControllerRef.current = null;
+    }
+  }, [
+    uiMessages,
+    isSummarizing,
+    sendPrompt,
+    createSession,
+    storeApi,
+    modelProvider,
+    modelName,
+    setIsSummarizing,
+  ]);
+
+  if (totalTokens === 0) return null;
+
+  const size = 18;
+  const strokeWidth = 1.5;
+  const radius = (size - strokeWidth) / 2;
+  const strokeColor = getStrokeColor(percentage);
+
+  // A pie slice token usage indicator
+  const center = size / 2;
+  const sweep = (percentage / 100) * 2 * Math.PI;
+  const wedgeEndX = center + radius * Math.sin(sweep);
+  const wedgeEndY = center - radius * Math.cos(sweep);
+  const wedgePath =
+    percentage >= 100
+      ? // A full sweep degenerates to a zero-length arc, so draw two halves.
+        `M ${center} ${center} m 0 ${-radius} a ${radius} ${radius} 0 1 1 0 ${2 * radius} a ${radius} ${radius} 0 1 1 0 ${-2 * radius} z`
+      : `M ${center} ${center} L ${center} ${center - radius} A ${radius} ${radius} 0 ${sweep > Math.PI ? 1 : 0} 1 ${wedgeEndX} ${wedgeEndY} Z`;
+
+  const tooltipText = `${percentage.toFixed(1)}% · ${formatTokenCount(contextTokens)} / ${formatTokenCount(contextWindow)} context used${cumulativeTokens > contextTokens ? `\n${formatTokenCount(cumulativeTokens)} total tokens consumed` : ''}`;
+  // The click target changes while summarizing — it aborts — so the label has
+  // to follow it rather than still offering to start the summary.
+  const fullTooltip = isSummarizing
+    ? `${tooltipText}\nSummarizing… click to cancel`
+    : percentage > USAGE_CRITICAL_THRESHOLD
+      ? `${tooltipText}\nClick to summarize current conversation and start a new session`
+      : tooltipText;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
+            isClickable
+              ? 'cursor-pointer hover:bg-red-500/20'
+              : 'text-muted-foreground hover:text-foreground'
+          } ${isSummarizing ? 'animate-pulse' : ''}`}
+          style={
+            percentage > USAGE_WARNING_THRESHOLD
+              ? {color: strokeColor}
+              : undefined
+          }
+          aria-label={fullTooltip}
+          onClick={
+            isSummarizing
+              ? () => summarizeAbortControllerRef.current?.abort()
+              : isClickable
+                ? handleSummarizeAndContinue
+                : undefined
+          }
+        >
+          <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+            <circle
+              cx={center}
+              cy={center}
+              r={radius}
+              fill="none"
+              stroke={strokeColor}
+              strokeWidth={strokeWidth}
+            />
+            {percentage > 0 && <path d={wedgePath} fill={strokeColor} />}
+          </svg>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="whitespace-pre-line">
+        {fullTooltip}
+      </TooltipContent>
+    </Tooltip>
+  );
+};

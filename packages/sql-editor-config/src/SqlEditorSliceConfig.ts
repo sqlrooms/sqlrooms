@@ -4,6 +4,10 @@ const QuerySchema = z.object({
   id: z.string().describe('Query identifier.'),
   name: z.string().describe('Query name.'),
   query: z.string().describe('SQL query to execute.'),
+  lastOpenedAt: z
+    .number()
+    .optional()
+    .describe('Last time this query tab was opened/selected (epoch ms).'),
 });
 
 const SqlEditorSliceConfigSchema = z.object({
@@ -46,7 +50,9 @@ export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfigSchema>;
 
 export function createDefaultSqlEditorConfig(): SqlEditorSliceConfig {
   return {
-    queries: [{id: 'default', name: 'SQL', query: ''}],
+    queries: [
+      {id: 'default', name: 'SQL', query: '', lastOpenedAt: Date.now()},
+    ],
     selectedQueryId: 'default',
     openTabs: ['default'],
   };

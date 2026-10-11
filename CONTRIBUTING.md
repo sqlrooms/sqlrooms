@@ -5,10 +5,14 @@ We want to make contributing to this project as easy and transparent as possible
 ## Code of Conduct
 
 SQLRooms has a Code of Conduct that we expect project participants to adhere
-to. Please read [the full text](https://github.com/sqlrooms/sqlrooms/CODE_OF_CONDUCT.md) so that you can understand
+to. Please read [the full text](https://github.com/sqlrooms/sqlrooms/blob/HEAD/CODE_OF_CONDUCT.md) so that you can understand
 what actions will and will not be tolerated.
 
 ## Our Development Process
+
+Repository development and testing require Node.js `>=24.9` and the pnpm
+version declared in `package.json`. Published packages may support older Node.js
+versions independently of this repository tooling requirement.
 
 We use example applications to test and validate changes. You can run the examples by following these steps:
 
@@ -30,6 +34,10 @@ If you've added a new feature, changed the configuration or public methods, plea
 3. Suggest appropriate changes to the documentation
 
 ## Pull Requests
+
+CI checks Prettier formatting for TypeScript, TSX, and Markdown files using the
+repository's Prettier configuration and ignore rules. Run `pnpm format:check`
+before submitting a PR, and use `pnpm format:ts` to fix formatting issues.
 
 We actively welcome pull requests. If you want to submit one, please follow the following process:
 

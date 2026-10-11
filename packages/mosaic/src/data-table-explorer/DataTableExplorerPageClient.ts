@@ -1,0 +1,130 @@
+import {MosaicClient, type Selection} from '@uwdata/mosaic-core';
+import {type ExprNode, type Query} from '@uwdata/mosaic-sql';
+import type {Table} from 'apache-arrow';
+import type {
+  DataTableExplorerPaginationState,
+  DataTableExplorerSqlTableReference,
+  DataTableExplorerSorting,
+} from './types';
+import {
+  buildDataTableExplorerBaseQuery,
+  buildDataTableExplorerPageQuery,
+} from './utils';
+import {getMosaicSqlTableReference} from '../mosaicTableReference';
+import {toArrowClientResult} from '../tableInterop';
+
+/**
+ * Converts a Mosaic query result into the Apache Arrow table used by the
+ * explorer UI. Nullish results clear the page; conversion failures are left
+ * for {@link DataTableExplorerPageClient.queryResult} to surface as errors.
+ */
+function toExplorerPageTable(data: unknown): Table | undefined {
+  if (data == null) {
+    return undefined;
+  }
+
+  try {
+    return toArrowClientResult(data);
+  } catch (error) {
+    const cause = error instanceof Error ? error : new Error(String(error));
+    throw new Error('Could not read the data table page.', {cause});
+  }
+}
+
+export type DataTableExplorerPageState = {
+  datasetId?: string;
+  error?: Error;
+  isLoading: boolean;
+  pageTable?: Table;
+};
+
+type DataTableExplorerPageClientOptions = {
+  columns: string[];
+  filter?: ReturnType<Selection['predicate']>;
+  onStateChange: (state: DataTableExplorerPageState) => void;
+  pagination: DataTableExplorerPaginationState;
+  sorting: DataTableExplorerSorting;
+  tableName: string;
+  tableReference?: DataTableExplorerSqlTableReference;
+};
+
+export class DataTableExplorerPageClient extends MosaicClient {
+  private readonly columns: string[];
+  private readonly datasetId: string;
+  private error?: Error;
+  private readonly filter?: ReturnType<Selection['predicate']>;
+  private readonly onStateChange: (state: DataTableExplorerPageState) => void;
+  private readonly pagination: DataTableExplorerPaginationState;
+  private pageTable?: Table;
+  private readonly sorting: DataTableExplorerSorting;
+  private readonly tableName: string;
+  private readonly tableReference: DataTableExplorerSqlTableReference;
+
+  constructor(options: DataTableExplorerPageClientOptions) {
+    super();
+    this.columns = options.columns;
+    this.datasetId = [options.tableName, ...options.columns].join('\u0001');
+    this.filter = options.filter ?? [];
+    this.onStateChange = options.onStateChange;
+    this.pagination = options.pagination;
+    this.sorting = options.sorting;
+    this.tableName = options.tableName;
+    this.tableReference =
+      options.tableReference ?? getMosaicSqlTableReference(options.tableName);
+  }
+
+  override get filterStable(): boolean {
+    return false;
+  }
+
+  override queryPending(): this {
+    this.onStateChange({
+      datasetId: this.datasetId,
+      error: this.error,
+      isLoading: true,
+      pageTable: this.pageTable,
+    });
+    return this;
+  }
+
+  override query(filter: Array<ExprNode> = []): Query {
+    const resolvedFilter = this.filter ?? filter;
+    return buildDataTableExplorerPageQuery(
+      buildDataTableExplorerBaseQuery({
+        columns: this.columns,
+        filter: resolvedFilter,
+        sorting: this.sorting,
+        tableName: this.tableReference,
+      }),
+      this.pagination,
+    );
+  }
+
+  override queryResult(data: unknown): this {
+    try {
+      this.pageTable = toExplorerPageTable(data);
+      this.error = undefined;
+      this.onStateChange({
+        datasetId: this.datasetId,
+        isLoading: false,
+        pageTable: this.pageTable,
+      });
+      return this;
+    } catch (error) {
+      return this.queryError(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    }
+  }
+
+  override queryError(error: Error): this {
+    this.error = error;
+    this.onStateChange({
+      datasetId: this.datasetId,
+      error,
+      isLoading: false,
+      pageTable: this.pageTable,
+    });
+    return this;
+  }
+}

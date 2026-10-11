@@ -1,51 +1,149 @@
+import {createRequire} from 'node:module';
+import {existsSync, readFileSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
 import {defineConfig} from 'vitepress';
-import {apiSidebarConfig} from './gen-api-sidebar';
 import llmstxt from 'vitepress-plugin-llms';
+import {apiSidebarConfig} from './gen-api-sidebar.ts';
 
-const PACKAGE_CATEGORIES = {
-  'Core Packages': [
-    'ai',
-    'core',
-    'room-shell',
-    'room-store',
-    'duckdb',
-    'ui',
-    'layout',
-  ],
-  'Feature Packages': [
-    'ai-rag',
-    'ai-settings',
-    'canvas',
-    'cosmos',
-    'data-table',
-    'discuss',
-    'dropzone',
-    'kepler',
-    'monaco-editor',
-    'mosaic',
-    'motherduck',
-    'recharts',
-    's3-browser',
-    'schema-tree',
-    'sql-editor',
-    'vega',
-  ],
-  'Utility Packages': ['utils'],
-};
+const SITE_URL = 'https://sqlrooms.org';
+const require = createRequire(import.meta.url);
+const mermaidRequire = createRequire(require.resolve('mermaid/package.json'));
+const localVersion = require('../../lerna.json').version;
+
+function loadApiReleaseMetadata() {
+  const metadataPath = fileURLToPath(
+    new URL('./api-release.generated.json', import.meta.url),
+  );
+
+  if (existsSync(metadataPath)) {
+    return JSON.parse(readFileSync(metadataPath, 'utf8'));
+  }
+
+  return {
+    version: localVersion,
+    ref: `v${localVersion}`,
+    prerelease: localVersion.includes('-'),
+  };
+}
+
+const apiRelease = loadApiReleaseMetadata();
+const apiReleaseUrl = `https://github.com/sqlrooms/sqlrooms/releases/tag/${apiRelease.ref}`;
+
+function publicUrl(relativePath?: string) {
+  const normalizedRelativePath = (relativePath || '').replace(/^\/+/, '');
+
+  return `${SITE_URL}/${normalizedRelativePath}`
+    .replace(/index\.md$/, '')
+    .replace(/\.md$/, '.html');
+}
 
 // https://vitepress.dev/reference/site-config
-export default defineConfig({
+const config = defineConfig({
+  markdown: {
+    config(md) {
+      const defaultFence = md.renderer.rules.fence;
+
+      md.renderer.rules.fence = (tokens, index, options, env, self) => {
+        const token = tokens[index];
+        if (token.info.trim() === 'mermaid') {
+          const encoded = encodeURIComponent(token.content);
+          return `<MermaidDiagram encoded="${encoded}" />`;
+        }
+
+        return defaultFence
+          ? defaultFence(tokens, index, options, env, self)
+          : self.renderToken(tokens, index, options);
+      };
+    },
+  },
   vite: {
+    resolve: {
+      alias: [
+        {
+          find: /^dayjs$/,
+          replacement: mermaidRequire.resolve('dayjs/esm/index.js'),
+        },
+        {
+          find: /^@braintree\/sanitize-url$/,
+          replacement: mermaidRequire.resolve('@braintree/sanitize-url'),
+        },
+        {
+          find: /^cytoscape$/,
+          replacement: mermaidRequire.resolve('cytoscape'),
+        },
+        {
+          find: /^cytoscape-cose-bilkent$/,
+          replacement: mermaidRequire.resolve('cytoscape-cose-bilkent'),
+        },
+        {
+          find: /^debug$/,
+          replacement: mermaidRequire.resolve('debug'),
+        },
+      ],
+    },
     plugins: [
       // @ts-ignore
       llmstxt({
+        domain: SITE_URL,
+        ignoreFiles: [
+          // Omit generated media and non-reference pages from all LLM outputs.
+          'api/**/_media/**',
+          'join-slack.md',
+          'packages.md',
+        ],
+        ignoreFilesPerOutput: {
+          // Keep summary bundles focused on package-level docs, while still
+          // generating per-symbol .md pages so package references can link to
+          // useful markdown targets.
+          llmsTxt: [
+            'api/**/classes/**',
+            'api/**/functions/**',
+            'api/**/interfaces/**',
+            'api/**/type-aliases/**',
+            'api/**/variables/**',
+            'api/**/enumerations/**',
+            'api/**/namespaces/**',
+          ],
+          llmsFullTxt: [
+            'api/**/classes/**',
+            'api/**/functions/**',
+            'api/**/interfaces/**',
+            'api/**/type-aliases/**',
+            'api/**/variables/**',
+            'api/**/enumerations/**',
+            'api/**/namespaces/**',
+          ],
+        },
+        customLLMsTxtTemplate: `# {title}
+
+{description}
+
+{details}
+
+## Intro for AI assistants
+
+{llm_intro}
+
+## Table of Contents
+
+{toc}`,
+        customTemplateVariables: {
+          llm_intro: `SQLRooms is a React toolkit for browser-based analytics apps powered by DuckDB.
+
+Use SQLRooms when the task is:
+- building a React analytics app with local-first data workflows
+- adding SQL query UX (editor + result tables + schema exploration)
+- combining analytics UI with AI assistants/tools
+
+Canonical package combos:
+- Minimal app: @sqlrooms/room-shell + @sqlrooms/duckdb + @sqlrooms/ui
+- SQL + AI app: add @sqlrooms/sql-editor + @sqlrooms/ai + @sqlrooms/ai-settings
+- Geospatial app: add @sqlrooms/kepler
+- MotherDuck integration: add @sqlrooms/motherduck`,
+        },
         // generateLLMsFullTxt: true,
         // ignoreFiles: ['sponsors/*'],
-        // customLLMsTxtTemplate: `# {title}\n\n{foo}`,
         // title: 'Awesome tool',
-        // customTemplateVariables: {
-        //   foo: 'bar',
-        // },
         // experimental: {
         //   depth: 2, // Generate llms.txt and llms-full.txt in root and first-level subdirectories
         // },
@@ -57,8 +155,11 @@ export default defineConfig({
   description:
     'An open source React toolkit for human + agent collaborative analytics apps',
   base: '/',
+  sitemap: {
+    hostname: SITE_URL,
+  },
   head: [
-    ['link', {rel: 'icon', href: '/logo.png'}],
+    ['link', {rel: 'icon', href: '/logo.svg', type: 'image/svg+xml'}],
     [
       'meta',
       {
@@ -68,8 +169,12 @@ export default defineConfig({
     ],
   ],
   themeConfig: {
+    apiRelease: {
+      ...apiRelease,
+      url: apiReleaseUrl,
+    },
     outline: 'deep',
-    logo: '/logo.png',
+    logo: '/logo.svg',
     search: {
       provider: 'local',
     },
@@ -81,6 +186,10 @@ export default defineConfig({
       {text: 'Examples', link: '/examples'},
       {text: 'Case Studies', link: '/case-studies'},
       {text: 'Get started', link: '/getting-started'},
+      {
+        text: `API v${apiRelease.version}`,
+        link: '/packages',
+      },
       // {
       //   text: 'Join Slack',
       //   link: '/join-slack',
@@ -105,6 +214,10 @@ export default defineConfig({
             link: '/modular-architecture',
           },
           {
+            text: 'Deployment Scenarios',
+            link: '/deployment-scenarios',
+          },
+          {
             text: "What's New",
             link: '/whats-new',
           },
@@ -125,10 +238,26 @@ export default defineConfig({
             text: 'State Management',
             link: '/state-management',
           },
-          // {
-          //   text: 'How Create a Custom Slice',
-          //   link: '/custom-slice',
-          // },
+          {
+            text: 'Layout',
+            link: '/layout',
+          },
+          {
+            text: 'Persistence',
+            link: '/persistence',
+          },
+          {
+            text: 'Artifacts',
+            link: '/artifacts',
+          },
+          {
+            text: 'Blocks and Block Documents',
+            link: '/blocks-and-documents',
+          },
+          {
+            text: 'Commands',
+            link: '/commands',
+          },
           {
             text: 'Query Cancellation',
             link: '/query-cancellation',
@@ -162,18 +291,14 @@ export default defineConfig({
         text: 'Reference',
         items: [
           {
+            text: 'Package Reference',
+            link: '/packages',
+          },
+          ...apiSidebarConfig,
+          {
             text: 'Docs for LLMs',
             link: '/llms',
           },
-          ...Object.entries(PACKAGE_CATEGORIES).map(([category, packages]) => {
-            return {
-              text: category,
-              link: `/packages#${category.toLowerCase().replace(/ /g, '-')}`,
-              items: apiSidebarConfig.filter((item) =>
-                packages.includes(item.text),
-              ),
-            };
-          }),
         ],
       },
     ],
@@ -183,26 +308,24 @@ export default defineConfig({
       {icon: 'github', link: 'https://github.com/sqlrooms/sqlrooms'},
     ],
   },
-  transformHead({page, siteData}: any) {
-    const url = `https://sqlrooms.org/${page.relativePath || ''}`
-      .replace(/index\.md$/, '')
-      .replace(/\.md$/, '.html');
+  transformHead({pageData, siteData}: any) {
+    const url = publicUrl(pageData.relativePath);
 
-    const frontmatter = page.frontmatter || {};
+    const frontmatter = pageData.frontmatter || {};
     const isHome =
-      frontmatter.layout === 'home' || page.relativePath === 'index.md';
+      frontmatter.layout === 'home' || pageData.relativePath === 'index.md';
 
     const hero = (frontmatter.hero as any) || {};
 
     const title = isHome
       ? `${hero.name || siteData.title} – ${hero.text || ''}`.trim()
-      : page.title || siteData.title;
+      : pageData.title || siteData.title;
 
     const description = isHome
       ? hero.tagline || siteData.description
       : frontmatter.description || siteData.description;
 
-    const image = 'https://sqlrooms.org/sqlrooms-og.webp';
+    const image = `${SITE_URL}/sqlrooms-og.webp`;
 
     return [
       ['meta', {property: 'og:type', content: 'website'}],
@@ -217,14 +340,24 @@ export default defineConfig({
     ];
   },
   transformPageData(pageData) {
-    const canonicalUrl = `https://sqlrooms.org/${pageData.relativePath}`
-      .replace(/index\.md$/, '')
-      .replace(/\.md$/, '.html');
+    const canonicalUrl = publicUrl(pageData.relativePath);
+    const frontmatterHead = pageData.frontmatter.head;
 
-    pageData.frontmatter.head ??= [];
-    pageData.frontmatter.head.push([
-      'link',
-      {rel: 'canonical', href: canonicalUrl},
-    ]);
+    pageData.frontmatter.head = Array.isArray(frontmatterHead)
+      ? frontmatterHead
+      : [];
+
+    const hasCanonical = pageData.frontmatter.head.some(
+      (entry) => entry[0] === 'link' && entry[1]?.rel === 'canonical',
+    );
+
+    if (!hasCanonical) {
+      pageData.frontmatter.head.push([
+        'link',
+        {rel: 'canonical', href: canonicalUrl},
+      ]);
+    }
   },
 });
+
+export default config;

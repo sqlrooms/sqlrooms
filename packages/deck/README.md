@@ -1,0 +1,885 @@
+# @sqlrooms/deck
+
+Deck.gl integration for SQLRooms with JSON-driven map specs, dataset registry
+binding, DuckDB-backed or in-memory Arrow datasets, and GeoArrow-first geometry
+preparation.
+
+## Package entry points
+
+| Import                  | Use                                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------------- |
+| `@sqlrooms/deck`        | Host-neutral maps, durable map resources, block-document integration, and authoring tools |
+| `@sqlrooms/deck/mosaic` | Opt-in Mosaic dashboard renderers, configuration helpers, and AI tools                    |
+
+The [Deck.gl example](https://github.com/sqlrooms/examples/tree/main/deckgl)
+shows direct DuckDB-backed maps. The
+[Deck.gl + Mosaic example](https://github.com/sqlrooms/examples/tree/main/deckgl-mosaic)
+shows custom cross-filter integration.
+
+## Map resources and dashboard adapters
+
+Document maps are first-class `deckMaps` resources. The root package export
+contains the resource slice, renderer, settings, direct DuckDB data adapter,
+and resource orchestration APIs. It does not require Mosaic.
+
+Mosaic dashboard panel support is opt-in through `@sqlrooms/deck/mosaic`.
+Dashboard panels keep their panel storage, query clients, cross-filter
+selection, and issue translation inside that adapter boundary.
+
+`DeckMapSettingsPanel` is the shared host-neutral editor for both surfaces. It
+receives a map config, selected table, available tables, and edit callbacks;
+document resources and Mosaic panels only adapt their respective stores to
+that contract. Layer, binding, style, extrusion, and code-view controls therefore
+stay consistent without putting Mosaic APIs in the document settings path.
+
+Use `getDeckMapDataPolicy(...)` to resolve a map config into the exported
+`DeckMapDataPolicy` runtime row-limit policy.
+
+Document map runtime issues distinguish dataset SQL failures (`sql-error`)
+from fit-to-data bounds failures (`fit-error`), so each issue is cleared only
+after its corresponding operation recovers.
+
+`DeckMapDataAdapter.resolveFitDataset` can provide an unsampled source for
+fit-to-data bounds queries. The direct adapter uses the authored source for
+bounds while applying the configured row-limit policy only to rendered rows.
+
+Document maps deliberately use independent selection semantics. Their direct
+data adapter executes each configured SQL/table dataset through the room's
+DuckDB connector and neither reads nor publishes Mosaic selections. This drops
+the old incidental intra-map cross-filtering between datasets; a future
+host-neutral selection adapter can add that behavior without changing map
+resource ownership.
+
+## Installation
+
+```bash
+npm install @sqlrooms/deck @sqlrooms/room-shell apache-arrow
+```
+
+For Mosaic dashboard integration, also install `@sqlrooms/mosaic`,
+`@uwdata/mosaic-core`, and `@uwdata/mosaic-sql`, then import the adapter from
+`@sqlrooms/deck/mosaic`.
+
+## What This Package Does
+
+`@sqlrooms/deck` is the JSON-spec bridge between SQLRooms data and deck.gl:
+
+- render a DeckGL map from a serializable `DeckJsonMap` spec
+- bind one or more datasets through a `datasets` registry
+- generate starter JSON specs from datasets with `createDeckJsonSpecFromDatasets`
+- validate SQLRooms-specific layer bindings under `_sqlroomsBinding`
+- prepare geometry for GeoArrow-native layers from
+  [`@geoarrow/deck.gl-geoarrow`](https://github.com/geoarrow/deck.gl-geoarrow)
+  and GeoJSON fallback layers
+- support shared declarative color scales through `@sqlrooms/color-scales`
+
+Use this package when you want deck.gl layers to be driven by a JSON-like spec
+instead of hand-constructing deck layer instances in React code.
+
+## Quick Start
+
+`DeckJsonMap` resolves SQL and table datasets through the current SQLRooms
+store. Render it inside `RoomShell` or `RoomStateProvider` with a store that
+includes DuckDB state. The example below assumes that host is already mounted.
+
+```tsx
+import {DeckJsonMap} from '@sqlrooms/deck';
+
+const spec = {
+  initialViewState: {
+    longitude: -122.4,
+    latitude: 37.74,
+    zoom: 10,
+    pitch: 0,
+    bearing: 0,
+  },
+  controller: true,
+  layers: [
+    {
+      '@@type': 'GeoArrowScatterplotLayer',
+      id: 'airports',
+      _sqlroomsBinding: {
+        dataset: 'airports',
+        geometryColumn: 'geom',
+      },
+      getFillColor: {
+        '@@function': 'colorScale',
+        field: 'scalerank',
+        type: 'sequential',
+        scheme: 'YlOrRd',
+        domain: 'auto',
+      },
+      getRadius: 6,
+      radiusUnits: 'pixels',
+      radiusMinPixels: 2,
+    },
+  ],
+};
+
+export function AirportsMap() {
+  return (
+    <DeckJsonMap
+      spec={spec}
+      datasets={{
+        airports: {
+          sqlQuery:
+            'SELECT name, abbrev, scalerank, ST_AsWKB(geom) AS geom FROM airports',
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      }}
+    />
+  );
+}
+```
+
+## Basemaps
+
+Deck maps use [OpenFreeMap](https://openfreemap.org/) vector tiles by default:
+**Positron** for light mode and **Dark** for dark mode. No API key or registration
+is required. The hosted styles include attribution, which MapLibre displays.
+Maps work immediately with `createDeckMapsSlice()` or `DeckJsonMap`, without
+additional configuration.
+
+New map resources and dashboard panels save `mapStyle: 'light'` or
+`'dark'` using the app theme at creation. Changing the app theme later
+does not change existing maps. The **Basemap** dropdown in map settings selects
+Light or Dark, including for maps with custom layer configurations. The selection
+survives dataset changes, config updates, and saved-workspace reloads; keys and
+generated style objects are not stored in map resources. Applications creating
+configs outside the browser can use `getDefaultDeckMapStyle(theme)` explicitly.
+
+Bare `DeckJsonMap` instances and older saved maps without a style continue to
+follow the app theme. Choose a basemap in settings to persist it in an older map.
+Explicit custom `mapStyle` URLs and `mapProps.mapStyle` objects remain supported;
+the selector displays **Custom** until a built-in style is selected.
+
+For custom basemaps, supply a `DeckMapBasemapProvider` callback:
+
+```tsx
+createDeckMapsSlice({basemapProvider: (theme) => customStyles[theme]});
+```
+
+Return stable MapLibre style objects or URLs. Direct `DeckJsonMap` callers
+can pass `basemapProvider` as a prop, overriding the room's provider without
+requiring the Deck maps slice. The existing room store is still required for
+dataset preparation. Explicit custom map styles take precedence over
+the provider.
+
+`DeckMapDefaultStylesProvider` and `useDeckMapDefaultStyles` are deprecated.
+To migrate an existing `styles={{light, dark}}` wrapper, keep the style objects
+and pass `basemapProvider: (theme) => styles[theme]` to `createDeckMapsSlice`,
+then remove the wrapper. For individual map overrides, pass the same callback
+to `DeckJsonMap`. Code that reads `useDeckMapDefaultStyles` should use the room's
+`deckMaps.basemapProvider` or the supplied callback instead.
+The context API remains functional for backward compatibility, as a fallback
+when no callback style is available. Removal is reserved for a future breaking
+release.
+
+Protomaps remains an optional provider for applications supplying their own key:
+
+```tsx
+import {
+  createDeckMapsSlice,
+  createProtomapsBasemapProvider,
+} from '@sqlrooms/deck';
+
+createDeckMapsSlice({
+  basemapProvider: createProtomapsBasemapProvider(protomapsApiKey),
+});
+```
+
+The helper creates and reuses the light/dark style objects. Its callback lives
+outside `deckMaps.config`, so its key is not persisted with maps. Obtain a
+browser-visible key from [Protomaps](https://protomaps.com/api) and configure
+allowed origins. A missing or blank key falls back to OpenFreeMap.
+Document maps, dashboard maps, and `DeckJsonMap` inherit the room's provider.
+
+`createProtomapsStyle(flavor, apiKey)` creates a MapLibre style object, and
+`createProtomapsDefaultStyles(apiKey)` creates the Protomaps light/dark pair.
+`DECK_MAP_BASEMAP_STYLES` lists the provider-neutral IDs and labels. Existing
+`protomaps-light`/`protomaps-dark` selections are recognized as light/dark aliases.
+
+## Auto Spec Generation
+
+If you want a starter JSON spec instead of writing every layer manually, use
+`createDeckJsonSpecFromDatasets(...)`:
+
+```tsx
+import {createDeckJsonSpecFromDatasets, DeckJsonMap} from '@sqlrooms/deck';
+
+const datasets = {
+  earthquakes: {
+    arrowTable,
+    geometryColumn: 'geom',
+    geometryEncodingHint: 'wkb',
+  },
+};
+
+const spec = createDeckJsonSpecFromDatasets({datasets});
+```
+
+By default, the helper is conservative:
+
+- point / multipoint -> `GeoArrowScatterplotLayer`
+- linestring / multilinestring -> `GeoArrowPathLayer`
+- native GeoArrow polygon / multipolygon -> `GeoArrowPolygonLayer`
+- WKB/WKT multipolygon -> `GeoJsonLayer`
+- mixed, unknown, or unsupported -> `GeoJsonLayer`
+
+You can provide semantic hints for special layers:
+
+```tsx
+const spec = createDeckJsonSpecFromDatasets({
+  datasets,
+  hints: {
+    earthquakes: {prefer: 'heatmap'},
+    trips: {
+      type: 'GeoArrowTripsLayer',
+      timestampColumn: 'timestamps',
+    },
+    flows: {
+      type: 'GeoArrowArcLayer',
+      sourceGeometryColumn: 'source_geom',
+      targetGeometryColumn: 'target_geom',
+    },
+    hexes: {
+      type: 'GeoArrowH3HexagonLayer',
+      hexagonColumn: 'h3',
+    },
+  },
+});
+```
+
+## Mosaic Dashboard Renderer
+
+`@sqlrooms/deck/mosaic` contributes a `deck-json-map` panel renderer to
+`@sqlrooms/mosaic` dashboards without making the Mosaic package depend on
+deck.gl or MapLibre. `createDeckMapDashboardSliceOptions()` installs the map
+renderer and add-panel action alongside the default Mosaic renderers, actions,
+and chart types.
+
+The dashboard renderer exposes `DeckMapDashboardSettings` through its renderer
+definition. `DeckMapBlockSettings` is also exported for block-document hosts
+that embed maps as stateful blocks.
+
+```tsx
+import {
+  createDeckMapDashboardPanelConfig,
+  createDeckMapDashboardSliceOptions,
+} from '@sqlrooms/deck/mosaic';
+import {createMosaicDashboardSlice, MosaicDashboard} from '@sqlrooms/mosaic';
+
+const dashboardSlice = createMosaicDashboardSlice(
+  createDeckMapDashboardSliceOptions(),
+);
+
+function Dashboard() {
+  return <MosaicDashboard dashboardId="geo" />;
+}
+
+const mapPanel = createDeckMapDashboardPanelConfig({
+  title: 'Earthquakes map',
+  spec: {
+    initialViewState: {longitude: -119.5, latitude: 37, zoom: 4.5},
+    layers: [
+      {
+        '@@type': 'GeoArrowScatterplotLayer',
+        id: 'earthquakes',
+        _sqlroomsBinding: {dataset: 'earthquakes'},
+      },
+    ],
+  },
+  datasets: {
+    earthquakes: {
+      source: {
+        sqlQuery:
+          'SELECT *, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM earthquakes',
+      },
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+    },
+  },
+  fitToData: {
+    dataset: 'earthquakes',
+    longitudeColumn: 'Longitude',
+    latitudeColumn: 'Latitude',
+    padding: 40,
+    maxZoom: 12,
+  },
+});
+```
+
+The dashboard renderer uses `useMosaicClient`, receives Arrow tables directly,
+and passes them to `DeckJsonMap` as Arrow-backed datasets. Dataset sources fall
+back from dataset-level source, to panel source, to the dashboard selected
+table. When `fitToData` is provided, the renderer asks DuckDB Spatial for the
+dataset extent using the declared longitude/latitude columns and fits the
+initial map view once, instead of inferring bounds from the loaded Arrow
+payload in React.
+
+Use `createDeckMapPanelFromNativeConfig(...)` when a host surface already has a
+native Deck map config, for example from AI tooling, and needs the same
+dashboard-compatible `deck-json-map` panel shape that the dashboard map tool
+creates.
+
+### Config Mode
+
+The optional `configMode` field (`'basic' | 'custom'`) on
+`DeckMapDashboardPanelConfig` controls how the map was authored and what editing
+UI is available:
+
+- **`'basic'`** (default when absent) — the config uses only properties that the
+  settings panel can represent (layer type, color scale, radius, geometry
+  bindings). The UI settings panel is enabled for user tweaks.
+- **`'custom'`** — the config may use any deck.gl JSON props, including those not
+  representable in the UI configurator. Dashboard and document map settings keep
+  the basic controls disabled so dataset or layer edits cannot rewrite the authored
+  config.
+
+AI tools set this field automatically based on request complexity.
+
+## Embeddable Map Blocks
+
+Host applications that expose document-like block surfaces can render maps
+as durable resources without creating a dashboard. Compose
+`createDeckMapsSlice()` into the room store, call
+`ensureDeckMapResourceState(...)` for a durable map id, and render it with
+`DeckMapBlockRenderer`.
+
+See [Blocks and Block Documents](https://sqlrooms.org/blocks-and-documents.html)
+for the surrounding artifact, renderer-provider, persistence, and ownership
+setup.
+
+Runtime issue recovery can call `deckMaps.clearMapIssue(mapId, kind)` to clear
+only a matching issue kind; omit `kind` when the map state should clear any
+stale issue. Replacing a map config clears its prior render issue, while data
+issues remain until the corresponding dataset recovery is reported.
+Direct document maps automatically fit the configured dataset when the map or
+its source first becomes ready; the header action remains available for manual
+refitting.
+
+Hosts that expose direct document-map AI capability should include
+`getDeckMapResourceAiInstructions()` in the responsible agent and tool
+instructions. `createOrUpdateDeckMapResource(...)` validates the fully merged
+resource before any durable block or map write: each dataset needs a
+`source.tableName` or `source.sqlQuery`, and each layer needs an explicit
+`_sqlroomsBinding.dataset`. Use `mergeDeckMapResourceConfigPatch(...)` in host
+preparation so sparse updates retain durable dataset sources and layers.
+Pass `{replaceLayers: true}` when the incoming `spec.layers` array is the
+complete desired list and omitted existing layers should be removed; the
+default remains additive for sparse layer updates.
+Pass `{replaceDatasets: true}` when the incoming `datasets` object is the
+complete desired registry and omitted existing datasets should be removed; use
+both flags when replacing a complete multi-dataset layer set.
+
+`createDeckMapBlockDocumentType(...)` and
+`createDeckMapBlockDocumentCommandType(...)` provide the reusable registration
+metadata for block-document hosts. They register a `map` stateful block with
+resizable height, scroll-modifier behavior, map settings, and owned state
+creation wired through `ensureDeckMapResourceState(...)`:
+
+```ts
+import {
+  createDeckMapBlockDocumentCommandType,
+  createDeckMapBlockDocumentType,
+} from '@sqlrooms/deck';
+
+const mapBlockType = createDeckMapBlockDocumentType({
+  getState: () => roomStore.getState(),
+  defaultTitle: 'Embedded Map',
+});
+
+const mapCommandType = createDeckMapBlockDocumentCommandType({
+  defaultTitle: 'Embedded Map',
+});
+```
+
+Hosts still own renderer registration, deletion cleanup, and product-specific
+side effects. Use `afterEnsureState` for app-local metadata updates after the
+map resource is created.
+
+`createOrUpdateDeckMapResource(...)` is the durable orchestration helper for
+commands and AI tools. It uses only resource and block callbacks:
+
+```ts
+import {createOrUpdateDeckMapResource} from '@sqlrooms/deck';
+
+const result = await createOrUpdateDeckMapResource(
+  {
+    ensureBlockDocument,
+    findMapBlock,
+    findMap,
+    createMapBlock,
+    updateBlockMetadata,
+    ensureMap,
+    writeMap,
+    findTable,
+    prepareConfig,
+  },
+  {
+    blockDocumentId,
+    mapId,
+    config,
+    pointBinding: {
+      dataset: 'places',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'latitude',
+    },
+    tableName,
+    title,
+    intent,
+  },
+);
+```
+
+On create, callers must provide either `mapId` or `createMapId`. On update, the
+default behavior is intentionally strict: missing map blocks and SQL-only
+dataset sources without a resolvable `tableName` throw so command paths do not
+silently retarget stale IDs. AI create flows can opt into
+`missingMapBlockBehavior: 'create'`; a supplied `mapId` is retained, with
+`createMapId` used only as its fallback.
+
+Title handling is conservative for Ask AI edits: when `title` is omitted,
+`createOrUpdateDeckMapResource(...)` preserves the existing non-blank block
+caption or resource title. Passing an explicit `title` updates the durable map
+title and uses it as the default block caption. Block metadata is written only
+after the map write succeeds.
+
+Map authoring helpers such as `normalizeDeckMapPointConfig(...)`,
+`applyDeckMapPointBinding(...)`, `normalizeDeckMapFillColor(...)`,
+`regenerateMapConfigForTable(...)`, and
+dataset-source helpers such as `getFirstDatasetSourceTableName(...)` are
+exported so hosts can normalize AI-authored configs before calling
+`createOrUpdateDeckMapResource(...)`. Passing structured `pointBinding` to the
+resource helper applies `applyDeckMapPointBinding(...)`: it generates canonical
+WKB point SQL through `createDeckMapPointTransformSql(...)` and aligns the target
+dataset, point layers, brush interaction, and fit binding. Choosing a native
+geometry column on a scatterplot, heatmap, or column layer builds centroid WKB
+SQL so Point geometries stay points and polygon/line footprints become
+representative points instead of failing the Point-position check. Encoded
+columns are decoded before `ST_Centroid`. The host
+table lookup also supplies source columns so missing coordinate columns and a
+generated geometry alias that would duplicate an existing column are rejected
+before durable state is written. For a single table-backed dataset, its canonical
+table
+identity must also match the selected table because that selection overrides the
+authored dataset source at render time. This is the preferred path for standard
+table-backed longitude/latitude Scatterplot, Heatmap, and Column maps; raw
+`transformSql` remains available for custom spatial transforms.
+`pointBinding` is not valid for a dataset used by `GeoArrowPathLayer` or
+`GeoArrowTripsLayer`, including when that layer is hidden.
+`applyDeckMapPointBinding(...)` throws in that case. Omit `pointBinding` and
+keep the layer's authored linestring SQL.
+`normalizeDeckMapPointConfig(...)` only adds
+the standard lon/lat point transform to table-backed datasets that do not
+already declare `geometryColumn`, `source.sqlQuery`, or `source.transformSql`
+and whose resolved table does not expose a native geometry column; native
+geometry, polygon, line, pre-transformed datasets, and datasets used by a path
+or trips layer are preserved.
+When regenerating a map with one existing dataset, its dataset ID is retained
+and geometry bindings are refreshed so custom layers continue to address the
+same dataset after a table switch. Authored arc, H3, and trips
+transforms are kept and only the table name is retargeted. Non-geospatial
+tables and multi-dataset maps return the existing config unchanged so callers
+can keep the current selection when a safe target cannot be inferred. Maps
+without datasets adopt the generated dataset and layer spec after a valid
+table is selected.
+
+## Core Concepts
+
+### `DeckJsonMap`
+
+`DeckJsonMap` is the main React component exported by this package. It takes:
+
+- `spec`: a JSON-like deck.gl spec object or JSON string
+- `datasets`: a dataset registry keyed by dataset id
+- `interleaved`: when true, deck layers render in MapLibre's own WebGL context instead of a separate overlay canvas. This halves the number of WebGL contexts per map panel (from 2 to 1), which matters because browsers limit active contexts to ~8–16 per page. Default: `true`
+- `deckProps`: runtime-only deck props such as `getTooltip`, `onHover`, `onClick`
+- `mapProps`: runtime-only MapLibre props
+- `showLegends`: whether SQLRooms-generated color legends should render
+
+`spec` stays serializable; callbacks and runtime behavior belong in `deckProps`
+or `mapProps`.
+
+By default, deck.gl renders interleaved into MapLibre's layer stack, sharing a
+single WebGL context. This allows deck layers to be inserted between basemap
+layers (e.g. render points under map labels) and reduces WebGL context usage.
+Set `interleaved` to `false` to render deck layers in a separate overlay canvas
+on top of all basemap layers (uses an additional WebGL context per map).
+
+MapLibre's drawing buffer is preserved by default so DOM image capture can
+include the basemap and interleaved deck layers after a frame finishes.
+In separate-overlay mode, deck.gl/luma.gl also preserves its drawing buffer by
+default. Both map canvases are identified for capture validation, including
+overlays with a custom deck ID. A lost context or disabled preservation on
+either canvas causes the CLI rendering tools to return an actionable error.
+Capture readiness also tracks dataset preparation, MapLibre tile rendering,
+and deck layers' asynchronous resources. While any map in the requested surface
+is still loading, the CLI rendering tools return an error asking the caller to
+wait and retry, instead of returning an incomplete image.
+Preserving the buffer can increase GPU memory use and reduce rendering
+performance. Hosts that do not need image capture can opt out by setting
+`mapProps.canvasContextAttributes.preserveDrawingBuffer` to `false`.
+Changing this context option requires remounting the map.
+To opt out for a separate deck overlay, set
+`deckProps.deviceProps.webgl.preserveDrawingBuffer` to `false` and remount
+the map; DOM image capture will then be unavailable.
+
+```tsx
+{
+  /* Default (interleaved): */
+}
+<DeckJsonMap spec={spec} datasets={datasets} />;
+
+{
+  /* Opt out to separate overlay canvas: */
+}
+<DeckJsonMap spec={spec} datasets={datasets} interleaved={false} />;
+```
+
+### Dataset Registry
+
+Each SQLRooms-managed layer binds to exactly one dataset through
+`_sqlroomsBinding.dataset`.
+
+```tsx
+<DeckJsonMap
+  spec={spec}
+  datasets={{
+    earthquakes: {tableName: 'earthquakes'},
+    faults: {tableName: 'faults'},
+  }}
+/>
+```
+
+Dataset ids are layer-binding labels. Internally, prepared geometry is cached
+by the resolved data identity, not by dataset id, so multiple maps or layers
+can reuse the same preparation work when they point at the same table/query.
+
+### Dataset Input Kinds
+
+Each dataset entry is one of:
+
+```tsx
+datasets={{
+  airports: {
+    sqlQuery: 'SELECT * FROM airports',
+    geometryColumn: 'geom',
+    geometryEncodingHint: 'wkb',
+  },
+  earthquakePoints: {
+    tableName: 'earthquakes',
+    transformSql: `
+      SELECT *, ST_AsWKB(ST_Point(longitude, latitude)) AS geom
+      FROM __sqlrooms_source
+      WHERE longitude IS NOT NULL AND latitude IS NOT NULL
+    `,
+    geometryColumn: 'geom',
+    geometryEncodingHint: 'wkb',
+  },
+  faults: {
+    tableName: 'faults',
+    geometryColumn: 'geom',
+    geometryEncodingHint: 'wkb',
+  },
+  preview: {
+    arrowTable,
+    geometryColumn: 'geom',
+    geometryEncodingHint: 'wkb',
+  },
+}}
+```
+
+- `sqlQuery`
+  Runs a standalone literal query through the DuckDB slice execution path. This
+  query is not rewritten by dashboard table selection.
+- `tableName`
+  Reads directly from a table or schema-qualified table reference.
+- `tableName` + `transformSql`
+  Reads a structured table source through a SQL transform. `transformSql` must
+  be a complete `SELECT` statement that reads from SQLRooms' reserved
+  `__sqlrooms_source` relation. SQLRooms binds that relation to the quoted
+  `tableName` at execution time, so dashboards can swap the table source
+  without editing authored SQL.
+- `arrowTable`
+  Uses an already available Apache Arrow table. This is the right input for
+  Arrow-native SQLRooms hooks such as `useSql` and `useMosaicClient`.
+
+For in-memory Arrow datasets, `arrowTable` may be temporarily `undefined` while
+data is still loading. `DeckJsonMap` will keep rendering the basemap and treat
+that dataset as loading until a table is provided.
+
+Use `onDatasetStatesChange` when the surrounding UI needs dataset loading,
+ready, or error state:
+
+```tsx
+<DeckJsonMap
+  spec={spec}
+  datasets={datasets}
+  onDatasetStatesChange={(states) => setDatasetStates(states)}
+/>
+```
+
+## SQLRooms Layer Bindings
+
+SQLRooms-specific layer metadata lives under `_sqlroomsBinding`:
+
+```tsx
+{
+  '@@type': 'GeoArrowScatterplotLayer',
+  id: 'earthquakes',
+  _sqlroomsBinding: {
+    dataset: 'earthquakes',
+    geometryColumn: 'geom',
+    geometryEncodingHint: 'wkb',
+  },
+  getFillColor: {
+    '@@function': 'colorScale',
+    field: 'Magnitude',
+    type: 'sequential',
+    scheme: 'YlOrRd',
+    domain: 'auto',
+  },
+}
+```
+
+Currently supported SQLRooms binding fields are:
+
+- `dataset`: binds the layer to one dataset id
+- `geometryColumn`: overrides geometry column detection for that layer
+- `geometryEncodingHint`: helps geometry detection when the source table needs it
+- `longitudeColumn` / `latitudeColumn`: point, heatmap, and column lon/lat
+- `sourceGeometryColumn`: source point geometry for `GeoArrowArcLayer`
+- `targetGeometryColumn`: target point geometry for `GeoArrowArcLayer`
+- `sourceLongitudeColumn` / `sourceLatitudeColumn` / `targetLongitudeColumn` / `targetLatitudeColumn`: arc lon/lat
+- `generatedTransform`: records a SQLRooms-generated point, centroid, or arc transform
+- `timestampColumn`: timestamp list column for `GeoArrowTripsLayer`
+- `hexagonColumn`: H3 index column for `GeoArrowH3HexagonLayer`
+
+The surrounding deck spec remains intentionally loose so normal deck.gl JSON
+props still pass through, while `_sqlroomsBinding` is validated strictly.
+
+## Color Scales and Legends
+
+You can ask SQLRooms to derive colors from a field with the
+`colorScale` JSON function instead of writing long `@@=` color
+expressions:
+
+```tsx
+getFillColor: {
+  '@@function': 'colorScale',
+  field: 'Magnitude',
+  type: 'sequential',
+  scheme: 'YlOrRd',
+  domain: 'auto',
+  clamp: true,
+}
+```
+
+Optional `opacity` (0–1) is a SQLRooms `colorScale` extension. The compiler
+multiplies it into the color's alpha so fill, stroke, and arc endpoints can be
+dimmed independently of deck.gl `layer.opacity`:
+
+```tsx
+getFillColor: {
+  '@@function': 'colorScale',
+  field: 'Magnitude',
+  type: 'sequential',
+  scheme: 'YlOrRd',
+  domain: 'auto',
+  opacity: 0.6,
+}
+```
+
+Discrete numeric palettes are supported too:
+
+```tsx
+getFillColor: {
+  '@@function': 'colorScale',
+  field: 'Magnitude',
+  type: 'quantize',
+  scheme: 'PuBuGn',
+  domain: [0, 8],
+  bins: 5,
+}
+```
+
+`DeckJsonMap` renders SQLRooms-generated legends by default for layers that use
+`colorScale`. To disable them globally:
+
+```tsx
+<DeckJsonMap spec={spec} datasets={datasets} showLegends={false} />
+```
+
+To override the title:
+
+```tsx
+getFillColor: {
+  '@@function': 'colorScale',
+  field: 'Magnitude',
+  type: 'sequential',
+  scheme: 'YlOrRd',
+  domain: 'auto',
+  legend: {
+    title: 'Magnitude (Mw)',
+  },
+}
+```
+
+Supported scale types come from `@sqlrooms/color-scales`:
+
+- `sequential`
+- `diverging`
+- `quantize`
+- `quantile`
+- `threshold`
+- `categorical`
+
+When `domain` is set to `'auto'`, the domain is computed from the currently
+bound dataset, so colors may shift as filters change. Use explicit domains when
+you want colors to stay stable across filtering.
+
+## Geometry Preparation
+
+`prepareDeckDataset(...)` is the deck-specific preparation step behind the
+scenes. It accepts resolved Arrow tables with geometry stored as:
+
+- native GeoArrow
+- WKB / GeoArrow WKB
+- WKT / GeoArrow WKT
+
+The returned `PreparedDeckDataset` records the dataset-level
+`datasetGeometryColumn` and `datasetGeometryEncodingHint` used to prepare
+and identify that payload.
+
+It then produces canonical deck-facing geometry outputs for:
+
+- GeoArrow-native layers such as `GeoArrowScatterplotLayer`
+- GeoJSON-binary fallback layers such as `GeoJsonLayer`
+
+Specialized layers such as `GeoArrowArcLayer`, `GeoArrowTripsLayer`, and
+`GeoArrowH3HexagonLayer` reuse the prepared table but bind additional
+configured columns on top for source/target geometry,
+timestamps, or index cells.
+
+This work is cached internally in a module-global prepared dataset store. That
+cache is separate from any upstream query cache:
+
+- Mosaic-driven queries already benefit from Mosaic's own query cache
+- DuckDB SQL datasets still use the DuckDB slice execution path
+
+Deck caches only the expensive geometry preparation layer on top.
+
+## Supported Layers
+
+The map-resource validator and settings UI support this curated layer set:
+
+- `GeoArrowScatterplotLayer`
+- `GeoArrowHeatmapLayer`
+- `GeoArrowColumnLayer`
+- `GeoArrowPathLayer`
+- `GeoArrowPolygonLayer`
+- `GeoArrowArcLayer`
+- `GeoArrowTripsLayer`
+- `GeoArrowH3HexagonLayer`
+- `GeoJsonLayer`
+
+The lower-level `DeckJsonMap` JSON converter also registers
+`GeoArrowSolidPolygonLayer`. Durable resource and AI authoring intentionally do
+not accept it; use `GeoArrowPolygonLayer` for authored map resources.
+
+GeoArrow-native geometry columns are the efficient path. WKB/WKT geometry falls
+back to decoding and GeoJSON-binary preparation, with promotion available
+for point-focused GeoArrow layers such as `GeoArrowScatterplotLayer`,
+`GeoArrowHeatmapLayer`, and `GeoArrowColumnLayer`, plus Polygon promotion for
+`GeoArrowPolygonLayer`. WKB/WKT MultiPolygon
+uses the GeoJSON-binary path so separate polygon parts retain their nesting.
+
+The GeoArrow layer implementations themselves come from
+[`@geoarrow/deck.gl-geoarrow`](https://github.com/geoarrow/deck.gl-geoarrow).
+
+When querying DuckDB spatial `GEOMETRY` columns, the dataset pipeline probes
+output types with `DESCRIBE` and projects native `GEOMETRY` columns through
+`SELECT * REPLACE (ST_AsWKB(col) AS col)` before prepare/decode. Matching is
+exact for `GEOMETRY` and CRS-parameterized forms such as
+`GEOMETRY('EPSG:4326')` — not containers like `GEOMETRY[]`. Authored SQL is
+not rewritten — the wrap is an outer pipeline query. Prefer writing
+`ST_AsWKB(...)` in transforms when you control the SQL; the pipeline covers
+bare `ST_Point(...)` / table `GEOMETRY` columns for every authoring surface.
+
+## Prepare AI-authored map configs
+
+AI and host tooling should prepare authored Deck map configs through the shared
+helpers exported from `@sqlrooms/deck`:
+
+- `prepareAiDeckMapConfig(config, {resolveTable?, stripCatalogNames?})` — preferred entrypoint:
+  validates `colorScale.field` names against known tables when a resolver is
+  provided, then runs normalization. Hosts that attach a workspace DB under a
+  catalog that is **not** in scope for dataset SQL should pass that catalog via
+  `stripCatalogNames` (CLI passes `['sqlrooms-cli']`). Default is **no
+  stripping** so other apps keep their own catalogs / attached remotes intact.
+  Dashboard AI helpers (`createDashboardAgentToolWithDeckMaps`,
+  `createDashboardWithDeckMapAiTools`, `createDeckMapDashboardTool`) accept the
+  same option.
+- `normalizeAiDeckMapConfig(config, {stripCatalogNames?})` — safe structural defaults only (scheme
+  casing, solo-dataset binding inject, size clamps, heatmap `colorRange` strip,
+  lon/lat → WKB transform inject). `SELECT *` / `ST_AsWKB` alias collisions are
+  rejected by validation for agent retry — SQL is not rewritten.
+  Does not invent schemes or silently mutate polygon geometry into centroids.
+- `validateAndFixColorScaleFields(config, resolveTable)` — casing fix for
+  base-table columns; hard-rejects unknown fields on bare `{tableName}` sources.
+  Skips unknown-field rejection when `transformSql` / `sqlQuery` is present
+  (aliases may be transform-only).
+
+Mosaic-specific AI helpers such as `createDeckMapDashboardTool()`,
+`createDashboardWithDeckMapAiTools()`, and
+`createDashboardAgentToolWithDeckMaps()` are exported from
+`@sqlrooms/deck/mosaic`.
+
+Durable resource writes also run `getDeckMapResourceConfigIssues` /
+`assertDeckMapResourceConfig` for syntax, supported layer types, and type/scheme
+compatibility (e.g. `quantile` + `Viridis` is rejected; layer `@@type` must be
+one of the settings picker classes). Native `GEOMETRY` columns are
+normalized to WKB by the dataset pipeline (not by SQL-string validation).
+
+### AI instruction layering
+
+Map authoring prompts are composed from one shared core plus a thin
+surface-specific layer, so the two surfaces cannot teach different contracts:
+
+- `getDeckMapSharedAiContractRules()` (internal) holds the surface-agnostic
+  core: dataset and SQL rules, layer classes and geometry recipes, sizes,
+  elevation and camera, color scales, view fitting, basemap, config mode, and
+  the per-page WebGL context budget.
+- `DECK_MAP_AI_INSTRUCTIONS` (via `@sqlrooms/deck/mosaic`) adds only dashboard
+  mechanics: tool names, selected-table semantics, full-config panel updates,
+  and the `list_dashboard_panels` render check.
+- `getDeckMapResourceAiInstructions()` adds only document-resource mechanics:
+  `pointBinding`, sparse patch merging, and `replaceLayers` / `replaceDatasets`.
+
+When adding a rule, place it by this test: if
+`getDeckMapResourceConfigIssues` can reject it, if it describes the
+DuckDB-to-GeoArrow dataset pipeline, or if it constrains the `DeckJsonMap`
+renderer, it belongs in the shared core, because both surfaces validate writes
+through `assertDeckMapResourceConfig` and render through the same component.
+Only rules that are meaningless on the other surface belong in a surface layer.
+
+## Runtime Props and Children
+
+Keep the spec serializable, then pass runtime behavior separately:
+
+- `deckProps` for deck callbacks such as `getTooltip`, `onHover`, `onClick`
+- `mapProps` for MapLibre props such as `projection`
+- `children` for controls, overlays, and popups rendered inside the map
+
+This lets the spec stay stable for storage, validation, and future AI-assisted
+generation while still supporting interactive React behavior at runtime.
+
+## More resources
+
+- [`@sqlrooms/deck` API reference](https://sqlrooms.org/api/deck/)
+- [Deck.gl example source](https://github.com/sqlrooms/examples/tree/main/deckgl)
+- [Deck.gl + Mosaic example source](https://github.com/sqlrooms/examples/tree/main/deckgl-mosaic)
+- [Blocks and Block Documents](https://sqlrooms.org/blocks-and-documents.html)
+- [Commands](https://sqlrooms.org/commands.html)

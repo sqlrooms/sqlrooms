@@ -1,59 +1,142 @@
-A central configuration and type definitions package that maintains base layout configuration schemas and Zod schema definitions for SQLRooms. It provides TypeScript types and interfaces along with essential constants and utilities used for managing layouts.
-
-## Features
-
-- 📝 **Layout Configuration**: Define and manage room layout configuration schemas for Mosaic layouts
-- 🔍 **Type Safety**: Strong TypeScript typing for layout configuration objects
-- ✅ **Validation**: Zod schemas for runtime validation of layout configurations
+Zod schemas and types for SQLRooms layout configuration.
 
 ## Installation
 
 ```bash
 npm install @sqlrooms/layout-config
-# or
-yarn add @sqlrooms/layout-config
 ```
 
-## Basic Usage
+## Main exports
 
-### Working with Mosaic Layout Configuration
+- `MAIN_VIEW`
+- `LayoutConfig` (`LayoutNode | null`)
+- `LayoutNode`, `LayoutPanelNode`, `LayoutSplitNode`, `LayoutTabsNode`, `LayoutDockNode`, `LayoutGridNode`
+- `isLayoutPanelNode`, `isLayoutSplitNode`, `isLayoutTabsNode`, `isLayoutDockNode`, `isLayoutGridNode`
+- `createDefaultLayout()`
 
-```tsx
+## Basic usage
+
+```ts
 import {
-  MosaicLayoutConfig,
   LayoutConfig,
-  MAIN_VIEW,
+  LayoutNode,
+  createDefaultLayout,
 } from '@sqlrooms/layout-config';
 
-// Create a new room configuration
-const layoutConfig: MosaicLayoutConfig = {
-  type: 'mosaic',
-  nodes: {
-    direction: 'row',
-    first: MAIN_VIEW,
-    second: {
-      direction: 'column',
-      first: 'files',
-      second: 'tables',
-    },
-  },
+// Simplest config — just the main view
+const simpleLayout = createDefaultLayout(); // returns 'main'
+
+// Two-pane split layout
+const twoPaneLayout: LayoutConfig = {
+  type: 'split',
+  direction: 'row',
+  children: [
+    {type: 'panel', id: 'data', defaultSize: '30%'},
+    {type: 'panel', id: 'main', defaultSize: '70%'},
+  ],
 };
 
-// This can be part of a bigger room configuration
-interface RoomConfig {
-  // ... other properties
-  layout: LayoutConfig;
+// Validated via Zod
+const validated: LayoutConfig = LayoutConfig.parse(twoPaneLayout);
+```
+
+## Layout node types
+
+`LayoutConfig` is `LayoutNode | null`. A `LayoutNode` is one of:
+
+| Type     | Description                                                   |
+| -------- | ------------------------------------------------------------- |
+| `string` | Leaf panel key (e.g. `'main'`, `'data'`)                      |
+| `panel`  | Leaf with sizing constraints (`defaultSize`, `minSize`, etc.) |
+| `split`  | Resizable panel group (rendered via `react-resizable-panels`) |
+| `tabs`   | Tabbed container with collapsible areas                       |
+| `dock`   | Docking container with a nested layout tree                   |
+| `grid`   | Scrollable dashboard grid with draggable/resizable panels     |
+
+### Panel node
+
+```ts
+{type: 'panel', id: 'sidebar', defaultSize: '25%', minSize: '150px', collapsible: true}
+```
+
+### Split node
+
+```ts
+{
+  type: 'split',
+  direction: 'row',
+  children: [
+    {type: 'panel', id: 'left', defaultSize: '30%'},
+    {type: 'panel', id: 'right'},
+  ],
 }
 ```
 
-## Advanced Features
+### Tabs node
 
-- **Schema Extensions**: Extend base schemas for custom room types
-- **Configuration Validation**: Validate configurations at runtime
-- **Serialization**: Convert configurations to/from JSON for storage
-
-For more information, visit the SQLRooms documentation.
-
+```ts
+{
+  type: 'tabs',
+  id: 'sidebar',
+  children: ['data', 'schema'],
+  activeTabIndex: 0,
+  collapsible: true,
+}
 ```
 
+### Dock node
+
+```ts
+{
+  type: 'dock',
+  id: 'docking-area',
+  root: {
+    type: 'split',
+    direction: 'row',
+    children: [
+      {type: 'panel', id: 'editor', defaultSize: '70%'},
+      {type: 'panel', id: 'preview', defaultSize: '30%'},
+    ],
+  },
+  defaultSize: '100%',
+}
 ```
+
+### Grid node
+
+```ts
+{
+  type: 'grid',
+  id: 'dashboard-grid',
+  breakpoints: {lg: 768, sm: 0},
+  cols: {lg: 12, sm: 6},
+  rowHeight: 220,
+  compactType:  'vertical',
+  preventCollision: false,
+  resizeHandles: ['e', 's', 'w', 'se', 'sw'],
+  children: [
+    {type: 'panel', id: 'chart-a', panel: 'chart'},
+    {type: 'panel', id: 'chart-b', panel: 'chart'},
+  ],
+}
+```
+
+## Typical integration
+
+```ts
+import {createRoomShellSlice} from '@sqlrooms/room-shell';
+
+createRoomShellSlice({
+  layout: {
+    config: twoPaneLayout,
+    panels: {
+      data: {title: 'Data', component: DataPanel},
+      main: {title: 'Main', component: MainPanel},
+    },
+  },
+});
+```
+
+## Backward compatibility
+
+Legacy binary-tree split configs are still migrated via `z.preprocess`, but the old `mosaic` node shape is no longer part of the public schema.

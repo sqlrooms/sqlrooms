@@ -1,0 +1,203 @@
+import type * as arrow from 'apache-arrow';
+
+const GEOARROW_COMPILED_ACCESSOR = Symbol.for(
+  '@sqlrooms/deck/compiled-geoarrow-accessor',
+);
+
+function isValidIdentifier(name: string) {
+  return /^[A-Za-z_$][\w$]*$/.test(name);
+}
+
+const RESERVED_IDENTIFIERS = new Set([
+  // JS keywords & future reserved words
+  'abstract',
+  'arguments',
+  'async',
+  'await',
+  'break',
+  'case',
+  'catch',
+  'class',
+  'const',
+  'continue',
+  'debugger',
+  'default',
+  'delete',
+  'do',
+  'else',
+  'enum',
+  'eval',
+  'export',
+  'extends',
+  'finally',
+  'for',
+  'function',
+  'if',
+  'implements',
+  'import',
+  'in',
+  'instanceof',
+  'interface',
+  'let',
+  'new',
+  'of',
+  'package',
+  'private',
+  'protected',
+  'public',
+  'return',
+  'static',
+  'super',
+  'switch',
+  'this',
+  'throw',
+  'try',
+  'typeof',
+  'var',
+  'void',
+  'while',
+  'with',
+  'yield',
+  // Literals & globals used in expressions
+  'true',
+  'false',
+  'null',
+  'undefined',
+  'NaN',
+  'Infinity',
+  'Math',
+  'Number',
+  'String',
+  'Boolean',
+  'Array',
+  'Object',
+  'Date',
+  // Accessor runtime parameter
+  'target',
+]);
+
+/**
+ * True when a column name can be safely embedded in a GeoArrow `@@=` expression
+ * (valid JS identifier that is not a reserved word or expression global).
+ */
+export function isBindableGeoArrowFieldIdentifier(name: string): boolean {
+  return isValidIdentifier(name) && !RESERVED_IDENTIFIERS.has(name);
+}
+
+function unique<T>(values: T[]) {
+  return [...new Set(values)];
+}
+
+function resolveColumnBindings(expression: string, table: arrow.Table) {
+  const schemaFieldNames = table.schema.fields
+    .map((field) => field.name)
+    .filter(isValidIdentifier);
+
+  const identifiers = unique(
+    Array.from(expression.matchAll(/\b[A-Za-z_$][\w$]*\b/g))
+      .map((match) => match[0])
+      .filter((identifier) => !RESERVED_IDENTIFIERS.has(identifier)),
+  );
+
+  return identifiers.map((identifier) => {
+    const exactMatch = schemaFieldNames.find(
+      (fieldName) => fieldName === identifier,
+    );
+    if (exactMatch) {
+      return {identifier, columnName: exactMatch};
+    }
+
+    const caseInsensitiveMatches = schemaFieldNames.filter(
+      (fieldName) => fieldName.toLowerCase() === identifier.toLowerCase(),
+    );
+
+    return {
+      identifier,
+      columnName:
+        caseInsensitiveMatches.length === 1
+          ? caseInsensitiveMatches[0]!
+          : undefined,
+    };
+  });
+}
+
+function copyArrayLikeIntoTarget(result: unknown) {
+  if (!Array.isArray(result) && !ArrayBuffer.isView(result)) {
+    return result;
+  }
+
+  // Keep returning plain JS arrays. Reusing deck's typed `target` buffer
+  // causes `ScatterplotLayer` binary attribute errors (`Float64Array`) when
+  // GeoArrow delegates to deck sublayers.
+  return Array.from(result as ArrayLike<number>);
+}
+
+/** Arrow Int64/Uint64 columns surface as bigint; deck.gl accessors need numbers. */
+function coerceArrowValue(value: unknown): unknown {
+  if (typeof value === 'bigint') {
+    return Number(value);
+  }
+  return value;
+}
+
+export function compileGeoArrowAccessor(
+  expression: string,
+  table: arrow.Table,
+) {
+  const trimmedExpression = expression.trim();
+
+  const bindings = resolveColumnBindings(trimmedExpression, table);
+
+  const evaluator = new Function(
+    ...bindings.map((binding) => binding.identifier),
+    'target',
+    `return (${trimmedExpression});`,
+  ) as (...args: unknown[]) => unknown;
+
+  // GeoArrow 0.4.x callbacks are batch-oriented: they receive
+  // {index, data: {data: batch}, target} from the upstream layer wrapper.
+  const accessor = ({
+    index,
+    data,
+    target,
+  }: {
+    index: number;
+    data: {data: {get: (i: number) => Record<string, unknown>}};
+    target: number[];
+  }) => {
+    const batch = data.data as arrow.Table | arrow.RecordBatch;
+    const args = bindings.map((binding) =>
+      coerceArrowValue(
+        binding.columnName
+          ? batch.getChild(binding.columnName)?.get(index)
+          : undefined,
+      ),
+    );
+    const result = evaluator(...args, target);
+    return coerceArrowValue(copyArrayLikeIntoTarget(result));
+  };
+
+  Object.defineProperty(accessor, GEOARROW_COMPILED_ACCESSOR, {
+    value: true,
+    enumerable: false,
+  });
+
+  return accessor;
+}
+
+export function isCompiledGeoArrowAccessor(
+  value: unknown,
+): value is (info: {
+  index: number;
+  data: {data: unknown};
+  target: number[];
+}) => unknown {
+  return (
+    typeof value === 'function' &&
+    Boolean(
+      (value as {[GEOARROW_COMPILED_ACCESSOR]?: boolean})[
+        GEOARROW_COMPILED_ACCESSOR
+      ],
+    )
+  );
+}

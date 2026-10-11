@@ -1,34 +1,35 @@
 {
   "name": "@sqlrooms/room-shell",
-  "version": "0.27.0-rc.2",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "module": "dist/index.js",
-  "type": "module",
-  "sideEffects": false,
-  "author": "SQLRooms Contributors",
-  "license": "MIT",
+  "version": "0.29.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sqlrooms/sqlrooms.git"
+    "url": "git+https://github.com/sqlrooms/sqlrooms.git"
   },
+  "license": "MIT",
+  "author": "SQLRooms Contributors",
+  "sideEffects": false,
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
-    "dev": "tsc -w",
     "build": "tsc",
+    "dev": "tsc -w",
     "lint": "eslint .",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
   },
   "dependencies": {
+    "@sqlrooms/codemirror": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
+    "@sqlrooms/db": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
+    "@sqlrooms/layout-config": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
@@ -36,11 +37,20 @@
     "apache-arrow": "17.0.0",
     "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
-    "react-mosaic-component": "^6.1.1",
+    "zod": "^4.1.13",
     "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.3.0",
+    "@sqlrooms/preset-jest": "workspace:*",
+    "jsdom": "^29.1.1",
+    "ts-jest": "^29.4.4"
   },
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

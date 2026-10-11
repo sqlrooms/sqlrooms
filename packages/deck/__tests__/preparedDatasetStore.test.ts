@@ -1,0 +1,576 @@
+import {jest} from '@jest/globals';
+import type {QueryHandle} from '@sqlrooms/duckdb';
+import {Table, Utf8, vectorFromArray} from 'apache-arrow';
+import {
+  createPreparedDatasetStore,
+  resolvePreparedDeckDatasetState,
+} from '../src/datasets/PreparedDatasetStore';
+import {
+  areDatasetRegistriesEqual,
+  getPreparedDatasetStatesIdentity,
+  resolvePreparedDatasetCacheKey,
+} from '../src/datasets/helpers';
+import type {
+  GeometryEncodingHint,
+  PreparedDeckDataset,
+} from '../src/prepare/types';
+import type {DeckDatasetInput} from '../src/types';
+
+function createPreparedDataset(
+  datasetId: string,
+  table: Table,
+  options?: {
+    geometryColumn?: string;
+    geometryEncodingHint?: GeometryEncodingHint;
+  },
+) {
+  return {
+    datasetId,
+    table,
+    datasetGeometryColumn: options?.geometryColumn,
+    datasetGeometryEncodingHint: options?.geometryEncodingHint,
+    resolveGeometry: (() => {
+      throw new Error('Not used in preparedDatasetStore tests.');
+    }) as PreparedDeckDataset['resolveGeometry'],
+    getGeoArrowLayerData: (() => {
+      throw new Error('Not used in preparedDatasetStore tests.');
+    }) as PreparedDeckDataset['getGeoArrowLayerData'],
+    getGeoJsonBinaryData: (() => {
+      throw new Error('Not used in preparedDatasetStore tests.');
+    }) as PreparedDeckDataset['getGeoJsonBinaryData'],
+  } satisfies PreparedDeckDataset;
+}
+
+async function waitForEntry(
+  store: ReturnType<typeof createPreparedDatasetStore>,
+  cacheKey: string,
+) {
+  const entry = store.getState().entries[cacheKey];
+  if (entry?.status === 'loading') {
+    await entry.promise;
+  }
+}
+
+describe('PreparedDatasetStore', () => {
+  it('reuses one prepared entry for matching sql datasets', async () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const connector = {};
+    const prepareDataset = jest.fn(
+      ({datasetId, table: nextTable}: {datasetId: string; table: Table}) =>
+        createPreparedDataset(datasetId, nextTable),
+    );
+    const executeSql = jest.fn(
+      async () => Promise.resolve(table) as unknown as QueryHandle,
+    );
+    const store = createPreparedDatasetStore({prepareDataset});
+    const input: DeckDatasetInput = {sqlQuery: 'select * from earthquakes'};
+    const cacheKey = resolvePreparedDatasetCacheKey({
+      input,
+      sqlSourceIdentity: connector,
+    })!;
+
+    store.getState().syncConsumer('consumer-a', [cacheKey]);
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'earthquakes',
+      executeSql,
+      input,
+    });
+    store.getState().syncConsumer('consumer-b', [cacheKey]);
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'earthquakes-copy',
+      executeSql,
+      input,
+    });
+
+    await waitForEntry(store, cacheKey);
+
+    expect(executeSql).toHaveBeenCalledTimes(2);
+    expect(prepareDataset).toHaveBeenCalledTimes(1);
+    expect(store.getState().entries[cacheKey]).toMatchObject({
+      status: 'ready',
+    });
+
+    const secondState = resolvePreparedDeckDatasetState({
+      datasetId: 'earthquakes-copy',
+      entry: store.getState().entries[cacheKey],
+    });
+    expect(secondState.status).toBe('ready');
+    if (secondState.status === 'ready') {
+      expect(secondState.prepared.datasetId).toBe('earthquakes-copy');
+      expect(secondState.prepared.table).toBe(table);
+    }
+  });
+
+  it('reuses one prepared entry for matching arrow tables', async () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const prepareDataset = jest.fn(
+      ({datasetId, table: nextTable}: {datasetId: string; table: Table}) =>
+        createPreparedDataset(datasetId, nextTable),
+    );
+    const store = createPreparedDatasetStore({prepareDataset});
+    const input: DeckDatasetInput = {arrowTable: table, geometryColumn: 'geom'};
+    const cacheKey = resolvePreparedDatasetCacheKey({input})!;
+
+    store.getState().syncConsumer('consumer-a', [cacheKey]);
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'earthquakes',
+      executeSql: jest.fn(),
+      input,
+    });
+    store.getState().syncConsumer('consumer-b', [cacheKey]);
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'earthquakes-copy',
+      executeSql: jest.fn(),
+      input,
+    });
+
+    await waitForEntry(store, cacheKey);
+
+    expect(prepareDataset).toHaveBeenCalledTimes(1);
+    expect(store.getState().entries[cacheKey]).toMatchObject({
+      status: 'ready',
+    });
+  });
+
+  it('wraps native GEOMETRY columns from DESCRIBE before the data query', async () => {
+    const dataTable = new Table({value: vectorFromArray([1, 2, 3])});
+    const describeTable = new Table({
+      column_name: vectorFromArray(['geom', 'id']),
+      column_type: vectorFromArray(['GEOMETRY', 'BIGINT']),
+    });
+    const connector = {};
+    const prepareDataset = jest.fn(
+      ({
+        datasetId,
+        table: nextTable,
+        geometryEncodingHint,
+      }: {
+        datasetId: string;
+        table: Table;
+        geometryEncodingHint?: string;
+      }) => {
+        expect(geometryEncodingHint).toBe('wkb');
+        return createPreparedDataset(datasetId, nextTable);
+      },
+    );
+    const executeSql = jest.fn(async (sql: string) => {
+      if (sql.startsWith('DESCRIBE ')) {
+        return Promise.resolve(describeTable) as unknown as QueryHandle;
+      }
+      return Promise.resolve(dataTable) as unknown as QueryHandle;
+    });
+    const store = createPreparedDatasetStore({prepareDataset});
+    const input: DeckDatasetInput = {
+      tableName: 'buildings',
+      geometryColumn: 'geom',
+    };
+    const cacheKey = resolvePreparedDatasetCacheKey({
+      input,
+      sqlSourceIdentity: connector,
+    })!;
+
+    store.getState().syncConsumer('consumer-a', [cacheKey]);
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'buildings',
+      executeSql,
+      input,
+    });
+
+    await waitForEntry(store, cacheKey);
+
+    expect(executeSql).toHaveBeenNthCalledWith(
+      2,
+      [
+        'SELECT * REPLACE (ST_AsWKB("geom") AS "geom")',
+        'FROM (SELECT * FROM "buildings") AS "__sqlrooms_as_wkb"',
+      ].join('\n'),
+    );
+    expect(store.getState().entries[cacheKey]).toMatchObject({
+      status: 'ready',
+    });
+  });
+
+  it('executes table dataset inputs through compiled SQL', async () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const connector = {};
+    const prepareDataset = jest.fn(
+      ({datasetId, table: nextTable}: {datasetId: string; table: Table}) =>
+        createPreparedDataset(datasetId, nextTable),
+    );
+    const executeSql = jest.fn(
+      async () => Promise.resolve(table) as unknown as QueryHandle,
+    );
+    const store = createPreparedDatasetStore({prepareDataset});
+    const input: DeckDatasetInput = {
+      tableName: 'earthquakes',
+      transformSql:
+        'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+      geometryColumn: 'geom',
+    };
+    const cacheKey = resolvePreparedDatasetCacheKey({
+      input,
+      sqlSourceIdentity: connector,
+    })!;
+
+    store.getState().syncConsumer('consumer-a', [cacheKey]);
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'earthquakes',
+      executeSql,
+      input,
+    });
+
+    await waitForEntry(store, cacheKey);
+
+    const compiled = [
+      'WITH __sqlrooms_source AS (',
+      '  SELECT * FROM "earthquakes"',
+      ')',
+      'SELECT *',
+      'FROM (',
+      'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+      ') AS "__sqlrooms_transform"',
+    ].join('\n');
+    expect(executeSql).toHaveBeenCalledTimes(2);
+    expect(executeSql).toHaveBeenNthCalledWith(
+      1,
+      `DESCRIBE SELECT * FROM (${compiled}) AS "__sqlrooms_describe_source"`,
+    );
+    expect(executeSql).toHaveBeenNthCalledWith(2, compiled);
+    expect(prepareDataset).toHaveBeenCalledTimes(1);
+  });
+
+  it('isolates invalid table dataset inputs during consumer sync', async () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const connector = {};
+    const prepareDataset = jest.fn(
+      ({datasetId, table: nextTable}: {datasetId: string; table: Table}) =>
+        createPreparedDataset(datasetId, nextTable),
+    );
+    const executeSql = jest.fn(
+      async () => Promise.resolve(table) as unknown as QueryHandle,
+    );
+    const store = createPreparedDatasetStore({prepareDataset});
+    const validInput: DeckDatasetInput = {sqlQuery: 'select 1'};
+    const invalidInput: DeckDatasetInput = {tableName: 'main.'};
+    const validKey = resolvePreparedDatasetCacheKey({
+      input: validInput,
+      sqlSourceIdentity: connector,
+    })!;
+    const invalidKey = resolvePreparedDatasetCacheKey({
+      input: invalidInput,
+      sqlSourceIdentity: connector,
+    })!;
+
+    expect(() =>
+      store.getState().syncDatasetsForConsumer({
+        consumerId: 'consumer-a',
+        datasets: {
+          valid: validInput,
+          invalid: invalidInput,
+        },
+        executeSql,
+        sqlSourceIdentity: connector,
+      }),
+    ).not.toThrow();
+
+    await waitForEntry(store, validKey);
+    await waitForEntry(store, invalidKey);
+
+    expect(store.getState().entries[validKey]).toMatchObject({
+      status: 'ready',
+    });
+    expect(store.getState().entries[invalidKey]).toMatchObject({
+      status: 'error',
+    });
+  });
+
+  it('changes cache keys when geometry options or sql source change', () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const connectorA = {};
+    const connectorB = {};
+
+    const sqlInput: DeckDatasetInput = {
+      sqlQuery: 'select * from earthquakes',
+      geometryColumn: 'geom',
+    };
+    const sqlKeyA = resolvePreparedDatasetCacheKey({
+      input: sqlInput,
+      sqlSourceIdentity: connectorA,
+    });
+    const sqlKeyB = resolvePreparedDatasetCacheKey({
+      input: sqlInput,
+      sqlSourceIdentity: connectorB,
+    });
+    const sqlKeyDifferentGeometry = resolvePreparedDatasetCacheKey({
+      input: {
+        sqlQuery: 'select * from earthquakes',
+        geometryColumn: 'shape',
+      },
+      sqlSourceIdentity: connectorA,
+    });
+
+    expect(sqlKeyA).not.toBe(sqlKeyB);
+    expect(sqlKeyA).not.toBe(sqlKeyDifferentGeometry);
+
+    const arrowKey = resolvePreparedDatasetCacheKey({
+      input: {arrowTable: table, geometryColumn: 'geom'},
+    });
+    const arrowKeyDifferentEncoding = resolvePreparedDatasetCacheKey({
+      input: {
+        arrowTable: table,
+        geometryColumn: 'geom',
+        geometryEncodingHint: 'wkb',
+      },
+    });
+    const arrowKeyUndefined = resolvePreparedDatasetCacheKey({
+      input: {arrowTable: undefined, geometryColumn: 'geom'},
+    });
+
+    expect(arrowKey).not.toBe(arrowKeyDifferentEncoding);
+    expect(arrowKeyUndefined).toBeUndefined();
+  });
+
+  it('returns loading when no prepared entry exists yet', () => {
+    expect(
+      resolvePreparedDeckDatasetState({
+        datasetId: 'earthquakes',
+        entry: undefined,
+      }),
+    ).toEqual({status: 'loading'});
+  });
+
+  it('evicts least recently used unreferenced settled entries', async () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const prepareDataset = jest.fn(
+      ({datasetId, table: nextTable}: {datasetId: string; table: Table}) =>
+        createPreparedDataset(datasetId, nextTable),
+    );
+    const executeSql = jest.fn(
+      async () => Promise.resolve(table) as unknown as QueryHandle,
+    );
+    const connector = {};
+    const store = createPreparedDatasetStore({
+      maxEntries: 1,
+      prepareDataset,
+    });
+
+    const firstInput: DeckDatasetInput = {sqlQuery: 'select 1'};
+    const firstKey = resolvePreparedDatasetCacheKey({
+      input: firstInput,
+      sqlSourceIdentity: connector,
+    })!;
+
+    store.getState().syncConsumer('consumer-a', [firstKey]);
+    store.getState().ensureEntry({
+      cacheKey: firstKey,
+      datasetId: 'first',
+      executeSql,
+      input: firstInput,
+    });
+    await waitForEntry(store, firstKey);
+    store.getState().removeConsumer('consumer-a');
+
+    const secondInput: DeckDatasetInput = {sqlQuery: 'select 2'};
+    const secondKey = resolvePreparedDatasetCacheKey({
+      input: secondInput,
+      sqlSourceIdentity: connector,
+    })!;
+
+    store.getState().syncConsumer('consumer-b', [secondKey]);
+    store.getState().ensureEntry({
+      cacheKey: secondKey,
+      datasetId: 'second',
+      executeSql,
+      input: secondInput,
+    });
+    await waitForEntry(store, secondKey);
+
+    expect(store.getState().entries[firstKey]).toBeUndefined();
+    expect(store.getState().entries[secondKey]).toMatchObject({
+      status: 'ready',
+    });
+  });
+
+  it('does not replace entries on a cache hit', async () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const connector = {};
+    const prepareDataset = jest.fn(
+      ({datasetId, table: nextTable}: {datasetId: string; table: Table}) =>
+        createPreparedDataset(datasetId, nextTable),
+    );
+    const executeSql = jest.fn(
+      async () => Promise.resolve(table) as unknown as QueryHandle,
+    );
+    const store = createPreparedDatasetStore({prepareDataset});
+    const input: DeckDatasetInput = {sqlQuery: 'select * from earthquakes'};
+    const cacheKey = resolvePreparedDatasetCacheKey({
+      input,
+      sqlSourceIdentity: connector,
+    })!;
+
+    store.getState().syncConsumer('consumer-a', [cacheKey]);
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'earthquakes',
+      executeSql,
+      input,
+    });
+    await waitForEntry(store, cacheKey);
+
+    const entriesAfterReady = store.getState().entries;
+    const accessedAt = store.getState().entries[cacheKey]!.lastAccessedAt;
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'earthquakes',
+      executeSql,
+      input,
+    });
+
+    expect(store.getState().entries).toBe(entriesAfterReady);
+    expect(store.getState().entries[cacheKey]?.lastAccessedAt).toBeGreaterThan(
+      accessedAt,
+    );
+    expect(prepareDataset).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('areDatasetRegistriesEqual', () => {
+  it('ignores wrapper object identity for equivalent table inputs', () => {
+    const first = {
+      places: {
+        tableName: 'places',
+        transformSql: 'SELECT * FROM __sqlrooms_source',
+        geometryColumn: 'geom',
+      },
+    };
+    const second = {
+      places: {
+        tableName: 'places',
+        transformSql: 'SELECT * FROM __sqlrooms_source',
+        geometryColumn: 'geom',
+      },
+    };
+
+    expect(areDatasetRegistriesEqual(first, second)).toBe(true);
+  });
+
+  it('returns false when the source query changes', () => {
+    const first = {places: {sqlQuery: 'select 1'}};
+    const second = {places: {sqlQuery: 'select 2'}};
+
+    expect(areDatasetRegistriesEqual(first, second)).toBe(false);
+  });
+
+  it('treats missing and empty optional fields as equal (fingerprint parity)', () => {
+    const first = {
+      places: {
+        tableName: 'places',
+        geometryColumn: 'geom',
+      },
+    };
+    const second = {
+      places: {
+        tableName: 'places',
+        transformSql: '',
+        geometryColumn: 'geom',
+        geometryEncodingHint: undefined,
+      },
+    };
+
+    expect(areDatasetRegistriesEqual(first, second)).toBe(true);
+  });
+
+  it('returns false when geometry options differ', () => {
+    const first = {
+      places: {
+        tableName: 'places',
+        geometryColumn: 'geom',
+        geometryEncodingHint: 'wkb' as const,
+      },
+    };
+    const second = {
+      places: {
+        tableName: 'places',
+        geometryColumn: 'geom',
+        geometryEncodingHint: 'wkt' as const,
+      },
+    };
+
+    expect(areDatasetRegistriesEqual(first, second)).toBe(false);
+  });
+});
+
+describe('getPreparedDatasetStatesIdentity', () => {
+  function readyState(
+    table: Table,
+    options?: {
+      geometryColumn?: string;
+      geometryEncodingHint?: GeometryEncodingHint;
+    },
+  ) {
+    return {
+      status: 'ready' as const,
+      prepared: createPreparedDataset('places', table, options),
+    };
+  }
+
+  it('keeps the same identity when only the datasetStates wrapper changes', () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const prepared = createPreparedDataset('places', table, {
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+    });
+
+    expect(
+      getPreparedDatasetStatesIdentity({
+        places: {status: 'ready', prepared},
+      }),
+    ).toBe(
+      getPreparedDatasetStatesIdentity({
+        places: {status: 'ready', prepared},
+      }),
+    );
+  });
+
+  it('distinguishes ready states that share a table but differ in geometry options', () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+
+    expect(
+      getPreparedDatasetStatesIdentity({
+        places: readyState(table, {
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        }),
+      }),
+    ).not.toBe(
+      getPreparedDatasetStatesIdentity({
+        places: readyState(table, {
+          geometryColumn: 'other_geom',
+          geometryEncodingHint: 'wkb',
+        }),
+      }),
+    );
+
+    expect(
+      getPreparedDatasetStatesIdentity({
+        places: readyState(table, {
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        }),
+      }),
+    ).not.toBe(
+      getPreparedDatasetStatesIdentity({
+        places: readyState(table, {
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkt',
+        }),
+      }),
+    );
+  });
+});

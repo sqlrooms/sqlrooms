@@ -1,98 +1,90 @@
-A collection of utility functions and helpers for SQLRooms applications. This package provides common utilities for string manipulation, file handling, color management, formatting, and more.
-
-## Features
-
-- 🔠 **String Utilities**: Functions for string manipulation and formatting
-- 📁 **File Path Handling**: Tools for working with file paths and extensions
-- 🎨 **Color Utilities**: Color conversion and manipulation functions
-- 📊 **Formatting**: Data formatting for display purposes
-- 🔄 **XHR Helpers**: Utilities for working with XMLHttpRequests
-- 🧰 **General Helpers**: Common helper functions for everyday tasks
+Shared utility functions used across SQLRooms packages and apps.
 
 ## Installation
 
 ```bash
 npm install @sqlrooms/utils
-# or
-yarn add @sqlrooms/utils
 ```
 
-## Basic Usage
+## String and formatting helpers
 
-### String Utilities
+```ts
+import {
+  capitalize,
+  camelCaseToTitle,
+  truncate,
+  formatBytes,
+  formatNumber,
+  formatDate,
+  formatDateTime,
+  formatTimeRelative,
+} from '@sqlrooms/utils';
 
-```tsx
-import {truncate, capitalize, slugify} from '@sqlrooms/utils';
+capitalize('hello'); // "Hello"
+camelCaseToTitle('tableRowCount'); // "Table Row Count"
+truncate('This is a long sentence', 10); // "This is..."
 
-// Truncate long text
-const shortText = truncate(
-  'This is a very long text that needs to be shortened',
-  20,
-);
-console.log(shortText); // 'This is a very long...'
-
-// Capitalize text
-const capitalized = capitalize('hello world');
-console.log(capitalized); // 'Hello world'
-
-// Create a URL-friendly slug
-const slug = slugify('Hello World! This is a test');
-console.log(slug); // 'hello-world-this-is-a-test'
+formatBytes(1048576); // "1 MB"
+formatNumber(1234567.89); // "1,234,568"
+formatDate(new Date()); // "2026-02-23"
+formatDateTime(new Date()); // "Mon 2026-02-23 02:15 PM"
+formatTimeRelative(Date.now() - 60_000); // "a minute ago"
 ```
 
-### File Path Utilities
+`formatTimeRelative` takes an optional second argument, the point to measure
+from; it defaults to now. Passing it explicitly keeps the result a pure function
+of its inputs, which is what lets a React component recompute the label on a
+clock tick instead of relying on a hidden read of the current time:
 
-```tsx
-import {getFileExtension, joinPaths, normalizePath} from '@sqlrooms/utils';
-
-// Get file extension
-const ext = getFileExtension('document.pdf');
-console.log(ext); // 'pdf'
-
-// Join path segments
-const fullPath = joinPaths('/base/path', 'subfolder', 'file.txt');
-console.log(fullPath); // '/base/path/subfolder/file.txt'
-
-// Normalize a path
-const normalized = normalizePath('/path//to/../folder/./file.txt');
-console.log(normalized); // '/path/folder/file.txt'
+```ts
+formatTimeRelative(completedAt, now); // "18 minutes ago", relative to `now`
 ```
 
-### JSON Utilities
+## File/table name helpers
 
-```tsx
-import {safeJsonParse} from '@sqlrooms/utils';
+```ts
+import {
+  convertToValidColumnOrTableName,
+  convertToUniqueColumnOrTableName,
+  generateUniqueName,
+  splitFilePath,
+  generateUniquePath,
+} from '@sqlrooms/utils';
 
-// Safely parse JSON without throwing exceptions
-const result = safeJsonParse('{"name": "John", "age": 30}');
-console.log(result); // { name: 'John', age: 30 }
+convertToValidColumnOrTableName('My File.csv'); // "My_File"
+convertToUniqueColumnOrTableName('sales.csv', ['sales']); // "sales_1"
+generateUniqueName('query', ['query', 'query_1']); // "query_2"
 
-// Handle invalid JSON gracefully
-const invalid = safeJsonParse('{"name": "John", age: 30}');
-console.log(invalid); // undefined
+splitFilePath('folder/data.parquet');
+// { dir: "folder", name: "data", ext: "parquet", filename: "data.parquet" }
+
+generateUniquePath('results.csv', ['results.csv']); // "results_1.csv"
 ```
 
-### Formatting Utilities
+## Network and JSON helpers
 
-```tsx
-import {formatBytes, formatNumber, formatDate} from '@sqlrooms/utils';
+```ts
+import {
+  safeJsonParse,
+  downloadFile,
+  uploadFile,
+  postData,
+} from '@sqlrooms/utils';
 
-// Format file size
-console.log(formatBytes(1024)); // '1 KB'
-console.log(formatBytes(1048576)); // '1 MB'
+const parsed = safeJsonParse('{"ok": true}'); // { ok: true }
+const invalid = safeJsonParse('{'); // undefined
 
-// Format numbers
-console.log(formatNumber(1234567.89)); // '1,234,567.89'
-
-// Format dates
-console.log(formatDate(new Date(), 'yyyy-MM-dd')); // '2023-04-15'
+// downloadFile / uploadFile / postData are Promise-based XHR helpers
 ```
 
-## Advanced Features
+## Other useful exports
 
-- **Type Safety**: All utilities are fully typed with TypeScript
-- **Browser Compatibility**: Works in all modern browsers
-- **Tree-Shakable**: Import only what you need to minimize bundle size
-- **No Dependencies**: Zero external runtime dependencies
-
-For more information, visit the SQLRooms documentation.
+- `memoizeOnce`
+- `opacifyHex`
+- `formatCount`, `formatCountShort`, `shorten`
+- decimal helpers:
+  - `isNegativeDecimal`
+  - `negateDecimal`
+  - `toDecimalString`
+  - `toDecimalNumber`
+  - `fromDecimalString`

@@ -2,6 +2,8 @@ This package is part of the SQLRooms framework.
 
 # S3 Browser
 
+> **Experimental:** This package's API and behavior may change between releases.
+
 A React component library for browsing and interacting with S3-compatible storage services.
 
 ![S3 File Browser Interface](https://github.com/user-attachments/assets/dd79fbb9-c487-4050-96ef-81cff39930d3)
@@ -30,6 +32,7 @@ yarn add @sqlrooms/s3-browser
 import {useState} from 'react';
 import {S3FileBrowser, S3CredentialsForm, S3State} from '@sqlrooms/s3-browser';
 import {S3FileOrDirectory, S3Config, S3Connection} from '@sqlrooms/s3-utils';
+import {Button} from '@sqlrooms/ui';
 
 type S3BrowserProps = {
   listS3Files: (args: {
@@ -115,9 +118,9 @@ export const S3Browser = ({
             }}
             onCanConfirmChange={() => {}}
           />
-          <button disabled={!selectedFiles.length} onClick={handleLoadFiles}>
+          <Button disabled={!selectedFiles.length} onClick={handleLoadFiles}>
             Add Selected
-          </button>
+          </Button>
         </div>
       )}
     </div>

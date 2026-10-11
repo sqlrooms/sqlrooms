@@ -69,7 +69,7 @@ export const VegaLiteSqlChart: React.FC<
       )}
     >
       {result.error && (
-        <div className="whitespace-pre-wrap font-mono text-sm text-red-500">
+        <div className="font-mono text-sm whitespace-pre-wrap text-red-500">
           {result.error.message}
         </div>
       )}

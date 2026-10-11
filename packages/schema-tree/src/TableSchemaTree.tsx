@@ -1,8 +1,9 @@
 import {DbSchemaNode} from '@sqlrooms/duckdb';
 import {cn, Tree} from '@sqlrooms/ui';
-import {FC} from 'react';
+import {FC, useMemo} from 'react';
 import {ColumnTreeNode} from './nodes/ColumnTreeNode';
 import {DatabaseTreeNode} from './nodes/DatabaseTreeNode';
+import {RefreshButton} from './nodes/RefreshButton';
 import {SchemaTreeNode} from './nodes/SchemaTreeNode';
 import {TableTreeNode} from './nodes/TableTreeNode';
 
@@ -22,9 +23,9 @@ export const defaultRenderTableSchemaNode = (node: DbSchemaNode) => {
   }
 };
 
-export const TableSchemaTree: FC<{
+const TableSchemaTreeRoot: FC<{
   className?: string;
-  schemaTrees: DbSchemaNode[];
+  schemaTrees: DbSchemaNode[] | undefined;
   renderNode?: (node: DbSchemaNode, isOpen: boolean) => React.ReactNode;
   skipSingleDatabaseOrSchema?: boolean;
 }> = ({
@@ -33,13 +34,45 @@ export const TableSchemaTree: FC<{
   renderNode = defaultRenderTableSchemaNode,
   skipSingleDatabaseOrSchema = false,
 }) => {
-  const trees = skipSingleDatabaseOrSchema
-    ? schemaTrees.length > 1
-      ? schemaTrees
-      : schemaTrees[0]?.children && schemaTrees[0]?.children?.length > 1
-        ? schemaTrees[0].children
-        : schemaTrees[0]?.children?.[0]?.children
-    : schemaTrees;
+  const trees = useMemo(() => {
+    if (!schemaTrees) return [];
+    if (!skipSingleDatabaseOrSchema) {
+      return schemaTrees;
+    }
+    if (schemaTrees.length > 1) {
+      return schemaTrees;
+    }
+    const dbNode = schemaTrees[0];
+    const schemaChildren = dbNode?.children;
+    if (!schemaChildren?.length) {
+      return schemaTrees;
+    }
+    if (schemaChildren.length > 1) {
+      return schemaChildren;
+    }
+    const onlySchema = schemaChildren[0];
+    if (!onlySchema) {
+      return schemaTrees;
+    }
+    const tableChildren = onlySchema.children ?? [];
+    if (tableChildren.length === 0) {
+      return [onlySchema];
+    }
+    return tableChildren;
+  }, [schemaTrees, skipSingleDatabaseOrSchema]);
+
+  if (!trees?.length) {
+    return (
+      <div
+        className={cn(
+          'text-muted-foreground/50 flex h-full items-center justify-center p-4 text-xs',
+          className,
+        )}
+      >
+        No tables found
+      </div>
+    );
+  }
 
   return (
     <div
@@ -48,7 +81,7 @@ export const TableSchemaTree: FC<{
         className,
       )}
     >
-      {trees?.map((subtree) => (
+      {trees.map((subtree) => (
         <Tree
           key={subtree.object.name}
           treeData={subtree}
@@ -58,3 +91,7 @@ export const TableSchemaTree: FC<{
     </div>
   );
 };
+
+export const TableSchemaTree = Object.assign(TableSchemaTreeRoot, {
+  RefreshButton: RefreshButton,
+});

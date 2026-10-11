@@ -5,19 +5,201 @@
 
 export {createAiSlice, useStoreWithAi} from './AiSlice';
 
-export type {AiSliceState} from './AiSlice';
-// @deprecated Use `Chat.Messages` instead.
-export {AnalysisResultsContainer} from './components/AnalysisResultsContainer';
-export {AnalysisResult} from './components/AnalysisResult';
+export type {
+  AiSliceState,
+  AiSliceOptions,
+  ForkSessionFromMessageArgs,
+  ModelSelection,
+} from './AiSlice';
+export type {AiTimeoutOptions} from './timeouts';
+export {
+  measureProviderContext,
+  tryMeasureProviderContext,
+} from './devtools/providerContextDiagnostics';
+export type {MeasureProviderContextArgs} from './devtools/providerContextDiagnostics';
+export type {ProviderContextDiagnostic} from './types';
+export {
+  ChatActiveStatus,
+  getChatActiveStatus,
+} from './components/ChatActiveStatus';
+export {ChatMessagesContainer} from './components/ChatMessagesContainer';
+/** @deprecated Use `Chat.Messages` instead. */
+export {ChatMessagesContainer as AnalysisResultsContainer} from './components/ChatMessagesContainer';
+export {ChatTurnView} from './components/ChatTurnView';
+export type {ChatTurnViewProps} from './components/ChatTurnView';
+/** @deprecated Use `ChatTurnView` instead. */
+export {ChatTurnView as AnalysisResult} from './components/ChatTurnView';
+export {
+  MessageContent,
+  processMessageContent,
+} from './components/MessageContent';
+export type {MessageContentProps} from './components/MessageContent';
+/** @deprecated Use `MessageContent` instead. */
+export {MessageContent as AnalysisAnswer} from './components/MessageContent';
+/** @deprecated Use `processMessageContent` instead. */
+export {processMessageContent as processAnalysisAnswerContent} from './components/MessageContent';
 export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
-export {Chat} from './components/Chat';
+export {useElapsedTime} from './hooks/useElapsedTime';
+export {useRelativeTime} from './hooks/useRelativeTime';
+export {
+  cleanGeneratedSessionTitle,
+  generateSessionTitle,
+  getSessionUserMessageText,
+  isDefaultGeneratedSessionName,
+  useGenerateSessionTitle,
+} from './hooks/useGenerateSessionTitle';
+export type {
+  GenerateSessionTitleArgs,
+  GenerateSessionTitleOptions,
+  GenerateSessionTitlePromptOptions,
+  GenerateSessionTitleResult,
+  UseGenerateSessionTitleOptions,
+} from './hooks/useGenerateSessionTitle';
+export {Chat, type LocalAgentChatRootProps} from './components/Chat';
+export {
+  ChatRendering,
+  useChatRendering,
+  useChatRenderingComponents,
+  useChatNestedActivityMode,
+  mergeChatRenderingComponents,
+} from './components/ChatRenderingContext';
+export type {
+  ChatActiveStatusInfo,
+  ChatActiveStatusProps,
+  ChatComponentType,
+  ChatRenderingProps,
+  ChatRenderingComponents,
+  ChatRenderingValue,
+  ChatNestedActivityMode,
+  ChatTurnSlotProps,
+  ChatTurnPresentation,
+  ChatPromptRegion,
+  ChatActivityRegion,
+  ChatActivityItem,
+  ChatTextRegion,
+  ChatTextItem,
+  ChatOutputRegion,
+  ChatOutputItem,
+  ChatCopyAction,
+  ChatForkAction,
+  ChatErrorRegion,
+  ChatActionsRegion,
+  ChatTimelineRegion,
+  ChatToolState,
+  ChatPromptProps,
+  ChatActivityProps,
+  ChatReasoningProps,
+  ChatTextOutputProps,
+  ChatToolActivityProps,
+  ChatHoistedOutputProps,
+  ChatErrorProps,
+  ChatActionsProps,
+} from './components/ChatRenderingContext';
+export {
+  DefaultChatTurn,
+  DefaultChatPrompt,
+  DefaultChatActivity,
+  DefaultChatReasoning,
+  DefaultChatTextOutput,
+  DefaultChatToolActivity,
+  DefaultChatHoistedOutput,
+  DefaultChatError,
+  DefaultChatActions,
+  defaultChatRenderingComponents,
+} from './components/defaultChatRendering';
+export {
+  LocalAgentChatRuntimeProvider,
+  SessionChatRuntimeProvider,
+} from './components/ChatRuntimeContext';
+export {
+  useChatComposer,
+  useRegisterBeforeSend,
+  useBlockSends,
+  ChatComposerStateBoundary,
+  Input as ChatComposerInput,
+  Send as ChatComposerSend,
+  Stop as ChatComposerStop,
+  DropTarget as ChatComposerDropTarget,
+  Attachments as ChatComposerAttachments,
+  useChatAttachments,
+} from './components/composer';
+export type {
+  ChatComposerMode,
+  ChatComposerState,
+  BeforeSendHandler,
+  ChatComposerInputProps,
+  ChatComposerSendProps,
+  ChatComposerStopProps,
+  ChatComposerDropTargetProps,
+  ChatComposerAttachmentsProps,
+  ChatAttachmentsState,
+} from './components/composer';
+export {
+  fileToChatAttachmentPart,
+  getChatAttachmentMediaType,
+  getChatAttachmentText,
+  getChatMessageAttachments,
+  isMarkdownAttachment,
+  isSupportedChatAttachment,
+  isTextAttachmentFilename,
+  isTextAttachmentMediaType,
+} from './chatAttachments';
+export type {ChatAttachmentPart} from './chatAttachments';
+export {
+  usePromptSuggestions,
+  ChatSuggestionsStateBoundary,
+  Root as ChatSuggestionsRoot,
+  Item as ChatSuggestionsItem,
+  VisibilityToggle as ChatSuggestionsVisibilityToggle,
+  Dismiss as ChatSuggestionsDismiss,
+  useControlledVisibility,
+} from './components/suggestions';
+export type {
+  ChatSuggestionsState,
+  ChatSuggestionsRootProps,
+  ChatSuggestionsItemProps,
+  ChatSuggestionsVisibilityToggleProps,
+  ChatSuggestionsDismissProps,
+  ControlledVisibility,
+} from './components/suggestions';
+export {
+  getAnalysisResultsFromUiMessages,
+  getChatRequestErrorMessage,
+  getChatTurnCompletedAt,
+  getChatTurnsFromUiMessages,
+} from './chatTurns';
+export type {
+  ChatMessageMetadata,
+  ChatRequestErrorMessage,
+  ChatTurn,
+} from './chatTurns';
+export {ContextSelector} from './components/context/ContextSelector';
+export {
+  toggleContextSelectorItem,
+  promoteContextSelectorItem,
+  reorderContextSelectorItems,
+} from './components/context/utils';
+export {CHAT_CONTEXT_SELECTOR_SLOT} from './components/context/types';
+export type {
+  ContextSelectorItem,
+  ContextSelectorRootProps,
+} from './components/context/types';
 
 export {PromptSuggestions} from './components/PromptSuggestions';
 export {ModelSelector} from './components/ModelSelector';
 export {SessionControls} from './components/SessionControls';
 export {QueryControls} from './components/QueryControls';
+export {
+  BlockAiPromptPopover,
+  type BlockAiPromptPopoverProps,
+} from './components/BlockAiPromptPopover';
+export {
+  createAskAiBlockHeaderAction,
+  type AskAiBlockHeaderActionRenderContext,
+  type CreateAskAiBlockHeaderActionOptions,
+} from './components/createAskAiBlockHeaderAction';
 export {DeleteSessionDialog} from './components/session/DeleteSessionDialog';
 export {SessionActions} from './components/session/SessionActions';
 export {SessionDropdown} from './components/session/SessionDropdown';
@@ -27,25 +209,134 @@ export {ToolErrorMessage} from './components/tools/ToolErrorMessage';
 export type {ErrorMessageComponentProps} from './components/ErrorMessage';
 export {ToolCallInfo} from './components/ToolCallInfo';
 
-export {AiSliceConfig, createDefaultAiConfig} from '@sqlrooms/ai-config';
+export {
+  AiRunContextItemSchema,
+  AiRunContextSchema,
+  AiSliceConfig,
+  AiSessionForkOrigin,
+  AnalysisSessionSchema,
+  BlockAiRunContextItemSchema,
+  ChatSessionSchema,
+  createBlockContextItem,
+  createDefaultAiConfig,
+  getAiRunContextPrimaryItem,
+  getAiRunContextItems,
+  setAiRunContextPrimaryItem,
+} from '@sqlrooms/ai-config';
+export type {
+  AiRunContext,
+  AiRunContextItem,
+  BlockAiRunContextItem,
+} from '@sqlrooms/ai-config';
+export {
+  getEffectiveSessionContextItemIds,
+  getRunContextItemIds,
+  getVisibleSessionContextItemIds,
+  isChatSessionEmpty,
+  isAnalysisSessionEmpty,
+} from './contextSelection';
 export {AiThinkingDots} from './components/AiThinkingDots';
 export {
   cleanupPendingAnalysisResults,
   ToolAbortError,
   extractModelsFromSettings,
+  shouldEndAnalysis,
 } from './utils';
-export {
-  convertToAiSDKTools,
-  createOnToolCompletedHandler,
-} from './chatTransport';
-export type {AddToolResult} from './types';
+export type {
+  AddToolApprovalResponse,
+  AddToolOutput,
+  AiToolExecutionContext,
+  AgentProgressSnapshot,
+  AgentSnapshot,
+  StoredTool,
+  StoredToolSet,
+  ToolRendererProps,
+  ToolRenderer,
+  ToolRendererShouldHoist,
+  ToolRendererRegistry,
+  ToolRenderers,
+  ToolTimingEntry,
+  AssistantMessageMetadata,
+  MessageTokenUsage,
+} from './types';
 export {fixIncompleteToolCalls} from './utils';
 
-export {processAgentStream, updateAgentToolCallData} from './agents/AgentUtils';
+export {withRunContextTools} from './chatTransport';
+
+export {
+  streamSubAgent,
+  updateAgentToolCallData,
+  formatAbortSnapshot,
+  getSubAgentErrorMessage,
+  SUB_AGENT_ERROR_MESSAGE,
+} from './agents/AgentUtils';
+export {
+  createModelToolCallRepair,
+  DEFAULT_MAX_REPAIRS_PER_TOOL,
+} from './agents/createModelToolCallRepair';
+export type {ModelToolCallRepairOptions} from './agents/createModelToolCallRepair';
 export type {
-  AgentStreamResult,
-  UIMessageChunk,
+  AgentStreamOutput,
   AgentToolCall,
   AgentToolCallAdditionalData,
-} from './agents/AgentUtils';
-export {ReasoningBox} from './components/ReasoningBox';
+  PendingSubAgentApproval,
+} from './types';
+export {ExpandableContent} from './components/ExpandableContent';
+export {ActivityBox} from './components/ActivityBox';
+export type {ActivityBoxProps} from './components/ActivityBox';
+export {
+  FlatAgentRenderer,
+  HoistedToolCallRenderer,
+  OrchestratorToolLogLine,
+  ShowToolCallDetailsProvider,
+} from './components/FlatAgentRenderer';
+export type {
+  ToolRenderBehavior,
+  ToolStructureBehavior,
+  ToolDisplayBehavior,
+} from './components/FlatAgentRenderer';
+export {
+  collectHoistableRenderers,
+  toolRendererAllowsHoist,
+} from './components/collectHoistableRenderers';
+export type {HoistableToolCall} from './components/collectHoistableRenderers';
+export {
+  areAnyNestedAwaitingApproval,
+  buildChatTurnModel,
+  splitTextAroundHoists,
+  computeActivityTimeSpan,
+  computeComputationTimeMs,
+  computeTimeSpan,
+  getToolName,
+  isAgentToolPart,
+} from './components/buildChatTurnModel';
+export type {
+  ChatTurnModel,
+  ChatTurnActivityItem,
+  ChatTurnTextItem,
+  ChatTurnSegment,
+  ToolCallTiming,
+  ToolPartWithId,
+} from './components/buildChatTurnModel';
+/** @deprecated Prefer {@link buildChatTurnModel}. Chronological presentation adapter. */
+export {buildChatTurnRenderPlan} from './components/buildChatTurnRenderPlan';
+export type {ChatTurnRenderPlan} from './components/buildChatTurnRenderPlan';
+export {ContextUsageIndicator} from './components/ContextUsageIndicator';
+export {
+  HoistedRenderersProvider,
+  useHoistedRenderers,
+} from './components/HoistedRenderersContext';
+export {
+  findChatSearchMatches,
+  HighlightedChatSearchText,
+  markdownToPlainText,
+  normalizeChatSearchQuery,
+  useActiveChatSearchMatchKey,
+  useOptionalChatSearch,
+  useReportRenderedChatSearchBlock,
+} from './components/ChatSearch';
+export type {
+  ChatSearchBlock,
+  ChatSearchContextValue,
+  ChatSearchMatch,
+} from './components/ChatSearch';

@@ -18,5 +18,5 @@ export {
 export {JsonMonacoEditor} from './components/JsonMonacoEditor';
 export type {JsonMonacoEditorProps} from './components/JsonMonacoEditor';
 
-// Export utility functions
-export {getCssColor, hslToHex, getMonospaceFont} from './utils/color-utils';
+export {MarkdownMonacoEditor} from './components/MarkdownMonacoEditor';
+export type {MarkdownMonacoEditorProps} from './components/MarkdownMonacoEditor';

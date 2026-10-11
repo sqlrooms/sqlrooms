@@ -33,7 +33,7 @@ const TablesListPanel: FC<{
     <>
       <div
         className={cn(
-          'relative flex flex-grow flex-col items-stretch gap-2',
+          'relative flex grow flex-col items-stretch gap-2',
           className,
         )}
       >

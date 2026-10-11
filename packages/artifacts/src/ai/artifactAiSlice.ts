@@ -1,0 +1,711 @@
+/**
+ * Artifact-owned AI session slice for apps that compose `@sqlrooms/artifacts`
+ * with `@sqlrooms/ai`.
+ *
+ * The generic AI session schema intentionally does not know about artifacts.
+ * This module keeps artifact relationships in a small companion slice.
+ *
+ * @packageDocumentation
+ */
+
+import {ChatSessionSchema} from '@sqlrooms/ai-config';
+import {
+  BaseRoomStoreState,
+  createSlice,
+  SliceFunctions,
+} from '@sqlrooms/room-store';
+import {produce} from 'immer';
+import {StoreApi} from 'zustand';
+import {z} from 'zod';
+import type {ArtifactsSliceState} from '../ArtifactsSlice';
+import {ArtifactSessionLinkSchema} from './ArtifactSessionLink';
+import {
+  cleanupSessionArtifactLinks,
+  getLatestAiSessionIdForArtifact,
+  getArtifactIdsForAiSession,
+  getLatestArtifactIdForAiSession,
+} from './artifactAiSessionHelpers';
+
+/**
+ * Persisted configuration for artifact-owned AI sessions.
+ *
+ * `sessionArtifactLinks` is an array of associations between sessions and
+ * artifacts.
+ */
+export const ArtifactAiConfig = z
+  .object({
+    sessionArtifactLinks: z.array(ArtifactSessionLinkSchema).default([]),
+  })
+  .strict();
+export type ArtifactAiConfig = z.infer<typeof ArtifactAiConfig>;
+export const ArtifactAiConfigSchema = ArtifactAiConfig;
+
+/**
+ * Slice state for artifact-owned AI sessions.
+ *
+ * The slice coordinates the current artifact with the current AI session while
+ * leaving the base AI session schema unchanged.
+ */
+export type ArtifactAiSliceState = {
+  artifactAi: SliceFunctions & {
+    config: ArtifactAiConfig;
+    setConfig: (config: z.input<typeof ArtifactAiConfig>) => void;
+
+    addSessionArtifactLink: (sessionId: string, artifactId: string) => void;
+    removeSessionArtifactLink: (sessionId: string, artifactId: string) => void;
+    removeAllLinksForSession: (sessionId: string) => void;
+    removeAllLinksForArtifact: (artifactId: string) => void;
+    hasSessionArtifactLink: (sessionId: string, artifactId: string) => boolean;
+    getArtifactIdsForSession: (sessionId: string) => string[];
+    getSessionIdsForArtifact: (artifactId: string) => string[];
+    getLatestArtifactForSession: (sessionId: string) => string | undefined;
+    createArtifactScopedSession: (
+      name?: string,
+      modelProvider?: string,
+      model?: string,
+    ) => string | undefined;
+    /**
+     * Open a blank new-chat screen without creating a session: selects
+     * `artifactId` (or clears the artifact selection when omitted), deselects
+     * the current session, and clears the shared draft prompt so no text
+     * carries over from an earlier screen.
+     *
+     * The auto-sync would normally pull the artifact's latest chat back in;
+     * while this screen is pending it leaves the empty selection alone, so a
+     * chat the user never wrote in is never added to the chat list.
+     *
+     * The session is created on the first send, by any means — including the
+     * stock composer's plain `ai.createSession()`. While the screen is
+     * pending, the first session that appears is linked to `artifactId`
+     * automatically, so the chat lands on the artifact whichever API created
+     * it. Selecting a session that already existed cancels the screen instead,
+     * and is never adopted.
+     */
+    startNewChat: (artifactId?: string) => void;
+    selectLatestSessionForArtifact: (artifactId?: string) => void;
+    cleanupSessionArtifacts: () => void;
+    syncCurrentArtifactAiSession: () => void;
+    /**
+     * Suspend or resume the current-artifact/current-session auto-sync.
+     *
+     * Use this to wrap bulk, non-atomic state updates (e.g. project
+     * hydration, where the artifact config, AI sessions, and
+     * `sessionArtifactLinks` are restored in separate `set()` calls). While
+     * suspended, the auto-sync subscription becomes a no-op so it cannot
+     * observe a partially-restored state and clobber the restored selection.
+     *
+     * Resuming (`suspended === false`) re-baselines the internal
+     * previous-artifact/previous-session pointers to the current selection so
+     * the next genuine change is measured against the fully-settled state
+     * rather than a stale/undefined baseline.
+     */
+    setSyncSuspended: (suspended: boolean) => void;
+  };
+};
+
+type ArtifactAiCompatibleAiState = {
+  ai: {
+    config: {
+      sessions: ChatSessionSchema[];
+      currentSessionId?: string;
+      sessionForks?: Record<string, {sourceSessionId: string}>;
+    };
+    createSession: (
+      name?: string,
+      modelProvider?: string,
+      model?: string,
+    ) => void;
+    switchSession: (sessionId: string) => void;
+    resetCurrentSession: () => void;
+    setDraftPrompt: (prompt: string) => void;
+    getCurrentSession: () => ChatSessionSchema | undefined;
+  };
+};
+
+export type RoomStateWithArtifactAi = BaseRoomStoreState &
+  ArtifactsSliceState &
+  ArtifactAiSliceState &
+  ArtifactAiCompatibleAiState;
+
+/**
+ * Minimal state observed by the artifact AI auto-sync subscription.
+ *
+ * The slice uses this snapshot to avoid running session/artifact alignment for
+ * unrelated room-store updates while still reacting to artifact selection, AI
+ * session config, artifact registry, and session association changes.
+ */
+type ArtifactAiSyncSnapshot = {
+  currentArtifactId?: string;
+  artifactsById: RoomStateWithArtifactAi['artifacts']['config']['artifactsById'];
+  aiConfig: ArtifactAiCompatibleAiState['ai']['config'];
+  sessionArtifactLinks: ArtifactAiConfig['sessionArtifactLinks'];
+};
+
+export type CreateArtifactAiSliceOptions = {
+  /** Initial or persisted artifact AI config. */
+  config?: z.input<typeof ArtifactAiConfig>;
+  /**
+   * Whether the slice should subscribe to store changes and keep current
+   * artifact/current session alignment up to date.
+   *
+   * Disable this in focused tests or when a host app wants to call
+   * `syncCurrentArtifactAiSession` manually.
+   */
+  autoSync?: boolean;
+};
+
+/**
+ * Creates the artifact AI companion slice.
+ *
+ * Compose this with `createArtifactsSlice` and `createAiSlice` when a room wants
+ * AI chats to be scoped to the currently selected artifact. The slice stores
+ * associations separately from AI sessions, creates artifact-scoped sessions,
+ * and keeps the current AI session aligned with
+ * `artifacts.config.currentArtifactId`.
+ */
+export function createArtifactAiSlice<
+  TRoomState extends RoomStateWithArtifactAi = RoomStateWithArtifactAi,
+>(options: CreateArtifactAiSliceOptions = {}) {
+  const autoSync = options.autoSync ?? true;
+  let artifactAiSyncing = false;
+  let artifactAiSyncSuspended = false;
+  let unsubscribe: (() => void) | undefined;
+  let previousArtifactId: string | undefined;
+  let previousSessionId: string | undefined;
+  /**
+   * Target of a pending `startNewChat`, while its blank screen is up.
+   * `knownSessionIds` is what existed when the screen opened, so the sync can
+   * tell the session the screen created from one the user switched to.
+   */
+  let pendingNewChat:
+    | {artifactId?: string; knownSessionIds: Set<string>}
+    | undefined;
+
+  return createSlice<ArtifactAiSliceState, TRoomState>((set, get, store) => {
+    const getArtifactAiSyncSnapshot = (
+      state: TRoomState,
+    ): ArtifactAiSyncSnapshot => ({
+      currentArtifactId: state.artifacts.config.currentArtifactId,
+      artifactsById: state.artifacts.config.artifactsById,
+      aiConfig: state.ai.config,
+      sessionArtifactLinks: state.artifactAi.config.sessionArtifactLinks,
+    });
+    const isSameArtifactAiSyncSnapshot = (
+      left: ArtifactAiSyncSnapshot,
+      right: ArtifactAiSyncSnapshot,
+    ) =>
+      left.currentArtifactId === right.currentArtifactId &&
+      left.artifactsById === right.artifactsById &&
+      left.aiConfig === right.aiConfig &&
+      left.sessionArtifactLinks === right.sessionArtifactLinks;
+
+    const cleanupSessionArtifacts = () => {
+      const state = get();
+      const cleanedLinks = cleanupSessionArtifactLinks({
+        sessionArtifactLinks: state.artifactAi.config.sessionArtifactLinks,
+        sessions: state.ai.config.sessions,
+        artifactIds: Object.keys(state.artifacts.config.artifactsById),
+      });
+
+      const linksChanged =
+        cleanedLinks.length !==
+        state.artifactAi.config.sessionArtifactLinks.length;
+
+      if (!linksChanged) {
+        return;
+      }
+
+      set((stateToUpdate) =>
+        produce(stateToUpdate, (draft: TRoomState) => {
+          draft.artifactAi.config.sessionArtifactLinks = cleanedLinks;
+        }),
+      );
+    };
+
+    const syncForkedSessionArtifactAssociations = () => {
+      const state = get();
+      const sessionIds = new Set(
+        state.ai.config.sessions.map((session) => session.id),
+      );
+      const inheritedEntries = Object.entries(
+        state.ai.config.sessionForks ?? {},
+      ).flatMap(([targetSessionId, forkOrigin]) => {
+        if (!sessionIds.has(targetSessionId)) return [];
+        // Seed associations only once: skip if the fork already has any link.
+        if (
+          state.artifactAi.config.sessionArtifactLinks.some(
+            (link) => link.sessionId === targetSessionId,
+          )
+        ) {
+          return [];
+        }
+        const seenArtifactIds = new Set<string>();
+        return state.artifactAi.config.sessionArtifactLinks
+          .filter(
+            (link) =>
+              link.sessionId === forkOrigin.sourceSessionId &&
+              Boolean(state.artifacts.config.artifactsById[link.artifactId]) &&
+              !seenArtifactIds.has(link.artifactId),
+          )
+          .map((link) => {
+            seenArtifactIds.add(link.artifactId);
+            return {
+              targetSessionId,
+              artifactId: link.artifactId,
+              linkedAt: link.linkedAt,
+            };
+          });
+      });
+
+      if (inheritedEntries.length === 0) return;
+
+      set((stateToUpdate) =>
+        produce(stateToUpdate, (draft: TRoomState) => {
+          for (const {
+            targetSessionId,
+            artifactId,
+            linkedAt,
+          } of inheritedEntries) {
+            draft.artifactAi.config.sessionArtifactLinks.push({
+              sessionId: targetSessionId,
+              artifactId,
+              // Preserve source ordering so the fork resolves to the same
+              // primary artifact even when several links are inherited.
+              linkedAt,
+            });
+          }
+        }),
+      );
+    };
+
+    // Keeps the current AI session and artifact in sync:
+    // - When artifact changes: switch to the latest session for that artifact
+    // - When session changes: switch to the latest artifact for that session
+    const syncCurrentArtifactAiSession = () => {
+      if (artifactAiSyncing || artifactAiSyncSuspended) return;
+      artifactAiSyncing = true;
+      try {
+        syncForkedSessionArtifactAssociations();
+        cleanupSessionArtifacts();
+        const state = get();
+        const currentArtifactId = state.artifacts.config.currentArtifactId;
+        const currentSessionId = state.ai.config.currentSessionId;
+        const currentSessionExists = state.ai.config.sessions.some(
+          (session) => session.id === currentSessionId,
+        );
+        const previousSessionWasRemoved = Boolean(
+          previousSessionId &&
+          !state.ai.config.sessions.some(
+            (session) => session.id === previousSessionId,
+          ),
+        );
+
+        // Detect what changed
+        const artifactChanged = previousArtifactId !== currentArtifactId;
+        const sessionChanged = previousSessionId !== currentSessionId;
+
+        // A pending `startNewChat` is a deliberately empty selection. Leave
+        // it alone rather than pulling the artifact's latest chat back in;
+        // once the user moves on (a session is selected or created, or
+        // another artifact is opened) the screen is gone and normal
+        // reconciliation resumes.
+        if (pendingNewChat) {
+          const {artifactId: pendingArtifactId, knownSessionIds} =
+            pendingNewChat;
+          if (
+            currentArtifactId === pendingArtifactId &&
+            currentSessionId === undefined
+          ) {
+            return;
+          }
+          pendingNewChat = undefined;
+          // The screen's first send may create the session through any API —
+          // including the stock composer's plain `ai.createSession()` — so the
+          // link is applied here rather than being left to the caller.
+          // Sessions that already existed are the user switching away, not the
+          // screen resolving, and must not be adopted.
+          if (
+            pendingArtifactId &&
+            currentSessionId &&
+            !knownSessionIds.has(currentSessionId) &&
+            currentArtifactId === pendingArtifactId &&
+            state.artifacts.config.artifactsById[pendingArtifactId]
+          ) {
+            get().artifactAi.addSessionArtifactLink(
+              currentSessionId,
+              pendingArtifactId,
+            );
+            return;
+          }
+        }
+
+        // Note: the previous-artifact/previous-session baseline is NOT updated
+        // here. This function mutates currentArtifactId/currentSessionId itself
+        // (P1/P2/selectLatestSessionForArtifact), and the re-entrant
+        // subscription fire that would observe those mutations is guarded out.
+        // Updating the baseline to the *entry* values would therefore leave it
+        // stale (pointing at pre-mutation values), so the next genuine change
+        // could be misclassified as "unchanged". Instead we reconcile the
+        // baseline against the actual post-sync state in `finally`.
+
+        // Get current session's artifact
+        const currentSessionArtifactId = currentSessionId
+          ? getLatestArtifactIdForAiSession({
+              sessionArtifactLinks:
+                state.artifactAi.config.sessionArtifactLinks,
+              sessionId: currentSessionId,
+            })
+          : undefined;
+        const isCurrentArtifactLinked = Boolean(
+          currentSessionId &&
+          currentArtifactId &&
+          state.artifacts.config.artifactsById[currentArtifactId] &&
+          state.artifactAi.config.sessionArtifactLinks.some(
+            (link) =>
+              link.sessionId === currentSessionId &&
+              link.artifactId === currentArtifactId,
+          ),
+        );
+
+        // A many-to-many session is in sync with any of its linked artifacts,
+        // not only the most recently linked one.
+        if (
+          currentSessionId &&
+          currentSessionExists &&
+          isCurrentArtifactLinked
+        ) {
+          return;
+        }
+
+        // Priority 1: Session changed -> align the artifact with the new session
+        if (sessionChanged) {
+          // `ai.deleteSession()` selects the first remaining global session.
+          // Treat that fallback as part of deletion, not as an explicit user
+          // session switch: keep following the selected artifact when it has
+          // another linked chat.
+          if (previousSessionWasRemoved && currentArtifactId) {
+            const remainingSessionId = getLatestAiSessionIdForArtifact({
+              sessions: state.ai.config.sessions,
+              sessionArtifactLinks:
+                state.artifactAi.config.sessionArtifactLinks,
+              artifactId: currentArtifactId,
+            });
+            if (remainingSessionId) {
+              get().artifactAi.selectLatestSessionForArtifact(
+                currentArtifactId,
+              );
+            } else {
+              set((stateToUpdate) =>
+                produce(stateToUpdate, (draft: TRoomState) => {
+                  draft.artifacts.config.currentArtifactId = undefined;
+                }),
+              );
+            }
+            return;
+          }
+
+          if (currentSessionId && currentSessionExists) {
+            if (currentSessionArtifactId) {
+              // Only switch artifact if current artifact is not linked to this session
+              if (
+                !isCurrentArtifactLinked &&
+                currentSessionArtifactId !== currentArtifactId &&
+                state.artifacts.config.artifactsById[currentSessionArtifactId]
+              ) {
+                set((stateToUpdate) =>
+                  produce(stateToUpdate, (draft: TRoomState) => {
+                    draft.artifacts.config.currentArtifactId =
+                      currentSessionArtifactId;
+                  }),
+                );
+              }
+            } else if (currentArtifactId) {
+              // Session has no artifact - clear current artifact
+              set((stateToUpdate) =>
+                produce(stateToUpdate, (draft: TRoomState) => {
+                  draft.artifacts.config.currentArtifactId = undefined;
+                }),
+              );
+            }
+            return;
+          }
+
+          // The current session was removed (e.g. the owning chat was
+          // deleted) and no session is selected. Follow the current artifact
+          // to another of its sessions if one remains; otherwise clear the
+          // artifact selection so the UI returns to the start screen instead
+          // of stranding a selected artifact with no chat.
+          if (currentArtifactId) {
+            const remainingSessionId = getLatestAiSessionIdForArtifact({
+              sessions: state.ai.config.sessions,
+              sessionArtifactLinks:
+                state.artifactAi.config.sessionArtifactLinks,
+              artifactId: currentArtifactId,
+            });
+            if (remainingSessionId) {
+              get().artifactAi.selectLatestSessionForArtifact(
+                currentArtifactId,
+              );
+            } else {
+              set((stateToUpdate) =>
+                produce(stateToUpdate, (draft: TRoomState) => {
+                  draft.artifacts.config.currentArtifactId = undefined;
+                }),
+              );
+            }
+          }
+          return;
+        }
+
+        // Priority 2: Artifact changed -> switch to artifact's latest session
+        if (artifactChanged) {
+          get().artifactAi.selectLatestSessionForArtifact(currentArtifactId);
+          return;
+        }
+
+        // Fallback: something is out of sync but we don't know what changed
+        // Default to artifact -> session sync
+        get().artifactAi.selectLatestSessionForArtifact(currentArtifactId);
+      } finally {
+        // Reconcile the change-detection baseline against the ACTUAL state
+        // left behind by this run (including any mutation this sync made).
+        // Keeps `sessionChanged`/`artifactChanged` accurate on the next run.
+        const finalState = get();
+        previousArtifactId = finalState.artifacts.config.currentArtifactId;
+        previousSessionId = finalState.ai.config.currentSessionId;
+        artifactAiSyncing = false;
+      }
+    };
+
+    return {
+      artifactAi: {
+        config: ArtifactAiConfig.parse(options.config ?? {}),
+        setConfig: (config) => {
+          const nextConfig = ArtifactAiConfig.parse(config ?? {});
+          set((state) =>
+            produce(state, (draft: TRoomState) => {
+              draft.artifactAi.config = nextConfig;
+            }),
+          );
+        },
+
+        addSessionArtifactLink: (sessionId, artifactId) => {
+          set((state) =>
+            produce(state, (draft: TRoomState) => {
+              const links = draft.artifactAi.config.sessionArtifactLinks;
+
+              // Check if link already exists
+              const existingLink = links.find(
+                (link) =>
+                  link.sessionId === sessionId &&
+                  link.artifactId === artifactId,
+              );
+
+              if (!existingLink) {
+                links.push({
+                  sessionId,
+                  artifactId,
+                  linkedAt: Date.now(),
+                });
+              }
+            }),
+          );
+        },
+
+        removeSessionArtifactLink: (sessionId, artifactId) => {
+          set((state) =>
+            produce(state, (draft: TRoomState) => {
+              draft.artifactAi.config.sessionArtifactLinks =
+                draft.artifactAi.config.sessionArtifactLinks.filter(
+                  (link) =>
+                    !(
+                      link.sessionId === sessionId &&
+                      link.artifactId === artifactId
+                    ),
+                );
+            }),
+          );
+        },
+
+        removeAllLinksForSession: (sessionId) => {
+          set((state) =>
+            produce(state, (draft: TRoomState) => {
+              draft.artifactAi.config.sessionArtifactLinks =
+                draft.artifactAi.config.sessionArtifactLinks.filter(
+                  (link) => link.sessionId !== sessionId,
+                );
+            }),
+          );
+        },
+
+        removeAllLinksForArtifact: (artifactId) => {
+          set((state) =>
+            produce(state, (draft: TRoomState) => {
+              draft.artifactAi.config.sessionArtifactLinks =
+                draft.artifactAi.config.sessionArtifactLinks.filter(
+                  (link) => link.artifactId !== artifactId,
+                );
+            }),
+          );
+        },
+
+        hasSessionArtifactLink: (sessionId, artifactId) => {
+          return get().artifactAi.config.sessionArtifactLinks.some(
+            (link) =>
+              link.sessionId === sessionId && link.artifactId === artifactId,
+          );
+        },
+
+        getArtifactIdsForSession: (sessionId) => {
+          return getArtifactIdsForAiSession({
+            sessionArtifactLinks: get().artifactAi.config.sessionArtifactLinks,
+            sessionId,
+          });
+        },
+
+        getSessionIdsForArtifact: (artifactId) => {
+          return get()
+            .artifactAi.config.sessionArtifactLinks.filter(
+              (link) => link.artifactId === artifactId,
+            )
+            .sort((a, b) => a.linkedAt - b.linkedAt)
+            .map((link) => link.sessionId);
+        },
+
+        getLatestArtifactForSession: (sessionId) => {
+          return getLatestArtifactIdForAiSession({
+            sessionArtifactLinks: get().artifactAi.config.sessionArtifactLinks,
+            sessionId,
+          });
+        },
+
+        // === INITIALIZATION ===
+        initialize: async () => {
+          if (!autoSync || unsubscribe) return;
+          const initialState = get();
+          previousArtifactId = initialState.artifacts.config.currentArtifactId;
+          previousSessionId = initialState.ai.config.currentSessionId;
+          let previousSnapshot = getArtifactAiSyncSnapshot(initialState);
+          unsubscribe = (store as StoreApi<TRoomState>).subscribe((state) => {
+            const nextSnapshot = getArtifactAiSyncSnapshot(state);
+            if (isSameArtifactAiSyncSnapshot(previousSnapshot, nextSnapshot)) {
+              return;
+            }
+            previousSnapshot = nextSnapshot;
+            syncCurrentArtifactAiSession();
+          });
+        },
+        destroy: async () => {
+          unsubscribe?.();
+          unsubscribe = undefined;
+        },
+        startNewChat: (artifactId) => {
+          if (artifactId && !get().artifacts.config.artifactsById[artifactId]) {
+            return;
+          }
+          pendingNewChat = {
+            artifactId,
+            knownSessionIds: new Set(
+              get().ai.config.sessions.map((session) => session.id),
+            ),
+          };
+          // Both writes together are the new state; syncing on the
+          // intermediate one would see an artifact whose session has not been
+          // cleared yet and reconcile the selection away.
+          get().artifactAi.setSyncSuspended(true);
+          try {
+            set((state) =>
+              produce(state, (draft: TRoomState) => {
+                draft.artifacts.config.currentArtifactId = artifactId;
+              }),
+            );
+            get().ai.resetCurrentSession();
+            // The draft prompt is shared by every sessionless composer, so
+            // text typed on an earlier blank screen would reappear here — and
+            // `ai.createSession()` would adopt it as the new chat's first
+            // prompt. A blank screen starts blank.
+            get().ai.setDraftPrompt('');
+          } finally {
+            get().artifactAi.setSyncSuspended(false);
+          }
+        },
+        createArtifactScopedSession: (name, modelProvider, model) => {
+          // The blank screen is over: this is the session it was waiting for.
+          pendingNewChat = undefined;
+          const currentArtifactId = get().artifacts.config.currentArtifactId;
+          if (
+            !currentArtifactId ||
+            !get().artifacts.config.artifactsById[currentArtifactId]
+          ) {
+            return undefined;
+          }
+
+          get().artifactAi.setSyncSuspended(true);
+          try {
+            get().ai.createSession(name, modelProvider, model);
+            const sessionId = get().ai.getCurrentSession()?.id;
+            if (!sessionId) return undefined;
+            get().artifactAi.addSessionArtifactLink(
+              sessionId,
+              currentArtifactId,
+            );
+            return sessionId;
+          } finally {
+            // Use setSyncSuspended(false) rather than clearing the flag
+            // directly so the change-detection baseline is re-anchored to the
+            // freshly created session. Otherwise previousSessionId would still
+            // point at the pre-creation session and the following
+            // selectLatestSessionForArtifact would be misread as a session
+            // change and could revert the artifact selection.
+            get().artifactAi.setSyncSuspended(false);
+            get().artifactAi.selectLatestSessionForArtifact(currentArtifactId);
+          }
+        },
+        selectLatestSessionForArtifact: (artifactId) => {
+          // Without a target artifact there is nothing to align the session
+          // against, so this is a no-op. In particular we must NOT clear the
+          // current session here: an unlinked (artifact-less) chat — such as
+          // the ones the welcome screen and "New Chat" create — is a valid
+          // current selection. Reconciliation passes that reach here with no
+          // current artifact (the P2/fallback branches) would otherwise
+          // deactivate a freshly created or just-selected chat, dropping the
+          // UI back to the start screen.
+          if (!artifactId) {
+            return;
+          }
+          const sessionId = getLatestAiSessionIdForArtifact({
+            sessions: get().ai.config.sessions,
+            sessionArtifactLinks: get().artifactAi.config.sessionArtifactLinks,
+            artifactId,
+          });
+          if (sessionId) {
+            if (get().ai.config.currentSessionId !== sessionId) {
+              get().ai.switchSession(sessionId);
+            }
+            return;
+          }
+          if (get().ai.config.currentSessionId === undefined) {
+            return;
+          }
+          set((state) =>
+            produce(state, (draft: TRoomState) => {
+              draft.ai.config.currentSessionId = undefined;
+            }),
+          );
+        },
+        cleanupSessionArtifacts,
+        syncCurrentArtifactAiSession,
+        setSyncSuspended: (suspended) => {
+          artifactAiSyncSuspended = suspended;
+          if (!suspended) {
+            // Re-baseline so the next genuine change is measured against the
+            // fully-settled selection rather than a stale/undefined baseline.
+            const state = get();
+            previousArtifactId = state.artifacts.config.currentArtifactId;
+            previousSessionId = state.ai.config.currentSessionId;
+          }
+        },
+      },
+    };
+  });
+}

@@ -4,7 +4,81 @@ export type QualifiedTableName = {
   database?: string;
   schema?: string;
   table: string;
+  /**
+   * Database/catalog that can be omitted from the canonical table reference.
+   */
+  defaultDatabase?: string;
+  /**
+   * Returns raw, unescaped identifier parts in `[database, schema, table]`
+   * order after applying any requested omissions.
+   */
+  toArray: (options?: {
+    includeDatabase?: boolean;
+    includeSchema?: boolean;
+  }) => string[];
+  /**
+   * Returns a fully-qualified SQL table reference, including the database when
+   * this object carries one.
+   */
+  toFullString: () => string;
+  /**
+   * Returns SQLRooms' canonical persisted table identity.
+   *
+   * Prefer the named boundary helpers instead of calling this directly:
+   * `getTableIdentity(...)` for persisted ids and lookup keys,
+   * `getRawSqlTableReference(...)` for direct SQL builders, and
+   * `getTableDisplayName(...)` for UI labels.
+   */
   toString: () => string;
+};
+
+declare const tableIdentityBrand: unique symbol;
+declare const fullTableIdentityBrand: unique symbol;
+declare const rawSqlTableReferenceBrand: unique symbol;
+
+/**
+ * Persisted SQLRooms table identity.
+ *
+ * This is the canonical `QualifiedTableName.toString()` shape. It may omit the
+ * default database/catalog, so use it for persisted state, lookup keys, cache
+ * keys, and selected-table state, not as an implicit SQL execution fragment.
+ */
+export type TableIdentity = string & {
+  readonly [tableIdentityBrand]: 'TableIdentity';
+};
+
+/**
+ * Fully-qualified SQLRooms table identity.
+ *
+ * Use this when diagnostics, migrations, or cross-catalog workflows need the
+ * catalog/database to remain visible.
+ */
+export type FullTableIdentity = string & {
+  readonly [fullTableIdentityBrand]: 'FullTableIdentity';
+};
+
+/**
+ * SQL-rendered table reference for direct SQL string builders.
+ *
+ * This type is intentionally distinct from persisted identity strings. Construct
+ * it from a resolved `QualifiedTableName` whenever possible.
+ */
+export type RawSqlTableReference = string & {
+  readonly [rawSqlTableReferenceBrand]: 'RawSqlTableReference';
+};
+
+type QualifiedTableNameParts = Pick<
+  QualifiedTableName,
+  'database' | 'schema' | 'table' | 'defaultDatabase'
+>;
+
+export type ResolveTableReferenceResult<T> = {
+  table?: T;
+  ambiguousMatches?: T[];
+};
+
+type TableReferenceCandidate = {
+  table: QualifiedTableName;
 };
 
 export function isQualifiedTableName(
@@ -13,19 +87,58 @@ export function isQualifiedTableName(
   return typeof tableName === 'object' && 'toString' in tableName;
 }
 
+function qualifiedTableNameToFullString(tableName: QualifiedTableName): string {
+  return (
+    (tableName as {toFullString?: () => string}).toFullString?.() ??
+    tableName.toString()
+  );
+}
+
+function getCanonicalTableReference(
+  tableName: Partial<QualifiedTableName>,
+): string | undefined {
+  if (!tableName.table) return undefined;
+  return makeQualifiedTableName({
+    database: tableName.database,
+    schema: tableName.schema,
+    table: tableName.table,
+  }).toString();
+}
+
 /**
- * Get a qualified table name from a table name, schema, and database.
+ * Builds a pure QualifiedTableName value from explicit identifier parts.
  * @param table - The name of the table.
  * @param schema - The schema of the table.
  * @param database - The database of the table.
  * @returns The qualified table name.
+ *
+ * @remarks
+ * Prefer `state.db.qualifyTableName()` when a table reference should use the
+ * current/default database context, and prefer `state.db.findTable()` when resolving
+ * an existing table reference from user input or persisted table IDs.
+ * Use this helper only when all qualification context is already known.
  */
 export function makeQualifiedTableName({
   database,
   schema,
   table,
-}: QualifiedTableName) {
-  const qualifiedTableName = [database, schema, table]
+  defaultDatabase,
+}: QualifiedTableNameParts): QualifiedTableName {
+  const fullyQualifiedTableName = [database, schema, table]
+    .filter((id) => id !== undefined && id !== null)
+    .map((id) => escapeId(id))
+    .join('.');
+  const isDefaultDatabase =
+    database !== undefined &&
+    database !== null &&
+    defaultDatabase !== undefined &&
+    defaultDatabase !== null &&
+    String(database) === String(defaultDatabase);
+  const canonicalTableName = [
+    database && !isDefaultDatabase ? database : undefined,
+    schema,
+    table,
+  ]
     .filter((id) => id !== undefined && id !== null)
     .map((id) => escapeId(id))
     .join('.');
@@ -33,8 +146,357 @@ export function makeQualifiedTableName({
     database,
     schema,
     table,
-    toString: () => qualifiedTableName,
+    defaultDatabase,
+    toArray: ({
+      includeDatabase = true,
+      includeSchema = true,
+    }: {
+      includeDatabase?: boolean;
+      includeSchema?: boolean;
+    } = {}) =>
+      [
+        includeDatabase ? database : undefined,
+        includeSchema ? schema : undefined,
+        table,
+      ].filter((id): id is string => id !== undefined && id !== null),
+    toFullString: () => fullyQualifiedTableName,
+    toString: () => canonicalTableName,
   };
+}
+
+/**
+ * Returns the canonical persisted SQLRooms table identity for a resolved table.
+ *
+ * Use this for saved state, lookup keys, cache keys, and selected-table state.
+ * Rehydrate JSON/Zod/tool strings with `parseTableIdentity(...)` or resolve
+ * them against the catalog before treating them as identities.
+ */
+export function getTableIdentity(table: QualifiedTableName): TableIdentity {
+  return table.toString() as TableIdentity;
+}
+
+/**
+ * Returns the fully-qualified SQLRooms table identity for a resolved table.
+ *
+ * Prefer `getTableIdentity(...)` for normal persisted state. Use this helper for
+ * migrations, diagnostics, and workflows where the database/catalog cannot be
+ * inferred from the default connection context.
+ */
+export function getFullTableIdentity(
+  table: QualifiedTableName,
+): FullTableIdentity {
+  if (!table.database || !table.schema || !table.table) {
+    throw new Error(
+      'FullTableIdentity requires database, schema, and table parts.',
+    );
+  }
+  const fullTableIdentity = table.toFullString();
+  const parsedFullTableIdentity = parseFullTableIdentity(fullTableIdentity);
+  if (!parsedFullTableIdentity) {
+    throw new Error(
+      `Invalid FullTableIdentity generated from qualified table "${fullTableIdentity}".`,
+    );
+  }
+  return parsedFullTableIdentity;
+}
+
+function unquoteSqlIdentifierSegment(identifier: string): string {
+  const segment = identifier.trim();
+  if (segment.startsWith('"') && segment.endsWith('"') && segment.length >= 2) {
+    return segment.slice(1, -1).split('""').join('"');
+  }
+  return segment;
+}
+
+function splitSqlIdentifierSegments(
+  qualifiedName: string | undefined,
+): string[] | undefined {
+  if (!qualifiedName) return undefined;
+  const input = qualifiedName.trim();
+  if (!input) return undefined;
+
+  const parts: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < input.length; i += 1) {
+    const ch = input[i];
+    if (ch === '"') {
+      if (inQuotes && input[i + 1] === '"') {
+        current += '""';
+        i += 1;
+        continue;
+      }
+      inQuotes = !inQuotes;
+      current += ch;
+      continue;
+    }
+
+    if (ch === '.' && !inQuotes) {
+      parts.push(current);
+      current = '';
+      continue;
+    }
+
+    current += ch;
+  }
+  parts.push(current);
+
+  if (inQuotes) {
+    return undefined;
+  }
+
+  const identifiers = parts.map(unquoteSqlIdentifierSegment);
+
+  if (
+    identifiers.length === 0 ||
+    identifiers.some((part) => part.length === 0)
+  ) {
+    return undefined;
+  }
+  return identifiers;
+}
+
+/**
+ * Parses a possibly-qualified SQL identifier into database, schema, and table
+ * segments. The parser is quote-aware, so dots inside double-quoted identifiers
+ * are treated as part of the current segment.
+ *
+ * @example
+ * parseQualifiedSqlIdentifier('schema.table')
+ * // {schema: 'schema', table: 'table'}
+ * parseQualifiedSqlIdentifier('"memory"."main"."events.2026"')
+ * // {database: 'memory', schema: 'main', table: 'events.2026'}
+ */
+export function parseQualifiedSqlIdentifier(
+  qualifiedName: string | undefined,
+): Partial<QualifiedTableName> | undefined {
+  const identifiers = splitSqlIdentifierSegments(qualifiedName);
+
+  if (!identifiers || identifiers.length > 3) {
+    return undefined;
+  }
+
+  if (identifiers.length === 3) {
+    return {
+      database: identifiers[0],
+      schema: identifiers[1],
+      table: identifiers[2],
+    };
+  }
+  if (identifiers.length === 2) {
+    return {schema: identifiers[0], table: identifiers[1]};
+  }
+  return {table: identifiers[0]};
+}
+
+/**
+ * Rehydrates a persisted SQLRooms table identity string.
+ *
+ * This intentionally accepts only the canonical quoted representation produced
+ * by `getTableIdentity(...)`. Legacy/user inputs such as `events` or
+ * `main.events` should be resolved through `resolveTableReference(...)` first.
+ */
+export function parseTableIdentity(
+  input: string | undefined,
+): TableIdentity | undefined {
+  const trimmedInput = input?.trim();
+  if (!trimmedInput) return undefined;
+
+  const parsed = parseQualifiedSqlIdentifier(trimmedInput);
+  const canonical = parsed ? getCanonicalTableReference(parsed) : undefined;
+  return canonical === trimmedInput ? (canonical as TableIdentity) : undefined;
+}
+
+/**
+ * Rehydrates a persisted fully-qualified SQLRooms table identity string.
+ *
+ * The full identity must include database, schema, and table parts.
+ */
+export function parseFullTableIdentity(
+  input: string | undefined,
+): FullTableIdentity | undefined {
+  const tableIdentity = parseTableIdentity(input);
+  if (!tableIdentity) return undefined;
+  const parsed = parseQualifiedSqlIdentifier(tableIdentity);
+  return parsed?.database && parsed.schema
+    ? (tableIdentity as string as FullTableIdentity)
+    : undefined;
+}
+
+/**
+ * Converts a rehydrated persisted table identity back to structured table parts.
+ */
+export function parseTableIdentityToQualifiedName(
+  input: TableIdentity | FullTableIdentity,
+): QualifiedTableName | undefined {
+  const parsed = parseQualifiedSqlIdentifier(input);
+  return parsed?.table
+    ? makeQualifiedTableName({
+        database: parsed.database,
+        schema: parsed.schema,
+        table: parsed.table,
+      })
+    : undefined;
+}
+
+/**
+ * Returns the final identifier segment from a possibly-qualified SQL name.
+ *
+ * The parser is quote-aware: dots inside double-quoted identifiers are treated
+ * as part of the identifier rather than as qualification separators. Embedded
+ * quotes inside a quoted segment use the standard `""` escape.
+ *
+ * @example
+ * getUnqualifiedSqlIdentifier('schema.table')              // 'table'
+ * getUnqualifiedSqlIdentifier('db.schema.table')           // 'table'
+ * getUnqualifiedSqlIdentifier('schema."my.funny.table"')   // 'my.funny.table'
+ * getUnqualifiedSqlIdentifier('"weird""name"')             // 'weird"name'
+ */
+export function getUnqualifiedSqlIdentifier(
+  qualifiedName: string | undefined,
+): string | undefined {
+  return splitSqlIdentifierSegments(qualifiedName)?.at(-1);
+}
+
+/**
+ * Returns a SQL-rendered quoted table reference from a resolved table name.
+ *
+ * Use this at direct SQL string-builder boundaries. Persisted strings, command
+ * inputs, AI tool arguments, and other plain strings should resolve to a
+ * `QualifiedTableName` first, or use `quoteParsedRawSqlTableReference(...)` at
+ * explicit legacy/user-input boundaries.
+ */
+export function getRawSqlTableReference(
+  table: QualifiedTableName,
+): RawSqlTableReference {
+  return table.toString() as RawSqlTableReference;
+}
+
+/**
+ * Parses and quotes a legacy/user-provided table reference for direct SQL.
+ *
+ * Prefer resolving against the catalog and calling `getRawSqlTableReference(...)`.
+ * This helper exists for boundaries that still receive plain strings.
+ */
+export function quoteParsedRawSqlTableReference(
+  input: string | undefined,
+): RawSqlTableReference | undefined {
+  const parsed = parseQualifiedSqlIdentifier(input);
+  const canonical = parsed ? getCanonicalTableReference(parsed) : undefined;
+  return canonical ? (canonical as RawSqlTableReference) : undefined;
+}
+
+/**
+ * Quotes a table reference for SQL.
+ *
+ * Accepts bare names, unquoted qualified names, or already-quoted qualified
+ * identifiers. Without a default database context, the result keeps all parsed
+ * table reference parts and quotes each identifier segment.
+ *
+ * @example
+ * quoteTableReference('events') // '"events"'
+ * quoteTableReference('main.events') // '"main"."events"'
+ * quoteTableReference('"memory"."main"."events.2026"') // '"memory"."main"."events.2026"'
+ *
+ * @deprecated Prefer `getRawSqlTableReference(...)` after resolving a
+ * `QualifiedTableName`, or `quoteParsedRawSqlTableReference(...)` at explicit
+ * legacy/user-input boundaries.
+ */
+export function quoteTableReference(tableName: string): string {
+  const parsed = parseQualifiedSqlIdentifier(tableName);
+  if (parsed?.table) {
+    return makeQualifiedTableName({
+      database: parsed.database,
+      schema: parsed.schema,
+      table: parsed.table,
+    }).toString();
+  }
+
+  return escapeId(tableName);
+}
+
+/**
+ * Returns a display-only label for a structured SQLRooms table name.
+ *
+ * Do not use this value for persistence, lookup, or SQL execution.
+ */
+export function getTableDisplayName(table: QualifiedTableName): string {
+  return table.table;
+}
+
+function matchesQualifiedTableName<T extends TableReferenceCandidate>(
+  candidate: T,
+  tableName: Partial<QualifiedTableName>,
+): boolean {
+  return (
+    candidate.table.table === tableName.table &&
+    (!tableName.schema || candidate.table.schema === tableName.schema) &&
+    (!tableName.database || candidate.table.database === tableName.database)
+  );
+}
+
+/**
+ * Resolves a table reference against an already-flat table catalog.
+ *
+ * Resolution prefers exact canonical table ids, then qualified SQL identifiers,
+ * then unique bare table names. Ambiguous bare names are returned as matches
+ * instead of silently selecting one table.
+ *
+ * @param tables - Flat catalog whose entries carry a QualifiedTableName.
+ * @param tableReference - Table reference string or QualifiedTableName.
+ * @returns Matching table, ambiguous matches, or an empty result.
+ */
+export function resolveTableReference<T extends TableReferenceCandidate>(
+  tables: T[],
+  tableReference: string | QualifiedTableName,
+): ResolveTableReferenceResult<T> {
+  if (typeof tableReference !== 'string') {
+    const tableIdentity = getTableIdentity(tableReference);
+    const fullTableIdentity = qualifiedTableNameToFullString(tableReference);
+    return {
+      table: tables.find(
+        (candidate) =>
+          getTableIdentity(candidate.table) === tableIdentity ||
+          qualifiedTableNameToFullString(candidate.table) === fullTableIdentity,
+      ),
+    };
+  }
+
+  const trimmedTableReference = tableReference.trim();
+  const canonicalMatches = tables.filter(
+    (candidate) =>
+      getTableIdentity(candidate.table) === trimmedTableReference ||
+      qualifiedTableNameToFullString(candidate.table) === trimmedTableReference,
+  );
+  if (canonicalMatches.length === 1) return {table: canonicalMatches[0]};
+  if (canonicalMatches.length > 1) {
+    return {ambiguousMatches: canonicalMatches};
+  }
+
+  const parsedTableReference = parseQualifiedSqlIdentifier(
+    trimmedTableReference,
+  );
+  if (
+    parsedTableReference?.table &&
+    (parsedTableReference.schema || parsedTableReference.database)
+  ) {
+    const qualifiedMatches = tables.filter((candidate) =>
+      matchesQualifiedTableName(candidate, parsedTableReference),
+    );
+    if (qualifiedMatches.length === 1) return {table: qualifiedMatches[0]};
+    if (qualifiedMatches.length > 1) {
+      return {ambiguousMatches: qualifiedMatches};
+    }
+  }
+
+  const bareMatches = tables.filter(
+    (candidate) => candidate.table.table === trimmedTableReference,
+  );
+  if (bareMatches.length === 1) return {table: bareMatches[0]};
+  if (bareMatches.length > 1) return {ambiguousMatches: bareMatches};
+
+  return {};
 }
 
 /**
@@ -88,12 +550,13 @@ export const isNumericDuckType = (type: string) =>
 
 /**
  * Extracts a numeric value from an Arrow Table at the specified column and row index.
- * Handles both column name and index-based access. Converts BigInt values to numbers.
+ * Converts scalar values to numbers, or unwraps and converts the first element
+ * when the value is an array. Returns NaN for nullish values.
  *
  * @param res - The Arrow Table containing the data
  * @param column - The column name or index (0-based) to read from. Defaults to first column (0)
  * @param index - The row index (0-based) to read from. Defaults to first row (0)
- * @returns The numeric value at the specified position, or NaN if the value is null/undefined
+ * @returns The converted numeric value, or NaN if the value is nullish
  * @example
  * const value = getColValAsNumber(table, "amount", 0)
  */
@@ -108,8 +571,8 @@ export function getColValAsNumber(
   if (v === undefined || v === null) {
     return NaN;
   }
-  // if it's an array (can be returned by duckdb as bigint)
-  return Number(v[0] ?? v);
+  // BigInts can be returned wrapped in an array by DuckDB connectors.
+  return Number(Array.isArray(v) ? v[0] : v);
 }
 
 /**
@@ -143,139 +606,227 @@ export const getSqlErrorWithPointer = (query: string, position: number) => {
   return {line, column, lineText, pointerLine, formatted};
 };
 
-//
-// const queries = splitSqlStatements(`
-//   SELECT * FROM users WHERE name = 'John;Doe';
-//   SELECT * FROM orders -- This comment; won't break;
-//   /*
-//      Multi-line comment;
-//      With semicolons;
-//   */
-//   SELECT "Quoted;identifier" FROM table;
-//`);
+type SqlCommentRange = {
+  start: number;
+  end: number;
+};
 
-// Returns:
-// [
-//   "SELECT * FROM users WHERE name = 'John;Doe'",
-//   "SELECT * FROM orders -- This comment; won't break",
-//   "SELECT \"Quoted;identifier\" FROM table"
-// ]
+type SqlStatementRange = {
+  start: number;
+  end: number;
+  comments: SqlCommentRange[];
+};
+
+function isDollarQuoteTagStart(char: string | undefined): boolean {
+  if (!char) return false;
+  const code = char.charCodeAt(0);
+  return (
+    (code >= 65 && code <= 90) ||
+    (code >= 97 && code <= 122) ||
+    char === '_' ||
+    code >= 0x80
+  );
+}
+
+function isDollarQuoteTagContinuation(char: string | undefined): boolean {
+  if (!char) return false;
+  const code = char.charCodeAt(0);
+  return isDollarQuoteTagStart(char) || (code >= 48 && code <= 57);
+}
+
+function isUnquotedIdentifierContinuation(char: string | undefined): boolean {
+  return char === '$' || isDollarQuoteTagContinuation(char);
+}
+
+function getDollarQuoteDelimiter(
+  input: string,
+  start: number,
+): string | undefined {
+  if (input[start] !== '$') return undefined;
+  if (isUnquotedIdentifierContinuation(input[start - 1])) return undefined;
+  if (input[start + 1] === '$') return '$$';
+  if (!isDollarQuoteTagStart(input[start + 1])) return undefined;
+
+  let end = start + 2;
+  while (isDollarQuoteTagContinuation(input[end])) {
+    end++;
+  }
+  return input[end] === '$' ? input.slice(start, end + 1) : undefined;
+}
+
+function isEscapeStringPrefix(input: string, quoteStart: number): boolean {
+  const prefix = input[quoteStart - 1];
+  if (prefix !== 'e' && prefix !== 'E') return false;
+
+  const beforePrefix = input[quoteStart - 2];
+  return !beforePrefix || !isUnquotedIdentifierContinuation(beforePrefix);
+}
+
+function scanSqlStatementRanges(input: string): SqlStatementRange[] {
+  const statements: SqlStatementRange[] = [];
+  let statementStart = 0;
+  let comments: SqlCommentRange[] = [];
+  let hasSqlContent = false;
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+
+    if (char === '-' && input[i + 1] === '-') {
+      const commentStart = i;
+      i += 2;
+      while (i < input.length && input[i] !== '\n' && input[i] !== '\r') {
+        i++;
+      }
+      comments.push({start: commentStart, end: i});
+      i--;
+      continue;
+    }
+
+    if (char === '/' && input[i + 1] === '*') {
+      const commentStart = i;
+      let depth = 1;
+      i += 2;
+      while (i < input.length && depth > 0) {
+        if (input[i] === '/' && input[i + 1] === '*') {
+          depth++;
+          i += 2;
+        } else if (input[i] === '*' && input[i + 1] === '/') {
+          depth--;
+          i += 2;
+        } else {
+          i++;
+        }
+      }
+      comments.push({start: commentStart, end: i});
+      i--;
+      continue;
+    }
+
+    if (char === "'" || char === '"') {
+      hasSqlContent = true;
+      const escapeBackslashes = char === "'" && isEscapeStringPrefix(input, i);
+      const quote = char;
+      i++;
+      while (i < input.length) {
+        if (escapeBackslashes && input[i] === '\\') {
+          i += 2;
+          continue;
+        }
+        if (input[i] === quote) {
+          if (input[i + 1] === quote) {
+            i += 2;
+            continue;
+          }
+          break;
+        }
+        i++;
+      }
+      continue;
+    }
+
+    const dollarQuoteDelimiter = getDollarQuoteDelimiter(input, i);
+    if (dollarQuoteDelimiter) {
+      hasSqlContent = true;
+      const closingDelimiter = input.indexOf(
+        dollarQuoteDelimiter,
+        i + dollarQuoteDelimiter.length,
+      );
+      i =
+        closingDelimiter === -1
+          ? input.length
+          : closingDelimiter + dollarQuoteDelimiter.length - 1;
+      continue;
+    }
+
+    if (char === ';') {
+      if (hasSqlContent) {
+        statements.push({
+          start: statementStart,
+          end: i,
+          comments,
+        });
+      }
+      statementStart = i + 1;
+      comments = [];
+      hasSqlContent = false;
+      continue;
+    }
+
+    if (char && !/\s/.test(char)) {
+      hasSqlContent = true;
+    }
+  }
+
+  if (hasSqlContent) {
+    statements.push({
+      start: statementStart,
+      end: input.length,
+      comments,
+    });
+  }
+
+  return statements;
+}
+
+function removeSqlComments(
+  input: string,
+  statement: SqlStatementRange,
+): string {
+  let result = '';
+  let current = statement.start;
+
+  for (const comment of statement.comments) {
+    result += input.slice(current, comment.start);
+    const lineBreaks = input
+      .slice(comment.start, comment.end)
+      .match(/\r\n|\r|\n/g);
+    result += lineBreaks?.join('') ?? ' ';
+    current = comment.end;
+  }
+
+  return result + input.slice(current, statement.end);
+}
+
+/**
+ * Options for {@link splitSqlStatements}.
+ */
+export type SplitSqlStatementsOptions = {
+  /**
+   * Whether to remove SQL comments from returned statements. Comment removal
+   * preserves line breaks and inserts whitespace where needed to avoid joining
+   * adjacent SQL tokens.
+   *
+   * @default true
+   */
+  removeComments?: boolean;
+};
 
 /**
  * Split a string with potentially multiple SQL queries (separated as usual by ';')
  * into an array of queries.
  * This implementation:
  *  - Handles single and double quoted strings with proper escaping
- *  - Removes all comments: line comments (--) and block comments (/* ... *\/)
+ *  - Handles DuckDB dollar-quoted strings
+ *  - Handles line comments (--) and nested block comments (/* ... *\/)
  *  - Ignores semicolons in quoted strings and comments
  *  - Trims whitespace from queries
  *  - Handles SQL-style escaped quotes ('' inside strings)
  *  - Returns only non-empty queries
  *
  * @param input - The SQL string containing one or more statements
- * @returns An array of SQL statements with all comments removed
+ * @param options - Options controlling the returned SQL
+ * @returns An array of SQL statements, with comments removed by default
  */
-export function splitSqlStatements(input: string): string[] {
-  const queries: string[] = [];
-  let currentQuery = '';
-  let inSingleQuote = false;
-  let inDoubleQuote = false;
-  let inLineComment = false;
-  let inBlockComment = false;
-
-  for (let i = 0; i < input.length; i++) {
-    const char = input[i];
-
-    if (inLineComment) {
-      if (char === '\n') {
-        inLineComment = false;
-        currentQuery += char; // preserve newlines for line numbers
-      }
-      // else: skip comment chars
-      continue;
-    }
-
-    if (inBlockComment) {
-      if (char === '*' && input[i + 1] === '/') {
-        inBlockComment = false;
-        i++; // skip '/'
-      }
-      // else: skip comment chars
-      continue;
-    }
-
-    if (inSingleQuote) {
-      currentQuery += char;
-      if (char === "'") {
-        // Handle escaped single quotes in SQL
-        if (i + 1 < input.length && input[i + 1] === "'") {
-          currentQuery += input[++i];
-        } else {
-          inSingleQuote = false;
-        }
-      }
-      continue;
-    }
-
-    if (inDoubleQuote) {
-      currentQuery += char;
-      if (char === '"') {
-        // Handle escaped double quotes
-        if (i + 1 < input.length && input[i + 1] === '"') {
-          currentQuery += input[++i];
-        } else {
-          inDoubleQuote = false;
-        }
-      }
-      continue;
-    }
-
-    // Check for comment starts
-    if (char === '-' && input[i + 1] === '-') {
-      inLineComment = true;
-      i++; // skip next '-'
-      continue;
-    }
-
-    if (char === '/' && input[i + 1] === '*') {
-      inBlockComment = true;
-      i++; // skip next '*'
-      continue;
-    }
-
-    // Check for quote starts
-    if (char === "'") {
-      inSingleQuote = true;
-      currentQuery += char;
-      continue;
-    }
-
-    if (char === '"') {
-      inDoubleQuote = true;
-      currentQuery += char;
-      continue;
-    }
-
-    // Handle query separator
-    if (char === ';') {
-      const trimmed = currentQuery.trim();
-      if (trimmed.length > 0) {
-        queries.push(trimmed);
-      }
-      currentQuery = '';
-      continue;
-    }
-
-    currentQuery += char;
-  }
-
-  // Add the final query
-  const trimmed = currentQuery.trim();
-  if (trimmed.length > 0) {
-    queries.push(trimmed);
-  }
-
-  return queries;
+export function splitSqlStatements(
+  input: string,
+  {removeComments = true}: SplitSqlStatementsOptions = {},
+): string[] {
+  return scanSqlStatementRanges(input).map((statement) =>
+    (removeComments
+      ? removeSqlComments(input, statement)
+      : input.slice(statement.start, statement.end)
+    ).trim(),
+  );
 }
 
 /**
@@ -336,7 +887,7 @@ export type SeparatedStatements = {
  * @throws Error if the query contains no statements
  */
 export function separateLastStatement(query: string): SeparatedStatements {
-  const statements = splitSqlStatements(query);
+  const statements = splitSqlStatements(query, {removeComments: false});
   if (statements.length === 0) {
     throw new Error('Query must contain at least one statement');
   }
@@ -357,6 +908,6 @@ export function joinStatements(
   lastStatement: string,
 ): string {
   return precedingStatements.length > 0
-    ? [...precedingStatements, lastStatement].join(';\n')
+    ? [...precedingStatements, lastStatement].join('\n;\n')
     : lastStatement;
 }

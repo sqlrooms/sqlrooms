@@ -78,7 +78,7 @@ The RAG system enables AI assistants to search through documentation and knowled
 
 ### 1. Python Preparation Tool
 
-Located in `python/rag/`:
+Located in `python/sqlrooms-rag/`:
 
 - **Purpose**: Prepare embedding databases from markdown documentation
 - **Package**: `sqlrooms-rag`
@@ -568,6 +568,6 @@ console.log(results);
 - [RAG Package README](../README.md) - Main package documentation
 - [RAG Tool Guide](./RAG_TOOL.md) - AI tool usage guide
 - [Embedding Providers Guide](./EMBEDDING_PROVIDERS.md) - Provider setup and comparison
-- [Python Package Docs](../../../python/rag/README.md) - Database preparation
+- [Python Package Docs](../../../python/sqlrooms-rag/README.md) - Database preparation
 - [Example Implementation](../../../examples/ai/src/store.ts) - Working example
 - [Vercel AI SDK Docs](https://sdk.vercel.ai/docs) - AI SDK documentation

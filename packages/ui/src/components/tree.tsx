@@ -1,11 +1,13 @@
 'use client';
 
 import {Collapsible, CollapsibleContent} from '@radix-ui/react-collapsible';
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 
-import {CollapsibleTrigger} from './collapsible';
-import {cn} from '../lib/utils';
 import {ChevronRightIcon} from 'lucide-react';
+import {cn} from '../lib/utils';
+import {CollapsibleTrigger} from './collapsible';
+
+const DROPDOWN_ICON_PLACEHOLDER_WIDTH = '18px';
 
 export type TreeNodeData<T> = {
   key: string;
@@ -45,26 +47,35 @@ type TreeNodeProps<T> = {
 function TreeNode<T>(props: TreeNodeProps<T>): React.ReactElement | null {
   const {treeData, renderNode} = props;
   const {children} = treeData;
+  const hasChildren = Boolean(children?.length);
   const [isOpen, setIsOpen] = useState(Boolean(treeData.isInitialOpen));
-  if (!children) {
-    return <>{renderNode(treeData, isOpen)}</>;
+  if (!hasChildren) {
+    return (
+      <div className="flex w-full items-center space-x-1">
+        <div
+          className="mr-px ml-2 shrink-0"
+          style={{width: DROPDOWN_ICON_PLACEHOLDER_WIDTH}}
+        />
+        {renderNode(treeData, isOpen)}
+      </div>
+    );
   }
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger className="w-full" asChild>
         <div className="flex w-full cursor-pointer items-center space-x-1">
           <ChevronRightIcon
-            className={cn('flex-shrink-0 text-gray-500', {
+            className={cn('mr-px ml-2 shrink-0 text-gray-500', {
               'rotate-90 transform': isOpen,
             })}
-            size="18px"
+            size={DROPDOWN_ICON_PLACEHOLDER_WIDTH}
           />
           {renderNode(treeData, isOpen)}
         </div>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pl-4">
+      <CollapsibleContent className="pl-2">
         {isOpen
-          ? children.map((child) => (
+          ? children?.map((child) => (
               <TreeNode<T>
                 key={child.key}
                 treeData={child}

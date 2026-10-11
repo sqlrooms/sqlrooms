@@ -29,6 +29,18 @@ export {arrowTableToJson} from './arrow-utils';
 export {
   isQualifiedTableName,
   makeQualifiedTableName,
+  parseQualifiedSqlIdentifier,
+  parseTableIdentity,
+  parseFullTableIdentity,
+  parseTableIdentityToQualifiedName,
+  getTableIdentity,
+  getFullTableIdentity,
+  getRawSqlTableReference,
+  quoteParsedRawSqlTableReference,
+  getTableDisplayName,
+  quoteTableReference,
+  resolveTableReference,
+  getUnqualifiedSqlIdentifier,
   escapeVal,
   escapeId,
   isNumericDuckType,
@@ -39,17 +51,33 @@ export {
   makeLimitQuery,
   separateLastStatement,
   joinStatements,
+  type TableIdentity,
+  type FullTableIdentity,
+  type RawSqlTableReference,
   type QualifiedTableName,
+  type ResolveTableReferenceResult,
   type SeparatedStatements,
+  type SplitSqlStatementsOptions,
 } from './duckdb-utils';
 
 export {
+  columnTypeCategoryToSelectorType,
+  getColumnTypeCategory,
   getDuckDbTypeCategory,
   getArrowColumnTypeCategory,
+  isColumnCategorical,
+  isColumnNumeric,
+  isColumnQuantitative,
+  isColumnTemporal,
   type ColumnTypeCategory,
+  type ColumnTypeLike,
 } from './schema-tree/typeCategories';
 
 export {createDbSchemaTrees} from './schema-tree/schemaTree';
+export {
+  getAllTablesFromSchemaTrees,
+  findTableInSchemaTrees,
+} from './schema-tree/schemaTreeUtils';
 
 export {
   type DbSchemaNode,
@@ -58,6 +86,14 @@ export {
   type TableNodeObject,
   type SchemaNodeObject,
   type DatabaseNodeObject,
+  type SchemaWithTables,
 } from './schema-tree/types';
 
 export {type TableColumn, type DataTable} from './types';
+
+export {getFunctionSuggestions} from './get-function-suggestions';
+export {getFunctionDocumentation} from './get-function-documentation';
+export {
+  type FunctionSuggestion,
+  type GroupedFunctionSuggestion,
+} from './duckdb-function-utils';

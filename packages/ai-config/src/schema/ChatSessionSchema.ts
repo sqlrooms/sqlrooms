@@ -1,0 +1,229 @@
+import {z} from 'zod';
+import {UIMessageSchema} from './UIMessageSchema';
+import {
+  needsV0_24_14Migration,
+  migrateFromV0_24_14,
+} from '../migration/AnalysisSession-v0.24.14';
+import {
+  needsV0_25_0Migration,
+  migrateFromV0_25_0,
+} from '../migration/AnalysisSession-v0.25.0';
+import {
+  needsV0_26_0Migration,
+  migrateFromV0_26_0,
+} from '../migration/AnalysisSession-v0.26.0';
+
+export const ErrorMessageSchema = z.object({
+  error: z.string(),
+});
+export type ErrorMessageSchema = z.infer<typeof ErrorMessageSchema>;
+
+/**
+ * @deprecated Compatibility schema for the legacy `analysisResults` session
+ * field. New chat behavior should prefer `uiMessages`.
+ */
+export const AnalysisResultSchema = z.object({
+  id: z.string(), // allow any string ID to match UI message ID from AI SDK v5
+  prompt: z.string(),
+  errorMessage: ErrorMessageSchema.optional(),
+  isCompleted: z.boolean(),
+});
+/** @deprecated Use `uiMessages`-oriented types for new chat behavior. */
+export type AnalysisResultSchema = z.infer<typeof AnalysisResultSchema>;
+
+export const AiRunContextItemSchema = z
+  .object({
+    kind: z.string(),
+    id: z.string(),
+    title: z.string(),
+    type: z.string().optional(),
+    subtitle: z.string().optional(),
+  })
+  .passthrough();
+export type AiRunContextItem = z.infer<typeof AiRunContextItemSchema>;
+
+const AiRunContextBaseSchema = z
+  .object({
+    items: z.array(AiRunContextItemSchema),
+    primaryItemId: z.string().optional(),
+    primaryItemKind: z.string().optional(),
+    capturedAt: z.number(),
+  })
+  .passthrough();
+
+export const AiRunContextSchema = z.preprocess((data) => {
+  if (
+    data &&
+    typeof data === 'object' &&
+    !Array.isArray(data) &&
+    'kind' in data &&
+    'id' in data &&
+    'title' in data &&
+    !('items' in data)
+  ) {
+    const legacyContext = data as {
+      kind: unknown;
+      id: unknown;
+      title: unknown;
+      type?: unknown;
+      capturedAt?: unknown;
+    };
+    const {capturedAt, ...item} = legacyContext;
+    return {
+      items: [item],
+      capturedAt: typeof capturedAt === 'number' ? capturedAt : 0,
+    };
+  }
+  return data;
+}, AiRunContextBaseSchema);
+export type AiRunContext = z.infer<typeof AiRunContextSchema>;
+
+function getStringProperty(obj: unknown, key: string): string | undefined {
+  return obj &&
+    typeof obj === 'object' &&
+    key in obj &&
+    typeof (obj as Record<string, unknown>)[key] === 'string'
+    ? (obj as Record<string, string>)[key]
+    : undefined;
+}
+
+export function getAiRunContextItems(
+  runContext: AiRunContext | unknown,
+): AiRunContextItem[] {
+  if (!runContext || typeof runContext !== 'object') return [];
+
+  if ('items' in runContext && Array.isArray(runContext.items)) {
+    return runContext.items
+      .map((item) => AiRunContextItemSchema.safeParse(item))
+      .filter((result) => result.success)
+      .map((result) => result.data);
+  }
+
+  const legacyResult = AiRunContextItemSchema.safeParse(runContext);
+  return legacyResult.success ? [legacyResult.data] : [];
+}
+
+export function getAiRunContextPrimaryItem(
+  runContext: AiRunContext | unknown,
+): AiRunContextItem | undefined {
+  const items = getAiRunContextItems(runContext);
+  if (items.length === 0) return undefined;
+
+  const primaryItemId = getStringProperty(runContext, 'primaryItemId');
+  const primaryItemKind = getStringProperty(runContext, 'primaryItemKind');
+
+  return primaryItemId && primaryItemKind
+    ? (items.find(
+        (item) => item.id === primaryItemId && item.kind === primaryItemKind,
+      ) ?? items[0])
+    : primaryItemId
+      ? (items.find((item) => item.id === primaryItemId) ?? items[0])
+      : items[0];
+}
+
+export function setAiRunContextPrimaryItem(
+  runContext: AiRunContext | unknown,
+  item: AiRunContextItem,
+): AiRunContext {
+  const parsedContext = AiRunContextSchema.safeParse(runContext);
+  const baseContext = parsedContext.success ? parsedContext.data : undefined;
+  const existingItems = getAiRunContextItems(runContext).filter(
+    (existing) => !(existing.kind === item.kind && existing.id === item.id),
+  );
+
+  return {
+    ...(baseContext ?? {}),
+    items: [item, ...existingItems],
+    primaryItemId: item.id,
+    primaryItemKind: item.kind,
+    capturedAt: baseContext?.capturedAt ?? Date.now(),
+  };
+}
+
+const AgentSnapshotSchema = z
+  .object({
+    agentName: z.string().optional(),
+    parentToolCallId: z.string(),
+    availableTools: z.array(
+      z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        hasExecute: z.boolean().optional(),
+        hasRenderer: z.boolean().optional(),
+        needsApproval: z.boolean().optional(),
+      }),
+    ),
+    settings: z
+      .object({
+        maxSteps: z.number().int().optional(),
+        model: z.string().optional(),
+        provider: z.string().optional(),
+      })
+      .optional(),
+    startedAt: z.number(),
+  })
+  .passthrough();
+
+const ChatSessionBaseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  modelProvider: z.string(),
+  model: z.string(),
+  customModelName: z.string().optional(),
+  baseUrl: z.string().optional(),
+  createdAt: z.coerce.date().optional(),
+  uiMessages: z.array(UIMessageSchema),
+  /** Revision counter that increments when messages are deleted, used to force useChat reset */
+  messagesRevision: z.number().optional().default(0),
+  /** Per-session analysis prompt text */
+  prompt: z.string().default(''),
+  /** Per-session draft context selected in the composer before the next request. */
+  draftContextItemIds: z.array(z.string()).optional(),
+  /** Per-session flag indicating if analysis is running */
+  isRunning: z.boolean().default(false),
+  /** Last time the session was opened/selected (epoch ms) */
+  lastOpenedAt: z.number().optional(),
+  /** Context captured when the current run started. */
+  runContext: AiRunContextSchema.optional(),
+  /** Persisted sub-agent tool call trees, keyed by parent toolCallId */
+  agentProgress: z.record(z.string(), z.array(z.unknown())).optional(),
+  /** Optional persisted agent devtools snapshots, keyed by parent toolCallId */
+  agentSnapshots: z.record(z.string(), AgentSnapshotSchema).optional(),
+});
+
+/**
+ * Apply all migrations in sequence from oldest to newest.
+ * This ensures that old data can be migrated through multiple versions.
+ */
+const migrateChatSession = z.preprocess((data) => {
+  let migrated = data;
+
+  // Apply v0.24.14 migration (ollamaBaseUrl → baseUrl)
+  if (needsV0_24_14Migration(migrated)) {
+    migrated = migrateFromV0_24_14(migrated);
+  }
+
+  // Apply v0.25.0 migration (streamMessage format change)
+  if (needsV0_25_0Migration(migrated)) {
+    migrated = migrateFromV0_25_0(migrated);
+  }
+
+  // Apply v0.26.0 migration (add uiMessages and toolAdditionalData)
+  if (needsV0_26_0Migration(migrated)) {
+    migrated = migrateFromV0_26_0(migrated);
+  }
+
+  return migrated;
+}, ChatSessionBaseSchema);
+
+export const ChatSessionSchema = migrateChatSession;
+export type ChatSessionSchema = z.infer<typeof ChatSessionSchema>;
+
+/**
+ * @deprecated Use `ChatSessionSchema` instead.
+ */
+export const AnalysisSessionSchema = ChatSessionSchema;
+/**
+ * @deprecated Use `ChatSessionSchema` instead.
+ */
+export type AnalysisSessionSchema = z.infer<typeof AnalysisSessionSchema>;

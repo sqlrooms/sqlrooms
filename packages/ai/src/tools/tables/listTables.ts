@@ -1,0 +1,137 @@
+import type {DuckDbSliceState} from '@sqlrooms/duckdb';
+import {tool} from 'ai';
+import {z} from 'zod';
+import type {StoreApi} from '@sqlrooms/room-shell';
+import {
+  createTableIdentitySummary,
+  type TableIdentitySummary,
+} from './tableIdentity';
+
+const ListTablesInput = z.object({
+  database: z
+    .string()
+    .optional()
+    .describe('Filter by database name (exact match).'),
+  schema: z
+    .string()
+    .optional()
+    .describe('Filter by schema name (exact match).'),
+  pattern: z
+    .string()
+    .optional()
+    .describe(
+      'Pattern to match table names (SQL LIKE syntax: use % for wildcard, e.g., "user%").',
+    ),
+  includeViews: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe('Include views in the results. Defaults to true.'),
+});
+
+export type ListTablesParameters = z.infer<typeof ListTablesInput>;
+
+export type TableSummary = TableIdentitySummary;
+
+export type ListTablesOutput = {
+  success: boolean;
+  tables: TableSummary[];
+  totalCount: number;
+};
+
+/**
+ * Converts SQL LIKE pattern to a JavaScript RegExp.
+ * Supports % (any characters) and _ (single character) wildcards.
+ * Guards against ReDoS by validating and normalizing input.
+ */
+function likePatternToRegex(pattern: string): RegExp {
+  // Guard against ReDoS: limit pattern length and wildcard count
+  if (pattern.length > 200) {
+    throw new Error('Pattern too long (max 200 characters)');
+  }
+
+  // Count wildcards
+  const wildcardCount = (pattern.match(/[%_]/g) || []).length;
+  if (wildcardCount > 20) {
+    throw new Error('Too many wildcards in pattern (max 20)');
+  }
+
+  // Collapse consecutive % into single % to prevent multiple .* groups
+  const normalized = pattern.replace(/%+/g, '%');
+
+  // Escape regex special characters except for % and _
+  const escaped = normalized
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/%/g, '.*')
+    .replace(/_/g, '.');
+  return new RegExp(`^${escaped}$`, 'i'); // case-insensitive
+}
+
+export function createListTablesTool(store: StoreApi<DuckDbSliceState>) {
+  return tool({
+    description:
+      'List available tables and views in the database. Supports filtering by database, schema, and table name pattern. Use this to discover what tables exist before reading their schemas. Results include tableId, the canonical quoted SQLRooms table reference from QualifiedTableName.toString() to pass to string-only table tools after choosing a table. The tableId may omit the default database and includes a database for non-default attached databases. Lists tables and views visible in the SQLRooms table catalog. Internal SQLRooms schemas/tables may be hidden; use this for user-facing data discovery, not exhaustive DuckDB catalog inspection.',
+    inputSchema: ListTablesInput,
+    execute: async (input) => {
+      const state = store.getState();
+      const allTables = state.db.tables;
+
+      // Apply filters
+      let filtered = allTables;
+
+      // Filter by database
+      if (input.database) {
+        filtered = filtered.filter(
+          (table) => table.table.database === input.database,
+        );
+      }
+
+      // Filter by schema
+      if (input.schema) {
+        filtered = filtered.filter(
+          (table) => table.table.schema === input.schema,
+        );
+      }
+
+      // Filter by pattern
+      if (input.pattern) {
+        const regex = likePatternToRegex(input.pattern);
+        filtered = filtered.filter((table) => regex.test(table.table.table));
+      }
+
+      // Filter by views
+      if (!input.includeViews) {
+        filtered = filtered.filter((table) => !table.isView);
+      }
+
+      // Exclude internal SQLRooms schemas
+      filtered = filtered.filter(
+        (table) => !table.table.schema?.startsWith('__sqlrooms_'),
+      );
+
+      // Map to summary format
+      const summaries = filtered.map(createTableIdentitySummary);
+
+      // Sort by database, schema, table
+      summaries.sort((a, b) => {
+        const dbA = a.database ?? '';
+        const dbB = b.database ?? '';
+        if (dbA !== dbB) return dbA.localeCompare(dbB);
+
+        const schemaA = a.schema ?? '';
+        const schemaB = b.schema ?? '';
+        if (schemaA !== schemaB) return schemaA.localeCompare(schemaB);
+
+        return a.tableName.localeCompare(b.tableName);
+      });
+
+      return {
+        llmResult: {
+          success: true,
+          tables: summaries,
+          totalCount: summaries.length,
+        },
+      };
+    },
+  });
+}

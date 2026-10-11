@@ -1,22 +1,35 @@
 import {createStore} from 'zustand';
 import {createNodeDuckDbConnector} from '@sqlrooms/duckdb-node';
-import {createDuckDbSlice, DuckDbSliceState} from '../src/DuckDbSlice';
+import {
+  createDuckDbSlice,
+  defaultLoadSchemaCatalogFilter,
+  DuckDbSliceState,
+  type CreateDuckDbSliceProps,
+} from '../src/DuckDbSlice';
 import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
+import {
+  DuckDbConnector,
+  getTableIdentity,
+  makeQualifiedTableName,
+} from '@sqlrooms/duckdb-core';
+import {loadSchemaCatalog} from '../src/loadTableSchemas';
 
 type TestStoreState = BaseRoomStoreState & DuckDbSliceState;
 
 /**
  * Creates a test store with DuckDbSlice using a real Node.js DuckDB connector.
  */
-function createTestStore() {
+function createTestStore(
+  options: Omit<CreateDuckDbSliceProps, 'connector'> = {},
+) {
   const connector = createNodeDuckDbConnector({
     dbPath: ':memory:',
   });
 
   return createStore<TestStoreState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
-    ...createDuckDbSlice({connector})(...args),
+    ...createDuckDbSlice({connector, ...options})(...args),
   }));
 }
 
@@ -162,6 +175,147 @@ describe('DuckDbSlice', () => {
     });
   });
 
+  describe('findTable', () => {
+    it('finds the current-schema table from an unqualified name', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE TABLE simple_lookup (id INT)');
+      await store.getState().db.refreshTableSchemas();
+
+      expect(store.getState().db.findTable('simple_lookup')).toMatchObject({
+        table: {table: 'simple_lookup'},
+      });
+    });
+
+    it('finds tables from quoted qualified SQL references', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE SCHEMA "analytics.2026"');
+      await connector.query(
+        'CREATE TABLE "analytics.2026"."daily events" (id INT)',
+      );
+      const tables = await store.getState().db.refreshTableSchemas();
+      const table = tables.find(
+        (candidate) => candidate.table.table === 'daily events',
+      );
+
+      expect(table).toBeDefined();
+      expect(getTableIdentity(table!.table)).toBe(
+        '"analytics.2026"."daily events"',
+      );
+      expect(table!.table.toFullString()).toBe(
+        `"${store.getState().db.currentDatabase}"."analytics.2026"."daily events"`,
+      );
+      expect(
+        store.getState().db.findTable('"analytics.2026"."daily events"'),
+      ).toBe(table);
+      expect(
+        store.getState().db.findTable(getTableIdentity(table!.table)),
+      ).toBe(table);
+    });
+
+    it('opens legacy saved table references through lazy runtime resolution', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE TABLE events (id INT)');
+      await connector.query("ATTACH ':memory:' AS remote");
+      await connector.query('CREATE TABLE remote.main.events (id INT)');
+      const tables = await store.getState().db.refreshTableSchemas();
+      const defaultDatabase = store.getState().db.currentDatabase;
+      const local = tables.find(
+        (candidate) =>
+          candidate.table.database === defaultDatabase &&
+          candidate.table.schema === 'main' &&
+          candidate.table.table === 'events',
+      );
+      const remote = tables.find(
+        (candidate) =>
+          candidate.table.database === 'remote' &&
+          candidate.table.schema === 'main' &&
+          candidate.table.table === 'events',
+      );
+
+      expect(local).toBeDefined();
+      expect(remote).toBeDefined();
+      expect(store.getState().db.findTable('events')).toBe(local);
+      expect(store.getState().db.findTable('"main"."events"')).toBe(local);
+      expect(
+        store.getState().db.findTable(`"${defaultDatabase}"."main"."events"`),
+      ).toBe(local);
+      expect(store.getState().db.findTable('"remote"."main"."events"')).toBe(
+        remote,
+      );
+    });
+
+    it('resolves stale default database refs by unique schema/table when metadata marks them as default', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE TABLE stale_default_db_lookup (id INT)');
+      const tables = await store.getState().db.refreshTableSchemas();
+      const table = tables.find(
+        (candidate) =>
+          candidate.table.table === 'stale_default_db_lookup' &&
+          candidate.table.schema === 'main',
+      );
+
+      expect(table).toBeDefined();
+      expect(
+        store.getState().db.findTable(
+          makeQualifiedTableName({
+            database: 'renamed-file',
+            schema: 'main',
+            table: 'stale_default_db_lookup',
+            defaultDatabase: 'renamed-file',
+          }),
+        ),
+      ).toBe(table);
+    });
+
+    it('does not resolve explicit database-qualified misses by schema/table fallback', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE TABLE explicit_database_miss (id INT)');
+      await store.getState().db.refreshTableSchemas();
+
+      expect(
+        store
+          .getState()
+          .db.findTable('"remote"."main"."explicit_database_miss"'),
+      ).toBeUndefined();
+    });
+
+    it('parses dotted strings as qualified references and quoted dots as literal names', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE TABLE "events.2026" (id INT)');
+      await connector.query('CREATE SCHEMA events');
+      await connector.query('CREATE TABLE events."2026" (id INT)');
+      const tables = await store.getState().db.refreshTableSchemas();
+      const dottedTable = tables.find(
+        (candidate) =>
+          candidate.table.schema === 'main' &&
+          candidate.table.table === 'events.2026',
+      );
+      const qualifiedTable = tables.find(
+        (candidate) =>
+          candidate.table.schema === 'events' &&
+          candidate.table.table === '2026',
+      );
+
+      expect(dottedTable).toBeDefined();
+      expect(qualifiedTable).toBeDefined();
+      expect(store.getState().db.findTable('events.2026')).toBe(qualifiedTable);
+      expect(store.getState().db.findTable('"events.2026"')).toBe(dottedTable);
+      expect(store.getState().db.findTable('events."2026"')).toBe(
+        qualifiedTable,
+      );
+    });
+
+    it('keeps findTableByName as a deprecated alias', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE TABLE alias_lookup (id INT)');
+      await store.getState().db.refreshTableSchemas();
+
+      expect(store.getState().db.findTableByName('alias_lookup')).toBe(
+        store.getState().db.findTable('alias_lookup'),
+      );
+    });
+  });
+
   describe('addTable', () => {
     it('should load objects using connector.loadObjects', async () => {
       const data = [
@@ -215,6 +369,55 @@ describe('DuckDbSlice', () => {
       // Verify it's gone
       await expect(connector.query('SELECT * FROM to_drop')).rejects.toThrow();
     });
+
+    it('should reject dropping a view', async () => {
+      await store
+        .getState()
+        .db.createTableFromQuery('view_via_drop_table', 'SELECT 1 as id', {
+          view: true,
+        });
+
+      await expect(
+        store.getState().db.dropTable('view_via_drop_table'),
+      ).rejects.toThrow('Use dropRelation() to remove views.');
+    });
+
+    it('does not drop a local table for an explicit database-qualified miss', async () => {
+      await store
+        .getState()
+        .db.createTableFromQuery('drop_database_miss', 'SELECT 1 as id');
+      const connector = await store.getState().db.getConnector();
+
+      await store
+        .getState()
+        .db.dropTable('"remote"."main"."drop_database_miss"')
+        .catch(() => undefined);
+
+      await expect(
+        connector.query('SELECT * FROM drop_database_miss'),
+      ).resolves.toBeTruthy();
+    });
+  });
+
+  describe('dropRelation', () => {
+    it('should drop an existing view', async () => {
+      await store
+        .getState()
+        .db.createTableFromQuery('view_to_drop', 'SELECT 1 as id', {
+          view: true,
+        });
+
+      const connector = await store.getState().db.getConnector();
+      await expect(
+        connector.query('SELECT * FROM view_to_drop'),
+      ).resolves.toBeTruthy();
+
+      await store.getState().db.dropRelation('view_to_drop');
+
+      await expect(
+        connector.query('SELECT * FROM view_to_drop'),
+      ).rejects.toThrow();
+    });
   });
 
   describe('loadTableSchemas', () => {
@@ -233,6 +436,203 @@ describe('DuckDbSlice', () => {
 
       expect(rows.length).toBe(1);
       expect(rows[0]?.table_name).toBe('schema_test1');
+    });
+  });
+
+  describe('loadSchemaCatalog', () => {
+    it('should preserve empty schemas and empty attached database main schemas', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      await connector.query('CREATE SCHEMA empty_schema');
+      await connector.query("ATTACH ':memory:' AS attached_empty");
+      await connector.query('CREATE TABLE main.visible_table (id INT)');
+
+      const catalog = await loadSchemaCatalog(connector, {
+        filterFunction: defaultLoadSchemaCatalogFilter,
+      });
+
+      expect(
+        catalog.find(
+          (entry) =>
+            entry.database === 'memory' && entry.schema === 'empty_schema',
+        ),
+      ).toEqual({database: 'memory', schema: 'empty_schema', tables: []});
+
+      expect(
+        catalog.find(
+          (entry) =>
+            entry.database === 'attached_empty' && entry.schema === 'main',
+        ),
+      ).toEqual({database: 'attached_empty', schema: 'main', tables: []});
+
+      expect(
+        catalog
+          .find(
+            (entry) => entry.database === 'memory' && entry.schema === 'main',
+          )
+          ?.tables.map((table) => table.tableName),
+      ).toContain('visible_table');
+    });
+
+    it('should hide the temp database catalog by default', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      await connector.query('CREATE TEMP TABLE temp_table (id INT)');
+
+      const catalog = await loadSchemaCatalog(connector, {
+        filterFunction: defaultLoadSchemaCatalogFilter,
+      });
+
+      expect(catalog.some((entry) => entry.database === 'temp')).toBe(false);
+    });
+
+    it('should keep schemas when a table catalog filter removes their tables', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      await connector.query('CREATE SCHEMA filtered_schema');
+      await connector.query(
+        'CREATE TABLE filtered_schema.hidden_table (id INT)',
+      );
+
+      const catalog = await loadSchemaCatalog(connector, {
+        filterFunction: (entry) =>
+          entry.type === 'table'
+            ? entry.table.table !== 'hidden_table'
+            : defaultLoadSchemaCatalogFilter(entry),
+      });
+
+      expect(
+        catalog.find(
+          (entry) =>
+            entry.database === 'memory' && entry.schema === 'filtered_schema',
+        ),
+      ).toEqual({database: 'memory', schema: 'filtered_schema', tables: []});
+    });
+  });
+
+  describe('refreshTableSchemas', () => {
+    it.each(['database', 'schema', 'table'])(
+      'keeps selectable tables when the catalog hides their %s',
+      async (hiddenType) => {
+        const filtered = createTestStore({
+          loadTableSchemasFilter: (name) => name.table === 'selectable_rows',
+          loadSchemaCatalogFilter: (entry) => entry.type !== hiddenType,
+        });
+        try {
+          await filtered.getState().db.initialize();
+          const connector = await filtered.getState().db.getConnector();
+          await connector.query('CREATE TABLE selectable_rows (value INT)');
+          const tables = await filtered.getState().db.refreshTableSchemas();
+          expect(tables.map((table) => table.table.table)).toEqual([
+            'selectable_rows',
+          ]);
+          expect(
+            (await filtered.getState().db.loadTableSchemas()).map((table) =>
+              getTableIdentity(table.table),
+            ),
+          ).toEqual(tables.map((table) => getTableIdentity(table.table)));
+          expect(
+            filtered.getState().db.findTable('selectable_rows'),
+          ).toBeDefined();
+          expect(
+            JSON.stringify(filtered.getState().db.schemaTrees),
+          ).not.toContain('selectable_rows');
+        } finally {
+          await filtered.getState().db.destroy();
+        }
+      },
+    );
+
+    it('disables catalog filtering with null while keeping the table filter', async () => {
+      const filtered = createTestStore({
+        loadTableSchemasFilter: () => false,
+        loadSchemaCatalogFilter: null,
+      });
+      try {
+        await filtered.getState().db.initialize();
+        const connector = await filtered.getState().db.getConnector();
+        await connector.query('CREATE TABLE catalog_only (value INT)');
+        expect(await filtered.getState().db.refreshTableSchemas()).toEqual([]);
+        expect(JSON.stringify(filtered.getState().db.schemaTrees)).toContain(
+          'catalog_only',
+        );
+      } finally {
+        await filtered.getState().db.destroy();
+      }
+    });
+
+    it('filters selectable tables using metadata while retaining an independent catalog', async () => {
+      const filtered = createTestStore({
+        loadTableSchemasFilter: (name, metadata) =>
+          metadata?.isView === false && name.database === name.defaultDatabase,
+        loadSchemaCatalogFilter: () => true,
+      });
+      try {
+        await filtered.getState().db.initialize();
+        const connector = await filtered.getState().db.getConnector();
+        await connector.query(
+          'CREATE TABLE physical_rows AS SELECT 1 AS value',
+        );
+        await connector.query(
+          'CREATE VIEW inspected_view AS SELECT * FROM physical_rows',
+        );
+        await connector.query("ATTACH ':memory:' AS external_catalog");
+        await connector.query(
+          'CREATE TABLE external_catalog.main.attached_rows (value INT)',
+        );
+        const tables = await filtered.getState().db.refreshTableSchemas();
+        expect(tables.map((table) => table.table.table)).toContain(
+          'physical_rows',
+        );
+        expect(tables.map((table) => table.table.table)).not.toContain(
+          'inspected_view',
+        );
+        expect(tables.map((table) => table.table.table)).not.toContain(
+          'attached_rows',
+        );
+        expect(JSON.stringify(filtered.getState().db.schemaTrees)).toContain(
+          'inspected_view',
+        );
+        const loaded = await filtered.getState().db.loadTableSchemas();
+        expect(loaded.map((table) => table.table.table)).toContain(
+          'physical_rows',
+        );
+        expect(loaded.map((table) => table.table.table)).not.toContain(
+          'inspected_view',
+        );
+      } finally {
+        await filtered.getState().db.destroy();
+      }
+    });
+
+    it('should issue a single catalog metadata query per refresh', async () => {
+      const connector = createNodeDuckDbConnector({dbPath: ':memory:'});
+      const querySql: string[] = [];
+      const countedConnector: DuckDbConnector = {
+        ...connector,
+        query(sql, options) {
+          querySql.push(sql);
+          return connector.query(sql, options);
+        },
+      };
+      const countedStore = createStore<TestStoreState>()((...args) => ({
+        ...createBaseRoomSlice()(...args),
+        ...createDuckDbSlice({connector: countedConnector})(...args),
+      }));
+
+      try {
+        await countedStore.getState().db.initialize();
+        await countedStore.getState().db.refreshTableSchemas();
+        querySql.length = 0;
+
+        await countedStore.getState().db.refreshTableSchemas();
+
+        expect(querySql).toHaveLength(2);
+        expect(querySql[0]).toContain('current_schema()');
+        expect(querySql[1]).toContain('FROM duckdb_schemas()');
+      } finally {
+        await countedStore.getState().db.destroy();
+      }
     });
   });
 
@@ -287,6 +687,175 @@ describe('DuckDbSlice', () => {
       // There should be one entry with our row count
       expect(keys.length).toBe(1);
       expect(rowCounts[keys[0] as string]).toBe(100);
+    });
+  });
+
+  describe('loadTableSchemas filter bypass', () => {
+    it('should filter out internal tables by default', async () => {
+      // Create an internal table
+      await store
+        .getState()
+        .db.createTableFromQuery(
+          '__sqlrooms_internal',
+          'SELECT 1 as id, 2 as value',
+        );
+
+      // Create a normal table
+      await store
+        .getState()
+        .db.createTableFromQuery('normal_table', 'SELECT 1 as id, 2 as value');
+
+      // Load all tables without bypass - should not include internal table
+      const tables = await store.getState().db.loadTableSchemas();
+
+      // Should not include the internal table
+      expect(tables.find((t) => t.table.table === '__sqlrooms_internal')).toBe(
+        undefined,
+      );
+
+      // Should include the normal table
+      expect(
+        tables.find((t) => t.table.table === 'normal_table'),
+      ).toBeDefined();
+    });
+
+    it('should allow addTable with internal table names', async () => {
+      const data = [
+        {id: 1, name: 'Alice'},
+        {id: 2, name: 'Bob'},
+      ];
+
+      // This should not throw "Failed to add table"
+      const table = await store
+        .getState()
+        .db.addTable('__sqlrooms_users', data);
+
+      expect(table).toBeDefined();
+      expect(table.table.table).toBe('__sqlrooms_users');
+
+      // Verify it exists in the database
+      const connector = await store.getState().db.getConnector();
+      const result = await connector.query(
+        'SELECT * FROM __sqlrooms_users ORDER BY id',
+      );
+      expect(result.numRows).toBe(2);
+    });
+
+    it('should allow checkTableExists with internal table names', async () => {
+      // Create an internal table
+      await store
+        .getState()
+        .db.createTableFromQuery(
+          '__sqlrooms_check',
+          'SELECT 1 as id, 2 as value',
+        );
+
+      // checkTableExists should find it
+      const exists = await store
+        .getState()
+        .db.checkTableExists('__sqlrooms_check');
+
+      expect(exists).toBe(true);
+    });
+
+    it('should allow dropTable with internal table names', async () => {
+      // Create an internal table
+      await store
+        .getState()
+        .db.createTableFromQuery(
+          '__sqlrooms_drop_test',
+          'SELECT 1 as id, 2 as value',
+        );
+
+      // Verify it exists
+      const connector = await store.getState().db.getConnector();
+      const beforeDrop = await connector.query(
+        'SELECT * FROM __sqlrooms_drop_test',
+      );
+      expect(beforeDrop.numRows).toBe(1);
+
+      // Drop it - should not throw
+      await store.getState().db.dropTable('__sqlrooms_drop_test');
+
+      // Verify it's gone
+      await expect(
+        connector.query('SELECT * FROM __sqlrooms_drop_test'),
+      ).rejects.toThrow();
+    });
+
+    it('should allow dropRelation with internal view names', async () => {
+      // Create an internal view
+      await store
+        .getState()
+        .db.createTableFromQuery('__sqlrooms_view', 'SELECT 1 as id', {
+          view: true,
+        });
+
+      // Verify it exists
+      const connector = await store.getState().db.getConnector();
+      const beforeDrop = await connector.query('SELECT * FROM __sqlrooms_view');
+      expect(beforeDrop.numRows).toBe(1);
+
+      // Drop it - should not throw
+      await store.getState().db.dropRelation('__sqlrooms_view');
+
+      // Verify it's gone
+      await expect(
+        connector.query('SELECT * FROM __sqlrooms_view'),
+      ).rejects.toThrow();
+    });
+
+    it('should filter internal schemas by default', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      // Create an internal schema and table
+      await connector.query('CREATE SCHEMA __sqlrooms_schema');
+      await connector.query(
+        'CREATE TABLE __sqlrooms_schema.test_table (id INT)',
+      );
+
+      // Create a normal schema and table
+      await connector.query('CREATE SCHEMA normal_schema');
+      await connector.query('CREATE TABLE normal_schema.test_table (id INT)');
+
+      // Load all tables without bypass
+      const tables = await store.getState().db.loadTableSchemas();
+
+      // Should not include tables from internal schema
+      expect(
+        tables.find(
+          (t) =>
+            t.table.schema === '__sqlrooms_schema' &&
+            t.table.table === 'test_table',
+        ),
+      ).toBe(undefined);
+
+      // Should include tables from normal schema
+      expect(
+        tables.find(
+          (t) =>
+            t.table.schema === 'normal_schema' &&
+            t.table.table === 'test_table',
+        ),
+      ).toBeDefined();
+    });
+
+    it('should allow exact lookup of tables in internal schemas', async () => {
+      const connector = await store.getState().db.getConnector();
+
+      // Create an internal schema and table
+      await connector.query('CREATE SCHEMA __sqlrooms_test_schema');
+      await connector.query(
+        'CREATE TABLE __sqlrooms_test_schema.my_table (id INT)',
+      );
+
+      // checkTableExists should find it with qualified name
+      const exists = await store.getState().db.checkTableExists({
+        schema: '__sqlrooms_test_schema',
+        table: 'my_table',
+      });
+
+      expect(exists).toBe(true);
     });
   });
 });

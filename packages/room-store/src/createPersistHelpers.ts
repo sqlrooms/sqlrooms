@@ -1,6 +1,142 @@
-import {persist, PersistOptions} from 'zustand/middleware';
 import z from 'zod';
+import {
+  createJSONStorage,
+  persist,
+  PersistOptions,
+  StateStorage,
+} from 'zustand/middleware';
 import {StateCreator} from './BaseRoomStore';
+
+type PersistedSliceConfigs<T extends Record<string, z.ZodType>> = {
+  [K in keyof T]: z.infer<T[K]>;
+};
+
+const unavailableStorage: StateStorage = {
+  getItem: () => null,
+  setItem: () => undefined,
+  removeItem: () => undefined,
+};
+
+function warnStorageFailure(operation: string, error: unknown) {
+  console.warn(
+    `Persist storage ${operation} failed; persistence was skipped:`,
+    error instanceof Error ? error.message : error,
+  );
+}
+
+function runSafeStorageOperation<T>(
+  operation: string,
+  callback: () => T,
+  fallback: T,
+): T {
+  try {
+    const result = callback();
+    if (result instanceof Promise) {
+      return result.catch((error) => {
+        warnStorageFailure(operation, error);
+        return fallback;
+      }) as T;
+    }
+    return result;
+  } catch (error) {
+    warnStorageFailure(operation, error);
+    return fallback;
+  }
+}
+
+function createSafeBrowserStorage(base: StateStorage): StateStorage {
+  const originalGetItem = base.getItem.bind(base);
+  const originalSetItem = base.setItem.bind(base);
+  const originalRemoveItem = base.removeItem.bind(base);
+
+  return {
+    getItem: (...args) =>
+      runSafeStorageOperation('getItem', () => originalGetItem(...args), null),
+    setItem: (...args) =>
+      runSafeStorageOperation(
+        'setItem',
+        () => originalSetItem(...args),
+        undefined,
+      ),
+    removeItem: (...args) =>
+      runSafeStorageOperation(
+        'removeItem',
+        () => originalRemoveItem(...args),
+        undefined,
+      ),
+  };
+}
+
+function getBrowserStorage(): StateStorage {
+  try {
+    const storage = window.localStorage;
+    return storage ? createSafeBrowserStorage(storage) : unavailableStorage;
+  } catch {
+    return unavailableStorage;
+  }
+}
+
+/**
+ * Protects storage writes and removals so failures do not prevent normal state
+ * updates. This also protects serialisation from errors such as `RangeError:
+ * Invalid string length` when state grows unexpectedly.
+ */
+function createSafeStorage<S, PersistedState>(
+  base: PersistOptions<S, PersistedState>['storage'],
+): PersistOptions<S, PersistedState>['storage'] {
+  if (!base) return base;
+  const originalSetItem = base.setItem.bind(base);
+  const originalRemoveItem = base.removeItem.bind(base);
+
+  return {
+    ...base,
+    setItem: (...args: Parameters<typeof originalSetItem>) =>
+      runSafeStorageOperation(
+        'setItem',
+        () => originalSetItem(...args),
+        undefined,
+      ),
+    removeItem: (...args: Parameters<typeof originalRemoveItem>) =>
+      runSafeStorageOperation(
+        'removeItem',
+        () => originalRemoveItem(...args),
+        undefined,
+      ),
+  };
+}
+
+/**
+ * Internal symbol-based hook for schema-specific rehydrate merge input.
+ *
+ * If a Zod schema sets a function under this symbol, `createPersistHelpers().merge`
+ * will call it with `{defaults, persisted}` and parse the returned value instead of
+ * parsing `persisted` directly.
+ *
+ * This allows slices to opt into defaults-aware merging without hard-coding slice keys.
+ */
+const PersistMergeInputSymbol = Symbol.for('sqlrooms.persist.mergeInput');
+
+/**
+ * Builds the value passed to `schema.parse(...)` during rehydrate merge.
+ */
+type PersistMergeInputBuilder = (params: {
+  persisted: unknown;
+  defaults: unknown;
+}) => unknown;
+
+function getPersistMergeInputBuilder(
+  schema: z.ZodType,
+): PersistMergeInputBuilder | undefined {
+  // Schemas can optionally expose a merge-input builder under this symbol.
+  // This lets slices define custom rehydrate behavior without key-based branching.
+  const marker = (
+    schema as z.ZodType & {
+      [PersistMergeInputSymbol]?: PersistMergeInputBuilder;
+    }
+  )[PersistMergeInputSymbol];
+
+  return typeof marker === 'function' ? marker : undefined;
+}
 
 /**
  * Creates partialize and merge functions for Zustand persist middleware.
@@ -8,6 +144,12 @@ import {StateCreator} from './BaseRoomStore';
  *
  * @param sliceConfigs - Map of slice names to their Zod config schemas
  * @returns Object with partialize and merge functions
+ *   - `partialize`: serializes `state[slice].config` for each configured slice
+ *   - `merge`: rehydrates each slice config from persisted storage
+ *
+ * `merge` supports schema-level customization via an internal symbol marker.
+ * When present on a schema, the marker function receives the current defaults and
+ * persisted value and can return custom parse input for `schema.parse(...)`.
  *
  * @example
  * ```ts
@@ -33,11 +175,13 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
   sliceConfigs: T,
 ) {
   return {
-    partialize: (state: any) => {
-      const result: Record<string, any> = {};
+    partialize: (state: any): PersistedSliceConfigs<T> => {
+      const result = {} as PersistedSliceConfigs<T>;
       for (const [key, schema] of Object.entries(sliceConfigs)) {
         try {
-          result[key] = schema.parse(state[key]?.config);
+          (result as Record<string, unknown>)[key] = schema.parse(
+            state[key]?.config,
+          );
         } catch (error) {
           throw new Error(`Error parsing config key "${key}"`, {
             cause: error,
@@ -50,10 +194,28 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
     merge: (persistedState: any, currentState: any) => {
       const merged = {...currentState};
       for (const [key, schema] of Object.entries(sliceConfigs)) {
+        const persistedConfig = persistedState?.[key];
+
+        if (persistedConfig === undefined || persistedConfig === null) {
+          continue;
+        }
+
         try {
+          // Default behavior parses persisted config as-is.
+          // If a schema declares a merge-input builder, we pass both persisted
+          // and current defaults so that schema can merge before validation.
+          const parseMergeInput = getPersistMergeInputBuilder(schema);
+          const mergeInput = parseMergeInput
+            ? parseMergeInput({
+                defaults: currentState[key]?.config,
+                persisted: persistedConfig,
+              })
+            : persistedConfig;
+          const config = schema.parse(mergeInput);
+
           merged[key] = {
             ...currentState[key],
-            config: schema.parse(persistedState[key]),
+            config,
           };
         } catch (error) {
           throw new Error(`Error parsing config key "${key}"`, {
@@ -78,7 +240,7 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
  * @param options.sliceConfigSchemas - Map of slice names to Zod schemas for their configs
  * @param options.partialize - Optional custom partialize function (overrides auto-generated one)
  * @param options.merge - Optional custom merge function (overrides auto-generated one)
- * @param options.storage - Custom storage implementation (optional, defaults to localStorage)
+ * @param options.storage - Custom storage implementation (optional, defaults to localStorage with a no-op fallback)
  * @param options.version - Schema version for migrations (optional)
  * @param options.migrate - Migration function for version changes (optional)
  * @param options.skipHydration - Skip auto-hydration for SSR (optional)
@@ -133,20 +295,30 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
  * );
  * ```
  */
-export function persistSliceConfigs<S>(
+export function persistSliceConfigs<
+  S,
+  TSliceConfigs extends Record<string, z.ZodType> = Record<string, z.ZodType>,
+  PersistedState = PersistedSliceConfigs<TSliceConfigs>,
+>(
   options: {
-    sliceConfigSchemas: Record<string, z.ZodType>;
-    partialize?: (state: S) => Partial<S>;
+    sliceConfigSchemas: TSliceConfigs;
+    partialize?: (state: S) => PersistedState;
     merge?: (persistedState: unknown, currentState: S) => S;
-  } & Omit<PersistOptions<S>, 'partialize' | 'merge'>,
+  } & Omit<PersistOptions<S, PersistedState>, 'partialize' | 'merge'>,
   stateCreator: StateCreator<S>,
 ): StateCreator<S> {
-  const {sliceConfigSchemas, partialize, merge, ...persistOptions} = options;
+  const {sliceConfigSchemas, partialize, merge, storage, ...persistOptions} =
+    options;
   const helpers = createPersistHelpers(sliceConfigSchemas);
 
-  return persist<S>(stateCreator, {
+  const safeStorage = createSafeStorage(
+    storage ?? createJSONStorage<PersistedState>(getBrowserStorage),
+  );
+
+  return persist<S, [], [], PersistedState>(stateCreator, {
     ...persistOptions,
+    ...(safeStorage ? {storage: safeStorage} : {}),
     partialize: partialize || helpers.partialize,
     merge: merge || helpers.merge,
-  } as PersistOptions<S>) as StateCreator<S>;
+  } as PersistOptions<S, PersistedState>) as StateCreator<S>;
 }

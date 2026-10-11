@@ -1,8 +1,8 @@
-import {cn} from '@sqlrooms/ui';
+import {cn, CopyButton} from '@sqlrooms/ui';
 import {AlertCircle} from 'lucide-react';
 import React from 'react';
+import {VegaCodeMirrorEditor} from './VegaCodeMirrorEditor';
 import {useVegaEditorContext} from './VegaEditorContext';
-import {VegaMonacoEditor} from './VegaMonacoEditor';
 
 export interface VegaSpecEditorPanelProps {
   /**
@@ -51,7 +51,7 @@ export const VegaSpecEditorPanel: React.FC<VegaSpecEditorPanelProps> = ({
 
       {/* Editor */}
       <div className="relative flex-1">
-        <VegaMonacoEditor
+        <VegaCodeMirrorEditor
           className="absolute inset-0 h-full w-full"
           value={state.editedSpecString}
           onChange={(value) => {
@@ -60,13 +60,26 @@ export const VegaSpecEditorPanel: React.FC<VegaSpecEditorPanelProps> = ({
             }
           }}
           readOnly={!editable}
+          options={{
+            lineNumbers: true,
+            lineWrapping: false,
+            foldGutter: true,
+          }}
         />
+        <div className="bg-background absolute top-2 right-2 rounded-md border">
+          <CopyButton
+            text={state.editedSpecString}
+            size="xs"
+            tooltipLabel="Copy spec"
+            disabled={!state.editedSpecString.trim()}
+          />
+        </div>
       </div>
 
       {/* Spec parse error */}
       {state.specParseError && (
         <div className="bg-destructive/90 text-destructive-foreground flex items-center gap-2 px-3 py-2 backdrop-blur-sm">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <AlertCircle className="h-4 w-4 shrink-0" />
           <span className="truncate text-xs">{state.specParseError}</span>
         </div>
       )}

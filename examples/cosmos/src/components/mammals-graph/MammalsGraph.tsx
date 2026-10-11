@@ -1,6 +1,6 @@
 import {FC, useMemo, useState, useEffect} from 'react';
-import {GraphConfigInterface} from '@cosmograph/cosmos';
 import {
+  GraphConfig,
   CosmosGraph,
   CosmosGraphControls,
   CosmosSimulationControls,
@@ -15,13 +15,13 @@ export const MammalsGraph: FC = () => {
 
   const updateGraphConfig = useRoomStore((s) => s.cosmos.updateGraphConfig);
 
-  const config = useMemo<GraphConfigInterface>(
+  const config = useMemo<GraphConfig>(
     () => ({
       backgroundColor: 'transparent',
       enableDrag: true, // allow dragging the nodes
-      linkWidth: 1,
-      linkColor: '#5F74C2',
-      linkArrows: false,
+      linkDefaultWidth: 1,
+      linkDefaultColor: '#5F74C2',
+      linkDefaultArrows: false,
       fitViewOnInit: true,
       fitViewDelay: 5000,
       simulationGravity: 0.25,
@@ -34,7 +34,6 @@ export const MammalsGraph: FC = () => {
       scalePointsOnZoom: true,
       renderHoveredPointRing: true,
       hoveredPointRingColor: '#a33aef',
-      renderFocusedPointRing: true,
       focusedPointRingColor: '#ee55ff',
       onClick: (index: number | undefined) => {
         if (index === undefined) {
@@ -66,7 +65,7 @@ export const MammalsGraph: FC = () => {
       <CosmosGraphControls>
         <DownloadButton nodes={graphData.nodes} />
       </CosmosGraphControls>
-      <CosmosSimulationControls className="absolute right-1 top-1" />
+      <CosmosSimulationControls className="absolute top-1 right-1" />
     </CosmosGraph>
   ) : null;
 };

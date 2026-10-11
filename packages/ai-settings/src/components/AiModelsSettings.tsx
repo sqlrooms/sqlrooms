@@ -10,7 +10,7 @@ import {
   Input,
   Label,
   useDisclosure,
-  useToast,
+  toast,
 } from '@sqlrooms/ui';
 import {
   Blocks,
@@ -30,6 +30,7 @@ export interface AiModelsSettingsProps {
   showCustomModels?: boolean;
   allowEditProviderModels?: boolean;
   allowCustomModels?: boolean;
+  showTitle?: boolean;
   className?: string;
 }
 
@@ -37,8 +38,8 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
   className = '',
   allowEditProviderModels = true,
   allowCustomModels = true,
+  showTitle = true,
 }) => {
-  const {toast} = useToast();
   const aiConfig = useStoreWithAiSettings((s) => s.aiSettings.config);
   const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
   const addModelToProvider = useStoreWithAiSettings(
@@ -115,20 +116,16 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
 
     // Validate required fields
     if (!customName.trim()) {
-      toast({
-        title: 'Model Name Required',
+      toast.error('Model Name Required', {
         description: 'Please enter a model name.',
-        variant: 'destructive',
       });
       return;
     }
 
     if (!customBaseUrl.trim()) {
       setBaseUrlError(true);
-      toast({
-        title: 'Base URL Required',
+      toast.error('Base URL Required', {
         description: 'Please enter a base URL for the model.',
-        variant: 'destructive',
       });
       return;
     }
@@ -142,10 +139,8 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
     setAiModel('custom', trimmedName);
 
     // Show success message
-    toast({
-      title: 'Custom Model Added',
+    toast.success('Custom Model Added', {
       description: `Successfully added "${trimmedName}" to your custom models.`,
-      variant: 'default',
     });
 
     // Reset form
@@ -178,20 +173,16 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
 
     // Validate required fields
     if (!editingModel.modelName.trim()) {
-      toast({
-        title: 'Model Name Required',
+      toast.error('Model Name Required', {
         description: 'Please enter a model name.',
-        variant: 'destructive',
       });
       return;
     }
 
     if (!editingModel.baseUrl.trim()) {
       setEditBaseUrlError(true);
-      toast({
-        title: 'Base URL Required',
+      toast.error('Base URL Required', {
         description: 'Please enter a base URL for the model.',
-        variant: 'destructive',
       });
       return;
     }
@@ -208,10 +199,8 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
     );
 
     if (duplicateModel) {
-      toast({
-        title: 'Model Name Already Exists',
+      toast.error('Model Name Already Exists', {
         description: `A custom model with the name "${trimmedName}" already exists.`,
-        variant: 'destructive',
       });
       return;
     }
@@ -225,10 +214,8 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
     );
 
     // Show success message
-    toast({
-      title: 'Custom Model Updated',
+    toast.success('Custom Model Updated', {
       description: `Successfully updated "${trimmedName}".`,
-      variant: 'default',
     });
 
     // Reset form and close dialog
@@ -254,10 +241,8 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
     );
 
     if (modelExists) {
-      toast({
-        title: 'Model Already Exists',
+      toast.error('Model Already Exists', {
         description: `The model "${newModelName.trim()}" already exists in this provider.`,
-        variant: 'destructive',
       });
       return;
     }
@@ -284,17 +269,13 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
         modelToDelete.providerKey,
         modelToDelete.modelName,
       );
-      toast({
-        title: 'Model Deleted',
+      toast.success('Model Deleted', {
         description: `Successfully removed "${modelToDelete.modelName}" from the provider.`,
-        variant: 'default',
       });
     } else if (modelToDelete.type === 'custom') {
       removeCustomModel(modelToDelete.modelName);
-      toast({
-        title: 'Custom Model Deleted',
+      toast.success('Custom Model Deleted', {
         description: `Successfully removed "${modelToDelete.modelName}" from custom models.`,
-        variant: 'default',
       });
     }
 
@@ -304,10 +285,12 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <label className="text-md flex items-center gap-2 pb-4 font-medium">
-        <Blocks className="h-4 w-4" />
-        Models
-      </label>
+      {showTitle && (
+        <label className="text-md flex items-center gap-2 pb-4 font-medium">
+          <Blocks className="h-4 w-4" />
+          Models
+        </label>
+      )}
 
       {/* Providers and their models */}
       <div className="w-full space-y-4">
@@ -443,7 +426,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                   Name
                 </Label>
                 <div className="relative flex-1">
-                  <Cpu className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Cpu className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                   <Input
                     id="custom-name"
                     value={customName}
@@ -459,7 +442,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                   baseUrl
                 </Label>
                 <div className="relative flex-1">
-                  <Server className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Server className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                   <Input
                     id="custom-baseUrl"
                     value={customBaseUrl}
@@ -480,7 +463,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                   API key
                 </Label>
                 <div className="relative flex-1">
-                  <Key className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Key className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                   <Input
                     id="custom-apiKey"
                     type="password"
@@ -531,7 +514,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                 Model Name
               </Label>
               <div className="relative flex-1">
-                <Cpu className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                <Cpu className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="new-model-name"
                   value={newModelName}
@@ -583,7 +566,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                   Name
                 </Label>
                 <div className="relative flex-1">
-                  <Cpu className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Cpu className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                   <Input
                     id="edit-model-name"
                     value={editingModel?.modelName || ''}
@@ -603,7 +586,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                   baseUrl
                 </Label>
                 <div className="relative flex-1">
-                  <Server className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Server className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                   <Input
                     id="edit-model-baseUrl"
                     value={editingModel?.baseUrl || ''}
@@ -626,7 +609,7 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
                   API key
                 </Label>
                 <div className="relative flex-1">
-                  <Key className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Key className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                   <Input
                     id="edit-model-apiKey"
                     type="password"

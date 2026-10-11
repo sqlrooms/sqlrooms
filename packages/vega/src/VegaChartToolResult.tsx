@@ -1,106 +1,89 @@
-import {useStoreWithAi} from '@sqlrooms/ai';
+import type {ToolRendererProps} from '@sqlrooms/ai-core';
 import {cn} from '@sqlrooms/ui';
-import {useCallback, useState} from 'react';
+import {ReactNode} from 'react';
 import {EmbedOptions, VisualizationSpec} from 'vega-embed';
+import {EditorMode} from './editor/types';
 import {VegaChartContainer} from './editor/VegaChartContainer';
 import {VegaChartDisplay} from './editor/VegaChartDisplay';
-import {EditorMode} from './editor/types';
+import type {
+  VegaChartToolOutput,
+  VegaChartToolParameters,
+} from './VegaChartTool';
 import {VegaEditAction} from './VegaEditAction';
 import {VegaExportAction} from './VegaExportAction';
 import {VegaLiteArrowChart} from './VegaLiteArrowChart';
+import type {VegaChartHeight, VegaChartHeightResolver} from './chartSizing';
 
-export type VegaChartToolResultProps = {
+export type VegaChartToolResultProps = ToolRendererProps<
+  VegaChartToolOutput,
+  VegaChartToolParameters
+> & {
   className?: string;
-  reasoning: string;
-  sqlQuery: string;
-  vegaLiteSpec: VisualizationSpec;
   options?: EmbedOptions;
   /**
-   * Tool call ID for AI slice integration (enables persistence)
-   */
-  toolCallId?: string;
-  /**
-   * Whether editing is enabled
-   * @default true
-   */
-  editable?: boolean;
-  /**
-   * Which editors to show when editing
+   * Which editors to show when viewing
    * @default 'both'
    */
   editorMode?: EditorMode;
+  /**
+   * Width-to-height ratio used when no fixed or automatic height is selected.
+   * @default 16/9
+   */
+  aspectRatio?: number;
+  /**
+   * Fixed outer chart height, or `'auto'` to opt into category-aware sizing.
+   * Automatic sizing falls back to the aspect ratio for ordinary charts.
+   */
+  height?: VegaChartHeight;
+  /**
+   * Optional application-specific height policy. Returning `'auto'` applies
+   * the built-in category-aware sizing policy.
+   */
+  getHeight?: VegaChartHeightResolver;
 };
 
 /**
  * Renders a chart tool call with visualization using Vega-Lite.
- * Supports inline editing with AI slice persistence.
- *
- * @param {VegaChartToolResultProps} props - The component props
- * @returns {JSX.Element} The rendered chart tool call
+ * Shows read-only editors for inspecting spec and SQL.
  */
 export function VegaChartToolResult({
   className,
-  sqlQuery,
-  vegaLiteSpec,
+  input,
+  output,
   options,
-  toolCallId,
-  editable = true,
   editorMode = 'both',
-}: VegaChartToolResultProps) {
-  // AI slice integration for persisting changes
-  const setToolAdditionalData = useStoreWithAi(
-    (s) => s.ai.setSessionToolAdditionalData,
-  );
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const currentSessionId = currentSession?.id;
+  aspectRatio = 16 / 9,
+  height,
+  getHeight,
+}: VegaChartToolResultProps): ReactNode {
+  const sqlQuery = output?.sqlQuery ?? '';
+  const vegaLiteSpec = output?.vegaLiteSpec as VisualizationSpec | null;
 
-  // Track applied values for callbacks (to persist both spec and sql together)
-  const [appliedSpec, setAppliedSpec] = useState(vegaLiteSpec);
-  const [appliedSql, setAppliedSql] = useState(sqlQuery);
-
-  // Callbacks to persist changes to AI slice
-  const handleSpecChange = useCallback(
-    (newSpec: VisualizationSpec) => {
-      setAppliedSpec(newSpec);
-      if (toolCallId && currentSessionId) {
-        setToolAdditionalData(currentSessionId, toolCallId, {
-          sqlQuery: appliedSql,
-          vegaLiteSpec: newSpec,
-        });
-      }
-    },
-    [toolCallId, currentSessionId, appliedSql, setToolAdditionalData],
-  );
-
-  const handleSqlChange = useCallback(
-    (newSql: string) => {
-      setAppliedSql(newSql);
-      if (toolCallId && currentSessionId) {
-        setToolAdditionalData(currentSessionId, toolCallId, {
-          sqlQuery: newSql,
-          vegaLiteSpec: appliedSpec,
-        });
-      }
-    },
-    [toolCallId, currentSessionId, appliedSpec, setToolAdditionalData],
-  );
+  if (!vegaLiteSpec) {
+    return null;
+  }
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className={cn('flex max-w-full flex-col gap-2', className)}>
+      {input?.reasoning && (
+        <p className="text-tiny text-muted-foreground">{input.reasoning}</p>
+      )}
       <VegaChartContainer
         spec={vegaLiteSpec}
         sqlQuery={sqlQuery}
         options={options}
-        editable={editable}
-        onSpecChange={handleSpecChange}
-        onSqlChange={handleSqlChange}
+        editable={false}
       >
-        {/* Chart with actions toolbar */}
-        <div className="relative">
-          <VegaChartDisplay aspectRatio={16 / 9} className="pt-2">
+        <div className="relative max-w-full overflow-x-auto">
+          <VegaChartDisplay
+            aspectRatio={aspectRatio}
+            height={height}
+            getHeight={getHeight}
+            className="pt-2"
+          >
             <VegaLiteArrowChart.Actions className="right-3">
               <VegaExportAction />
-              {editable && <VegaEditAction editorMode={editorMode} />}
+              <VegaEditAction editorMode={editorMode} />
             </VegaLiteArrowChart.Actions>
           </VegaChartDisplay>
         </div>

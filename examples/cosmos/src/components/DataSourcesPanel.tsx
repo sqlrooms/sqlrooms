@@ -10,14 +10,14 @@ import {
   AccordionTrigger,
 } from '@sqlrooms/ui';
 import {FolderIcon, TableIcon} from 'lucide-react';
-import {FC} from 'react';
-import {RoomPanelTypes, useRoomStore} from '../store';
+import type {FC} from 'react';
+import {useRoomStore} from '../store';
 
-const DataSourcesPanel: FC = () => {
+export const DataSourcesPanel: FC = () => {
   const roomFiles = useRoomStore((state) => state.room.roomFiles);
   const isRoomEmpty = !roomFiles?.length;
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
+    <RoomPanel>
       {isRoomEmpty ? (
         <></>
       ) : (
@@ -34,7 +34,7 @@ const DataSourcesPanel: FC = () => {
                     <h3 className="ml-1 text-xs uppercase">Files</h3>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="px-[5px] pb-5 pt-1">
+                <AccordionContent className="px-1.25 pt-1 pb-5">
                   <FileDataSourcesPanel />
                 </AccordionContent>
               </AccordionItem>
@@ -46,7 +46,7 @@ const DataSourcesPanel: FC = () => {
                     <h3 className="ml-1 text-xs uppercase">Tables</h3>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="px-[5px] pb-5 pt-1">
+                <AccordionContent className="px-1.25 pt-1 pb-5">
                   <TablesListPanel />
                 </AccordionContent>
               </AccordionItem>
@@ -61,5 +61,3 @@ const DataSourcesPanel: FC = () => {
     </RoomPanel>
   );
 };
-
-export default DataSourcesPanel;

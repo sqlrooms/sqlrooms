@@ -1,0 +1,148 @@
+import type * as arrow from 'apache-arrow';
+import type {ComponentProps, ReactNode} from 'react';
+import type DeckGLReact from '@deck.gl/react';
+import type {MapProps} from 'react-map-gl/maplibre';
+import type {DeckMapBasemapProvider} from './basemap';
+
+type DeckProps = ComponentProps<typeof DeckGLReact>;
+import type {GeometryEncodingHint, PreparedDeckDataset} from './prepare/types';
+
+export type {
+  ColorScaleFunction,
+  DeckJsonMapLayerSpec,
+  DeckJsonMapSpec,
+  LayerBindingConfig,
+  LayerBindingProps,
+} from './DeckJsonMapSpec';
+
+type DeckDatasetBase = {
+  geometryColumn?: string;
+  geometryEncodingHint?: GeometryEncodingHint;
+};
+
+export type DeckAutoLayerType =
+  | 'GeoJsonLayer'
+  | 'GeoArrowScatterplotLayer'
+  | 'GeoArrowHeatmapLayer'
+  | 'GeoArrowColumnLayer'
+  | 'GeoArrowPathLayer'
+  | 'GeoArrowPolygonLayer'
+  | 'GeoArrowSolidPolygonLayer'
+  | 'GeoArrowArcLayer'
+  | 'GeoArrowTripsLayer'
+  | 'GeoArrowH3HexagonLayer';
+
+export type DeckSqlDatasetInput = DeckDatasetBase & {
+  /**
+   * Literal SQL query used as the full dataset source.
+   *
+   * SQLRooms does not rewrite this query when dashboard selected tables change.
+   * Use `DeckTableDatasetInput` when a dataset should follow a structured
+   * table source.
+   */
+  sqlQuery: string;
+};
+
+/**
+ * Structured table-backed dataset source.
+ *
+ * `tableName` identifies the source relation. When `transformSql` is present,
+ * it must be a complete SELECT query that reads from the reserved
+ * `__sqlrooms_source` relation supplied by SQLRooms at execution time.
+ */
+export type DeckTableDatasetInput = DeckDatasetBase & {
+  tableName: string;
+  transformSql?: string;
+};
+
+export type DeckTable = arrow.Table;
+
+export type DeckArrowTableDatasetInput = DeckDatasetBase & {
+  arrowTable: DeckTable | undefined;
+};
+export type DeckDatasetInput =
+  | DeckSqlDatasetInput
+  | DeckTableDatasetInput
+  | DeckArrowTableDatasetInput;
+
+export type DeckJsonSpecDatasetHint = {
+  prefer?: 'heatmap';
+  type?: DeckAutoLayerType;
+  sourceGeometryColumn?: string;
+  targetGeometryColumn?: string;
+  timestampColumn?: string;
+  hexagonColumn?: string;
+};
+
+export type CreateDeckJsonSpecFromDatasetsOptions = {
+  datasets: Record<string, DeckDatasetInput>;
+  hints?: Record<string, DeckJsonSpecDatasetHint>;
+};
+
+export type PreparedDeckDatasetState =
+  | {status: 'loading'}
+  | {status: 'ready'; prepared: PreparedDeckDataset}
+  | {status: 'error'; error: Error};
+
+export type DeckJsonMapHandle = {
+  jumpTo: (opts: {
+    longitude: number;
+    latitude: number;
+    zoom: number;
+    bearing?: number;
+    pitch?: number;
+  }) => void;
+};
+
+/**
+ * Renders a JSON deck.gl specification with named datasets in a room store.
+ * A per-map basemap provider overrides the room's provider; explicit custom
+ * map styles take precedence over both providers.
+ */
+export type DeckJsonMapProps = {
+  spec: string | Record<string, unknown>;
+  datasets: Record<string, DeckDatasetInput>;
+  mapStyle?: string;
+  /** Overrides the room's optional basemap provider for this map instance. */
+  basemapProvider?: DeckMapBasemapProvider;
+  /**
+   * When true, deck.gl renders into the map's own WebGL context rather than
+   * creating a separate overlay canvas. This halves the number of WebGL
+   * contexts per map panel (from 2 to 1), which matters because browsers
+   * limit active contexts to ~8–16 per page. Defaults to true.
+   */
+  interleaved?: boolean;
+  deckProps?: Partial<DeckProps>;
+  /**
+   * MapLibre runtime props. Drawing-buffer preservation defaults to true so
+   * DOM image capture includes the basemap and interleaved deck layers.
+   * Set canvasContextAttributes.preserveDrawingBuffer to false to opt out.
+   */
+  mapProps?: Partial<MapProps>;
+  showLegends?: boolean;
+  className?: string;
+  children?: ReactNode;
+  onDatasetStatesChange?: (
+    states: Record<string, PreparedDeckDatasetState>,
+  ) => void;
+  onRenderingError?: (error: Error) => void;
+};
+
+export function isSqlDatasetInput(
+  input: DeckDatasetInput,
+): input is DeckSqlDatasetInput {
+  return 'sqlQuery' in input;
+}
+
+/** Returns true when the dataset input describes a structured table source. */
+export function isTableDatasetInput(
+  input: DeckDatasetInput,
+): input is DeckTableDatasetInput {
+  return 'tableName' in input;
+}
+
+export function isArrowTableDatasetInput(
+  input: DeckDatasetInput,
+): input is DeckArrowTableDatasetInput {
+  return 'arrowTable' in input;
+}

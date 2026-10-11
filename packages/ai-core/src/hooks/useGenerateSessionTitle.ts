@@ -1,0 +1,385 @@
+import {useCallback, useEffect, useMemo, useRef} from 'react';
+import type {ChatSessionSchema} from '@sqlrooms/ai-config';
+import {generateUniqueName} from '@sqlrooms/utils';
+import {useStoreWithAi, type AiSliceState} from '../AiSlice';
+
+type SessionMessagePart =
+  ChatSessionSchema['uiMessages'][number]['parts'][number];
+type SessionTextPart = SessionMessagePart & {type: 'text'; text: string};
+type SessionFilePart = SessionMessagePart & {
+  type: 'file';
+  filename?: string;
+  mediaType: string;
+};
+
+export type GenerateSessionTitlePromptOptions = Parameters<
+  AiSliceState['ai']['sendPrompt']
+>[1];
+
+type GenerateSessionTitlePromptArgs = {
+  session: ChatSessionSchema;
+  userMessages: string[];
+};
+
+export type GenerateSessionTitleOptions = {
+  /** Maximum generated title length after cleanup. */
+  maxTitleLength?: number;
+  /** Number of initial user messages to include in the title prompt. */
+  maxUserMessages?: number;
+  /** Identify titles that are still safe to auto-replace. */
+  isDefaultSessionName?: (name: string) => boolean;
+  /** Override the prompt sent to the title-generation model. */
+  buildPrompt?: (args: GenerateSessionTitlePromptArgs) => string;
+  /** Provide model/provider/baseUrl options for the title-generation call. */
+  getPromptOptions?: (
+    args: GenerateSessionTitlePromptArgs,
+  ) =>
+    | GenerateSessionTitlePromptOptions
+    | Promise<GenerateSessionTitlePromptOptions>;
+};
+
+export type GenerateSessionTitleArgs = GenerateSessionTitleOptions & {
+  session: ChatSessionSchema;
+  sendPrompt: AiSliceState['ai']['sendPrompt'];
+  renameSession: AiSliceState['ai']['renameSession'];
+  /**
+   * Names of the other sessions, used to number the fallback name so two
+   * failures do not both produce "Untitled Chat". Omit to skip numbering.
+   */
+  existingSessionNames?: string[];
+};
+
+/**
+ * Outcome of one title-generation attempt.
+ *
+ * - `renamed` — a title was generated and applied.
+ * - `empty` — the session has no user messages to summarise yet.
+ * - `custom-title` — the session already has a name the user chose, so it is
+ *   left alone.
+ * - `unchanged` — the generated title matched the current name.
+ * - `blank-generated-title` — the model returned nothing usable.
+ * - `generation-failed` — the model call itself failed. The session is renamed
+ *   to `Untitled Chat` rather than to the error text, and stays eligible for
+ *   another attempt on the next user message. `title` carries the fallback.
+ */
+export type GenerateSessionTitleResult =
+  | {
+      status: 'renamed';
+      title: string;
+    }
+  | {
+      status:
+        | 'empty'
+        | 'custom-title'
+        | 'unchanged'
+        | 'blank-generated-title'
+        | 'generation-failed';
+      title?: string;
+    };
+
+export type UseGenerateSessionTitleOptions = GenerateSessionTitleOptions & {
+  /**
+   * Turn title generation on or off. Useful while model credentials or app
+   * subscription state are still loading.
+   */
+  enabled?: boolean;
+  /** Delay after a new user message before generating a title. */
+  delayMs?: number;
+  /**
+   * Observe unexpected errors without breaking the chat UI. A failed model
+   * call is not one of these: it resolves to the `Untitled Chat` fallback
+   * instead of throwing. Pass `onError` through `getPromptOptions` to see
+   * those.
+   */
+  onError?: (error: unknown) => void;
+};
+
+/**
+ * Name given to a session whose title generation failed. Deliberately matched
+ * by {@link DEFAULT_SESSION_NAME_PATTERNS} so the next user message can still
+ * replace it with a real title.
+ */
+export const UNTITLED_SESSION_NAME = 'Untitled Chat';
+
+const DEFAULT_SESSION_NAME_PATTERNS = [
+  // New sessions are named via generateUniqueName('Chat', names, ' '),
+  // producing "Chat", "Chat 1", "Chat 2", ...
+  /^Chat$/,
+  /^Chat \d+$/,
+  // The title-generation fallback, likewise numbered when it repeats.
+  /^Untitled Chat$/,
+  /^Untitled Chat \d+$/,
+  /^Untitled$/,
+  /^Default Session$/,
+  /^Session /,
+  /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/,
+];
+
+export function isDefaultGeneratedSessionName(name: string) {
+  return DEFAULT_SESSION_NAME_PATTERNS.some((pattern) => pattern.test(name));
+}
+
+function isTextPart(part: SessionMessagePart): part is SessionTextPart {
+  return (
+    part.type === 'text' && 'text' in part && typeof part.text === 'string'
+  );
+}
+
+function isFilePart(part: SessionMessagePart): part is SessionFilePart {
+  return part.type === 'file' && 'mediaType' in part;
+}
+
+function getFileTitleText(part: SessionFilePart): string {
+  const filename = part.filename?.replace(/[\r\n]+/g, ' ').trim();
+  if (filename) return `Attached file: ${filename}`;
+  return part.mediaType.startsWith('image/')
+    ? 'Attached image'
+    : 'Attached file';
+}
+
+/**
+ * Collects user-authored text for session-title generation. File parts add a
+ * bounded filename or media-type fallback so attachment-only turns can receive
+ * a generated title without sending the attachment payload a second time.
+ */
+export function getSessionUserMessageText(session: ChatSessionSchema) {
+  return session.uiMessages
+    .filter((message) => message.role === 'user')
+    .map((message) =>
+      message.parts
+        .map((part) => {
+          if (isTextPart(part)) return part.text;
+          if (isFilePart(part)) return getFileTitleText(part);
+          return '';
+        })
+        .join(' ')
+        .trim(),
+    )
+    .filter((text) => text.length > 0);
+}
+
+function buildDefaultTitlePrompt(userMessages: string[]) {
+  return `Based on the following user messages from a conversation, generate a concise, descriptive title of 50 characters or fewer that summarizes the main topic.
+
+Write the title as a bare noun phrase, ideally 2-5 words. Drop leading filler: framing words ("Analysis of", "Overview of", "Report on", "Question about"), output kinds ("Map of", "Chart of"), and articles ("A", "The"). Write "San Francisco roads", not "Map of roads in San Francisco".
+
+User messages:
+${userMessages.join('\n')}
+
+Return only the title text, without quotes or explanation.`;
+}
+
+export function cleanGeneratedSessionTitle(title: string, maxTitleLength = 50) {
+  return title
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/\n.*/g, '')
+    .trim()
+    .slice(0, maxTitleLength);
+}
+
+export async function generateSessionTitle({
+  session,
+  sendPrompt,
+  renameSession,
+  maxTitleLength = 50,
+  maxUserMessages = 3,
+  isDefaultSessionName = isDefaultGeneratedSessionName,
+  buildPrompt,
+  getPromptOptions,
+  existingSessionNames,
+}: GenerateSessionTitleArgs): Promise<GenerateSessionTitleResult> {
+  if (!isDefaultSessionName(session.name)) {
+    return {status: 'custom-title', title: session.name};
+  }
+
+  const userMessages = getSessionUserMessageText(session);
+  if (userMessages.length === 0) {
+    return {status: 'empty'};
+  }
+
+  const messagesForPrompt = userMessages.slice(0, maxUserMessages);
+  const prompt =
+    buildPrompt?.({session, userMessages: messagesForPrompt}) ??
+    buildDefaultTitlePrompt(messagesForPrompt);
+  const promptOptions = await getPromptOptions?.({
+    session,
+    userMessages: messagesForPrompt,
+  });
+  // `sendPrompt` reports failure by resolving with a placeholder rather than
+  // throwing, so the failure is observed through `onError` instead of by
+  // comparing the response text — a conversation *about* that wording could
+  // otherwise have its own title mistaken for a failure.
+  let generationFailed = false;
+  const generatedTitle = await sendPrompt(prompt, {
+    systemInstructions:
+      'You generate concise, descriptive conversation titles as bare noun ' +
+      'phrases, with no leading filler such as "Map of", "Analysis of", or ' +
+      '"The". Return only the title text, nothing else.',
+    useTools: false,
+    ...promptOptions,
+    onError: (error) => {
+      generationFailed = true;
+      promptOptions?.onError?.(error);
+    },
+  });
+  // A failed generation must not become the session name. Fall back to
+  // "Untitled Chat", which reads as untitled rather than as a brand-new chat,
+  // and which `isDefaultSessionName` still matches so the next user message
+  // can replace it with a real title.
+  if (generationFailed) {
+    const fallbackTitle = generateUniqueName(
+      UNTITLED_SESSION_NAME,
+      existingSessionNames ?? [],
+      ' ',
+    );
+    if (session.name !== fallbackTitle) {
+      renameSession(session.id, fallbackTitle);
+    }
+    return {status: 'generation-failed', title: fallbackTitle};
+  }
+
+  const title = cleanGeneratedSessionTitle(generatedTitle, maxTitleLength);
+
+  if (!title) {
+    return {status: 'blank-generated-title'};
+  }
+  if (title === session.name) {
+    return {status: 'unchanged', title};
+  }
+
+  renameSession(session.id, title);
+  return {status: 'renamed', title};
+}
+
+export function useGenerateSessionTitle({
+  enabled = true,
+  delayMs = 1000,
+  maxTitleLength = 50,
+  maxUserMessages = 3,
+  isDefaultSessionName = isDefaultGeneratedSessionName,
+  buildPrompt,
+  getPromptOptions,
+  onError,
+}: UseGenerateSessionTitleOptions = {}) {
+  const currentSessionId = useStoreWithAi((s) => s.ai.config.currentSessionId);
+  const sessions = useStoreWithAi((s) => s.ai.config.sessions);
+  const currentSession = useMemo(
+    () => sessions.find((session) => session.id === currentSessionId),
+    [currentSessionId, sessions],
+  );
+  const uiMessagesLength = currentSession?.uiMessages?.length ?? 0;
+  const renameSession = useStoreWithAi((s) => s.ai.renameSession);
+  const sendPrompt = useStoreWithAi((s) => s.ai.sendPrompt);
+
+  // Held in a ref rather than read directly, so that session activity
+  // elsewhere does not change `generateTitle`'s identity — see the note at
+  // its `existingSessionNames` argument.
+  const sessionsRef = useRef(sessions);
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
+  const lastUserMessageCountRef = useRef(0);
+  const isGeneratingRef = useRef(false);
+  const lastGeneratedTitleRef = useRef('');
+
+  const generateTitle = useCallback(async () => {
+    if (!enabled || !currentSession || isGeneratingRef.current) {
+      return;
+    }
+
+    const userMessages = getSessionUserMessageText(currentSession);
+    if (userMessages.length === 0) {
+      return;
+    }
+
+    const userMessageCount = userMessages.length;
+    if (
+      userMessageCount === lastUserMessageCountRef.current &&
+      currentSession.name !== lastGeneratedTitleRef.current &&
+      !isDefaultSessionName(currentSession.name)
+    ) {
+      return;
+    }
+
+    isGeneratingRef.current = true;
+
+    try {
+      const result = await generateSessionTitle({
+        session: currentSession,
+        sendPrompt,
+        renameSession,
+        maxTitleLength,
+        maxUserMessages,
+        isDefaultSessionName,
+        buildPrompt,
+        getPromptOptions,
+        // Read through a ref: putting `sessions` in this callback's deps
+        // would give it a new identity whenever any session changes, and the
+        // debounce effect below depends on the callback, so its pending
+        // timer would be cleared and re-armed by unrelated session activity.
+        existingSessionNames: sessionsRef.current
+          .filter((session) => session.id !== currentSession.id)
+          .map((session) => session.name),
+      });
+      if (result.title) {
+        lastGeneratedTitleRef.current = result.title;
+      }
+    } catch (error) {
+      onError?.(error);
+    } finally {
+      isGeneratingRef.current = false;
+      lastUserMessageCountRef.current = userMessages.length;
+    }
+  }, [
+    buildPrompt,
+    currentSession,
+    enabled,
+    getPromptOptions,
+    isDefaultSessionName,
+    maxTitleLength,
+    maxUserMessages,
+    onError,
+    renameSession,
+    sendPrompt,
+  ]);
+
+  useEffect(() => {
+    lastUserMessageCountRef.current = 0;
+    lastGeneratedTitleRef.current = '';
+    isGeneratingRef.current = false;
+  }, [currentSessionId]);
+
+  useEffect(() => {
+    if (!enabled || !currentSession || !currentSessionId) {
+      return undefined;
+    }
+
+    const userMessageCount = getSessionUserMessageText(currentSession).length;
+
+    if (
+      userMessageCount > 0 &&
+      userMessageCount > lastUserMessageCountRef.current &&
+      !isGeneratingRef.current &&
+      isDefaultSessionName(currentSession.name)
+    ) {
+      const timeoutId = setTimeout(() => {
+        void generateTitle();
+      }, delayMs);
+
+      return () => clearTimeout(timeoutId);
+    }
+
+    lastUserMessageCountRef.current = userMessageCount;
+    return undefined;
+  }, [
+    currentSession,
+    currentSessionId,
+    delayMs,
+    enabled,
+    generateTitle,
+    isDefaultSessionName,
+    uiMessagesLength,
+  ]);
+}

@@ -1,8 +1,28 @@
-export {AiSliceConfig, createDefaultAiConfig} from './AiSliceConfig';
+export {
+  AiSliceConfig,
+  AiSessionForkOrigin,
+  createDefaultAiConfig,
+} from './AiSliceConfig';
 export {AiSettingsSliceConfig} from './AiSettingsSliceConfig';
 export {
+  BlockAiRunContextItemSchema,
+  createBlockContextItem,
+  type BlockAiRunContextItem,
+} from './createBlockContextItem';
+export {
+  AiRunContextItemSchema,
+  AiRunContextSchema,
+  ChatSessionSchema,
   AnalysisSessionSchema,
   AnalysisResultSchema,
   ErrorMessageSchema,
-} from './schema/AnalysisSessionSchema';
-export type {ToolUIPart, UIMessagePart} from './schema/UIMessageSchema';
+  getAiRunContextPrimaryItem,
+  getAiRunContextItems,
+  setAiRunContextPrimaryItem,
+} from './schema/ChatSessionSchema';
+export type {AiRunContext, AiRunContextItem} from './schema/ChatSessionSchema';
+export type {
+  DynamicToolUIPart,
+  ToolUIPart,
+  UIMessagePart,
+} from './schema/UIMessageSchema';

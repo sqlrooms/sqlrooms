@@ -1,11 +1,19 @@
 import {
   addDataToMap,
+  addFilter as addFilterAction,
   addLayer as addLayerAction,
   deleteEntry,
+  interactionConfigChange,
   ActionTypes as KeplerActionTypes,
   registerEntry,
   removeDataset,
   requestMapStyles,
+  setFilter as setFilterAction,
+  setFilterAnimationTime as setFilterAnimationTimeAction,
+  setFilterAnimationWindow as setFilterAnimationWindowAction,
+  setFilterView as setFilterViewAction,
+  toggleLayerForMap as toggleLayerForMapAction,
+  toggleSplitMap as toggleSplitMapAction,
   wrapTo,
 } from '@kepler.gl/actions';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
@@ -16,7 +24,6 @@ import {
   restoreGeoarrowMetadata,
   setGeoArrowWKBExtension,
 } from '@kepler.gl/duckdb';
-import {Layer} from '@kepler.gl/layers';
 import {arrowSchemaToFields} from '@kepler.gl/processors';
 import {
   INITIAL_UI_STATE,
@@ -26,22 +33,27 @@ import {
 } from '@kepler.gl/reducers';
 import {KeplerGLSchemaClass} from '@kepler.gl/schemas';
 import {KeplerTable} from '@kepler.gl/table';
-import {AddDataToMapPayload} from '@kepler.gl/types';
+import {
+  AddDataToMapPayload,
+  MinSavedLayer,
+  ParsedLayer,
+} from '@kepler.gl/types';
 import {
   DatabaseConnection,
   initApplicationConfig,
   KeplerApplicationConfig,
 } from '@kepler.gl/utils';
 import {createId} from '@paralleldrive/cuid2';
-import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {KeplerMapSchema, KeplerSliceConfig} from '@sqlrooms/kepler-config';
 import {
   BaseRoomStoreState,
   createSlice,
+  DbSliceState,
   RoomShellSliceState,
   useBaseRoomShellStore,
   type StateCreator,
 } from '@sqlrooms/room-shell';
+import {getTheme, type ResolvedTheme} from '@sqlrooms/ui';
 import * as arrow from 'apache-arrow';
 import {produce, setAutoFreeze} from 'immer';
 import {taskMiddleware} from 'react-palm/tasks';
@@ -53,6 +65,23 @@ import type {
 } from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
+import type {DefaultTheme} from 'styled-components';
+import {
+  getTableIdentity,
+  getUnqualifiedSqlIdentifier,
+} from '@sqlrooms/duckdb-core';
+import {
+  findKeplerTableForDatasetId,
+  getKeplerDatasetIdForTable,
+  getKeplerTableLabel,
+  type KeplerDbSchemaReference,
+  type KeplerTableSelectionOptions,
+} from './keplerTableSelection';
+import {
+  getReferencedKeplerDatasetIds,
+  hasPendingKeplerConfig,
+} from './keplerConfigPersistence';
+
 setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
 const KeplerGLSchemaManager = new KeplerGLSchemaClass();
@@ -68,13 +97,46 @@ export type KeplerGLBasicProps = {
   mapboxApiAccessToken?: string;
 };
 
+export type KeplerModalPortalTarget = 'body' | 'container';
+
+export type CreateInitialMapKeplerStateContext = {
+  reason:
+    | 'initialize'
+    | 'create-map'
+    | 'duplicate-map'
+    | 'register-map'
+    | 'sync-config';
+  defaultInitialMapKeplerState: Partial<KeplerGlState>;
+  mapId?: string;
+  name?: string;
+};
+
 export type CreateKeplerSliceOptions = {
   config?: Partial<KeplerSliceConfig>;
-  initialKeplerState?: Partial<KeplerGlState>;
+  createInitialMapKeplerState?: (
+    context: CreateInitialMapKeplerStateContext,
+  ) => Partial<KeplerGlState>;
   basicKeplerProps?: Partial<KeplerGLBasicProps>;
+  /**
+   * Theme passed to Kepler's ThemeProvider.
+   * Use createKeplerTheme() to merge app-level overrides into the default theme.
+   */
+  keplerTheme?: DefaultTheme;
+  /**
+   * Where the Kepler modal (Add Map Style, Export, etc.) should be portaled.
+   * - 'body': portals to document.body (escapes stacking contexts)
+   * - 'container': portals inside the kepler map container element
+   * @default 'container'
+   */
+  modalPortalTarget?: KeplerModalPortalTarget;
   actionLogging?: boolean | ReduxLoggerOptions;
   middlewares?: Middleware[];
   applicationConfig?: KeplerApplicationConfig;
+  /**
+   * Controls which DuckDB tables appear in Kepler's Add Layer menu and how
+   * those tables are represented in saved Kepler dataset ids.
+   */
+  tableSelection?: KeplerTableSelectionOptions;
   /**
    * Called when a kepler action is dispatched
    * @param mapId - The map id
@@ -83,22 +145,56 @@ export type CreateKeplerSliceOptions = {
   onAction?: (mapId: string, action: KeplerAction) => void;
 };
 
+function createDefaultMapKeplerState(
+  resolvedTheme: ResolvedTheme,
+): Partial<KeplerGlState> {
+  return {
+    mapStyle: {
+      styleType: resolvedTheme === 'dark' ? 'dark-matter' : 'positron',
+    } as MapStyle,
+    uiState: {
+      ...INITIAL_UI_STATE,
+      activeSidePanel: null,
+      currentModal: null,
+      mapControls: {
+        visibleLayers: INITIAL_UI_STATE.mapControls.visibleLayers,
+        splitMap: {
+          show: true,
+          active: false,
+        },
+        mapLegend: {
+          show: true,
+          active: false,
+        },
+        toggle3d: {
+          show: true,
+          active: false,
+        },
+        mapDraw: {
+          show: true,
+          active: false,
+        },
+      },
+    },
+  };
+}
+
 export function createDefaultKeplerConfig(
   props?: Partial<KeplerSliceConfig>,
 ): KeplerSliceConfig {
   const mapId = createId();
-  return {
+  const config: KeplerSliceConfig = {
     maps: [
       {
         id: mapId,
         name: 'Untitled Map',
         config: undefined,
+        lastOpenedAt: Date.now(),
       },
     ],
-    currentMapId: mapId,
-    openTabs: [mapId],
     ...props,
   };
+  return KeplerSliceConfig.parse(config);
 }
 
 export type KeplerAction = {
@@ -121,27 +217,144 @@ export function hasMapId(action: KeplerAction): action is KeplerAction & {
 
 // support multiple kepler maps
 export type KeplerGlReduxState = {[id: string]: KeplerGlState};
+/**
+ * Optional dataset identity and cancellation for the positional add-table API.
+ * Aborting discards the result without cancelling the underlying database query.
+ */
+export type AddTableToMapLoadOptions = {
+  /** Discard query results if aborted; the load resolves without adding data. */
+  signal?: AbortSignal;
+  /**
+   * Load the table under an explicit Kepler dataset id.
+   *
+   * Normal callers should omit this so the table-selection policy decides the
+   * id. Restore uses it to satisfy already-saved layer/filter dataIds.
+   */
+  datasetId?: string;
+};
+/**
+ * Arguments for the preferred object-form add-table API.
+ * An aborted signal makes the load resolve without applying its query result.
+ */
+export type AddTableToMapParams = {
+  mapId: string;
+  /** Discard query results if aborted; the load resolves without adding data. */
+  signal?: AbortSignal;
+  /**
+   * Table reference to load. This can also be an existing/saved Kepler dataset
+   * id when the table-selection policy can resolve it back to a table.
+   */
+  tableName: string;
+  options?: AddDataToMapPayload['options'];
+  config?: AddDataToMapPayload['config'];
+  /**
+   * Explicit Kepler dataset id to write into `datasets.info.id`.
+   *
+   * Most callers should omit this so `tableSelection.getDatasetIdForTable`
+   * controls new ids. Restore passes it to preserve saved layer/filter dataIds.
+   */
+  datasetId?: string;
+};
+export type AddTableToMapFn = {
+  (params: AddTableToMapParams): Promise<void>;
+  (
+    mapId: string,
+    tableName: string,
+    options?: AddDataToMapPayload['options'],
+    config?: AddDataToMapPayload['config'],
+    loadOptions?: AddTableToMapLoadOptions,
+  ): Promise<void>;
+};
+
+function normalizeAddTableToMapParams(
+  paramsOrMapId: AddTableToMapParams | string,
+  tableName?: string,
+  options: AddDataToMapPayload['options'] = {},
+  config: AddDataToMapPayload['config'] = {},
+  loadOptions: AddTableToMapLoadOptions = {},
+): AddTableToMapParams {
+  if (typeof paramsOrMapId === 'object') {
+    return {
+      options: {},
+      config: {},
+      ...paramsOrMapId,
+    };
+  }
+
+  if (!tableName) {
+    throw new Error('addTableToMap requires a tableName.');
+  }
+
+  return {
+    mapId: paramsOrMapId,
+    tableName,
+    options,
+    config,
+    datasetId: loadOptions.datasetId,
+    signal: loadOptions.signal,
+  };
+}
+
 export type KeplerSliceState = {
   kepler: {
     config: KeplerSliceConfig;
     map: KeplerGlReduxState;
     basicKeplerProps?: Partial<KeplerGLBasicProps>;
+    keplerTheme?: DefaultTheme;
+    modalPortalTarget: KeplerModalPortalTarget;
+    tableSelection: KeplerTableSelectionOptions;
     forwardDispatch: {
       [mapId: string]: Dispatch;
     };
     initialize: () => Promise<void>;
+    destroy: () => Promise<void>;
     setConfig: (config: KeplerSliceConfig) => void;
     /**
      * Update the datasets in all the kepler map so that they correspond to
      * the latest table schemas in the database
      */
     syncKeplerDatasets: () => Promise<void>;
-    addLayer: (mapId: string, layer: Layer, datasetId: string) => void;
-    addTableToMap: (
+    addLayer: (
       mapId: string,
-      tableName: string,
-      options?: AddDataToMapPayload['options'],
-    ) => Promise<void>;
+      layer: ParsedLayer | MinSavedLayer | undefined,
+      datasetId: string,
+    ) => void;
+    addFilter: (mapId: string, datasetId: string) => void;
+    setFilter: (
+      mapId: string,
+      filterIdx: number,
+      prop: string | string[],
+      value: any,
+      valueIndex?: number,
+    ) => void;
+    setFilterAnimationTime: (
+      mapId: string,
+      filterIdx: number,
+      prop: string,
+      value: any,
+    ) => void;
+    setFilterAnimationWindow: (
+      mapId: string,
+      filterId: string,
+      animationWindow: string,
+    ) => void;
+    setFilterView: (
+      mapId: string,
+      filterIdx: number,
+      view: 'side' | 'enlarged' | 'minified',
+    ) => void;
+    updateTooltipFields: (
+      mapId: string,
+      datasetId: string,
+      fieldNames: string[],
+    ) => void;
+    toggleSplitMap: (mapId: string, index?: number) => void;
+    toggleLayerForMap: (
+      mapId: string,
+      mapIndex: number,
+      layerId: string,
+    ) => void;
+    addTableToMap: AddTableToMapFn;
     addTileSetToMap: (
       mapId: string,
       tableName: string,
@@ -154,20 +367,31 @@ export type KeplerSliceState = {
       autoCreateLayers: boolean,
     ) => void;
     addConfigToMap: (mapId: string, config: KeplerMapSchema) => void;
+    /**
+     * Whether a map has pending config or dataset merges that block autosave.
+     * Returns false for unregistered maps. Does not include the slice's
+     * persistence pause or report completion of all async work.
+     */
+    isMapConfigPending: (mapId: string) => boolean;
+    isRestoringConfig: boolean;
+    withConfigPersistencePaused: <TResult>(
+      fn: () => TResult | Promise<TResult>,
+    ) => Promise<TResult>;
+    waitForConfigRestore: () => Promise<void>;
     removeDatasetFromMaps: (datasetId: string) => void;
     dispatchAction: (mapId: string, action: KeplerAction) => void;
-    setCurrentMapId: (mapId: string) => void;
+    ensureMap: (mapId: string, name?: string) => void;
     /**
      * Create a new map and return the map id
      * @param name - The name of the map
      * @returns The map id
      */
-    createMap: (name?: string) => string;
+    createMap: (name?: string, options?: {id?: string}) => string;
     deleteMap: (mapId: string) => void;
+    duplicateMap: (
+      mapId: string,
+    ) => Promise<{success: boolean; message?: string; code?: string}>;
     renameMap: (mapId: string, name: string) => void;
-    closeMap: (mapId: string) => void;
-    setOpenTabs: (tabIds: string[]) => void;
-    getCurrentMap: () => KeplerMapSchema | undefined;
     registerKeplerMapIfNotExists: (mapId: string) => void;
     __reduxProviderStore: ReduxStore<KeplerGlReduxState, AnyAction> | undefined;
   };
@@ -183,28 +407,14 @@ const SKIP_AUTO_SAVE_ACTIONS: string[] = [
 
 export function createKeplerSlice({
   basicKeplerProps = {},
+  keplerTheme,
+  modalPortalTarget = 'container',
   config: initialConfigProps,
-  initialKeplerState = {
-    mapStyle: {styleType: 'positron'} as MapStyle,
-    uiState: {
-      ...INITIAL_UI_STATE,
-      currentModal: null,
-      mapControls: {
-        visibleLayers: INITIAL_UI_STATE.mapControls.visibleLayers,
-        mapLegend: {
-          show: true,
-          active: false,
-        },
-        toggle3d: {
-          show: true,
-          active: false,
-        },
-      },
-    },
-  },
+  createInitialMapKeplerState,
   actionLogging = false,
   middlewares: additionalMiddlewares = [],
   applicationConfig,
+  tableSelection = {},
   onAction,
 }: CreateKeplerSliceOptions = {}): StateCreator<KeplerSliceState> {
   const initialConfig = createDefaultKeplerConfig(initialConfigProps);
@@ -212,11 +422,85 @@ export function createKeplerSlice({
     table: DesktopKeplerTable,
     ...applicationConfig,
   });
+  let syncKeplerPromise: Promise<void> | null = null;
+  let configRestoreDepth = 0;
+  let configRestoreController = new AbortController();
+  const configRestorePromises = new Set<Promise<unknown>>();
+  // When a caller arrives while a sync is already in-flight, the in-flight run
+  // may have captured a stale snapshot of db.tables/kepler.map (missing maps or
+  // tables added by createMap, duplicateMap, etc.). Setting this flag tells the
+  // active run to loop once more with a fresh snapshot after it finishes, so
+  // late mutations are never silently dropped.
+  let pendingKeplerSync = false;
+  const updateMapLastOpenedAt = (
+    maps: KeplerSliceConfig['maps'],
+    mapId: string,
+    now: number = Date.now(),
+  ) => {
+    const map = maps.find((item) => item.id === mapId);
+    if (map) {
+      map.lastOpenedAt = now;
+    }
+  };
   return createSlice<
     KeplerSliceState,
-    BaseRoomStoreState & KeplerSliceState & DuckDbSliceState
-  >((set, get) => {
-    const keplerReducer = keplerGlReducer.initialState(initialKeplerState);
+    BaseRoomStoreState & KeplerSliceState & DbSliceState
+  >((set, get, _store) => {
+    function getDefaultDbSchema(): KeplerDbSchemaReference | undefined {
+      const currentDatabase = get().db.currentDatabase;
+      const currentSchema = get().db.currentSchema;
+
+      if (!currentDatabase || !currentSchema) {
+        return undefined;
+      }
+
+      return {
+        database: currentDatabase,
+        schema: currentSchema,
+      };
+    }
+
+    const resolvedTableSelection: KeplerTableSelectionOptions = {
+      ...tableSelection,
+    };
+
+    if (!resolvedTableSelection.defaultDbSchema) {
+      resolvedTableSelection.defaultDbSchema = getDefaultDbSchema;
+    }
+
+    function resolveInitialMapKeplerState(
+      context: Omit<
+        CreateInitialMapKeplerStateContext,
+        'defaultInitialMapKeplerState'
+      >,
+    ): Partial<KeplerGlState> {
+      const resolvedTheme = getTheme();
+      const defaultInitialMapKeplerState =
+        createDefaultMapKeplerState(resolvedTheme);
+      return (
+        createInitialMapKeplerState?.({
+          ...context,
+          defaultInitialMapKeplerState,
+        }) ?? defaultInitialMapKeplerState
+      );
+    }
+
+    function createKeplerReducer(
+      context: Omit<
+        CreateInitialMapKeplerStateContext,
+        'defaultInitialMapKeplerState'
+      >,
+    ) {
+      return keplerGlReducer.initialState(
+        resolveInitialMapKeplerState(context),
+      );
+    }
+
+    function registerMapEntry(id: string) {
+      return registerEntry({id, ...basicKeplerProps});
+    }
+
+    const keplerReducer = createKeplerReducer({reason: 'initialize'});
     const middlewares: Middleware[] = [
       taskMiddleware,
       saveKeplerConfigMiddleware,
@@ -250,29 +534,55 @@ export function createKeplerSlice({
       kepler: {
         config: initialConfig,
         basicKeplerProps,
+        keplerTheme,
+        modalPortalTarget,
+        tableSelection: resolvedTableSelection,
         map: {},
+        isMapConfigPending: (mapId) => {
+          const map = get().kepler.map[mapId];
+          return map ? hasPendingKeplerConfig(map.visState) : false;
+        },
+        isRestoringConfig: false,
         dispatchAction: () => {},
         __reduxProviderStore: undefined,
         forwardDispatch: {},
 
         setConfig: (config: KeplerSliceConfig) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.kepler.config = config;
-            }),
-          );
-          updateMapReduxStates();
-          updateForwardDispatch();
-          updateMapConfigs();
-          get().kepler.syncKeplerDatasets();
+          void get()
+            .kepler.withConfigPersistencePaused(async () => {
+              const nextConfig = KeplerSliceConfig.parse(config);
+              configRestoreController.abort();
+              configRestoreController = new AbortController();
+              set((state) =>
+                produce(state, (draft) => {
+                  draft.kepler.config = nextConfig;
+                }),
+              );
+              updateMapReduxStates();
+              updateForwardDispatch();
+              updateMapConfigs();
+              await get().kepler.syncKeplerDatasets();
+            })
+            .catch((error) => {
+              console.error(
+                'setConfig: failed to restore Kepler config',
+                error,
+              );
+            });
         },
 
         async initialize() {
+          configRestoreController.abort();
+          configRestoreController = new AbortController();
           const config = get().kepler.config;
-          const currentMapId = config.currentMapId;
-          const keplerInitialState: KeplerGlReduxState = keplerReducer(
-            undefined,
-            registerEntry({id: currentMapId}),
+          const keplerInitialState = config.maps.reduce<KeplerGlReduxState>(
+            (mapState, map) =>
+              createKeplerReducer({
+                reason: 'initialize',
+                mapId: map.id,
+                name: map.name,
+              })(mapState, registerMapEntry(map.id)),
+            {},
           );
           set({
             kepler: {
@@ -295,12 +605,21 @@ export function createKeplerSlice({
                 // @ts-expect-error - Symbol.observable is not defined in the Redux type definitions
                 [Symbol.observable]: () => {},
               },
+              isRestoringConfig: get().kepler.isRestoringConfig,
             },
           });
           updateForwardDispatch();
-          updateMapConfigs();
-          await get().kepler.syncKeplerDatasets();
-          requestMapStyle(config.currentMapId);
+          await get().kepler.withConfigPersistencePaused(async () => {
+            updateMapConfigs();
+            await get().kepler.syncKeplerDatasets();
+          });
+          for (const mapId of Object.keys(get().kepler.map)) {
+            requestMapStyle(mapId);
+          }
+        },
+
+        async destroy() {
+          // no-op
         },
 
         addLayer: (mapId, layer, datasetId) => {
@@ -308,20 +627,159 @@ export function createKeplerSlice({
           get().kepler.dispatchAction(mapId, addLayerAction(layer, datasetId));
         },
 
-        addTableToMap: async (mapId, tableName, options = {}) => {
+        addFilter: (mapId, datasetId) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(mapId, addFilterAction(datasetId));
+        },
+
+        setFilter: (mapId, filterIdx, prop, value, valueIndex) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            setFilterAction(filterIdx, prop, value, valueIndex),
+          );
+        },
+
+        setFilterAnimationTime: (mapId, filterIdx, prop, value) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            setFilterAnimationTimeAction(filterIdx, prop, value),
+          );
+        },
+
+        setFilterAnimationWindow: (mapId, filterId, animationWindow) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            setFilterAnimationWindowAction({id: filterId, animationWindow}),
+          );
+        },
+
+        setFilterView: (mapId, filterIdx, view) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            setFilterViewAction(filterIdx, view),
+          );
+        },
+
+        updateTooltipFields: (mapId, datasetId, fieldNames) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          const mapState = get().kepler.map[mapId];
+          const tooltipConfig = mapState?.visState?.interactionConfig?.tooltip;
+          if (!tooltipConfig) return;
+          const currentFieldsToShow = tooltipConfig.config?.fieldsToShow || {};
+          const existingFields = currentFieldsToShow[datasetId] || [];
+          const existingByName = new Map(
+            existingFields.map(
+              (field: {name: string; format: string | null}) => [
+                field.name,
+                field,
+              ],
+            ),
+          );
+          const nextFields = Array.from(new Set(fieldNames)).map(
+            (name) => existingByName.get(name) ?? {name, format: null},
+          );
+          if (
+            nextFields.length === existingFields.length &&
+            nextFields.every(
+              (field, index) =>
+                field.name === existingFields[index]?.name &&
+                field.format === existingFields[index]?.format,
+            )
+          ) {
+            return;
+          }
+          get().kepler.dispatchAction(
+            mapId,
+            interactionConfigChange({
+              ...tooltipConfig,
+              config: {
+                ...tooltipConfig.config,
+                fieldsToShow: {
+                  ...currentFieldsToShow,
+                  [datasetId]: nextFields,
+                },
+              },
+            }),
+          );
+        },
+
+        toggleSplitMap: (mapId, index) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            toggleSplitMapAction(index as number),
+          );
+        },
+
+        toggleLayerForMap: (mapId, mapIndex, layerId) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(
+            mapId,
+            toggleLayerForMapAction(mapIndex, layerId),
+          );
+        },
+
+        addTableToMap: (async (
+          paramsOrMapId: AddTableToMapParams | string,
+          legacyTableName?: string,
+          legacyOptions?: AddDataToMapPayload['options'],
+          legacyConfig?: AddDataToMapPayload['config'],
+          legacyLoadOptions?: AddTableToMapLoadOptions,
+        ) => {
+          const {
+            mapId,
+            tableName,
+            options,
+            config,
+            datasetId: explicitDatasetId,
+            signal,
+          } = normalizeAddTableToMapParams(
+            paramsOrMapId,
+            legacyTableName,
+            legacyOptions,
+            legacyConfig,
+            legacyLoadOptions,
+          );
+          if (signal?.aborted) return;
+          const tableSelection = get().kepler.tableSelection;
+          const table = findKeplerTableForDatasetId(
+            get().db.tables,
+            tableName,
+            tableSelection,
+          );
+          const sqlTableName = table
+            ? getTableIdentity(table.table)
+            : tableName;
+          let datasetId = explicitDatasetId;
+          if (!datasetId && table) {
+            datasetId = getKeplerDatasetIdForTable(table, tableSelection);
+          }
+          if (!datasetId) {
+            datasetId =
+              getUnqualifiedSqlIdentifier(String(sqlTableName)) ?? tableName;
+          }
           const connector = await get().db.getConnector();
           const duckDbColumns = await getDuckDBColumnTypes(
             {
               query: (query: string) => connector.query(query).result,
             } as DatabaseConnection,
-            tableName,
+            sqlTableName,
           );
           const tableDuckDBTypes = getDuckDBColumnTypesMap(duckDbColumns);
           const adjustedQuery = castDuckDBTypesForKepler(
-            tableName,
+            sqlTableName,
             duckDbColumns,
           );
           const arrowResult = await connector.query(adjustedQuery).result;
+          // Sync supplies a restore-owned signal. Explicit add-table requests
+          // stay independent of restores unless their caller supplies a signal.
+          if (signal?.aborted || !get().kepler.map[mapId]) {
+            return;
+          }
           setGeoArrowWKBExtension(arrowResult, duckDbColumns);
           // TODO remove once DuckDB doesn't drop geoarrow metadata
           restoreGeoarrowMetadata(arrowResult, {});
@@ -331,112 +789,145 @@ export function createKeplerSlice({
           ).filter((col) => col) as arrow.Vector[];
 
           if (fields && cols) {
+            let label = tableName;
+            if (table) {
+              label = getKeplerTableLabel(table, tableSelection);
+            } else {
+              label =
+                getUnqualifiedSqlIdentifier(String(sqlTableName)) ?? tableName;
+            }
             const datasets: AddDataToMapPayload['datasets'] = {
               data: {fields, cols, rows: [], arrowTable: arrowResult},
-              info: {label: tableName, id: tableName},
-              metadata: {tableName},
+              info: {label, id: datasetId},
+              metadata: {tableName: sqlTableName},
             };
             get().kepler.dispatchAction(
               mapId,
-              addDataToMap({datasets, options}),
+              addDataToMap({datasets, options, config}),
             );
           }
-        },
+        }) as AddTableToMapFn,
 
-        getCurrentMap: () => {
-          return get().kepler.config.maps.find(
-            (map) => map.id === get().kepler.config.currentMapId,
-          );
-        },
-
-        setCurrentMapId: (mapId) => {
-          return set((state) =>
-            produce(state, (draft) => {
-              draft.kepler.config.currentMapId = mapId;
-            }),
-          );
-        },
-
-        createMap: (name) => {
-          const mapId = createId();
+        ensureMap: (mapId, name) => {
+          const now = Date.now();
           set((state) =>
             produce(state, (draft) => {
+              const existing = draft.kepler.config.maps.find(
+                (map) => map.id === mapId,
+              );
+              if (existing) {
+                if (name && existing.name !== name) {
+                  existing.name = name;
+                }
+                return;
+              }
               draft.kepler.config.maps.push({
                 id: mapId,
                 name: name ?? 'Untitled Map',
+                lastOpenedAt: now,
               });
-              draft.kepler.config.openTabs.push(mapId);
-              draft.kepler.map = keplerReducer(
-                draft.kepler.map,
-                registerEntry({id: mapId}),
-              );
+              draft.kepler.map = createKeplerReducer({
+                reason: 'create-map',
+                mapId,
+                name,
+              })(draft.kepler.map, registerMapEntry(mapId));
               draft.kepler.forwardDispatch[mapId] = getForwardDispatch(mapId);
             }),
           );
+          if (!get().kepler.map[mapId]) {
+            get().kepler.registerKeplerMapIfNotExists(mapId);
+          }
           requestMapStyle(mapId);
           get().kepler.syncKeplerDatasets();
+        },
+
+        createMap: (name, options) => {
+          const mapId = options?.id ?? createId();
+          get().kepler.ensureMap(mapId, name);
           return mapId;
         },
 
         async syncKeplerDatasets() {
-          for (const mapId of Object.keys(get().kepler.map)) {
-            const keplerDatasets = get().kepler.map[mapId]?.visState.datasets;
-            for (const {table} of get().db.tables) {
-              // TODO: remove this once getDuckDBColumnTypesMap can handle qualified table names
-              // const qualifiedTable = table.toString();
-              if (
-                // !table.schema?.startsWith('__') && // skip internal schemas
-                // !keplerDatasets?.[qualifiedTable]
-                table.schema === 'main' &&
-                !keplerDatasets?.[table.table]
-              ) {
-                await get().kepler.addTableToMap(mapId, table.table, {
-                  autoCreateLayers: false,
-                  centerMap: false,
-                });
-              }
-            }
+          if (syncKeplerPromise) {
+            pendingKeplerSync = true;
+            return syncKeplerPromise;
           }
+          // Publish the promise before work starts, including an empty sync.
+          syncKeplerPromise = Promise.resolve().then(async () => {
+            try {
+              // Loop until no new sync was requested during the current pass.
+              // Each iteration reads a fresh snapshot of db.tables and kepler.map,
+              // so tables/maps added concurrently are picked up on the next pass.
+              do {
+                pendingKeplerSync = false;
+                const {signal} = configRestoreController;
+                maps: for (const mapId of Object.keys(get().kepler.map)) {
+                  const mapState = get().kepler.map[mapId];
+                  if (!mapState) continue;
+                  const keplerDatasets = mapState.visState.datasets;
+
+                  const referencedDataIds = getReferencedKeplerDatasetIds(
+                    mapState.visState,
+                  );
+
+                  const availableTables = get().db.tables;
+
+                  for (const dataId of referencedDataIds) {
+                    // Don't start another query from a superseded snapshot.
+                    if (signal.aborted) {
+                      pendingKeplerSync = true;
+                      break maps;
+                    }
+                    if (keplerDatasets?.[dataId]) {
+                      continue;
+                    }
+                    const table = findKeplerTableForDatasetId(
+                      availableTables,
+                      dataId,
+                      get().kepler.tableSelection,
+                    );
+                    if (!table) {
+                      continue;
+                    }
+                    try {
+                      await get().kepler.addTableToMap({
+                        mapId,
+                        tableName: dataId,
+                        options: {
+                          autoCreateLayers: false,
+                          centerMap: false,
+                        },
+                        datasetId: dataId,
+                        signal,
+                      });
+                    } catch (e) {
+                      console.error(
+                        'syncKeplerDatasets: addTableToMap failed',
+                        {
+                          dataId,
+                          e,
+                        },
+                      );
+                    }
+                  }
+                }
+              } while (pendingKeplerSync);
+            } finally {
+              // Release ownership before this run resolves. A caller arriving
+              // after the final loop check must start a new run, not join one
+              // that can no longer observe pendingKeplerSync.
+              syncKeplerPromise = null;
+            }
+          });
+          return syncKeplerPromise;
         },
 
         deleteMap: (mapId) => {
           set((state) =>
             produce(state, (draft) => {
-              const openTabs = draft.kepler.config.openTabs;
               const maps = draft.kepler.config.maps;
-              const wasCurrentMap = draft.kepler.config.currentMapId === mapId;
-              const deletingIndex = openTabs.indexOf(mapId);
 
-              // Remove from maps and openTabs
               draft.kepler.config.maps = maps.filter((map) => map.id !== mapId);
-              draft.kepler.config.openTabs = openTabs.filter(
-                (id) => id !== mapId,
-              );
-
-              // If we deleted the current map, select another one
-              if (wasCurrentMap) {
-                const newOpenTabs = draft.kepler.config.openTabs;
-                const remainingMaps = draft.kepler.config.maps;
-
-                if (newOpenTabs.length > 0) {
-                  // Select from remaining open tabs
-                  const newIndex =
-                    deletingIndex === 0
-                      ? 0
-                      : Math.min(deletingIndex - 1, newOpenTabs.length - 1);
-                  const newSelectedId = newOpenTabs[newIndex];
-                  if (newSelectedId) {
-                    draft.kepler.config.currentMapId = newSelectedId;
-                  }
-                } else if (remainingMaps.length > 0) {
-                  // No open tabs left, open a closed map
-                  const mapToOpen = remainingMaps[0];
-                  if (mapToOpen) {
-                    draft.kepler.config.openTabs.push(mapToOpen.id);
-                    draft.kepler.config.currentMapId = mapToOpen.id;
-                  }
-                }
-              }
 
               draft.kepler.map = keplerReducer(
                 draft.kepler.map,
@@ -448,6 +939,69 @@ export function createKeplerSlice({
           );
         },
 
+        duplicateMap: async (mapId) => {
+          // Ensure the map's redux state is registered, consistent with other kepler actions
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+
+          const sourceMap = get().kepler.config.maps.find(
+            (m) => m.id === mapId,
+          );
+          const sourceMapState = get().kepler.map[mapId];
+          if (!sourceMap || !sourceMapState) {
+            return {
+              success: false,
+              message: 'Unable to duplicate map: source map or state not found',
+              code: 'source-map-not-found',
+            };
+          }
+
+          // Like autosave, duplication must not serialize incomplete state.
+          // A pending map's preserved config includes its unresolved references.
+          const savedConfig = hasPendingKeplerConfig(sourceMapState.visState)
+            ? structuredClone(sourceMap.config)
+            : KeplerGLSchemaManager.getConfigToSave(sourceMapState);
+          if (!savedConfig) {
+            return {
+              success: false,
+              message:
+                'Unable to duplicate map: source config is pending and no saved config is available',
+              code: 'source-map-config-pending',
+            };
+          }
+
+          const newMapId = createId();
+          const now = Date.now();
+
+          set((state) =>
+            produce(state, (draft) => {
+              draft.kepler.config.maps.push({
+                id: newMapId,
+                name: `Copy of ${sourceMap.name}`,
+                config: savedConfig as any,
+                lastOpenedAt: now,
+              });
+              // Register the new map with empty state, then load the config
+              draft.kepler.map = createKeplerReducer({
+                reason: 'duplicate-map',
+                mapId: newMapId,
+                name: `Copy of ${sourceMap.name}`,
+              })(draft.kepler.map, registerMapEntry(newMapId));
+              draft.kepler.forwardDispatch[newMapId] =
+                getForwardDispatch(newMapId);
+            }),
+          );
+
+          // Load the saved config into the new map
+          get().kepler.addConfigToMap(newMapId, savedConfig as any);
+          requestMapStyle(newMapId);
+          get().kepler.syncKeplerDatasets();
+
+          return {
+            success: true,
+            message: 'Map duplicated successfully',
+          };
+        },
+
         renameMap: (mapId, name) => {
           set((state) =>
             produce(state, (draft) => {
@@ -457,30 +1011,6 @@ export function createKeplerSlice({
               if (map) {
                 map.name = name;
               }
-            }),
-          );
-        },
-
-        closeMap: (mapId) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const openTabs = draft.kepler.config.openTabs;
-
-              // Don't close if it's the last open tab (defensive check, TabStrip also prevents this)
-              if (openTabs.length <= 1) return;
-
-              // Just remove from openTabs - TabStrip handles selection via onSelect before calling onClose
-              draft.kepler.config.openTabs = openTabs.filter(
-                (id) => id !== mapId,
-              );
-            }),
-          );
-        },
-
-        setOpenTabs: (tabIds) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.kepler.config.openTabs = tabIds;
             }),
           );
         },
@@ -548,15 +1078,59 @@ export function createKeplerSlice({
           );
         },
 
+        withConfigPersistencePaused: async (fn) => {
+          configRestoreDepth += 1;
+          if (configRestoreDepth === 1) {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.kepler.isRestoringConfig = true;
+              }),
+            );
+          }
+
+          const restorePromise = (async () => {
+            try {
+              return await fn();
+            } finally {
+              // Kepler restore actions can enqueue follow-up work through
+              // react-palm; let those actions settle before persisted config
+              // writes are allowed again.
+              await new Promise((resolve) => setTimeout(resolve, 0));
+              await new Promise((resolve) => setTimeout(resolve, 0));
+              configRestoreDepth -= 1;
+              if (configRestoreDepth === 0) {
+                set((state) =>
+                  produce(state, (draft) => {
+                    draft.kepler.isRestoringConfig = false;
+                  }),
+                );
+              }
+            }
+          })();
+
+          configRestorePromises.add(restorePromise);
+          try {
+            return await restorePromise;
+          } finally {
+            configRestorePromises.delete(restorePromise);
+          }
+        },
+
+        waitForConfigRestore: async () => {
+          while (configRestorePromises.size > 0) {
+            await Promise.allSettled(Array.from(configRestorePromises));
+          }
+        },
+
         registerKeplerMapIfNotExists(mapId: string) {
           if (!get().kepler.map[mapId]) {
             set({
               kepler: {
                 ...get().kepler,
-                map: keplerReducer(
-                  get().kepler.map,
-                  registerEntry({id: mapId}),
-                ),
+                map: createKeplerReducer({
+                  reason: 'register-map',
+                  mapId,
+                })(get().kepler.map, registerMapEntry(mapId)),
                 forwardDispatch: {
                   ...get().kepler.forwardDispatch,
                   [mapId]: getForwardDispatch(mapId),
@@ -596,7 +1170,14 @@ export function createKeplerSlice({
           const mapId = hasMapId(action) ? action.payload.meta._id_ : undefined;
           if (!mapId) throw new Error('Map ID not found in action payload');
           const result = next(action);
-          if (!SKIP_AUTO_SAVE_ACTIONS.includes(action.type) && mapId) {
+          const mapState = get().kepler.map[mapId];
+          if (
+            configRestoreDepth === 0 &&
+            !get().kepler.isRestoringConfig &&
+            !SKIP_AUTO_SAVE_ACTIONS.includes(action.type) &&
+            mapState &&
+            !hasPendingKeplerConfig(mapState.visState)
+          ) {
             // save kepler config to store
             set((state) =>
               produce(state, (draft) => {
@@ -641,10 +1222,11 @@ export function createKeplerSlice({
           // Register redux state of maps that are not in the config
           for (const map of draft.kepler.config.maps) {
             if (!draft.kepler.map[map.id]) {
-              draft.kepler.map = keplerReducer(
-                draft.kepler.map,
-                registerEntry({id: map.id}),
-              );
+              draft.kepler.map = createKeplerReducer({
+                reason: 'sync-config',
+                mapId: map.id,
+                name: map.name,
+              })(draft.kepler.map, registerMapEntry(map.id));
               draft.kepler.forwardDispatch[map.id] = getForwardDispatch(map.id);
             }
           }
@@ -654,10 +1236,7 @@ export function createKeplerSlice({
 
     function updateForwardDispatch() {
       const config = get().kepler.config;
-      const currentMapId = config.currentMapId;
-      const forwardDispatch = {
-        [currentMapId]: getForwardDispatch(currentMapId),
-      };
+      const forwardDispatch: Record<string, Dispatch<KeplerAction>> = {};
       if (config) {
         for (const {id} of config.maps) {
           forwardDispatch[id] = getForwardDispatch(id);

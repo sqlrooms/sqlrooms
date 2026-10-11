@@ -1,8 +1,8 @@
 <script setup>
 import DefaultTheme from 'vitepress/theme';
-import {ref, onMounted} from 'vue';
+import {computed, ref, onMounted} from 'vue';
 import {useData} from 'vitepress';
-const {frontmatter} = useData();
+const {frontmatter, page, theme} = useData();
 import CaseStudiesCarousel from './CaseStudiesCarousel.vue';
 
 const SHOW_BANNER = false; // Set to false to hide banner and margin everywhere
@@ -10,6 +10,12 @@ const SHOW_BANNER = false; // Set to false to hide banner and margin everywhere
 const BANNER_ID = 'sqlrooms-launch-2025';
 const open = ref(true);
 const currentYear = new Date().getFullYear();
+const isApiReference = computed(
+  () =>
+    page.value.relativePath === 'packages.md' ||
+    page.value.relativePath.startsWith('api/'),
+);
+const apiRelease = computed(() => theme.value.apiRelease);
 
 onMounted(() => {
   if (localStorage.getItem(`sqlrooms-banner-${BANNER_ID}`) === 'true') {
@@ -49,6 +55,18 @@ function dismiss() {
       <button @click="dismiss" aria-label="Close banner">&times;</button>
     </div>
     <DefaultTheme.Layout>
+      <template #doc-before>
+        <aside v-if="isApiReference" class="api-release-notice">
+          <span>
+            API reference for SQLRooms
+            <a :href="apiRelease.url">v{{ apiRelease.version }}</a>
+          </span>
+          <span v-if="apiRelease.prerelease" class="api-release-badge">
+            prerelease
+          </span>
+        </aside>
+      </template>
+
       <template #home-hero-image>
         <video
           class="video"
@@ -72,46 +90,155 @@ function dismiss() {
 
       <template #layout-bottom>
         <CaseStudiesCarousel v-if="frontmatter.layout === 'home'" />
-        <div class="sponsors-footer">
-          <div class="sponsor-item">
-            Supported by
-            <a
-              href="https://location.foursquare.com"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img
-                width="100"
-                height="32"
-                src="/public/foursquare-logo.svg"
-                alt="Foursquare Logo"
-                decoding="async"
-                class="foursquare-logo"
-              />
-            </a>
+        <div class="site-footer">
+          <div class="sponsors-footer">
+            <div class="sponsor-item">
+              <a
+                href="https://www.openvisualization.org/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  width="132"
+                  height="40"
+                  src="/openvis.svg"
+                  alt="Open Visualization Logo"
+                  decoding="async"
+                  class="openvis-logo openvis-light"
+                />
+                <img
+                  width="132"
+                  height="40"
+                  src="/openvis-white.svg"
+                  alt="Open Visualization Logo"
+                  decoding="async"
+                  class="openvis-logo openvis-dark"
+                />
+              </a>
+            </div>
+            <div class="sponsor-item">
+              <a
+                href="https://openjsf.org"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  width="126"
+                  height="40"
+                  src="/openjsf-logo.svg"
+                  alt="OpenJS Foundation Logo"
+                  decoding="async"
+                  class="openjsf-logo openjsf-light"
+                />
+                <img
+                  width="127"
+                  height="40"
+                  src="/openjs-foundation-logo-horizontal-white.svg"
+                  alt="OpenJS Foundation Logo"
+                  decoding="async"
+                  class="openjsf-logo openjsf-dark"
+                />
+              </a>
+            </div>
+            <div class="sponsor-item">
+              <a
+                href="https://vis.gl/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="visgl-link"
+              >
+                <img
+                  width="117"
+                  height="30"
+                  src="/visgl-logo-color.svg"
+                  alt="VIS.GL Logo"
+                  decoding="async"
+                  class="visgl-logo visgl-light"
+                />
+                <img
+                  width="117"
+                  height="30"
+                  src="/visgl-logo-color-dark_background.svg"
+                  alt="VIS.GL Logo"
+                  decoding="async"
+                  class="visgl-logo visgl-dark"
+                />
+              </a>
+            </div>
+            <div class="sponsor-item">
+              Supported by
+              <a
+                href="https://location.foursquare.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  width="100"
+                  height="32"
+                  src="/foursquare-logo.svg"
+                  alt="Foursquare Logo"
+                  decoding="async"
+                  class="foursquare-logo"
+                />
+              </a>
+            </div>
+            <div class="sponsor-item horizontal">
+              Deploys by
+              <a
+                href="https://www.netlify.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  src="https://www.netlify.com/assets/badges/netlify-badge-light.svg"
+                  alt="Deploys by Netlify"
+                  class="netlify-logo netlify-light"
+                />
+                <img
+                  src="https://www.netlify.com/assets/badges/netlify-badge-dark.svg"
+                  alt="Deploys by Netlify"
+                  class="netlify-logo netlify-dark"
+                />
+              </a>
+            </div>
           </div>
-          <div class="sponsor-item horizontal">
-            Deploys by
-            <a
-              href="https://www.netlify.com"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img
-                src="https://www.netlify.com/v3/img/components/netlify-light.svg"
-                alt="Deploys by Netlify"
-                class="netlify-logo netlify-light"
-              />
-              <img
-                src="https://www.netlify.com/v3/img/components/netlify-dark.svg"
-                alt="Deploys by Netlify"
-                class="netlify-logo netlify-dark"
-              />
-            </a>
+          <div class="footer__copyright">
+            <div class="footer-copy">
+              Copyright <a href="https://openjsf.org">OpenJS Foundation</a> and
+              vis.gl contributors. All rights reserved. The
+              <a href="https://openjsf.org">OpenJS Foundation</a> has registered
+              trademarks and uses trademarks. For a list of trademarks of the
+              <a href="https://openjsf.org">OpenJS Foundation</a>, please see
+              our
+              <a href="https://trademark-policy.openjsf.org"
+                >Trademark Policy</a
+              >
+              and
+              <a href="https://trademark-list.openjsf.org">Trademark List</a>.
+              Trademarks and logos not indicated on the
+              <a href="https://trademark-list.openjsf.org"
+                >list of OpenJS Foundation trademarks</a
+              >
+              are trademarks™ or registered® trademarks of their respective
+              holders. Use of them does not imply any affiliation with or
+              endorsement by them.<br /><br /><a href="https://openjsf.org"
+                >The OpenJS Foundation</a
+              >
+              | <a href="https://terms-of-use.openjsf.org">Terms of Use</a> |
+              <a href="https://privacy-policy.openjsf.org">Privacy Policy</a> |
+              <a href="https://bylaws.openjsf.org">Bylaws</a> |
+              <a href="https://code-of-conduct.openjsf.org">Code of Conduct</a>
+              |
+              <a href="https://trademark-policy.openjsf.org"
+                >Trademark Policy</a
+              >
+              |
+              <a href="https://trademark-list.openjsf.org">Trademark List</a> |
+              <a href="https://www.linuxfoundation.org/cookies"
+                >Cookie Policy</a
+              >
+            </div>
           </div>
-        </div>
-        <div class="copyright-row">
-          Copyright © {{ currentYear }} SQLRooms contributors
         </div>
       </template>
     </DefaultTheme.Layout>
@@ -143,6 +270,44 @@ html:not(.dark) .netlify-dark {
 .dark .netlify-light {
   display: none;
 }
+
+html:not(.dark) .openvis-dark {
+  display: none !important;
+}
+
+.dark .openvis-light {
+  display: none !important;
+}
+
+html:not(.dark) .openjsf-dark {
+  display: none !important;
+}
+
+.dark .openjsf-light {
+  display: none !important;
+}
+
+html:not(.dark) .visgl-dark {
+  display: none !important;
+}
+
+.dark .visgl-light {
+  display: none !important;
+}
+
+@media (min-width: 960px) {
+  .VPContent.has-sidebar ~ .site-footer {
+    margin-left: var(--vp-sidebar-width);
+  }
+}
+
+@media (min-width: 1440px) {
+  .VPContent.has-sidebar ~ .site-footer {
+    margin-left: calc(
+      (100vw - var(--vp-layout-max-width)) / 2 + var(--vp-sidebar-width)
+    );
+  }
+}
 </style>
 
 <style scoped>
@@ -167,6 +332,7 @@ html:not(.dark) .video.dark {
 .sponsors-footer {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   gap: 3rem;
   align-items: center;
   justify-content: center;
@@ -191,12 +357,56 @@ html:not(.dark) .video.dark {
   align-items: center;
 }
 
-.copyright-row {
+.openjsf-logo {
+  display: block;
+  height: 40px;
+  width: auto;
+}
+
+.openvis-logo {
+  display: block;
+  height: 40px;
+  width: auto;
+}
+
+.visgl-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.visgl-link:hover {
+  text-decoration: none;
+}
+
+.visgl-logo {
+  display: block;
+  height: 30px;
+  width: auto;
+}
+
+.footer__copyright {
   text-align: center;
   font-size: 0.75rem;
   color: var(--vp-c-text-2);
-  margin-top: 1rem;
-  padding-bottom: 2rem;
+  border-top: 1px solid var(--vp-c-divider);
+  padding: 2rem 1.5rem;
+}
+
+.footer-copy {
+  max-width: 920px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.footer-copy a {
+  color: var(--vp-c-brand-1);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.footer-copy a:hover {
+  text-decoration: underline;
 }
 
 .sponsors-footer a {

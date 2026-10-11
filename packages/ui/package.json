@@ -1,28 +1,27 @@
 {
   "name": "@sqlrooms/ui",
-  "version": "0.27.0-rc.2",
-  "type": "module",
-  "sideEffects": false,
-  "author": "SQLRooms Contributors",
-  "license": "MIT",
+  "version": "0.29.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sqlrooms/sqlrooms.git"
+    "url": "git+https://github.com/sqlrooms/sqlrooms.git"
   },
+  "license": "MIT",
+  "author": "SQLRooms Contributors",
+  "sideEffects": false,
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
     "dist",
     "tailwind-preset.css"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "module": "dist/index.js",
   "scripts": {
-    "dev": "tsc -w",
     "build": "tsc",
+    "dev": "tsc -w",
     "lint": "eslint .",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --watch",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
   },
@@ -37,6 +36,7 @@
     "@radix-ui/react-context-menu": "^2.2.16",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-hover-card": "^1.1.15",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-menubar": "^1.1.16",
     "@radix-ui/react-popover": "^1.1.15",
@@ -49,7 +49,6 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
-    "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
@@ -61,14 +60,22 @@
     "lucide-react": "^0.556.0",
     "react-day-picker": "^8.10.1",
     "react-hook-form": "^7.63.0",
-    "react-resizable-panels": "^3.0.6",
+    "react-resizable-panels": "^4.12.1",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "usehooks-ts": "^3.1.1",
     "vaul": "^1.1.2"
   },
+  "devDependencies": {
+    "@jest/globals": "^30.3.0",
+    "jsdom": "^29.1.1",
+    "ts-jest": "^29.4.4"
+  },
   "peerDependencies": {
-    "autoprefixer": "^10.4.20",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^4.1.18"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

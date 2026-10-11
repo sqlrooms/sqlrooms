@@ -1,44 +1,32 @@
 import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ChevronsLeftIcon as ChevronDoubleLeftIcon,
-  ChevronsRightIcon as ChevronDoubleRightIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from 'lucide-react';
-import {
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Badge,
+  Checkbox,
+  cn,
+  resolveFontSizeClass,
+  ScrollArea,
+  ScrollBar,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  Badge,
-  cn,
-  ScrollArea,
-  ScrollBar,
-  resolveFontSizeClass,
 } from '@sqlrooms/ui';
-import {formatCount} from '@sqlrooms/utils';
 import {
   ColumnDef,
-  PaginationState,
-  SortingState,
-  Row,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
+  PaginationState,
+  Row,
+  RowSelectionState,
+  SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import {useEffect, useMemo, useState} from 'react';
+import {ChevronDownIcon, ChevronUpIcon} from 'lucide-react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ArrowColumnMeta} from './useArrowDataTable';
+import {DataTablePaginatedFooter} from './DataTablePaginatedFooter';
 
 export type DataTablePaginatedProps<Data extends object> = {
   className?: string;
@@ -68,14 +56,24 @@ export type DataTablePaginatedProps<Data extends object> = {
     row: Row<Data>;
     event: React.MouseEvent<HTMLTableRowElement>;
   }) => void;
+  /**
+   * Enables row selection with checkboxes. When true, a checkbox column is added.
+   */
+  enableRowSelection?: boolean;
+  /**
+   * Controlled row selection state. Keys are row indices, values are selection status.
+   */
+  rowSelection?: RowSelectionState;
+  /**
+   * Called when row selection changes.
+   */
+  onRowSelectionChange?: (rowSelection: RowSelectionState) => void;
 };
 
 /**
- * Data table with pagination, sorting, and custom actions.
- * @param props
- * @returns
+ * Data table with pagination, sorting, row selection, and custom actions.
  */
-export default function DataTablePaginated<Data extends object>({
+export function DataTablePaginated<Data extends object>({
   className,
   fontSize = 'text-xs',
   data,
@@ -89,19 +87,58 @@ export default function DataTablePaginated<Data extends object>({
   isFetching,
   onRowClick,
   onRowDoubleClick,
+  enableRowSelection,
+  rowSelection,
+  onRowSelectionChange,
 }: DataTablePaginatedProps<Data>) {
   const defaultData = useMemo(() => [], []);
+  const [internalRowSelection, setInternalRowSelection] =
+    useState<RowSelectionState>({});
+
+  // Use controlled or uncontrolled row selection
+  const currentRowSelection = rowSelection ?? internalRowSelection;
+  const currentRowSelectionRef = useRef(currentRowSelection);
+
+  useEffect(() => {
+    currentRowSelectionRef.current = currentRowSelection;
+  }, [currentRowSelection]);
+
+  const handleRowSelectionChange = useCallback(
+    (
+      updaterOrValue:
+        | RowSelectionState
+        | ((old: RowSelectionState) => RowSelectionState),
+    ) => {
+      if (onRowSelectionChange) {
+        const newValue =
+          typeof updaterOrValue === 'function'
+            ? updaterOrValue(currentRowSelectionRef.current)
+            : updaterOrValue;
+        onRowSelectionChange(newValue);
+      } else {
+        setInternalRowSelection(updaterOrValue);
+      }
+    },
+    [onRowSelectionChange, setInternalRowSelection],
+  );
+
   const fontSizeClass = resolveFontSizeClass(fontSize);
   const pageCount =
     pagination && numRows !== undefined
       ? Math.ceil(numRows / pagination.pageSize)
       : undefined;
 
+  // TanStack's table hook returns non-memoizable functions by design.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: (data ?? defaultData) as any[],
     columns: columns ?? [],
     pageCount: pageCount ?? 0,
     getSortedRowModel: getSortedRowModel(),
+    enableRowSelection: enableRowSelection ?? false,
+    onRowSelectionChange: (update) => {
+      handleRowSelectionChange(update);
+    },
     onSortingChange: (update) => {
       if (onSortingChange && sorting && typeof update === 'function') {
         onSortingChange(update(sorting));
@@ -117,27 +154,26 @@ export default function DataTablePaginated<Data extends object>({
     state: {
       pagination,
       sorting,
+      rowSelection: currentRowSelection,
     },
   });
 
-  const [internalPageIndex, setInternalPageIndex] = useState(
-    pagination?.pageIndex ?? 0,
-  );
-  useEffect(() => {
-    setInternalPageIndex(pagination?.pageIndex ?? 0);
-  }, [pagination?.pageIndex]);
-
   return (
-    <div className={cn(`relative flex h-full w-full flex-col`, className)}>
-      <div className="border-border flex-1 overflow-hidden border font-mono">
+    <div
+      className={cn(`relative flex h-full w-full flex-col border`, className)}
+    >
+      <div
+        className={cn(
+          'flex-1 overflow-hidden font-mono',
+          isFetching && 'pointer-events-none opacity-50',
+        )}
+      >
         <ScrollArea className="h-full overflow-auto">
-          <Table disableWrapper>
-            <TableHeader>
+          <Table disableWrapper className="border-separate border-spacing-0">
+            <TableHeader className="[&_tr]:border-b-0!">
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  <TableHead
-                    className={`bg-background sticky left-0 top-[-1px] z-10 w-auto whitespace-nowrap border-r py-2 text-center`}
-                  >
+                <TableRow key={headerGroup.id} className="border-b-0!">
+                  <TableHead className="bg-background sticky top-0 left-0 z-10 h-auto w-auto min-w-[40px] border-r border-b py-[3px] text-center whitespace-nowrap">
                     {isFetching ? (
                       <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
                     ) : null}
@@ -150,7 +186,7 @@ export default function DataTablePaginated<Data extends object>({
                         key={header.id}
                         colSpan={header.colSpan}
                         className={cn(
-                          'bg-background hover:bg-muted sticky top-[-1px] z-10 w-auto whitespace-nowrap border-r py-2',
+                          'bg-background hover:bg-muted sticky top-0 z-10 h-auto w-auto border-r border-b py-[3px] whitespace-nowrap',
                           pagination ? 'cursor-pointer' : '',
                           meta?.isNumeric ? 'text-right' : 'text-left',
                           fontSizeClass,
@@ -184,7 +220,7 @@ export default function DataTablePaginated<Data extends object>({
                       </TableHead>
                     );
                   })}
-                  <TableHead className="bg-background sticky top-0 w-full whitespace-nowrap border-r border-t py-2" />
+                  <TableHead className="bg-background sticky top-0 h-auto w-full border-b py-[3px] whitespace-nowrap" />
                 </TableRow>
               ))}
             </TableHeader>
@@ -192,22 +228,46 @@ export default function DataTablePaginated<Data extends object>({
               {table.getRowModel().rows.map((row, i) => (
                 <TableRow
                   key={row.id}
-                  className="hover:bg-muted bg-background"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    onRowClick?.({row: row as Row<Data>, event});
-                  }}
-                  onDoubleClick={(event) => {
-                    event.preventDefault();
-                    onRowDoubleClick?.({row: row as Row<Data>, event});
-                  }}
+                  data-state={row.getIsSelected() ? 'selected' : undefined}
+                  className={cn(
+                    'hover:bg-muted bg-background [&>td]:border-b last:[&>td]:border-b-0',
+                    row.getIsSelected() && 'bg-muted',
+                  )}
+                  onClick={
+                    onRowClick
+                      ? (event) => {
+                          event.preventDefault();
+                          onRowClick({row: row as Row<Data>, event});
+                        }
+                      : undefined
+                  }
+                  onDoubleClick={
+                    onRowDoubleClick
+                      ? (event) => {
+                          event.preventDefault();
+                          onRowDoubleClick({row: row as Row<Data>, event});
+                        }
+                      : undefined
+                  }
                 >
                   <TableCell
-                    className={`bg-background text-muted-foreground sticky left-0 border-r text-center ${fontSizeClass}`}
+                    className={cn(
+                      'bg-background text-muted-foreground sticky left-0 min-w-[40px] border-r text-center',
+                      fontSizeClass,
+                    )}
                   >
-                    {pagination
-                      ? `${pagination.pageIndex * pagination.pageSize + i + 1}`
-                      : `${i + 1}`}
+                    {enableRowSelection ? (
+                      <Checkbox
+                        checked={row.getIsSelected()}
+                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        onClick={(event) => event.stopPropagation()}
+                        aria-label="Select row"
+                      />
+                    ) : pagination ? (
+                      `${pagination.pageIndex * pagination.pageSize + i + 1}`
+                    ) : (
+                      `${i + 1}`
+                    )}
                   </TableCell>
                   {row.getVisibleCells().map((cell) => {
                     const meta = cell.column.columnDef.meta as ArrowColumnMeta;
@@ -215,7 +275,7 @@ export default function DataTablePaginated<Data extends object>({
                       <TableCell
                         key={cell.id}
                         className={cn(
-                          'max-w-[500px] overflow-hidden truncate border-r px-7',
+                          'max-w-[500px] truncate overflow-hidden border-r px-7',
                           fontSizeClass,
                           meta?.isNumeric ? 'text-right' : 'text-left',
                         )}
@@ -227,7 +287,7 @@ export default function DataTablePaginated<Data extends object>({
                       </TableCell>
                     );
                   })}
-                  <TableCell className="border-r">&nbsp;</TableCell>
+                  <TableCell>&nbsp;</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -236,105 +296,15 @@ export default function DataTablePaginated<Data extends object>({
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </div>
-      {pagination || footerActions ? (
-        <div className="bg-background sticky bottom-0 left-0 flex flex-wrap items-center gap-2 border border-t-0 p-2">
-          {pagination ? (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => table.setPageIndex(0)}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <ChevronDoubleLeftIcon className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <ChevronLeftIcon className="h-4 w-4" />
-                </Button>
-                <div
-                  className={`ml-1 flex items-center gap-1 ${fontSizeClass}`}
-                >
-                  <div>Page</div>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={table.getPageCount()}
-                    className="h-8 w-16"
-                    value={internalPageIndex + 1}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value) {
-                        const page = Math.max(
-                          0,
-                          Math.min(table.getPageCount() - 1, Number(value) - 1),
-                        );
-                        setInternalPageIndex(page);
-                      }
-                    }}
-                    onBlur={() => {
-                      if (internalPageIndex !== pagination?.pageIndex) {
-                        table.setPageIndex(internalPageIndex);
-                      }
-                    }}
-                  />
-                  <div>{`of ${formatCount(table.getPageCount())}`}</div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <ChevronRightIcon className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <ChevronDoubleRightIcon className="h-4 w-4" />
-                </Button>
-                <Select
-                  value={String(table.getState().pagination.pageSize)}
-                  onValueChange={(value) => table.setPageSize(Number(value))}
-                >
-                  <SelectTrigger className="h-8 w-[110px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[10, 50, 100, 500, 1000].map((pageSize) => (
-                      <SelectItem key={pageSize} value={String(pageSize)}>
-                        {`${pageSize} rows`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1" />
-            </>
-          ) : null}
 
-          <>
-            {numRows !== undefined && isFinite(numRows) ? (
-              <div className={`font-normal ${fontSizeClass}`}>
-                {`${formatCount(numRows)} rows`}
-              </div>
-            ) : null}
-          </>
-          {footerActions}
-        </div>
-      ) : null}
-
-      {isFetching ? (
-        <div className="bg-background/80 absolute inset-0 animate-pulse" />
-      ) : null}
+      <DataTablePaginatedFooter
+        fontSize={fontSize}
+        isFetching={isFetching}
+        pagination={pagination}
+        numRows={numRows}
+        footerActions={footerActions}
+        table={table}
+      />
     </div>
   );
 }

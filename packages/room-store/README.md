@@ -1,122 +1,207 @@
-This package provides the core state management for SQLRooms using [Zustand](https://github.com/pmndrs/zustand). It is designed to be extensible, allowing you to build custom room experiences by creating and composing state "slices".
+Low-level state management primitives for SQLRooms, built on Zustand.
+
+Use this package when you want to build custom room state from scratch.  
+If you want DuckDB + layout + room shell out of the box, use `@sqlrooms/room-shell`.
 
 ## Installation
 
 ```bash
-npm install @sqlrooms/room-store @sqlrooms/room-config zod zustand
+npm install @sqlrooms/room-store
 ```
 
-## Core Concepts
+## What this package provides
 
-### RoomStore
+- `createRoomStore()` and `createRoomStoreCreator()`
+- base lifecycle slice: `createBaseRoomSlice()`
+- generic slice helper: `createSlice()`
+- React context/hooks: `RoomStateProvider`, `useBaseRoomStore`, `useRoomStoreApi`
+- persistence helpers: `persistSliceConfigs()`, `createPersistHelpers()`
+- room-store persistence glue: `createRoomStorePersistence()`
+- persistence controller: `createPersistenceController()`
 
-The `RoomStore` is a Zustand store that holds the entire state of a room. It is created by calling `createRoomStore` with a function that composes one or more slice creators.
+## Quick start
 
-### RoomState
-
-The `RoomState` is the object that defines the shape of the store. It includes state from the base room shell slice and any additional slices you add:
-
-- `room.config`: This holds the configuration of the room that is persisted. This is defined by a `zod` schema, often extending the `BaseRoomConfig` from `@sqlrooms/room-config`.
-- `room`: This holds the client-side state of the room, such as task progress, and provides actions for interacting with the room.
-- `db`: DuckDB database state and methods
-- `layout`: Layout configuration and panel definitions
-
-### Slices
-
-A slice is a piece of the room's state and its associated actions. You can create your own slices to add custom functionality to your room. The framework provides `createRoomShellSlice` to create the base slice with core room functionality. You combine this with your own slices inside the `createRoomStore` composer function.
-
-## Basic Usage
-
-Here's an example of how to create a room store with a custom feature slice.
-
-```typescript
+```tsx
 import {
+  BaseRoomStoreState,
+  createBaseRoomSlice,
   createRoomStore,
-  createRoomShellSlice,
-  RoomShellSliceState,
+  createSlice,
+  type StateCreator,
 } from '@sqlrooms/room-store';
-import {StateCreator} from 'zustand';
 
-// 1. Define the state and actions for your custom feature slice.
-export interface MyFeatureSlice {
-  activeChartId: string | null;
-  setActiveChartId: (id: string | null) => void;
+type CounterSliceState = {
+  counter: {
+    value: number;
+    increment: () => void;
+  };
+};
+
+function createCounterSlice(): StateCreator<CounterSliceState> {
+  return createSlice<CounterSliceState>((set, get) => ({
+    counter: {
+      value: 0,
+      increment: () =>
+        set((state) => ({
+          counter: {
+            ...state.counter,
+            value: get().counter.value + 1,
+          },
+        })),
+    },
+  }));
 }
 
-// 2. Create your custom slice.
-export const createMyFeatureSlice: StateCreator<MyFeatureSlice> = (set) => ({
-  activeChartId: null,
-  setActiveChartId: (id) => set({activeChartId: id}),
-});
+type RoomState = BaseRoomStoreState & CounterSliceState;
 
-// 3. Define the full state of your room, combining the base RoomShellSliceState
-// with your custom slice's state.
-export type MyRoomState = RoomShellSliceState & MyFeatureSlice;
-
-// 4. Create the room store by composing the base slice and your custom slice.
-export const {roomStore, useRoomStore} = createRoomStore<MyRoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
-    ...createRoomShellSlice({
-      config: {
-        // You can provide initial values for your config here
-        title: 'My First Room',
-        dataSources: [],
-      },
-      layout: {
-        config: {
-          // Layout configuration
-        },
-        panels: {
-          // Panel definitions
-        },
-      },
-    })(set, get, store),
-
-    // Add your custom slice to the store
-    ...createMyFeatureSlice(set, get, store),
+    ...createBaseRoomSlice()(set, get, store),
+    ...createCounterSlice()(set, get, store),
   }),
 );
-
-export {roomStore, useRoomStore};
 ```
 
-## Providing the Store
-
-To make the store available to your React components, you need to use the `RoomStateProvider` component at the root of your application.
+## React integration
 
 ```tsx
 import {RoomStateProvider} from '@sqlrooms/room-store';
-import {roomStore} from './my-room-store';
+import {roomStore} from './store';
 
-function App() {
+export function App() {
   return (
-    <RoomStateProvider value={roomStore}>
-      {/* Your room components go here */}
+    <RoomStateProvider roomStore={roomStore}>
+      <Dashboard />
     </RoomStateProvider>
   );
 }
 ```
 
-## Accessing the Store in Components
+```tsx
+import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
-You can use the `useRoomStore` hook returned by `createRoomStore` to access the room's state and actions from any component.
+function Dashboard() {
+  const value = useRoomStore((state) => state.counter.value);
+  const increment = useRoomStore((state) => state.counter.increment);
+
+  return <Button onClick={increment}>Count: {value}</Button>;
+}
+```
+
+## Imperative access
+
+Use `roomStore.getState()` for non-reactive code (events, timers, async jobs).
+
+```ts
+import {roomStore} from './store';
+
+export function incrementLater() {
+  setTimeout(() => {
+    roomStore.getState().counter.increment();
+  }, 500);
+}
+```
+
+## Guarded command invocation
+
+External and agent-facing integrations must use `invokeCommandWithPolicy()`
+instead of calling `roomStore.getState().commands.invokeCommand()` directly.
+The guarded helper re-checks that the command exists and is enabled immediately
+before execution. It also blocks high-risk or `requiresConfirmation` commands
+unless the caller supplies confirmation obtained from the user.
+
+```ts
+import {invokeCommandWithPolicy} from '@sqlrooms/room-store';
+
+const result = await invokeCommandWithPolicy(
+  roomStore,
+  'workspace.refresh',
+  undefined,
+  {
+    surface: 'mcp',
+    actor: 'assistant',
+    traceId: requestId,
+    metadata: {clientName: 'Example client'},
+    signal: abortController.signal,
+  },
+  {confirmed: false},
+);
+```
+
+Set `confirmed: true` only after explicit user confirmation. Omitting it, or
+passing `false`, fails closed with `command-confirmation-required` when the
+command requires confirmation. `createCommandCliAdapter()` and
+`createCommandMcpAdapter()` use the same guard and therefore have the same
+execution semantics.
+
+## Persistence
+
+For a Zustand room store with host-owned storage, prefer
+`createRoomStorePersistence()`. It composes `createPersistHelpers()` with a
+controller-backed `PersistStorage`, rehydrate saved-snapshot marking, optional
+room-store subscription, autosave, and final flush helpers. This is the default
+entry point for SQLRooms apps that persist room state to DuckDB, files, or another
+project-owned store. See the
+[Persistence developer guide](https://sqlrooms.org/persistence.html) for the
+full integration model, data flow, and examples.
+
+`persistSliceConfigs()` defaults to browser `localStorage`. If browser storage
+is `null`, cannot be accessed, or a raw storage operation fails, the room state
+continues to work in memory and persistence is skipped. Malformed persisted JSON
+and read failures from an explicit custom storage adapter still propagate
+through Zustand's `onRehydrateStorage` callback so hosts can distinguish a
+failed load from an empty store; custom write and removal failures are logged
+and skipped.
+
+Use the lower-level `createPersistenceController()` only when you need the same
+persistence policy outside a room store or Zustand persist. The controller is
+storage-agnostic: hosts provide `load()` and `save()` adapter functions, while
+SQLRooms handles hydration state, dirty tracking, scheduled saves, final flush,
+in-flight save coalescing, and observable save status.
+Failed writes retain the pending snapshot for retry. Calling `flush()` while a
+save is running waits for that write and any newer edits without scheduling a
+duplicate write.
+
+`createPersistHelpers()` still only handles schema-based partialization and
+rehydrate merging. Let `createRoomStorePersistence()` combine those helpers with
+save policy unless you have a custom integration that does not fit the room-store
+helper.
+
+```ts
+import {createRoomStorePersistence} from '@sqlrooms/room-store';
+
+const persistence = createRoomStorePersistence({
+  partialize: (state) => ({room: state.room.config}),
+  autosaveDelayMs: 300,
+  load: async () => loadProjectSnapshot(),
+  save: async (snapshot, metadata) => {
+    await saveProjectSnapshot(snapshot, metadata?.reason);
+  },
+});
+
+await persistence.hydrate();
+await persistence.flush('final-flush');
+```
+
+Inside components, `useRoomStoreApi()` gives you the raw store API:
 
 ```tsx
-import {useRoomStore} from './my-room-store';
+import {useRoomStoreApi} from '@sqlrooms/room-store';
+import {Button} from '@sqlrooms/ui';
 
-function RoomTitle() {
-  const title = useRoomStore((state) => state.room.config.title);
-  const activeChartId = useRoomStore((state) => state.activeChartId);
-  const setActiveChartId = useRoomStore((state) => state.setActiveChartId);
-
+function ResetButton() {
+  const store = useRoomStoreApi();
   return (
-    <div>
-      <h1>{title}</h1>
-      <p>Active Chart: {activeChartId || 'None'}</p>
-      <button onClick={() => setActiveChartId('chart-123')}>
-        Activate Chart
-      </button>
-    </div>
+    <Button
+      onClick={() => {
+        // Example: imperative read from store
+        const current = store.getState().room.initialized;
+        console.log('initialized', current);
+      }}
+    >
+      Inspect store
+    </Button>
   );
 }
 ```

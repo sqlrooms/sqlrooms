@@ -1,15 +1,16 @@
 {
-  "name": "sqlrooms-kepler",
+  "name": "kepler-example",
   "version": "0.0.0",
-  "type": "module",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "tsc -b && vite build",
+    "dev": "vite",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/kepler": "workspace:*",
@@ -26,19 +27,18 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@tailwindcss/vite": "^4.1.18",
     "@types/react": "19.1.7",
     "@types/react-dom": "19.1.6",
-    "@vitejs/plugin-react": "^4.3.4",
-    "autoprefixer": "^10.4.20",
+    "@vitejs/plugin-react": "^5.2.0",
     "esbuild-plugin-react-virtualized": "^1.0.4",
     "eslint": "^9.17.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.17",
+    "tailwindcss": "^4.1.18",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.18.2",
-    "vite": "^7.1.9"
+    "vite": "^8.2.0"
   }
 }

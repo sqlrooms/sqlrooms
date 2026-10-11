@@ -1,0 +1,142 @@
+import {CompositeLayer, type Layer, type LayersList} from '@deck.gl/core';
+import {H3HexagonLayer} from '@deck.gl/geo-layers';
+import * as arrow from 'apache-arrow';
+import {formatH3IndexForDeck} from './h3IndexFormat';
+
+/**
+ * Custom GeoArrow-compatible H3HexagonLayer wrapper.
+ *
+ * The upstream GeoArrowH3HexagonLayer (from @geoarrow/deck.gl-geoarrow@0.4.x)
+ * expects `getHexagon: Data<Utf8 | Uint64>`, but our pipeline may produce
+ * BigInt H3 indices that need hex-string conversion. Additionally, H3HexagonLayer
+ * internally iterates rows using createIterable and calls getHexagon(object)
+ * expecting string H3 indices, which is incompatible with binary attribute passing.
+ *
+ * This wrapper converts Arrow data to row objects with proper BigInt→hex string
+ * conversion, then passes them to the native H3HexagonLayer.
+ */
+export class DeckH3HexagonLayer extends CompositeLayer<{
+  data: arrow.Table;
+  getHexagon: arrow.Vector;
+  getFillColor?:
+    | arrow.Vector
+    | [number, number, number, number]
+    | ((...args: any[]) => any);
+  getElevation?: arrow.Vector | number | ((...args: any[]) => any);
+  getLineColor?:
+    | arrow.Vector
+    | [number, number, number, number]
+    | ((...args: any[]) => any);
+  getLineWidth?: arrow.Vector | number | ((...args: any[]) => any);
+  [key: string]: unknown;
+}> {
+  static layerName = 'GeoArrowH3HexagonLayer';
+  static defaultProps = {
+    highPrecision: 'auto',
+    coverage: {type: 'number', min: 0, max: 1, value: 1},
+    extruded: true,
+  };
+
+  renderLayers(): Layer | LayersList | null {
+    const {data: table, getHexagon: hexProp, ...otherProps} = this.props;
+
+    if (!table || !hexProp) return null;
+
+    const numRows = table.numRows;
+    const isVector = hexProp instanceof arrow.Vector;
+
+    // Build a lookup from global row index to {batch, localIndex} for
+    // multi-batch tables so compiled accessors receive the correct batch.
+    const batches = table.batches;
+    const batchOffsets = new Int32Array(batches.length);
+    for (let i = 1; i < batches.length; i++) {
+      batchOffsets[i] = batchOffsets[i - 1]! + batches[i - 1]!.numRows;
+    }
+
+    const resolveBatchContext = (globalIndex: number) => {
+      let batchIdx = batches.length - 1;
+      for (let i = 1; i < batches.length; i++) {
+        if (globalIndex < batchOffsets[i]!) {
+          batchIdx = i - 1;
+          break;
+        }
+      }
+      return {
+        batch: batches[batchIdx]!,
+        localIndex: globalIndex - batchOffsets[batchIdx]!,
+      };
+    };
+
+    // Resolve hex value per row
+    const getHexValue = (i: number): string => {
+      if (isVector) {
+        return formatH3IndexForDeck(hexProp.get(i));
+      }
+      // Compiled accessor function
+      if (typeof hexProp === 'function') {
+        const {batch, localIndex} = resolveBatchContext(i);
+        const result = (hexProp as (...args: unknown[]) => unknown)({
+          index: localIndex,
+          data: {data: batch},
+          target: [],
+        });
+        return formatH3IndexForDeck(result);
+      }
+      return '';
+    };
+
+    // Build row objects from Arrow table
+    const rows: Record<string, unknown>[] = Array.from(
+      {length: numRows},
+      (_, i) => {
+        const row: Record<string, unknown> = {};
+        for (const field of table.schema.fields) {
+          row[field.name] = table.getChild(field.name)?.get(i);
+        }
+        row.__h3Index = getHexValue(i);
+        return row;
+      },
+    );
+
+    // Resolve accessor props: Arrow Vectors → row functions, keep scalars
+    const layerProps: Record<string, unknown> = {};
+    for (const [propName, propValue] of Object.entries(otherProps)) {
+      if (propValue instanceof arrow.Vector) {
+        // Arrow Vector → row accessor (H3 layer uses row-based iteration)
+        const vec = propValue;
+        layerProps[propName] = (
+          _d: Record<string, unknown>,
+          {index}: {index: number},
+        ) => {
+          const raw = vec.get(index);
+          // Int64 elevation/width columns arrive as bigint; deck.gl needs numbers.
+          return typeof raw === 'bigint' ? Number(raw) : raw;
+        };
+      } else if (typeof propValue === 'function') {
+        // Compiled GeoArrow accessor → wrap with batch context
+        const fn = propValue;
+        layerProps[propName] = (
+          _object: unknown,
+          objectInfo: {index: number; target?: number[]},
+        ) => {
+          const {batch, localIndex} = resolveBatchContext(objectInfo.index);
+          const result = fn({
+            index: localIndex,
+            data: {data: batch},
+            target: objectInfo.target,
+          });
+          return typeof result === 'bigint' ? Number(result) : result;
+        };
+      } else {
+        layerProps[propName] = propValue;
+      }
+    }
+
+    return new H3HexagonLayer({
+      ...layerProps,
+      id: `${this.props.id}-geoarrow-h3`,
+      data: rows,
+      getHexagon: (d: Record<string, unknown>) => d.__h3Index as string,
+    } as any);
+  }
+}

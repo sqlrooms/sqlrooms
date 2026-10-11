@@ -118,7 +118,14 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
             />
           </>
         )}
-      />
+      >
+        <TabStrip.SearchDropdown
+          sortSearchItems="recent"
+          getTabLastOpenedAt={(tab) => tab.lastOpenedAt as number | undefined}
+        />
+        <TabStrip.Tabs />
+        <TabStrip.NewButton />
+      </TabStrip>
 
       <DeleteSqlQueryModal
         isOpen={queryToDelete !== null}

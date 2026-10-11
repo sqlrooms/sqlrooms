@@ -1,4 +1,10 @@
-import {getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
+import {
+  getVisibleLayoutPanels,
+  resolvePanelDefinition,
+  resolvePanelIdentity,
+  useStoreWithLayout,
+} from '@sqlrooms/layout';
+import type {RoomPanelInfo} from '@sqlrooms/layout';
 import {
   Button,
   cn,
@@ -6,8 +12,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@sqlrooms/ui';
+import {useBaseRoomStore} from '@sqlrooms/room-store';
 import React, {FC, useMemo} from 'react';
-import {useBaseRoomShellStore} from './RoomShellSlice';
 
 const SidebarButton: FC<{
   className?: string;
@@ -31,9 +37,8 @@ const SidebarButton: FC<{
           variant="ghost"
           size="icon"
           className={cn(
-            'h-10 w-10 rounded-none',
-            isSelected ? 'bg-secondary' : 'hover:bg-secondary/50',
-            // isDisabled && 'opacity-50 cursor-not-allowed',
+            'h-10 w-10 rounded-md',
+            isSelected && 'bg-secondary',
             className,
           )}
           disabled={isDisabled}
@@ -52,39 +57,46 @@ const SidebarButton: FC<{
 const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
   roomPanelType,
 }) => {
-  const initialized = useBaseRoomShellStore((state) => state.room.initialized);
-  const layout = useBaseRoomShellStore((state) => state.layout.config);
-  const panels = useBaseRoomShellStore((state) => state.layout.panels);
+  const initialized = useBaseRoomStore((state) => state.room.initialized);
+  const layout = useStoreWithLayout((state) => state.layout.config);
+  const panels = useStoreWithLayout((state) => state.layout.panels);
   const visibleRoomPanels = useMemo(
-    () => getVisibleMosaicLayoutPanels(layout?.nodes),
+    () => getVisibleLayoutPanels(layout),
     [layout],
   );
-  const togglePanel = useBaseRoomShellStore(
-    (state) => state.layout.togglePanel,
-  );
-  const {icon: Icon, title} = panels[roomPanelType] ?? {};
+  const togglePanel = useStoreWithLayout((state) => state.layout.togglePanel);
+  const panelDef = panels[roomPanelType];
+  const info: RoomPanelInfo | undefined = panelDef
+    ? resolvePanelDefinition(panelDef, {panelId: roomPanelType})
+    : undefined;
 
   return (
     <SidebarButton
       key={roomPanelType}
-      title={title ?? ''}
+      title={info?.title ?? ''}
       isSelected={visibleRoomPanels.includes(roomPanelType)}
       isDisabled={!initialized}
-      icon={Icon ?? (() => null)}
+      icon={info?.icon ?? (() => null)}
       onClick={() => togglePanel(roomPanelType)}
     />
   );
 };
 
 const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
-  const panels = useBaseRoomShellStore((state) => state.layout.panels);
+  const panels = useStoreWithLayout((state) => state.layout.panels);
 
   return (
     <div className={cn('flex h-full grow flex-col', className)}>
       <div className="flex flex-col gap-2">
         {panels
           ? Object.keys(panels)
-              .filter((key) => panels[key]?.placement === 'sidebar')
+              .filter((key) => {
+                const def = panels[key];
+                const resolved = def
+                  ? resolvePanelDefinition(def, {panelId: key})
+                  : undefined;
+                return resolved?.placement === 'sidebar';
+              })
               .map((type) => (
                 <RoomShellSidebarButton key={type} roomPanelType={type} />
               ))
@@ -93,7 +105,13 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
       <div className="flex-1" />
       <div className="flex flex-col gap-2">
         {Object.keys(panels)
-          .filter((key) => panels[key]?.placement === 'sidebar-bottom')
+          .filter((key) => {
+            const def = panels[key];
+            const resolved = def
+              ? resolvePanelDefinition(def, {panelId: key})
+              : undefined;
+            return resolved?.placement === 'sidebar-bottom';
+          })
           .map((type) => (
             <RoomShellSidebarButton key={type} roomPanelType={type} />
           ))}
@@ -102,4 +120,71 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
   );
 };
 
-export {RoomShellSidebarButton, RoomShellSidebarButtons, SidebarButton};
+/**
+ * Renders sidebar buttons for all panels belonging to a tabs node.
+ * Clicking the active tab's button collapses the node;
+ * clicking an inactive tab expands the node and switches to that tab.
+ */
+const TabButtons: FC<{
+  tabsId?: string;
+  className?: string;
+}> = ({tabsId = 'left', className}) => {
+  const panels = useStoreWithLayout((state) => state.layout.panels);
+  const getTabs = useStoreWithLayout((state) => state.layout.getTabs);
+  const activeTab = useStoreWithLayout((state) =>
+    state.layout.getActiveTab(tabsId),
+  );
+  const collapsed = useStoreWithLayout((state) =>
+    state.layout.isCollapsed(tabsId),
+  );
+  const setActiveTab = useStoreWithLayout((state) => state.layout.setActiveTab);
+  const setCollapsed = useStoreWithLayout((state) => state.layout.setCollapsed);
+  const initialized = useBaseRoomStore((state) => state.room.initialized);
+
+  const tabIds = useMemo(() => getTabs(tabsId), [getTabs, tabsId]);
+
+  return (
+    <div className={cn('flex flex-col gap-2', className)}>
+      {tabIds.map((tabId) => {
+        // Resolve panel identity from the tab ID (which is a LayoutNodeKey)
+        const {panelId, meta} = resolvePanelIdentity(tabId);
+        if (!panelId) {
+          return null;
+        }
+        const definition = panels[panelId];
+        const info: RoomPanelInfo | undefined = definition
+          ? resolvePanelDefinition(definition, {panelId, meta})
+          : undefined;
+        const isSelected = activeTab === tabId && !collapsed;
+        return (
+          <SidebarButton
+            key={tabId}
+            title={info?.title ?? tabId}
+            icon={info?.icon ?? (() => null)}
+            isSelected={isSelected}
+            isDisabled={!initialized}
+            onClick={() => {
+              if (isSelected) {
+                setCollapsed(tabsId, true);
+              } else {
+                setCollapsed(tabsId, false);
+                setActiveTab(tabsId, tabId);
+              }
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
+/** @deprecated Use TabButtons instead */
+const AreaPanelButtons = TabButtons;
+
+export {
+  AreaPanelButtons,
+  TabButtons,
+  RoomShellSidebarButton,
+  RoomShellSidebarButtons,
+  SidebarButton,
+};

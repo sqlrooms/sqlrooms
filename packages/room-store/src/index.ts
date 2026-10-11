@@ -7,62 +7,144 @@ export {
   RoomStateContext,
   RoomStateProvider,
   useBaseRoomStore,
+  useRoomStoreApi,
 } from './RoomStateProvider';
 export type {RoomStateProviderProps} from './RoomStateProvider';
 
 export {
   createBaseRoomSlice,
   createBaseSlice,
-  createSlice,
   createRoomSlice,
   createRoomStore,
   createRoomStoreCreator,
+  createSlice,
   isRoomSliceWithDestroy,
   isRoomSliceWithInitialize,
 } from './BaseRoomStore';
 export type {
+  BaseRoomStore,
   BaseRoomStoreState,
   CreateBaseRoomSliceProps,
-  BaseRoomStore,
+  SliceFunctions,
+  UseRoomStore,
 } from './BaseRoomStore';
 
+export type {StateCreator, StoreApi} from 'zustand';
 export {
   createPersistHelpers,
   persistSliceConfigs,
 } from './createPersistHelpers';
-export type {StateCreator, StoreApi} from 'zustand';
+export {createRoomStorePersistence} from './createRoomStorePersistence';
+export type {
+  CreateRoomStorePersistenceOptions,
+  RoomStorePersistence,
+  RoomStorePersistenceChangePredicate,
+  RoomStorePersistenceSnapshotEquivalence,
+  RoomStorePersistenceSnapshotCodec,
+} from './createRoomStorePersistence';
+export {createPersistenceController} from './PersistenceController';
+export type {
+  CreatePersistenceControllerOptions,
+  PersistenceAdapter,
+  PersistenceController,
+  PersistenceControllerListener,
+  PersistenceControllerState,
+  PersistenceSaveMetadata,
+  PersistenceSaveReason,
+} from './PersistenceController';
+
+export {
+  createCommandSlice,
+  createRoomCommandExecutionContext,
+  doesCommandRequireInput,
+  exportCommandInputSchema,
+  getCommandKeystrokes,
+  getCommandInputComponent,
+  getCommandShortcut,
+  hasCommandSliceState,
+  invokeCommandFromStore,
+  listCommandsFromStore,
+  registerCommandsForOwner,
+  resolveCommandPolicyMetadata,
+  unregisterCommandsForOwner,
+  validateCommandInput,
+} from './CommandSlice';
+export type {
+  CommandSliceState,
+  CreateCommandSliceProps,
+  RoomCommandDescriptor,
+  RoomCommandExecuteOutput,
+  RoomCommandKeystrokes,
+  RoomCommandInvocation,
+  RoomCommandInvokeFailureEvent,
+  RoomCommandInvokeErrorEvent,
+  RoomCommandInvocationOptions,
+  RoomCommandInvokeStartEvent,
+  RoomCommandInvokeSuccessEvent,
+  RoomCommandMiddleware,
+  RoomCommandMiddlewareNext,
+  RegisteredRoomCommand,
+  RoomCommand,
+  RoomCommandInputComponent,
+  RoomCommandInputComponentProps,
+  RoomCommandListOptions,
+  RoomCommandPolicyMetadata,
+  RoomCommandPortableSchema,
+  RoomCommandResult,
+  RoomCommandRiskLevel,
+  RoomCommandSurface,
+  RoomCommandUiMetadata,
+  RoomCommandExecutionContext,
+  RoomCommandPredicate,
+} from './CommandSlice';
+export {
+  createCommandCliAdapter,
+  createCommandMcpAdapter,
+  invokeCommandWithPolicy,
+} from './CommandAdapters';
+export type {
+  CommandCliAdapter,
+  CommandCliAdapterOptions,
+  CommandInvocationPolicyOptions,
+  CommandMcpAdapter,
+  CommandMcpAdapterOptions,
+  CommandMcpToolDescriptor,
+  GuardedCommandInvocationOptions,
+} from './CommandAdapters';
 
 // Re-export from @sqlrooms/room-config
 // Values also export their corresponding types automatically (Zod pattern)
 export {
-  BaseRoomConfig,
-  DEFAULT_ROOM_TITLE,
-  createDefaultBaseRoomConfig,
-  DataSourceTypes,
   BaseDataSource,
-  FileDataSource,
-  UrlDataSource,
-  SqlQueryDataSource,
+  BaseRoomConfig,
+  createDefaultBaseRoomConfig,
   DataSource,
+  DataSourceTypes,
+  DEFAULT_ROOM_TITLE,
+  FileDataSource,
   isFileDataSource,
-  isUrlDataSource,
-  isSqlQueryDataSource,
-  LoadFile,
-  StandardLoadOptions,
-  SpatialLoadOptions,
-  SpatialLoadFileOptions,
   isSpatialLoadFileOptions,
-  StandardLoadFileOptions,
+  isSqlQueryDataSource,
+  isUrlDataSource,
+  LoadFile,
   LoadFileOptions,
   MAIN_VIEW,
-  LayoutTypes,
-  DEFAULT_MOSAIC_LAYOUT,
-  createDefaultMosaicLayout,
-  MosaicLayoutDirection,
-  MosaicLayoutParent,
-  isMosaicLayoutParent,
-  MosaicLayoutNodeKey,
-  MosaicLayoutNode,
-  MosaicLayoutConfig,
+  SpatialLoadFileOptions,
+  SpatialLoadOptions,
+  SqlQueryDataSource,
+  StandardLoadFileOptions,
+  StandardLoadOptions,
+  UrlDataSource,
+  LayoutNodeKey,
+  LayoutPanelNode,
+  LayoutSplitNode,
+  LayoutTabsNode,
+  LayoutNode,
   LayoutConfig,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
+  createDefaultLayout,
 } from '@sqlrooms/room-config';
+
+export type {LayoutDirection} from '@sqlrooms/room-config';

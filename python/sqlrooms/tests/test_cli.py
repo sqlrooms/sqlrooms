@@ -1,0 +1,486 @@
+import pytest
+from pathlib import Path
+
+import click
+from typer.testing import CliRunner
+from sqlrooms.cli import (
+    DEFAULT_CONFIG_PATH,
+    DEFAULT_HTTP_PORT,
+    _load_capability_profile,
+    _load_ai_runtime_config,
+    _load_connector_config,
+    _normalize_config_string,
+    _resolve_config_path,
+    _resolve_capability_profile,
+    _resolve_http_port,
+    app,
+)
+from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
+
+runner = CliRunner()
+
+
+def test_cli_help():
+    result = runner.invoke(app, ["--help"])
+    stdout = click.unstyle(result.stdout)
+    assert result.exit_code == 0
+    assert "Launch a local SQLRooms project" in stdout
+    assert "my-project.duckdb" in stdout
+    assert "--version" in stdout
+    assert "--ai-devtools" in stdout
+    assert "--ai-rendering-tools" not in stdout
+    assert "--debug" in stdout
+    assert "--experimental" in stdout
+    assert "--profile" in stdout
+    assert "--experimental-sync" in stdout
+    assert "--sync" not in stdout
+    assert "next free port" in stdout
+
+
+def test_cli_version_exits_without_database_path():
+    result = runner.invoke(app, ["--version"])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("sqlrooms ")
+    assert "Please provide a DuckDB project file" not in result.stderr
+
+
+def test_cli_requires_database_path():
+    result = runner.invoke(app, [])
+
+    assert result.exit_code == 1
+    assert "Please provide a DuckDB project file" in result.stderr
+    assert "sqlrooms ./my-project.duckdb" in result.stderr
+    assert "--db-path :memory:" in result.stderr
+
+
+def test_cli_rejects_blank_database_path():
+    result = runner.invoke(app, ["   "])
+
+    assert result.exit_code == 1
+    assert "Please provide a DuckDB project file" in result.stderr
+
+
+def test_experimental_sync_requires_experimental():
+    result = runner.invoke(app, ["--experimental-sync"])
+
+    assert result.exit_code == 1
+    assert "--experimental-sync requires --experimental" in result.stderr
+
+
+def test_load_capability_profile_from_config(tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[app]\nprofile = "experimental"\n', encoding="utf-8")
+
+    assert _load_capability_profile(config_path) == "experimental"
+
+
+def test_resolve_capability_profile_defaults_and_alias():
+    assert _resolve_capability_profile(None, None, experimental=False) == "default"
+    assert _resolve_capability_profile(None, None, experimental=True) == "experimental"
+    assert (
+        _resolve_capability_profile("experimental", None, experimental=False)
+        == "experimental"
+    )
+    assert (
+        _resolve_capability_profile(None, "default", experimental=True)
+        == "experimental"
+    )
+
+
+def test_resolve_capability_profile_prefers_cli_over_config():
+    assert (
+        _resolve_capability_profile("default", "experimental", experimental=False)
+        == "default"
+    )
+
+
+def test_resolve_capability_profile_rejects_unknown_and_conflicting_alias():
+    try:
+        _resolve_capability_profile("unknown", None, experimental=False)
+    except RuntimeError as exc:
+        assert "Unknown SQLRooms capability profile" in str(exc)
+    else:
+        raise AssertionError("Expected unknown profile failure")
+
+    try:
+        _resolve_capability_profile("default", None, experimental=True)
+    except RuntimeError as exc:
+        assert "--experimental conflicts" in str(exc)
+    else:
+        raise AssertionError("Expected conflicting profile failure")
+
+
+def test_cli_rejects_empty_explicit_profile():
+    result = runner.invoke(
+        app,
+        ["--no-config", "--profile", "", ":memory:"],
+    )
+
+    assert result.exit_code == 1
+    assert "Unknown SQLRooms capability profile" in result.stderr
+
+
+def test_cli_passes_named_profile_to_server(monkeypatch):
+    captured = {}
+
+    class FakeServer:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        async def start(self):
+            return None
+
+    monkeypatch.setattr("sqlrooms.cli.SqlroomsHttpServer", FakeServer)
+    monkeypatch.setattr("sqlrooms.cli._resolve_http_port", lambda *args: 3000)
+
+    result = runner.invoke(
+        app,
+        ["--no-config", "--no-open-browser", "--profile", "experimental", ":memory:"],
+    )
+
+    assert result.exit_code == 0
+    assert captured["capability_profile"] == "experimental"
+
+
+def test_cli_passes_document_charts_maps_profile_to_server(monkeypatch):
+    captured = {}
+
+    class FakeServer:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        async def start(self):
+            return None
+
+    monkeypatch.setattr("sqlrooms.cli.SqlroomsHttpServer", FakeServer)
+    monkeypatch.setattr("sqlrooms.cli._resolve_http_port", lambda *args: 3000)
+
+    result = runner.invoke(
+        app,
+        [
+            "--no-config",
+            "--no-open-browser",
+            "--profile",
+            "document-charts-maps",
+            ":memory:",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert captured["capability_profile"] == "document-charts-maps"
+
+
+def test_cli_loads_profile_from_config(monkeypatch, tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text('[app]\nprofile = "experimental"\n', encoding="utf-8")
+    captured = {}
+
+    class FakeServer:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        async def start(self):
+            return None
+
+    monkeypatch.setattr("sqlrooms.cli.SqlroomsHttpServer", FakeServer)
+    monkeypatch.setattr("sqlrooms.cli._resolve_http_port", lambda *args: 3000)
+
+    result = runner.invoke(
+        app,
+        ["--no-open-browser", "--config", str(config_path), ":memory:"],
+    )
+
+    assert result.exit_code == 0
+    assert captured["capability_profile"] == "experimental"
+
+
+def test_legacy_sync_flag_is_hidden_and_rejected():
+    result = runner.invoke(app, ["--sync"])
+
+    assert result.exit_code == 1
+    assert "--sync has been renamed to --experimental-sync" in result.stderr
+
+
+def test_resolve_http_port_honors_explicit_port(monkeypatch):
+    def fail_pick_free_port(host, start_port=None):
+        raise AssertionError("explicit --port should not scan for a free port")
+
+    monkeypatch.setattr("sqlrooms.cli._pick_free_port", fail_pick_free_port)
+    assert _resolve_http_port("127.0.0.1", 5000) == 5000
+
+
+def test_resolve_http_port_scans_from_default(monkeypatch):
+    calls = []
+
+    def fake_pick_free_port(host, start_port=None, *, reserved_ports=None):
+        calls.append((host, start_port, reserved_ports))
+        return 3001
+
+    monkeypatch.setattr("sqlrooms.cli._pick_free_port", fake_pick_free_port)
+
+    assert _resolve_http_port("127.0.0.1", None) == 3001
+    assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT, None)]
+
+
+def test_cli_export_help():
+    result = runner.invoke(app, ["export", "--help"])
+    stdout = click.unstyle(result.stdout)
+    assert result.exit_code == 0
+    assert "Usage" in stdout
+    assert "export" in stdout
+
+
+def test_load_connector_config_toml(tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[[db.connectors]]
+id = "pg-local"
+engine = "postgres"
+host = "localhost"
+port = "5432"
+database = "db"
+user = "u"
+password = "p"
+title = "Local Postgres"
+
+[[db.connectors]]
+id = "sf-local"
+engine = "snowflake"
+account = "demo-account"
+user = "demo-user"
+warehouse = "DEMO_WH"
+title = "Local Snowflake"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    data = _load_connector_config(config_path)
+    assert isinstance(data[0], PostgresConnectorSettings)
+    assert data[0].host == "localhost"
+    assert data[0].port == "5432"
+    assert data[0].database == "db"
+    assert data[0].user == "u"
+    assert data[0].password == "p"
+    assert data[0].connection_id == "pg-local"
+    assert data[0].title == "Local Postgres"
+    assert isinstance(data[1], SnowflakeConnectorSettings)
+    assert data[1].account == "demo-account"
+    assert data[1].user == "demo-user"
+    assert data[1].warehouse == "DEMO_WH"
+    assert data[1].connection_id == "sf-local"
+    assert data[1].title == "Local Snowflake"
+
+
+def test_load_ai_runtime_config_toml(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "env-openai-key")
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[ai]
+default_provider = "openai"
+default_model = "gpt-5"
+
+[[ai.providers]]
+id = "openai"
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+models = ["gpt-5", "gpt-4.1"]
+
+[[ai.providers]]
+id = "anthropic"
+base_url = "https://api.anthropic.com"
+api_key = "anthropic-key"
+models = ["claude-4-sonnet"]
+
+[[ai.custom_models]]
+model_name = "local-qwen"
+base_url = "http://localhost:11434/v1"
+api_key = "local-key"
+
+[ai.model_parameters]
+max_steps = 9
+additional_instruction = "Prefer short answers."
+""".strip(),
+        encoding="utf-8",
+    )
+
+    (
+        default_provider,
+        default_model,
+        providers,
+        custom_models,
+        model_parameters,
+    ) = _load_ai_runtime_config(config_path)
+    assert default_provider == "openai"
+    assert default_model == "gpt-5"
+    assert providers["openai"]["apiKey"] == "env-openai-key"
+    assert providers["openai"]["models"][0]["modelName"] == "gpt-5"
+    assert providers["anthropic"]["apiKey"] == "anthropic-key"
+    assert custom_models[0]["modelName"] == "local-qwen"
+    assert custom_models[0]["apiKey"] == "local-key"
+    assert model_parameters["maxSteps"] == 9
+    assert model_parameters["additionalInstruction"] == "Prefer short answers."
+
+
+def test_load_connector_config_rejects_duplicate_ids(tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[[db.connectors]]
+id = "dup"
+engine = "postgres"
+host = "localhost"
+database = "db"
+user = "u"
+
+[[db.connectors]]
+id = "dup"
+engine = "snowflake"
+account = "demo-account"
+user = "demo-user"
+""".strip(),
+        encoding="utf-8",
+    )
+    try:
+        _load_connector_config(config_path)
+    except RuntimeError as exc:
+        assert "Duplicate connector id" in str(exc)
+    else:
+        raise AssertionError("Expected duplicate connector id failure")
+
+
+def test_load_ai_runtime_config_rejects_unknown_default_provider(tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[ai]
+default_provider = "missing"
+
+[[ai.providers]]
+id = "openai"
+base_url = "https://api.openai.com/v1"
+models = ["gpt-5"]
+""".strip(),
+        encoding="utf-8",
+    )
+    try:
+        _load_ai_runtime_config(config_path)
+    except RuntimeError as exc:
+        assert "default_provider" in str(exc)
+    else:
+        raise AssertionError("Expected invalid default provider failure")
+
+
+def test_resolve_config_path_prefers_explicit(tmp_path):
+    explicit = tmp_path / "explicit.toml"
+    explicit.write_text("[db.connectors]\n", encoding="utf-8")
+    resolved = _resolve_config_path(str(explicit), no_config=False)
+    assert resolved == explicit
+
+
+def test_resolve_config_path_honors_no_config():
+    assert _resolve_config_path(None, no_config=True) is None
+
+
+def test_default_config_path():
+    import sys
+
+    if sys.platform.startswith("win"):
+        import os
+
+        expected = Path(os.environ.get("APPDATA", "")) / "sqlrooms" / "config.toml"
+    else:
+        expected = Path.home() / ".config" / "sqlrooms" / "config.toml"
+    assert DEFAULT_CONFIG_PATH == expected
+
+
+def test_normalize_config_string_coerces_int():
+    assert _normalize_config_string(5432) == "5432"
+    assert _normalize_config_string(0) == "0"
+    assert _normalize_config_string(3.14) == "3.14"
+
+
+def test_load_connector_config_int_port(tmp_path):
+    """tomllib parses bare ``port = 6543`` as int; ensure it's preserved."""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[[db.connectors]]
+id = "pg"
+engine = "postgres"
+host = "db.example.com"
+port = 6543
+database = "mydb"
+user = "admin"
+""".strip(),
+        encoding="utf-8",
+    )
+    data = _load_connector_config(config_path)
+    assert data[0].port == "6543"
+
+
+# Since the main function in cli.py starts an asyncio loop and a server,
+# unit testing it without mocks is hard. We'll skip deep integration tests
+# of the full server startup here.
+
+
+@pytest.mark.parametrize("option", ["--ws-port", "--mcp-port"])
+def test_removed_listener_options_fail_with_migration_guidance(option):
+    result = runner.invoke(app, ["--no-config", option, "4000", ":memory:"])
+    assert result.exit_code == 1
+    assert "Use --port" in result.output
+
+
+def test_server_command_uses_same_no_ui_launcher(monkeypatch):
+    from unittest.mock import AsyncMock
+
+    instances = []
+
+    def server(**kwargs):
+        instances.append(kwargs)
+        return type("Server", (), {"start": AsyncMock()})()
+
+    monkeypatch.setattr("sqlrooms.cli.SqlroomsHttpServer", server)
+    result = runner.invoke(
+        app, ["server", "--db-path", ":memory:", "--port", "4080", "--no-config"]
+    )
+    assert result.exit_code == 0, result.output
+    assert instances[0]["serve_ui"] is False
+    assert instances[0]["open_browser"] is False
+    assert instances[0]["port"] == 4080
+
+
+@pytest.mark.parametrize(
+    ("options", "message"),
+    [
+        (["--ws-port", "4000"], "Use --port"),
+        (["--mcp-port", "4000"], "Use --port"),
+        (["--mcp"], "--mcp requires the browser UI"),
+        (["--profile", "unknown"], "Unknown SQLRooms capability profile"),
+    ],
+)
+def test_server_command_propagates_launcher_validation_errors(options, message):
+    result = runner.invoke(
+        app, ["server", "--db-path", ":memory:", "--no-config", *options]
+    )
+    assert result.exit_code == 1
+    assert message in result.output
+
+
+def test_server_command_propagates_startup_failure(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(
+        "sqlrooms.cli.SqlroomsHttpServer",
+        lambda **kwargs: SimpleNamespace(
+            start=AsyncMock(side_effect=RuntimeError("Database startup failed"))
+        ),
+    )
+    result = runner.invoke(
+        app, ["server", "--db-path", ":memory:", "--port", "4080", "--no-config"]
+    )
+    assert result.exit_code == 1
+    assert "Database startup failed" in result.output

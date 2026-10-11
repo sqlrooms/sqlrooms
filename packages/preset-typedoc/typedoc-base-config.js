@@ -8,10 +8,19 @@ const typedocOptions = {
   entryPoints: ['src/index.ts'],
   entryPointStrategy: 'resolve',
   enumMembersFormat: 'table',
-  exclude: ['**/node_modules', '**/dist'],
-  excludeExternals: false,
-  excludePrivate: false,
-  excludeProtected: false,
+  exclude: [
+    '**/node_modules',
+    '**/dist',
+    '**/__tests__',
+    '**/*.test.ts',
+    '**/*.test.tsx',
+    '**/*.stories.ts',
+    '**/*.stories.tsx',
+  ],
+  excludeExternals: true,
+  excludeInternal: true,
+  excludePrivate: true,
+  excludeProtected: true,
   excludeScopesInPaths: true,
   fileExtension: '.md',
   // hideBreadcrumbs: true,
@@ -41,7 +50,7 @@ const typedocOptions = {
     // Only include Node.js ambient types; avoid pulling in every installed
     // `@types/*` package (like `@types/d3-sankey`) which can cause issues
     // for packages that don't actually depend on them.
-    types: ['node'],
+    types: ['node', 'jest'],
   },
 };
 

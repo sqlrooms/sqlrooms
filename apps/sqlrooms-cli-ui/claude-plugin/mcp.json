@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "sqlrooms": {
+      "type": "http",
+      "url": "${SQLROOMS_MCP_URL}",
+      "headersHelper": "${SQLROOMS_MCP_HEADERS_HELPER}"
+    }
+  }
+}

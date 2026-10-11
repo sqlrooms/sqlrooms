@@ -1,8 +1,30 @@
 import {useEffect, useRef, type RefObject, useState, useCallback} from 'react';
 
-interface ScrollToBottomResult<T extends HTMLElement | null> {
+interface ScrollToBottomResult {
   showScrollButton: boolean;
   scrollToBottom: () => void;
+}
+
+/**
+ * Options for {@link useScrollToBottom}.
+ *
+ * @template T - The type of HTMLElement for the scrollable container.
+ */
+export interface UseScrollToBottomOptions<T extends HTMLElement | null> {
+  /**
+   * The data to observe. Can be an array of items or a single item.
+   * When the data changes, the hook will scroll to the bottom of the container.
+   */
+  dataToObserve: unknown;
+  /** Reference to the scrollable container element. */
+  containerRef: RefObject<T | null>;
+  /** @deprecated No longer used. The hook now scrolls the container directly. */
+  endRef?: RefObject<T | null>;
+  /**
+   * Whether to scroll to bottom on initial load.
+   * @default false
+   */
+  scrollOnInitialLoad?: boolean;
 }
 
 /**
@@ -18,12 +40,16 @@ const AT_BOTTOM_TOLERANCE = 100;
  * such as chat interfaces or logs. It automatically scrolls to the bottom when new content is added
  * if the user was already at the bottom, and provides a function to manually scroll to the bottom.
  *
+ * Uses a combination of data observation and DOM mutation/resize observation to reliably
+ * detect content changes, even when content grows inside nested fixed-height containers
+ * (e.g. collapsed ActivityBox components).
+ *
  * @template T - The type of HTMLElement for the container and end references
  *
  * @param options - Configuration options
  * @param options.dataToObserve - The data to observe for changes (messages, items, etc.)
  * @param options.containerRef - Reference to the scrollable container element
- * @param options.endRef - Reference to an element at the end of the content
+ * @param options.endRef - Deprecated, no longer used. Kept for backward compatibility.
  * @param options.scrollOnInitialLoad - Whether to scroll to bottom on initial load (default: true)
  *
  * @returns An object containing:
@@ -37,12 +63,10 @@ const AT_BOTTOM_TOLERANCE = 100;
  *
  * function Chat({ messages }) {
  *   const containerRef = useRef<HTMLDivElement>(null);
- *   const endRef = useRef<HTMLDivElement>(null);
  *
  *   const { showScrollButton, scrollToBottom } = useScrollToBottom({
  *     dataToObserve: messages,
  *     containerRef,
- *     endRef,
  *     scrollOnInitialLoad: false // Disable scrolling on initial load
  *   });
  *
@@ -54,7 +78,6 @@ const AT_BOTTOM_TOLERANCE = 100;
  *             {message.text}
  *           </div>
  *         ))}
- *         <div ref={endRef} />
  *       </div>
  *
  *       {showScrollButton && (
@@ -71,24 +94,13 @@ const AT_BOTTOM_TOLERANCE = 100;
  * ```
  */
 export function useScrollToBottom<T extends HTMLElement | null>({
-  /**
-   * The data to observe. Can be an array of items or a single item.
-   * When the data changes, the hook will scroll to the bottom of the container.
-   */
   dataToObserve,
+  // endRef kept in signature for backward compatibility but no longer used
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  endRef: _endRef,
   containerRef,
-  endRef,
-  /**
-   * Whether to scroll to bottom on initial load.
-   * @default false
-   */
   scrollOnInitialLoad = false,
-}: {
-  dataToObserve: unknown;
-  containerRef: RefObject<T | null>;
-  endRef: RefObject<T | null>;
-  scrollOnInitialLoad?: boolean;
-}): ScrollToBottomResult<T> {
+}: UseScrollToBottomOptions<T>): ScrollToBottomResult {
   const [showScrollButton, setShowButton] = useState(false);
 
   // Track if user was at bottom before content changes
@@ -98,6 +110,9 @@ export function useScrollToBottom<T extends HTMLElement | null>({
   // Track if this is the initial load
   const isInitialLoadRef = useRef(true);
 
+  // Track the last known scrollHeight to detect content growth
+  const lastScrollHeightRef = useRef(0);
+
   // Check if the container is scrolled to the bottom
   const checkIfAtBottom = useCallback((container: T) => {
     if (!container) return false;
@@ -105,63 +120,144 @@ export function useScrollToBottom<T extends HTMLElement | null>({
     return scrollHeight - scrollTop - clientHeight <= AT_BOTTOM_TOLERANCE;
   }, []);
 
-  // Extracted reusable handleScroll function
-  const onScroll = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
+  // Use refs for functions to keep them stable and avoid dependency cycles
+  const updateScrollStateRef = useRef<(() => void) | undefined>(undefined);
+  const doScrollToBottomRef = useRef<(() => void) | undefined>(undefined);
 
-    const isAtBottom = checkIfAtBottom(container);
+  // Keep the ref-held functions up to date without assigning to refs during
+  // render (which violates the react-hooks/refs rule). These functions are only
+  // ever invoked asynchronously (rAF, setTimeout, event handlers), so updating
+  // them in an effect that runs on every render is safe.
+  useEffect(() => {
+    updateScrollStateRef.current = () => {
+      const container = containerRef.current;
+      if (!container) return;
 
-    // Update wasAtBottom state for next content change
-    wasAtBottomRef.current = isAtBottom;
+      const isAtBottom = checkIfAtBottom(container);
+      wasAtBottomRef.current = isAtBottom;
 
-    // Show button only if not at bottom
-    setShowButton(!isAtBottom);
-  }, [checkIfAtBottom, containerRef]);
+      // Use functional update to avoid dependency on showScrollButton
+      setShowButton((current) => {
+        const next = !isAtBottom;
+        return current === next ? current : next;
+      });
+    };
 
-  // Handle new content being added
+    doScrollToBottomRef.current = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      container.scrollTop = container.scrollHeight;
+    };
+  });
+
+  // Handle new content being added (triggered by dataToObserve changes)
   useEffect(() => {
     if (!dataToObserve) return;
 
     const container = containerRef.current;
-    const end = endRef.current;
+    if (!container) return;
 
-    if (container && end && wasAtBottomRef.current) {
-      // Only scroll if this is not the initial load or if scrollOnInitialLoad is true
-      if (!isInitialLoadRef.current || scrollOnInitialLoad) {
-        end.scrollIntoView({behavior: 'instant', block: 'end'});
-      }
+    const shouldScroll =
+      wasAtBottomRef.current &&
+      (!isInitialLoadRef.current || scrollOnInitialLoad);
+
+    if (shouldScroll) {
+      // Use rAF to scroll after React has committed DOM updates. Re-check the
+      // at-bottom state inside the frame: the scroll listener may have run
+      // between scheduling and flushing (e.g. the user scrolled up during a
+      // streaming update), and we must not yank them back to the bottom.
+      requestAnimationFrame(() => {
+        if (wasAtBottomRef.current) {
+          doScrollToBottomRef.current?.();
+        }
+        updateScrollStateRef.current?.();
+      });
+    } else {
+      // Just update state without scrolling
+      requestAnimationFrame(() => {
+        updateScrollStateRef.current?.();
+      });
     }
 
-    // Mark that initial load is complete
     isInitialLoadRef.current = false;
+  }, [containerRef, dataToObserve, scrollOnInitialLoad]);
 
-    // After content change, check scroll position again
-    onScroll();
-  }, [containerRef, dataToObserve, endRef, onScroll, scrollOnInitialLoad]);
-
+  // Observe DOM mutations and resizes inside the scroll container.
+  // This catches content changes that don't correspond to a dataToObserve
+  // update (e.g. content expanding inside a collapsed ActivityBox, lazy
+  // renders, or async component updates).
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    container.addEventListener('scroll', onScroll);
+    const onContentChange = () => {
+      const prevHeight = lastScrollHeightRef.current;
+      const newHeight = container.scrollHeight;
+      lastScrollHeightRef.current = newHeight;
 
-    // Initial check with a slight delay to ensure proper measurement
-    const timeoutId = setTimeout(onScroll, 100);
+      if (newHeight > prevHeight && wasAtBottomRef.current) {
+        requestAnimationFrame(() => {
+          // Re-check: a user scroll may have landed between scheduling and
+          // flushing this frame, which must cancel the queued auto-scroll.
+          if (wasAtBottomRef.current) {
+            doScrollToBottomRef.current?.();
+          }
+          updateScrollStateRef.current?.();
+        });
+      } else {
+        requestAnimationFrame(() => {
+          updateScrollStateRef.current?.();
+        });
+      }
+    };
+
+    const ro = new ResizeObserver(onContentChange);
+    const mo = new MutationObserver(onContentChange);
+
+    // Observe the first child (content wrapper) if it exists, otherwise the container
+    const target = container.firstElementChild ?? container;
+    ro.observe(target);
+    mo.observe(container, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    lastScrollHeightRef.current = container.scrollHeight;
+
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+    };
+  }, [containerRef]);
+
+  // Listen for user scroll events to update button visibility
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onScroll = () => {
+      updateScrollStateRef.current?.();
+    };
+    container.addEventListener('scroll', onScroll, {passive: true});
+
+    const timeoutId = setTimeout(() => {
+      updateScrollStateRef.current?.();
+    }, 100);
 
     return () => {
       container.removeEventListener('scroll', onScroll);
       clearTimeout(timeoutId);
     };
-  }, [containerRef, onScroll]);
+  }, [containerRef]);
 
   const scrollToBottom = useCallback(() => {
-    if (containerRef.current) {
-      containerRef.current.scrollTo({
-        top: containerRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
-    }
+    const container = containerRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: 'smooth',
+    });
   }, [containerRef]);
 
   return {

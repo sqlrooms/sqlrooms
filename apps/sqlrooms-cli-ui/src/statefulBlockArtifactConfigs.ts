@@ -1,0 +1,294 @@
+import type {
+  BlockSettingsComponent,
+  BlockDocumentStatefulBlockCreateNodeOptions,
+  BlockDocumentStatefulBlockCommandType,
+  BlockDocumentStatefulBlockType,
+} from '@sqlrooms/documents';
+import {DeckMapBlockSettings, ensureDeckMapResourceState} from '@sqlrooms/deck';
+import {
+  DataTableBlockSettings,
+  MosaicDashboardSettings,
+} from '@sqlrooms/mosaic';
+import {
+  STATEFUL_BLOCK_ARTIFACT_TYPES,
+  type StatefulBlockArtifactType,
+} from './artifactTypeIds';
+import type {RoomState} from './store-types';
+
+export type FeatureStability = 'stable' | 'experimental';
+
+type StatefulBlockCapabilityProfile = {
+  readonly blocks: {
+    readonly stateful: readonly StatefulBlockArtifactType[];
+  };
+};
+
+export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
+  {
+    artifactType: TArtifactType;
+    stability: FeatureStability;
+    label: string;
+    defaultTitle: string;
+    embeddedTitle: string;
+    embeddedDescription: string;
+    resizableHeight?: boolean;
+    defaultHeight?: number;
+    minHeight?: number;
+    maxHeight?: number;
+    requireScrollModifier?: boolean;
+    scrollHintLabel?: string;
+    settings?: BlockSettingsComponent;
+    ensureState: (
+      state: RoomState,
+      artifactId: string,
+      title?: string,
+      options?: BlockDocumentStatefulBlockCreateNodeOptions,
+    ) => void;
+    deleteState: (state: RoomState, artifactId: string) => void;
+    /** Read backing state without initialization; undefined means missing. */
+    readState?: (state: RoomState, blockInstanceId: string) => unknown;
+  };
+
+export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
+  dashboard: {
+    artifactType: 'dashboard',
+    stability: 'stable',
+    label: 'Dashboard',
+    defaultTitle: 'Dashboard',
+    embeddedTitle: 'Embedded Dashboard',
+    embeddedDescription: 'Embedded dashboard',
+    resizableHeight: true,
+    defaultHeight: 560,
+    minHeight: 360,
+    maxHeight: 1600,
+    requireScrollModifier: true,
+    scrollHintLabel: 'this dashboard',
+    settings: MosaicDashboardSettings,
+    ensureState: (state, artifactId, title) => {
+      state.mosaicDashboard.ensureDashboard(artifactId, title, 'grid');
+    },
+    deleteState: (state, artifactId) => {
+      state.mosaicDashboard.removeDashboard(artifactId);
+    },
+  },
+  pivot: {
+    artifactType: 'pivot',
+    stability: 'experimental',
+    label: 'Pivot Table',
+    defaultTitle: 'Pivot Table',
+    embeddedTitle: 'Embedded Pivot Table',
+    embeddedDescription: 'Embedded pivot table',
+    ensureState: (state, artifactId, title) => {
+      state.pivot.ensurePivot(artifactId, {
+        ...(title ? {title} : {}),
+      });
+    },
+    deleteState: (state, artifactId) => {
+      state.pivot.removePivot(artifactId);
+    },
+  },
+  'data-table': {
+    artifactType: 'data-table',
+    stability: 'stable',
+    label: 'Data Table',
+    defaultTitle: 'Data Table',
+    embeddedTitle: 'Data Table',
+    embeddedDescription: 'Embedded Mosaic Data Table Explorer',
+    resizableHeight: true,
+    defaultHeight: 640,
+    minHeight: 360,
+    maxHeight: 1600,
+    requireScrollModifier: true,
+    scrollHintLabel: 'this data table',
+    settings: DataTableBlockSettings,
+    ensureState: () => {},
+    deleteState: () => {},
+  },
+  map: {
+    artifactType: 'map',
+    stability: 'experimental',
+    label: 'Map',
+    defaultTitle: 'Map',
+    embeddedTitle: 'Embedded Map',
+    embeddedDescription: 'Embedded Deck.gl map',
+    resizableHeight: true,
+    defaultHeight: 560,
+    minHeight: 360,
+    maxHeight: 1600,
+    requireScrollModifier: true,
+    scrollHintLabel: 'this map',
+    settings: DeckMapBlockSettings,
+    readState: (state, blockInstanceId) =>
+      state.deckMaps.config.mapsById[blockInstanceId],
+    ensureState: (state, artifactId, title) => {
+      ensureDeckMapResourceState(state, artifactId, title);
+    },
+    deleteState: (state, artifactId) => {
+      state.deckMaps.removeMap(artifactId);
+    },
+  },
+  'markdown-document': {
+    artifactType: 'markdown-document',
+    stability: 'experimental',
+    label: 'Markdown',
+    defaultTitle: 'Markdown',
+    embeddedTitle: 'Embedded Markdown',
+    embeddedDescription: 'Embedded Markdown document',
+    ensureState: (state, artifactId, _title, options) => {
+      state.markdownDocuments.ensureDocument(artifactId, options?.initialText);
+    },
+    deleteState: (state, artifactId) => {
+      state.markdownDocuments.removeDocument(artifactId);
+    },
+  },
+  'sql-query': {
+    artifactType: 'sql-query',
+    stability: 'experimental',
+    label: 'SQL Query',
+    defaultTitle: 'SQL Query',
+    embeddedTitle: 'Embedded SQL Query',
+    embeddedDescription: 'Embedded SQL query editor and result table',
+    ensureState: (state, artifactId, title, options) => {
+      state.sqlEditor.ensureQuery(artifactId, {
+        ...(title ? {name: title} : {}),
+        query: options?.initialText,
+      });
+    },
+    deleteState: (state, artifactId) => {
+      state.sqlEditor.removeQuery(artifactId);
+    },
+  },
+  'html-app': {
+    artifactType: 'html-app',
+    stability: 'experimental',
+    label: 'HTML App',
+    defaultTitle: 'HTML App',
+    embeddedTitle: 'Embedded HTML App',
+    embeddedDescription: 'Sandboxed HTML app with read-only SQL access',
+    resizableHeight: true,
+    defaultHeight: 560,
+    minHeight: 320,
+    maxHeight: 1600,
+    ensureState: (state, artifactId, title) => {
+      state.htmlApps.ensureApp(artifactId, {
+        ...(title ? {title} : {}),
+        requestedCapabilities: ['query'],
+        grantedCapabilities: ['query'],
+      });
+    },
+    deleteState: (state, artifactId) => {
+      state.htmlApps.removeApp(artifactId);
+    },
+  },
+  python: {
+    artifactType: 'python',
+    stability: 'experimental',
+    label: 'Python',
+    defaultTitle: 'Python',
+    embeddedTitle: 'Python',
+    embeddedDescription: 'Python analysis block with visible code and outputs',
+    ensureState: (state, artifactId, title, options) => {
+      state.python.ensureBlock(artifactId, {
+        ...(title ? {title} : {}),
+        code: options?.initialText,
+      });
+    },
+    deleteState: (state, artifactId) => {
+      state.python.removeBlock(artifactId);
+    },
+  },
+} as const satisfies Record<
+  StatefulBlockArtifactType,
+  StatefulBlockArtifactConfig
+>;
+
+export {
+  STATEFUL_BLOCK_ARTIFACT_TYPES,
+  type StatefulBlockArtifactType,
+} from './artifactTypeIds';
+
+export function isStatefulBlockArtifactType(
+  artifactType: string,
+): artifactType is StatefulBlockArtifactType {
+  return artifactType in STATEFUL_BLOCK_ARTIFACT_CONFIGS;
+}
+
+export function getStatefulBlockArtifactConfig(
+  artifactType: StatefulBlockArtifactType,
+): StatefulBlockArtifactConfig<StatefulBlockArtifactType> {
+  return STATEFUL_BLOCK_ARTIFACT_CONFIGS[artifactType];
+}
+
+/** Returns stateful block artifact types enabled by a production profile. */
+export function getEnabledStatefulBlockArtifactTypes(
+  profile: StatefulBlockCapabilityProfile,
+): StatefulBlockArtifactType[] {
+  return STATEFUL_BLOCK_ARTIFACT_TYPES.filter((artifactType) =>
+    profile.blocks.stateful.includes(artifactType),
+  );
+}
+
+export function createStatefulBlockTypes({
+  getState,
+  profile,
+}: {
+  getState: () => RoomState;
+  profile: StatefulBlockCapabilityProfile;
+}): BlockDocumentStatefulBlockType[] {
+  return getEnabledStatefulBlockArtifactTypes(profile).map((artifactType) => {
+    const config = getStatefulBlockArtifactConfig(artifactType);
+    return {
+      blockType: config.artifactType,
+      label: config.label,
+      description: config.embeddedDescription,
+      resizableHeight: config.resizableHeight,
+      defaultHeight: config.defaultHeight,
+      minHeight: config.minHeight,
+      maxHeight: config.maxHeight,
+      requireScrollModifier: config.requireScrollModifier,
+      scrollHintLabel: config.scrollHintLabel,
+      settings: config.settings,
+      createNode: (blockId, options) => {
+        const state = getState();
+        config.ensureState(state, blockId, config.embeddedTitle, options);
+        return {
+          type: 'blockDocumentStatefulBlock',
+          attrs: {
+            id: blockId,
+            blockType: config.artifactType,
+            blockInstanceId: blockId,
+            ownership: 'owned',
+            caption: '',
+            ...(config.resizableHeight
+              ? {height: config.defaultHeight ?? 560}
+              : {}),
+          },
+        };
+      },
+    };
+  });
+}
+
+export function createStatefulBlockCommandTypes({
+  profile,
+}: {
+  profile: StatefulBlockCapabilityProfile;
+}): BlockDocumentStatefulBlockCommandType<RoomState>[] {
+  return getEnabledStatefulBlockArtifactTypes(profile).map((artifactType) => {
+    const config = getStatefulBlockArtifactConfig(artifactType);
+    return {
+      blockType: config.artifactType,
+      label: config.label,
+      description: config.embeddedDescription,
+      defaultTitle: config.embeddedTitle,
+      defaultHeight: config.defaultHeight,
+      ensureState: ({state, blockInstanceId, title}) => {
+        config.ensureState(state, blockInstanceId, title);
+      },
+      readState: config.readState
+        ? ({state, blockInstanceId}) =>
+            config.readState!(state, blockInstanceId)
+        : undefined,
+    };
+  });
+}

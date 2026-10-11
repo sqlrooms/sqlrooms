@@ -7,32 +7,38 @@ Comprehensive metadata tracking ensures reproducibility, version compatibility, 
 Every time you run `prepare_embeddings()`, the system automatically creates and stores metadata about:
 
 ### 1. Embedding Model
+
 - Provider (huggingface/openai)
 - Model name
 - Embedding dimensions
 
 ### 2. Chunking Strategy
+
 - Strategy used (markdown-aware/size-based)
 - Configured chunk size
 - Header inclusion settings
 - Header weight multiplier
 
 ### 3. Source Documents
+
 - Total number of documents processed
 - Number of unique files
 - Total character count
 
 ### 4. Chunks
+
 - Total number of chunks created
 - Min/max/median/mean chunk sizes
 - Total characters in all chunks
 
 ### 5. Capabilities
+
 - Hybrid search enabled
 - Full-text search (FTS) enabled
 - Source documents stored
 
 ### 6. Timestamps
+
 - When the database was created
 - Metadata format version
 
@@ -47,6 +53,7 @@ SELECT * FROM embedding_metadata;
 ```
 
 This allows runtime validation:
+
 ```python
 from sqlrooms_rag import get_embedding_metadata
 
@@ -120,6 +127,7 @@ is_valid = validate_embedding_model(
 ### 3. **Debugging**
 
 When results are poor, check metadata:
+
 - Are you using the correct model?
 - What chunk size was used?
 - Are chunks too large/small?
@@ -127,6 +135,7 @@ When results are poor, check metadata:
 ### 4. **Documentation**
 
 The YAML file serves as documentation:
+
 - What settings were used?
 - When was it created?
 - What capabilities are available?
@@ -134,6 +143,7 @@ The YAML file serves as documentation:
 ### 5. **Reproducibility**
 
 Need to recreate the database? The metadata tells you exactly:
+
 - Which model to use
 - What chunk size
 - Whether headers were included
@@ -192,13 +202,15 @@ python -c "import yaml; print(yaml.safe_load(open('knowledge_base.yaml')))"
 ### Scenario 1: Model Mismatch
 
 **Problem:**
-```
+
+```text
 Created database with: text-embedding-3-small (1536 dims)
 Querying with: BAAI/bge-small-en-v1.5 (384 dims)
 Result: Completely wrong results
 ```
 
 **Solution:**
+
 ```python
 # Check metadata first
 metadata = get_embedding_metadata("kb.duckdb")
@@ -211,6 +223,7 @@ validate_embedding_model("kb.duckdb", "your-model")
 ### Scenario 2: Debugging Poor Results
 
 **Check:**
+
 1. Model compatibility (see above)
 2. Chunk sizes - are they appropriate?
    ```python
@@ -223,6 +236,7 @@ validate_embedding_model("kb.duckdb", "your-model")
 ### Scenario 3: Reproducing a Database
 
 **From metadata:**
+
 ```yaml
 # knowledge_base.yaml shows:
 embedding:
@@ -235,6 +249,7 @@ chunking:
 ```
 
 **Reproduce:**
+
 ```bash
 uv run prepare-embeddings docs -o kb_new.duckdb \
   --provider openai \
@@ -247,12 +262,14 @@ uv run prepare-embeddings docs -o kb_new.duckdb \
 ### Scenario 4: Migrating to New Model
 
 **Check current setup:**
+
 ```python
 metadata = get_embedding_metadata("old_kb.duckdb")
 # Shows: BAAI/bge-small-en-v1.5 (384 dims)
 ```
 
 **Create new database with different model:**
+
 ```bash
 uv run prepare-embeddings docs -o new_kb.duckdb \
   --provider openai \
@@ -261,6 +278,7 @@ uv run prepare-embeddings docs -o new_kb.duckdb \
 ```
 
 **Compare:**
+
 ```bash
 python examples/inspect_metadata.py --compare old_kb.duckdb new_kb.duckdb
 ```
@@ -279,29 +297,29 @@ CREATE TABLE embedding_metadata (
 
 ### Available Keys
 
-| Key | Description | Example |
-|-----|-------------|---------|
-| `version` | Metadata format version | `1.0` |
-| `created_at` | ISO 8601 timestamp | `2024-11-21T18:30:00Z` |
-| `embedding_provider` | Provider name | `openai`, `huggingface` |
-| `embedding_model` | Model identifier | `text-embedding-3-small` |
-| `embedding_dimensions` | Vector dimensions | `1536` |
-| `chunking_strategy` | Strategy used | `markdown-aware`, `size-based` |
-| `chunk_size` | Configured chunk size | `512` |
-| `include_headers` | Headers included | `true`, `false` |
-| `header_weight` | Header repetition | `3` |
-| `total_source_documents` | Document count | `150` |
-| `unique_files` | Unique file count | `145` |
-| `source_total_characters` | Total chars | `2500000` |
-| `total_chunks` | Chunk count | `5234` |
-| `min_chunk_size` | Smallest chunk | `100` |
-| `max_chunk_size` | Largest chunk | `4500` |
-| `median_chunk_size` | Median chunk | `450` |
-| `mean_chunk_size` | Average chunk | `478` |
-| `chunks_total_characters` | Total chunk chars | `2503452` |
-| `hybrid_search_enabled` | Hybrid capability | `true` |
-| `fts_enabled` | FTS capability | `true` |
-| `source_documents_stored` | Source docs stored | `true` |
+| Key                       | Description             | Example                        |
+| ------------------------- | ----------------------- | ------------------------------ |
+| `version`                 | Metadata format version | `1.0`                          |
+| `created_at`              | ISO 8601 timestamp      | `2024-11-21T18:30:00Z`         |
+| `embedding_provider`      | Provider name           | `openai`, `huggingface`        |
+| `embedding_model`         | Model identifier        | `text-embedding-3-small`       |
+| `embedding_dimensions`    | Vector dimensions       | `1536`                         |
+| `chunking_strategy`       | Strategy used           | `markdown-aware`, `size-based` |
+| `chunk_size`              | Configured chunk size   | `512`                          |
+| `include_headers`         | Headers included        | `true`, `false`                |
+| `header_weight`           | Header repetition       | `3`                            |
+| `total_source_documents`  | Document count          | `150`                          |
+| `unique_files`            | Unique file count       | `145`                          |
+| `source_total_characters` | Total chars             | `2500000`                      |
+| `total_chunks`            | Chunk count             | `5234`                         |
+| `min_chunk_size`          | Smallest chunk          | `100`                          |
+| `max_chunk_size`          | Largest chunk           | `4500`                         |
+| `median_chunk_size`       | Median chunk            | `450`                          |
+| `mean_chunk_size`         | Average chunk           | `478`                          |
+| `chunks_total_characters` | Total chunk chars       | `2503452`                      |
+| `hybrid_search_enabled`   | Hybrid capability       | `true`                         |
+| `fts_enabled`             | FTS capability          | `true`                         |
+| `source_documents_stored` | Source docs stored      | `true`                         |
 
 ## Best Practices
 
@@ -370,4 +388,3 @@ Open an issue if you need additional metadata fields!
 - [Example Script: inspect_metadata.py](../examples/inspect_metadata.py)
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture
 - [EXTERNAL_APIS.md](./EXTERNAL_APIS.md) - Using external APIs
-

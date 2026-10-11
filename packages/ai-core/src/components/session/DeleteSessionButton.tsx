@@ -14,7 +14,6 @@ export interface DeleteSessionButtonProps {
 
 /**
  * A button component that handles session deletion with confirmation dialog.
- * Only appears when there is more than one session available.
  *
  * @example
  * ```tsx
@@ -24,8 +23,7 @@ export interface DeleteSessionButtonProps {
 export const DeleteSessionButton: React.FC<DeleteSessionButtonProps> = ({
   className,
 }) => {
-  const sessions = useStoreWithAi((s) => s.ai.config.sessions);
-  const currentSessionId = useStoreWithAi((s) => s.ai.config.currentSessionId);
+  const currentSessionId = useStoreWithAi((s) => s.ai.getCurrentSession()?.id);
   const deleteSession = useStoreWithAi((s) => s.ai.deleteSession);
 
   const [sessionToDeleteId, setSessionToDeleteId] = useState<string | null>(
@@ -62,8 +60,7 @@ export const DeleteSessionButton: React.FC<DeleteSessionButtonProps> = ({
     setSessionToDeleteId(null);
   };
 
-  // Only show the delete button if there's more than one session
-  if (sessions.length <= 1 || !currentSessionId) {
+  if (!currentSessionId) {
     return null;
   }
 

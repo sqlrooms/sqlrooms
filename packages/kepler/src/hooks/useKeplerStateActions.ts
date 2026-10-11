@@ -1,15 +1,22 @@
-import {useMemo} from 'react';
-import {KeplerAction, useStoreWithKepler} from '../KeplerSlice';
+import {
+  MapStateActions,
+  MapStyleActions,
+  ProviderActions,
+  UIStateActions,
+  VisStateActions,
+} from '@kepler.gl/actions';
 import {makeGetActionCreators} from '@kepler.gl/components';
 import {KeplerGlState} from '@kepler.gl/reducers';
+import {useMemo} from 'react';
+import {KeplerAction, useStoreWithKepler} from '../KeplerSlice';
 
 const keplerActionSelector = makeGetActionCreators();
 export type KeplerActions = {
-  visStateActions: any;
-  mapStateActions: any;
-  mapStyleActions: any;
-  uiStateActions: any;
-  providerActions: any;
+  uiStateActions: typeof UIStateActions;
+  visStateActions: typeof VisStateActions;
+  mapStateActions: typeof MapStateActions;
+  mapStyleActions: typeof MapStyleActions;
+  providerActions: typeof ProviderActions;
   dispatch: (action: KeplerAction) => void;
 };
 export function useKeplerStateActions({mapId}: {mapId: string}): {

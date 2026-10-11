@@ -1,16 +1,25 @@
-import React, {useCallback, useEffect, useMemo, useRef} from 'react';
-import {MonacoEditor} from '@sqlrooms/monaco-editor';
-import type {MonacoEditorProps} from '@sqlrooms/monaco-editor';
 import type {OnMount} from '@monaco-editor/react';
+import type {DataTable, DuckDbConnector} from '@sqlrooms/db';
+import {getFunctionSuggestions} from '@sqlrooms/duckdb';
+import type {MonacoEditorProps} from '@sqlrooms/monaco-editor';
+import {MonacoEditor} from '@sqlrooms/monaco-editor';
+import {cn} from '@sqlrooms/ui';
 import type * as Monaco from 'monaco-editor';
+import React, {useCallback, useEffect, useMemo, useRef} from 'react';
 import {
-  DUCKDB_KEYWORDS,
   DUCKDB_FUNCTIONS,
+  DUCKDB_KEYWORDS,
   SQL_LANGUAGE_CONFIGURATION,
 } from './constants/duckdb-dialect';
-import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
-import {cn} from '@sqlrooms/ui';
-import {getFunctionSuggestions} from './constants/functionSuggestions';
+import {FunctionDocumentation} from './components/FunctionDocumentation';
+import {renderComponentToString} from '@sqlrooms/utils';
+
+export type SqlMonacoRunQueryOptions = {
+  value: string;
+  selectedValue: string;
+  isSelectionEmpty: boolean;
+};
+
 export interface SqlMonacoEditorProps extends Omit<
   MonacoEditorProps,
   'language'
@@ -36,19 +45,22 @@ export interface SqlMonacoEditorProps extends Omit<
    * Table schemas for autocompletion
    */
   tableSchemas?: DataTable[];
-  /**
-   * Callback to get the latest table schemas
-   * This is called from within provideCompletionItems to ensure we have the latest data
-   */
+  /** Callback to get the latest table schemas */
   getLatestSchemas?: () => {
     tableSchemas: DataTable[];
   };
+  /** Callback when Cmd/Ctrl+Enter is pressed to run query */
+  onRunQuery?: (params: SqlMonacoRunQueryOptions) => void;
 }
 
 const EDITOR_OPTIONS: MonacoEditorProps['options'] = {
   formatOnPaste: true,
   formatOnType: true,
   wordWrap: 'on',
+  scrollBeyondLastLine: false,
+  scrollbar: {
+    alwaysConsumeMouseWheel: false,
+  },
 };
 
 type MonacoInstance = typeof Monaco;
@@ -163,16 +175,19 @@ function ensureSqlCompletionProvider(monaco: MonacoInstance) {
               });
             });
             if (ctx.connector) {
-              const functionSuggestions = await getFunctionSuggestions(
+              const functionGroups = await getFunctionSuggestions(
                 ctx.connector,
                 word.word,
               );
-              for (const {name, documentation} of functionSuggestions) {
+
+              for (const {name, overloads} of functionGroups) {
                 suggestions.push({
                   label: name,
                   insertText: name,
                   documentation: {
-                    value: documentation,
+                    value: renderComponentToString(FunctionDocumentation, {
+                      functions: overloads,
+                    }),
                     isTrusted: true,
                     supportHtml: true,
                   },
@@ -265,6 +280,8 @@ function ensureSqlCompletionProvider(monaco: MonacoInstance) {
 /**
  * A Monaco editor for editing SQL with DuckDB syntax highlighting and autocompletion
  * This is an internal component used by SqlEditor
+ *
+ * @deprecated Use SqlCodeMirrorEditor instead. This component will be removed in a future version.
  */
 export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   connector,
@@ -272,12 +289,18 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   customFunctions = [],
   tableSchemas = [],
   getLatestSchemas,
+  onRunQuery,
   onMount,
   className,
   options,
   ...restProps
 }) => {
   const modelRef = useRef<any>(null);
+  const onRunQueryRef = useRef(onRunQuery);
+
+  useEffect(() => {
+    onRunQueryRef.current = onRunQuery;
+  }, [onRunQuery]);
 
   // Update per-model context when props change
   useEffect(() => {
@@ -313,8 +336,8 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       ensureSqlLanguageConfigured(monaco);
       ensureSqlCompletionProvider(monaco);
 
-      const model = editor.getModel?.();
-      if (model) {
+      const setContextForModel = (model: any) => {
+        if (!model) return;
         modelRef.current = model;
         sqlCompletionContextByModel.set(model, {
           connector,
@@ -323,14 +346,47 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
           customKeywords,
           customFunctions,
         });
+      };
+
+      // Initial model context
+      setContextForModel(editor.getModel?.());
+
+      // IMPORTANT: when callers pass `path`, @monaco-editor/react swaps the underlying
+      // Monaco model without re-mounting the editor. Keep the completion context in sync
+      // with the active model so suggestions remain database-aware.
+      const modelChangeDisposable = editor.onDidChangeModel?.(() => {
+        setContextForModel(editor.getModel?.());
+      });
+
+      // Add keyboard shortcut for running query
+      if (onRunQuery) {
+        editor.onKeyDown((e) => {
+          if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.Enter) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const model = editor.getModel();
+            const selection = editor.getSelection();
+            const value = editor.getValue();
+            const selectedValue =
+              model && selection ? model.getValueInRange(selection) : '';
+            const isSelectionEmpty = !selection || selection.isEmpty();
+
+            onRunQuery({
+              value,
+              selectedValue,
+              isSelectionEmpty,
+            });
+          }
+        });
       }
 
       // Cleanup on dispose
-      if (model) {
-        editor.onDidDispose(() => {
-          sqlCompletionContextByModel.delete(model);
-        });
-      }
+      editor.onDidDispose(() => {
+        modelChangeDisposable?.dispose?.();
+        const model = modelRef.current;
+        if (model) sqlCompletionContextByModel.delete(model);
+      });
 
       // Call the original onMount if provided
       if (onMount) {
@@ -343,6 +399,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       customFunctions,
       getLatestSchemas,
       onMount,
+      onRunQuery,
       tableSchemas,
     ],
   );

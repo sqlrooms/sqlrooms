@@ -6,12 +6,12 @@
 // Components
 export {
   Accordion,
+  AccordionContent,
   AccordionItem,
   AccordionTrigger,
-  AccordionContent,
 } from './components/accordion';
 
-export {Alert, AlertTitle, AlertDescription} from './components/alert';
+export {Alert, AlertDescription, AlertTitle} from './components/alert';
 
 export {AspectRatio} from './components/aspect-ratio';
 
@@ -19,12 +19,12 @@ export {Badge, badgeVariants, type BadgeProps} from './components/badge';
 
 export {
   Breadcrumb,
-  BreadcrumbList,
+  BreadcrumbEllipsis,
   BreadcrumbItem,
   BreadcrumbLink,
+  BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  BreadcrumbEllipsis,
 } from './components/breadcrumb';
 
 export {Button, buttonVariants, type ButtonProps} from './components/button';
@@ -33,96 +33,107 @@ export {Calendar, type CalendarProps} from './components/calendar';
 
 export {
   Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardDescription,
   CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 } from './components/card';
 
 export {Checkbox} from './components/checkbox';
 
-export {ComboboxDemo} from './components/combobox';
+export {
+  Combobox,
+  type ComboboxContentProps,
+  type ComboboxItemProps,
+  type ComboboxRootProps,
+  type ComboboxTriggerProps,
+} from './components/combobox';
+export {
+  useCombobox,
+  type UseComboboxOptions,
+  type UseComboboxReturn,
+} from './hooks/useCombobox';
 
 export {
   Collapsible,
-  CollapsibleTrigger,
   CollapsibleContent,
+  CollapsibleTrigger,
 } from './components/collapsible';
 
 export {
   Command,
   CommandDialog,
-  CommandInput,
-  CommandList,
   CommandEmpty,
   CommandGroup,
+  CommandInput,
   CommandItem,
-  CommandShortcut,
+  CommandList,
   CommandSeparator,
+  CommandShortcut,
 } from './components/command';
 
 export {
   ContextMenu,
-  ContextMenuTrigger,
-  ContextMenuContent,
-  ContextMenuItem,
   ContextMenuCheckboxItem,
-  ContextMenuRadioItem,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
   ContextMenuLabel,
+  ContextMenuPortal,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
   ContextMenuSeparator,
   ContextMenuShortcut,
-  ContextMenuGroup,
-  ContextMenuPortal,
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
-  ContextMenuRadioGroup,
+  ContextMenuTrigger,
 } from './components/context-menu';
 
 export {
   Dialog,
-  DialogPortal,
-  DialogOverlay,
-  DialogTrigger,
   DialogClose,
   DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
   DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
 } from './components/dialog';
 
 export {
   Drawer,
-  DrawerPortal,
-  DrawerOverlay,
-  DrawerTrigger,
   DrawerClose,
   DrawerContent,
-  DrawerHeader,
-  DrawerFooter,
-  DrawerTitle,
   DrawerDescription,
+  DrawerFooter,
   DrawerHandle,
+  DrawerHeader,
+  DrawerOverlay,
+  DrawerPortal,
+  DrawerTitle,
+  DrawerTrigger,
 } from './components/drawer';
 
 export {
   DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuCheckboxItem,
-  DropdownMenuRadioItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuGroup,
-  DropdownMenuPortal,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-  DropdownMenuRadioGroup,
+  DropdownMenuTrigger,
 } from './components/dropdown-menu';
 
 export {EditableText} from './components/editable-text';
@@ -132,54 +143,64 @@ export {ErrorBoundary} from './components/error-boundary';
 export {ErrorPane} from './components/error-pane';
 
 export {
-  useFormField,
   Form,
-  FormItem,
-  FormLabel,
   FormControl,
   FormDescription,
-  FormMessage,
   FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  useFormField,
 } from './components/form';
 
 export {Input} from './components/input';
 
+export {
+  SettingsPanelHeader,
+  type SettingsPanelHeaderProps,
+} from './components/settings-panel-header';
+
 export {Label} from './components/label';
 
 export {
+  ModifierScrollOverlay,
+  type ModifierScrollOverlayProps,
+} from './components/modifier-scroll-overlay';
+
+export {
   Menubar,
-  MenubarMenu,
-  MenubarTrigger,
-  MenubarContent,
-  MenubarItem,
-  MenubarSeparator,
-  MenubarLabel,
   MenubarCheckboxItem,
+  MenubarContent,
+  MenubarGroup,
+  MenubarItem,
+  MenubarLabel,
+  MenubarMenu,
+  MenubarPortal,
   MenubarRadioGroup,
   MenubarRadioItem,
-  MenubarPortal,
+  MenubarSeparator,
+  MenubarShortcut,
   MenubarSub,
   MenubarSubContent,
   MenubarSubTrigger,
-  MenubarGroup,
-  MenubarShortcut,
+  MenubarTrigger,
 } from './components/menu-bar';
 
 export {
   Pagination,
   PaginationContent,
-  PaginationLink,
-  PaginationItem,
-  PaginationPrevious,
-  PaginationNext,
   PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
 } from './components/pagination';
 
 export {
   Popover,
-  PopoverTrigger,
-  PopoverContent,
   PopoverAnchor,
+  PopoverContent,
+  PopoverTrigger,
 } from './components/popover';
 
 export {ProgressModal} from './components/progress-modal';
@@ -189,28 +210,38 @@ export {Progress} from './components/progress';
 export {RadioGroup, RadioGroupItem} from './components/radio-group';
 
 export {
-  ResizablePanelGroup,
-  ResizablePanel,
   ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
 } from './components/resizable';
+export type {
+  ResizablePanelOrientation,
+  ResizablePanelHandle,
+} from './components/resizable';
+
+export {RunButton, type RunButtonProps} from './components/run-button';
 
 export {
   TabStrip,
   type TabDescriptor,
+  type TabStripDndMode,
+  type TabStripDragData,
   type TabStripProps,
 } from './components/tab-strip';
 
+export {ScrollableRow} from './components/scrollable-row';
+
 export {
   Select,
-  SelectGroup,
-  SelectValue,
-  SelectTrigger,
   SelectContent,
-  SelectLabel,
+  SelectGroup,
   SelectItem,
-  SelectSeparator,
-  SelectScrollUpButton,
+  SelectLabel,
   SelectScrollDownButton,
+  SelectScrollUpButton,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
 } from './components/select';
 
 export {ScrollArea, ScrollBar} from './components/scroll-area';
@@ -219,16 +250,43 @@ export {Separator} from './components/separator';
 
 export {
   Sheet,
-  SheetPortal,
-  SheetOverlay,
-  SheetTrigger,
   SheetClose,
   SheetContent,
-  SheetHeader,
-  SheetFooter,
-  SheetTitle,
   SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetOverlay,
+  SheetPortal,
+  SheetTitle,
+  SheetTrigger,
 } from './components/sheet';
+
+export {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupAction,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInput,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuAction,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSkeleton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
+} from './components/sidebar';
 
 export {SkeletonPane} from './components/skeleton-pane';
 
@@ -244,34 +302,20 @@ export {Switch} from './components/switch';
 
 export {
   Table,
-  TableHeader,
   TableBody,
+  TableCaption,
+  TableCell,
   TableFooter,
   TableHead,
+  TableHeader,
   TableRow,
-  TableCell,
-  TableCaption,
 } from './components/table';
 
-export {Tabs, TabsList, TabsTrigger, TabsContent} from './components/tabs';
+export {Tabs, TabsContent, TabsList, TabsTrigger} from './components/tabs';
 
 export {Textarea} from './components/textarea';
 
 export {ThemeSwitch} from './components/theme-switch';
-
-export {
-  type ToastProps,
-  type ToastActionElement,
-  ToastProvider,
-  ToastViewport,
-  Toast,
-  ToastTitle,
-  ToastDescription,
-  ToastClose,
-  ToastAction,
-} from './components/toast';
-
-export {Toaster} from './components/toaster';
 
 export {ToggleGroup, ToggleGroupItem} from './components/toggle-group';
 
@@ -281,15 +325,15 @@ export {CopyButton, type CopyButtonProps} from './components/copy-button';
 
 export {
   Tooltip,
-  TooltipTrigger,
   TooltipContent,
   TooltipProvider,
+  TooltipTrigger,
 } from './components/tooltip';
 
 export {Tree, type TreeNodeData} from './components/tree';
 
 // Hooks
-export {useToast, toast, reducer} from './hooks/use-toast';
+export {toast, type ExternalToast} from 'sonner';
 
 export {
   useAspectRatioDimensions,
@@ -302,17 +346,43 @@ export {
   type UseDisclosureReturnValue,
 } from './hooks/useDisclosure';
 
+export {useDebounce} from './hooks/useDebounce';
+export {useDebouncedCallback} from './hooks/useDebouncedCallback';
+export {useDebouncedValue} from './hooks/useDebouncedValue';
+
+export {useIsMobile} from './hooks/use-mobile';
 export {useRelativeCoordinates} from './hooks/useRelativeCoordinates';
 
-// Utilities
-export {cn} from './lib/utils';
-export {resolveFontSizeClass, type FontSizeToken} from './lib/fontSize';
+export {
+  useAutoResizeTextarea,
+  type UseAutoResizeTextareaOptions,
+  type UseAutoResizeTextareaResult,
+} from './hooks/useAutoResizeTextarea';
 
-// Tailwind preset
-export {sqlroomsTailwindPreset} from './tailwind-preset';
+// Utilities
+export {resolveFontSizeClass, type FontSizeToken} from './lib/fontSize';
+export {cn} from './lib/utils';
 
 // Theme
-export {ThemeProvider, useTheme} from './theme/theme-provider';
+export {
+  DEFAULT_THEME,
+  DEFAULT_THEME_STORAGE_KEY,
+  getResolvedTheme,
+  getTheme,
+  getThemePreference,
+  ThemeProvider,
+  useTheme,
+  type ResolvedTheme,
+  type Theme,
+} from './theme/theme-provider';
 
 // Re-export from Radix
 export {Slot} from '@radix-ui/react-slot';
+
+export {Toaster} from './components/sonner';
+
+export {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from './components/hover-card';

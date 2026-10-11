@@ -8,6 +8,1191 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.29.0 (upcoming)
+
+### `@sqlrooms/documents`: canonical document names (breaking)
+
+The prerelease document APIs now distinguish structured block documents from
+Markdown documents. Block documents use the `block-document` artifact type
+and `block-document.*` command IDs. Markdown artifacts and embedded Markdown
+blocks use `markdown-document`, with `markdown-document.*` command IDs.
+
+Update Markdown imports, selectors, persistence schemas, artifact registries,
+and command callers:
+
+| Previous API or key                                 | Replacement                                                         |
+| --------------------------------------------------- | ------------------------------------------------------------------- |
+| `createDocumentsSlice`                              | `createMarkdownDocumentsSlice`                                      |
+| `createDefaultDocumentsConfig`                      | `createDefaultMarkdownDocumentsConfig`                              |
+| `DocumentsSliceConfig` / `DocumentsSliceConfigType` | `MarkdownDocumentsSliceConfig` / `MarkdownDocumentsSliceConfigType` |
+| `DocumentsSliceState`                               | `MarkdownDocumentsSliceState`                                       |
+| `CreateDocumentsSliceProps`                         | `CreateMarkdownDocumentsSliceProps`                                 |
+| `useStoreWithDocuments`                             | `useStoreWithMarkdownDocuments`                                     |
+| `state.documents`                                   | `state.markdownDocuments`                                           |
+| `createMarkdownCommands`                            | `createMarkdownDocumentCommands`                                    |
+| `markdown.*` command IDs                            | `markdown-document.*` command IDs                                   |
+| `markdown` artifact and embedded block type         | `markdown-document`                                                 |
+| `buildKnowledgeIndex({documents, artifacts})`       | `buildKnowledgeIndex({markdownDocuments, artifacts})`               |
+
+Persist `MarkdownDocumentsSliceConfig` under the `markdownDocuments` key.
+`DocumentAsset` and `createDocumentsCrdtMirror()` remain shared by both document
+families and keep their names.
+
+`createBlockDocumentCommands()` and `createPythonBlockCommands()` no longer
+accept `artifactType`, `artifactLabel`, or `commandNamespace`. Remove those
+options and use the canonical `block-document` type and `block-document.*`
+IDs. Keep product-specific labels in the artifact registry; `commandGroup`
+remains available for UI grouping. The block-document command factory also
+retains `defaultTitle`.
+
+`createBlockDocumentCommandIds()` no longer accepts a namespace argument.
+`createBlockDocumentCommandAiAdapter()` no longer accepts
+`isBlockDocumentArtifact`, and `createDocumentsCrdtMirror()` no longer accepts
+`blockDocumentArtifactTypes`.
+
+#### Persisted workspace data
+
+The CLI migrates local workspace snapshots from `documents` to
+`markdownDocuments` before schema validation, preserving Markdown bodies and
+owned assets. When both keys exist, it retains disjoint records and gives
+canonical records precedence for overlapping IDs. It also normalizes legacy
+`markdown` artifact and embedded block types to `markdown-document` and keeps
+its existing local `document`/`worksheet` migration to the appropriate family.
+
+Applications that persist their own workspaces must perform the equivalent
+migration before parsing with the new schema; the package schema does not
+rename the outer slice key automatically. Preserve both the Markdown content
+and the document-owned asset map when moving each record.
+
+The CRDT Markdown field is also named `markdownDocuments`. Experimental CRDT
+snapshots and saved AI context are not migrated. Reset incompatible development
+sync snapshots and saved sessions when upgrading; this does not replace the
+local workspace migration above.
+
+### `@sqlrooms/artifacts`: artifact AI sessions use pure many-to-many associations (breaking)
+
+The prerelease-only one-to-one `artifactAi.aiSessionArtifacts` map,
+`artifactCreators` map, and provenance-bearing link shape were removed.
+`artifactAi.sessionArtifactLinks` is now the only persisted and runtime
+representation of relationships between AI sessions and artifacts:
+
+```ts
+type ArtifactSessionLink = {
+  sessionId: string;
+  artifactId: string;
+  linkedAt: number;
+};
+```
+
+This is a clean prerelease break: `ArtifactAiConfigSchema` does not migrate the
+removed fields or the previous `{createdAt, linkType}` link shape. If you need
+to retain prerelease state, convert each relationship to an association and
+rename its relationship timestamp from `createdAt` to `linkedAt`. Creation
+provenance, when needed, should live in the artifact's domain metadata rather
+than in its chat associations. Helper APIs now require
+`sessionArtifactLinks`, and the deprecated one-to-one and creator-provenance
+slice methods were removed:
+
+- `setSessionArtifact` → `addSessionArtifactLink(sessionId, artifactId)`
+- `clearSessionArtifact` → `removeAllLinksForSession`
+- `getSessionArtifactId` → `getLatestArtifactForSession`
+- `setArtifactCreator`, `getArtifactCreatorSessionId`, and
+  `getCreatedArtifactIds` have no association-layer replacement
+
+Artifact pinning is workspace state and has moved from the AI companion slice
+to the base artifacts slice:
+
+- `artifactAi.config.pinnedArtifactIds` →
+  `artifacts.config.pinnedArtifactIds`
+- `artifactAi.togglePinArtifact(id)` → `artifacts.togglePinArtifact(id)`
+- `artifactAi.isPinnedArtifact(id)` → `artifacts.isPinnedArtifact(id)`
+
+### `@sqlrooms/artifacts`: "Sheets" terminology migrated to "Artifacts" (breaking)
+
+The concept of "sheets" has been replaced with "artifacts" to better represent the variety of content types (app builders, charts, maps, etc.) that can be created and managed.
+
+#### API Changes
+
+**Store namespace:**
+
+- `state.sheets` → `state.artifacts`
+- `createSheetsSlice` → `createArtifactsSlice`
+- `SheetsSlice` → `ArtifactsSlice`
+
+**Component renames:**
+
+- `Sheets` → `Artifacts`
+- `SheetsTabs` → `ArtifactTabs`
+- `SheetsPanel` → `ArtifactsPanel`
+
+**Type renames:**
+
+- `Sheet` → `Artifact`
+- `SheetType` → `ArtifactType`
+
+#### Migration Example
+
+Before:
+
+```tsx
+import {createSheetsSlice, SheetsSlice} from '@sqlrooms/sheets';
+
+type RoomState = SheetsSlice & ...;
+
+const store = createRoomStore<RoomState>((set, get, store) => ({
+  ...createSheetsSlice()(set, get, store),
+}));
+
+const sheets = useRoomStore((state) => state.sheets.items);
+```
+
+After:
+
+```tsx
+import {createArtifactsSlice, ArtifactsSlice} from '@sqlrooms/artifacts';
+
+type RoomState = ArtifactsSlice & ...;
+
+const store = createRoomStore<RoomState>((set, get, store) => ({
+  ...createArtifactsSlice()(set, get, store),
+}));
+
+const artifacts = useRoomStore((state) => state.artifacts.items);
+```
+
+### `@sqlrooms/kepler`: map tabs moved to `@sqlrooms/artifacts` (breaking)
+
+Kepler no longer owns host-level tab selection. If your app supports multiple
+user-managed maps, model each map as an artifact and let `ArtifactTabs` own the
+selected tab, ordering, close/reopen, rename, and delete lifecycle.
+
+#### API Changes
+
+- `KeplerSliceConfig.currentMapId` was removed.
+- Legacy Kepler tab state such as `openTabs` should move to layout/artifact tab
+  state.
+- `state.kepler.getCurrentMap()` and `state.kepler.setCurrentMapId(...)` were
+  removed. Pass explicit map ids to Kepler APIs instead.
+- `KeplerMapContainer`, `KeplerPlotContainer`, `KeplerSidePanels`, and Kepler
+  slice actions should receive a `mapId` derived from the artifact panel or
+  current artifact selection.
+
+#### Migration Helper
+
+Use `migrateKeplerTabsToArtifacts` when loading persisted Kepler configs that
+still contain `maps`, `openTabs`, and `currentMapId`.
+
+```ts
+import {ArtifactsSliceConfig} from '@sqlrooms/artifacts';
+import {
+  KeplerSliceConfig,
+  migrateKeplerTabsToArtifacts,
+} from '@sqlrooms/kepler-config';
+
+const migrated = migrateKeplerTabsToArtifacts(rawKeplerConfig, {
+  artifactType: 'kepler-map',
+});
+
+const keplerConfig = KeplerSliceConfig.parse(migrated.keplerConfig);
+const artifactsConfig = ArtifactsSliceConfig.parse(migrated.artifactsConfig);
+```
+
+Then initialize the slices with the migrated configs and apply
+`migrated.hiddenArtifactIds` to the artifact tabs layout node if you need to
+preserve maps that were closed under the old Kepler tab model.
+
+#### Before
+
+```ts
+const currentMap = useRoomStore((state) => state.kepler.getCurrentMap());
+
+<KeplerMapContainer mapId={currentMap?.id ?? ''} />;
+```
+
+#### After
+
+```tsx
+const mapId = artifactIdFromPanelMeta;
+
+<KeplerMapContainer mapId={mapId} />;
+```
+
+### `@sqlrooms/kepler`: `addTableToMap` now prefers an object parameter
+
+`state.kepler.addTableToMap` now accepts a single object parameter. The older
+positional signature remains supported for compatibility, but host apps should
+migrate to the object form because the API now separates the table reference,
+Kepler `addDataToMap` options, config, and optional dataset id override.
+
+#### Before
+
+```ts
+await state.kepler.addTableToMap(
+  mapId,
+  tableName,
+  {
+    autoCreateLayers: false,
+    centerMap: false,
+  },
+  config,
+);
+```
+
+#### After
+
+```ts
+await state.kepler.addTableToMap({
+  mapId,
+  tableName,
+  options: {
+    autoCreateLayers: false,
+    centerMap: false,
+  },
+  config,
+});
+```
+
+If your app restores a previously saved Kepler layer or filter and must load the
+table under an existing `dataId`, pass `datasetId` explicitly:
+
+```ts
+await state.kepler.addTableToMap({
+  mapId,
+  tableName: savedDataId,
+  options: {
+    autoCreateLayers: false,
+    centerMap: false,
+  },
+  datasetId: savedDataId,
+});
+```
+
+For normal add-table flows, omit `datasetId`. Kepler will derive the persisted
+dataset id from the configured `tableSelection.getDatasetIdForTable` policy.
+
+### `@sqlrooms/duckdb-core`, `@sqlrooms/duckdb`: schema catalog loader and `createDbSchemaTrees()` input changed (breaking)
+
+`createDbSchemaTrees()` now takes a grouped `SchemaWithTables[]` instead of a flat `DataTable[]`, and the loader pair changed:
+
+- `loadSchemasWithTables()` → replaced by `loadSchemaCatalog()` (single metadata query, preserves empty schemas and empty `main` schemas of attached databases)
+- Filter API: instead of a single `(QualifiedTableName) => boolean` invoked with a fake `table === ''` for schemas, the new `loadSchemaCatalogFilter` receives a typed `SchemaCatalogFilterEntry` discriminated union (`{type: 'database' | 'schema' | 'table', ...}`)
+- `DuckDbSlice` accepts a new `loadSchemaCatalogFilter` prop alongside `loadTableSchemasFilter`. If you only set `loadTableSchemasFilter`, it is bridged for `entry.type === 'table'` only — schemas/databases fall through to `defaultLoadSchemaCatalogFilter`, so any reserved schemas/databases you previously hid via the table filter must move to a `loadSchemaCatalogFilter`.
+
+#### Signature change
+
+```ts
+// Before
+function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[];
+
+// After
+function createDbSchemaTrees(schemas: SchemaWithTables[]): DbSchemaNode[];
+
+type SchemaWithTables = {
+  database: string;
+  schema: string;
+  tables: DataTable[];
+};
+```
+
+`SchemaWithTables` is exported from both `@sqlrooms/duckdb-core` and `@sqlrooms/duckdb`.
+
+#### Before
+
+```ts
+import {createDbSchemaTrees, type DataTable} from '@sqlrooms/duckdb-core';
+
+const tables: DataTable[] = await loadTableSchemas(connector);
+const trees = createDbSchemaTrees(tables);
+```
+
+#### After
+
+Use the new `loadSchemaCatalog()` from `@sqlrooms/duckdb`, which returns `SchemaWithTables[]` directly:
+
+```ts
+import {createDbSchemaTrees} from '@sqlrooms/duckdb-core';
+import {
+  defaultLoadSchemaCatalogFilter,
+  loadSchemaCatalog,
+} from '@sqlrooms/duckdb';
+
+const schemas = await loadSchemaCatalog(connector, {
+  filterFunction: (entry) =>
+    entry.type === 'schema' && entry.schema === 'scratch'
+      ? false
+      : defaultLoadSchemaCatalogFilter(entry),
+});
+const trees = createDbSchemaTrees(schemas);
+```
+
+If you only have a flat `DataTable[]`, group it before passing to `createDbSchemaTrees`:
+
+```ts
+const grouped = new Map<string, SchemaWithTables>();
+for (const t of tables) {
+  const key = `${t.database}\x00${t.schema}`;
+  let g = grouped.get(key);
+  if (!g) {
+    g = {database: t.database ?? '', schema: t.schema, tables: []};
+    grouped.set(key, g);
+  }
+  g.tables.push(t);
+}
+const trees = createDbSchemaTrees(Array.from(grouped.values()));
+```
+
+### `@sqlrooms/duckdb-node`: query results now use DuckDB Arrow IPC (breaking)
+
+`@sqlrooms/duckdb-node` now converts query results with DuckDB's `nanoarrow`
+extension instead of reconstructing Arrow tables from JavaScript values. This
+preserves DuckDB's declared types and fixes lossy handling of timestamps,
+decimals, and binary data, but it changes both initialization requirements and
+the JavaScript values returned by `query()`.
+
+#### Make `nanoarrow` available during initialization
+
+The connector installs and loads DuckDB's `nanoarrow` community extension when
+it initializes. Initialization now fails if the extension cannot be installed
+or loaded. Environments without outbound network access must populate DuckDB's
+extension cache before creating the connector.
+
+If you use a restricted CI or production environment, exercise connector
+initialization in that environment before deployment. Do not treat
+`nanoarrow` as an optional enhancement: it is the conversion path used by the
+Node connector.
+
+#### Update code that consumes Arrow values
+
+Values returned by `query()` now follow their Arrow types instead of inferred
+JavaScript types. In particular:
+
+- `BIGINT` is Arrow `Int64` and is exposed as JavaScript `bigint`.
+- `DATE` remains Arrow `Date32` instead of being inferred from a JavaScript
+  date value.
+- `DECIMAL` retains its declared precision and scale.
+- `BLOB` remains Arrow `Binary` and preserves arbitrary bytes.
+
+Code that converts `query()` results to plain objects or serializes them with
+`JSON.stringify` must handle values such as `bigint` explicitly.
+
+For JSON-facing code, prefer `queryJson()`. Its row accessor converts safe
+integers to JavaScript numbers, unsafe integers and decimals to strings, and
+applies the same conversion recursively inside lists, structs, and maps.
+
+#### Arrow loading is now supported
+
+`loadArrow()` now accepts both Arrow tables and IPC byte streams. The Node API
+does not currently register in-memory Arrow buffers directly, so the connector
+uses a short-lived local file while DuckDB reads the IPC stream. Environments
+that restrict temporary-file creation must provide a writable operating-system
+temporary directory.
+
+### `@sqlrooms/ai-core`, `@sqlrooms/ai`: Upgraded to AI SDK v6 with `ToolLoopAgent` (breaking)
+
+The AI SDK dependency has been upgraded from v5 to v6. Tool execution now uses `ToolLoopAgent` instead of `streamText`. If you only use `createAiSlice` without customization, no changes are needed — the transport layer is updated internally.
+
+### `@sqlrooms/ai-config`, `@sqlrooms/ai-core`, `@sqlrooms/ai`: chat session terminology
+
+The public AI session API now uses chat terminology. Existing analysis-named
+exports remain available as compatibility aliases during the migration window,
+but new code should use the chat-named APIs.
+
+#### API Changes
+
+- `AnalysisSessionSchema` is deprecated in favor of `ChatSessionSchema`.
+- `isAnalysisSessionEmpty` is deprecated in favor of `isChatSessionEmpty`.
+- `AnalysisResultsContainer` is deprecated in favor of `ChatMessagesContainer`
+  or the preferred compound component API, `Chat.Messages`.
+- `AnalysisResult` is deprecated in favor of `ChatTurnView`.
+- `AnalysisAnswer` is deprecated in favor of `MessageContent`.
+- `processAnalysisAnswerContent` is deprecated in favor of
+  `processMessageContent`.
+- `AnalysisResultSchema`, `getAnalysisResults`, `addAnalysisResult`,
+  `deleteAnalysisResult`, and `cleanupPendingAnalysisResults` remain
+  compatibility APIs for existing apps.
+- New code should prefer `uiMessages` and derived `ChatTurn` helpers such as
+  `getChatTurnsFromUiMessages`.
+- Persisted legacy `analysisResults` is still accepted when loading old rooms,
+  but `ChatSessionSchema` no longer emits `analysisResults` in parsed session
+  state and new sessions no longer persist it.
+
+#### Migration Example
+
+Before:
+
+```ts
+import {AnalysisSessionSchema, isAnalysisSessionEmpty} from '@sqlrooms/ai';
+```
+
+After:
+
+```ts
+import {ChatSessionSchema, isChatSessionEmpty} from '@sqlrooms/ai';
+```
+
+If you render the built-in chat UI, prefer the compound component:
+
+```tsx
+<Chat.Root>
+  <Chat.Messages />
+</Chat.Root>
+```
+
+For custom chat rendering, derive turns from `uiMessages`:
+
+```ts
+import {getChatTurnsFromUiMessages} from '@sqlrooms/ai';
+
+const turns = getChatTurnsFromUiMessages(session.uiMessages, {
+  isRunning: session.isRunning,
+});
+```
+
+#### Sub-agent composition
+
+The tool-as-agent pattern now uses `ToolLoopAgent` + `streamSubAgent`:
+
+```ts
+// Before (v5)
+const result = await streamText({
+  model,
+  system: instructions,
+  messages: [{role: 'user', content: prompt}],
+  tools,
+  maxSteps: 10,
+});
+
+// After (v6)
+import {ToolLoopAgent, stepCountIs} from 'ai';
+import {streamSubAgent} from '@sqlrooms/ai';
+
+const agent = new ToolLoopAgent({
+  model,
+  instructions,
+  tools,
+  stopWhen: stepCountIs(10),
+  temperature: 0,
+});
+const resultText = await streamSubAgent(agent, prompt, abortSignal);
+```
+
+#### `addToolResult` → `addToolOutput`
+
+```ts
+// Before
+addToolResult({toolCallId, result: {...}});
+
+// After — note: `tool` is a new required field in v6
+addToolOutput({tool: toolName, toolCallId, output: {...}});
+```
+
+#### `ToolRendererProps` new states
+
+Tool renderers may now receive three additional states for approval workflows: `approval-requested`, `approval-responded`, and `output-denied`. Update any exhaustive switch/if-else on `state` in custom renderers.
+
+#### Remote transport
+
+If you use `createRemoteChatTransportFactory`, your server-side route must migrate from `streamText` to `ToolLoopAgent` + `createAgentUIStreamResponse`. The transport now sends `instructions`, `maxSteps`, and `temperature` in the request body.
+
+> **Note:** The [`ai-nextjs` example](https://github.com/sqlrooms/sqlrooms/blob/main/examples/ai-nextjs/src/app/api/chat/route.ts) shows a reference implementation that intentionally ignores these client-supplied fields and uses server-controlled defaults for security. Production endpoints should decide whether to trust client-supplied values for `instructions`, `maxSteps`, and `temperature` based on their security model.
+
+### `@sqlrooms/kepler`: `initialKeplerState` was replaced with `createInitialMapKeplerState` (breaking)
+
+`createKeplerSlice()` no longer accepts a static `initialKeplerState` object.
+
+Use `createInitialMapKeplerState` instead. It is called whenever a map's kepler state is initialized, so consumers can override the default map state and, if needed, derive things like the basemap style from the current theme by calling `getTheme()`.
+
+#### Before
+
+```ts
+createKeplerSlice({
+  initialKeplerState: {
+    mapStyle: {
+      styleType: 'positron',
+    },
+  },
+});
+```
+
+#### After
+
+```ts
+import {getTheme} from '@sqlrooms/ui';
+
+createKeplerSlice({
+  createInitialMapKeplerState: ({defaultInitialMapKeplerState}) => ({
+    ...defaultInitialMapKeplerState,
+    mapStyle: {
+      ...defaultInitialMapKeplerState.mapStyle,
+      styleType: getTheme() === 'dark' ? 'dark-matter' : 'positron',
+    },
+  }),
+});
+```
+
+### `@sqlrooms/ui`: `toast` export now uses Sonner (breaking)
+
+The top-level `toast` export from `@sqlrooms/ui` now points to Sonner's API.
+
+- **Before**: `toast({...})` used SQLRooms' legacy Radix-based object API.
+- **After**: `toast.success(...)`, `toast.error(...)`, etc. use Sonner.
+
+If you still need the old API temporarily, import `legacyToast` from `@sqlrooms/ui`.
+
+#### Before
+
+```tsx
+import {toast} from '@sqlrooms/ui';
+
+toast({
+  variant: 'default',
+  title: 'Table created',
+  description: 'File loaded',
+});
+```
+
+#### After (Sonner)
+
+```tsx
+import {toast} from '@sqlrooms/ui';
+
+toast.success('Table created', {
+  description: 'File loaded',
+});
+```
+
+#### Temporary compatibility option
+
+```tsx
+import {legacyToast} from '@sqlrooms/ui';
+
+legacyToast({
+  variant: 'default',
+  title: 'Table created',
+  description: 'File loaded',
+});
+```
+
+### `@sqlrooms/ai`, `@sqlrooms/vega`, `@sqlrooms/ai-rag`: Tools migrated to native AI SDK format (breaking)
+
+All built-in tools and the tool authoring API now use the AI SDK's `tool()` factory instead of the OpenAssistant format. The `@openassistant/utils` dependency has been removed.
+
+#### Custom tools: before
+
+```ts
+import {z} from 'zod';
+
+const myTool = {
+  name: 'my_tool',
+  description: 'Does something',
+  parameters: z.object({text: z.string()}),
+  execute: async ({text}) => ({
+    llmResult: {success: true, details: `Result: ${text}`},
+    additionalData: {processed: text},
+  }),
+  component: MyToolResult, // renderer attached to tool
+};
+```
+
+#### Custom tools: after
+
+```ts
+import {tool} from 'ai';
+import {z} from 'zod';
+
+const myTool = tool({
+  description: 'Does something',
+  inputSchema: z.object({text: z.string()}),
+  execute: async ({text}) => ({
+    // flat output — no llmResult / additionalData nesting
+    success: true,
+    details: `Result: ${text}`,
+    processed: text,
+  }),
+  // optional: control what the LLM sees (defaults to full JSON)
+  toModelOutput: ({output}) => ({type: 'text', value: output.details}),
+});
+// renderer is registered separately — see toolRenderers below
+```
+
+### `@sqlrooms/ai-core`, `@sqlrooms/ai`: Tool renderers decoupled from tools (breaking)
+
+Tool renderers (`component`) are no longer attached to individual tools. They are now registered once in `createAiSlice` via the new `toolRenderers` option, typed against the tools map.
+
+#### Before
+
+```ts
+createAiSlice({
+  tools: {
+    query: createQueryTool(store), // had component: QueryToolResult
+    chart: createVegaChartTool(), // had component: VegaChartToolResult
+  },
+  // ...
+});
+```
+
+#### After
+
+```ts
+import {createDefaultAiTools, createDefaultAiToolRenderers} from '@sqlrooms/ai';
+import {VegaChartToolResult} from '@sqlrooms/vega';
+
+createAiSlice({
+  tools: {
+    ...createDefaultAiTools(store),
+    chart: createVegaChartTool(),
+  },
+  toolRenderers: {
+    ...createDefaultAiToolRenderers(), // includes QueryToolResult
+    chart: VegaChartToolResult,
+    // myCustomTool: MyCustomToolResult,
+  },
+  // ...
+});
+```
+
+### `@sqlrooms/ai`: Tool output type renames (breaking)
+
+The `llmResult`/`additionalData` split has been replaced with a single flat output type per tool.
+
+| Package            | Old type                                                 | New type                                |
+| ------------------ | -------------------------------------------------------- | --------------------------------------- |
+| `@sqlrooms/ai`     | `QueryToolLlmResult` + `QueryToolAdditionalData`         | `QueryToolOutput`                       |
+| `@sqlrooms/ai`     | `QueryToolOutput.errorMessage`                           | `QueryToolOutput.error`                 |
+| `@sqlrooms/vega`   | `VegaChartToolLlmResult` + `VegaChartToolAdditionalData` | `VegaChartToolOutput`                   |
+| `@sqlrooms/vega`   | `VegaChartToolArgs` (type alias)                         | removed — use `VegaChartToolParameters` |
+| `@sqlrooms/vega`   | `VegaChartToolContext`                                   | removed                                 |
+| `@sqlrooms/ai-rag` | `RagToolAdditionalData` + `RagToolContext`               | removed — use `RagToolOutput`           |
+
+### `@sqlrooms/ai`: `QueryToolResult` props changed (breaking)
+
+`QueryToolResult` now receives `ToolRendererProps<QueryToolOutput, QueryToolParameters>` instead of standalone props. If you render it directly, update the call-site:
+
+#### Before
+
+```tsx
+<QueryToolResult
+  title="My query"
+  sqlQuery={sql}
+  showSql={false}
+  formatValue={myFormatter}
+/>
+```
+
+#### After
+
+Use `createQueryToolRenderer` and register it in `toolRenderers`:
+
+```ts
+import {createQueryToolRenderer} from '@sqlrooms/ai';
+
+toolRenderers: {
+  query: createQueryToolRenderer({showSql: false, formatValue: myFormatter}),
+}
+```
+
+### `@sqlrooms/vega`: `createVegaChartTool` options removed (breaking)
+
+The `embedOptions`, `editable`, and `editorMode` options have been removed from `createVegaChartTool`. Pass them directly as props to `VegaChartToolResult` instead.
+
+#### Before
+
+```ts
+createVegaChartTool({editable: false, editorMode: 'sql'});
+```
+
+#### After
+
+```tsx
+import {VegaChartToolResult} from '@sqlrooms/vega';
+
+// In your toolRenderers:
+toolRenderers: {
+  chart: (props) => <VegaChartToolResult {...props} editable={false} editorMode="sql" />,
+}
+```
+
+### `@sqlrooms/ai-rag`: `ragToolRenderer` exported separately (breaking)
+
+The RAG tool renderer is no longer attached to the tool. Import and register it explicitly.
+
+#### Before
+
+```ts
+// renderer was bundled inside createRagTool() as `component`
+tools: {
+  search_documentation: createRagTool();
+}
+```
+
+#### After
+
+```ts
+import {createRagTool, ragToolRenderer} from '@sqlrooms/ai-rag';
+
+tools: {search_documentation: createRagTool()},
+toolRenderers: {search_documentation: ragToolRenderer},
+```
+
+### `@sqlrooms/ai-core`: In-chat tool result editing removed (breaking)
+
+The `setSessionToolAdditionalData` API and the `toolAdditionalData` session field have been removed. In-chat editing of tool results (e.g. inline Vega chart spec editing) is no longer supported — charts and other tool outputs are now rendered read-only within the chat.
+
+```ts
+// Before
+state.ai.setSessionToolAdditionalData(sessionId, toolCallId, data);
+
+// After — remove the call entirely; no replacement needed.
+```
+
+If you were using `toolAdditionalData` to persist user edits to charts, extract the chart into a first-class entity stored independently of the chat instead. Persisted sessions with `toolAdditionalData` are automatically cleaned up on load.
+
+### `@sqlrooms/ai`: Remote transport — drop `data-tool-additional-output` custom chunk (breaking)
+
+If you have a custom Next.js (or other server-side) route that manually wrote `data-tool-additional-output` data chunks to ferry `additionalData` to the client, you can remove that code entirely.
+
+#### Before
+
+```ts
+// app/api/chat/route.ts
+result.pipeThrough(
+  new TransformStream({
+    async onChunk({chunk}) {
+      if (chunk.type === 'tool-result') {
+        writer.write({
+          type: 'data-tool-additional-output',
+          transient: true,
+          data: {
+            toolCallId: chunk.toolCallId,
+            toolName: chunk.toolName,
+            output: getToolAdditionalData(chunk.toolCallId),
+          },
+        });
+      }
+    },
+  }),
+);
+```
+
+#### After
+
+Remove the `onChunk` handler. `createAgentUIStreamResponse` embeds the full tool `execute()` output directly into the `UIMessage` stream as a `tool-result` part, which the renderer receives via `ToolRendererProps.output`. No side-channel is needed.
+
+```ts
+// chatTransport.ts — inside the local transport factory
+return createAgentUIStreamResponse({
+  agent,
+  uiMessages: sanitizeMessagesForLLM(fixIncompleteToolCalls(messagesCopy)),
+  abortSignal,
+});
+```
+
+**Why this works:** Previously, `execute()` returned `{llmResult, additionalData}` — the UI data (`additionalData`) was separate and had to be sent manually. Now `execute()` returns a single flat output object. The AI SDK propagates the full output to the client through the standard `UIMessage` parts, so `ToolRendererProps.output` is populated automatically without any custom data chunks.
+
+### `@sqlrooms/ai-core`: Removed exports
+
+- `convertToAiSDKTools` — removed (tools are now native AI SDK tools)
+- `findToolComponent` — replaced by `findToolRenderer`
+- `VegaChartToolParametersType` from `@sqlrooms/vega` — removed (use `VegaChartToolParameters` directly)
+
+### `@sqlrooms/ai-core`: Composer and prompt suggestions rebuilt on unstyled primitives (breaking)
+
+`Chat.Composer` and `Chat.PromptSuggestions` are now recipes built on a new
+public primitive layer — `useChatComposer()` / `usePromptSuggestions()` and a
+set of `asChild`-capable, unstyled components (`Input`, `Send`, `Stop`,
+`DropTarget` for the composer; `Root`, `Item`, `VisibilityToggle`, `Dismiss`
+for suggestions). See the "Composable composer and prompt-suggestions
+primitives" section of the [`@sqlrooms/ai-core` README](https://github.com/sqlrooms/sqlrooms/blob/main/packages/ai-core/README.md)
+for the full layering and API.
+
+Three behavior changes ship alongside the new primitives:
+
+- **`Chat.Composer`'s `onRun` is now a chat-wide pre-send veto, not a
+  per-control one.** It is registered on the composer state rather than wired
+  into the composer's own button and keymap, so it also runs for sends that
+  originate elsewhere under the same `<Chat>` root — clicking a prompt
+  suggestion, or a host calling `useChatComposer().send()`. This is deliberate:
+  a policy the composer enforces and a suggestion row bypasses is a policy two
+  surfaces disagree about. Two consequences to check: `onRun` may now fire for
+  a prompt the user never typed into the composer, and two `Chat.Composer`s
+  under one root share one registry, so both `onRun`s run for either surface's
+  sends (a duplicate warns in development). Give independent surfaces their own
+  `<Chat>` root. `onRun` is still skipped entirely when sending is not possible,
+  so it never fires for a send that does not happen.
+- **Local-agent `Enter` while streaming no longer stops the run.** It is now
+  a no-op, matching session mode: `Enter` sends when ready, and never
+  cancels a run in flight.
+- **`Chat.PromptSuggestions` now defaults to a full-width vertical list**
+  with click-to-send and CSS-ellipsis truncation (plus a native `title` for
+  the full text), replacing the previous horizontal card carousel that
+  filled the prompt for editing and truncated by character count. A
+  horizontal layout is still available — build it directly from the
+  suggestions primitives, as `examples/ai-rag` now does.
+
+### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
+
+The layout system now uses explicit panel identity and dock boundaries instead
+of path-based lookup. `LayoutConfig` is `LayoutNode | null` directly — the
+outer `{ type: 'mosaic', nodes: ... }` wrapper is gone. Type names have been
+renamed from `MosaicLayout*` to `Layout*`, and `react-resizable-panels` now
+handles all layout rendering.
+
+The following APIs and properties were removed:
+
+- `getPanelByPath`
+- `useGetPanelByPath`
+- `useGetPanelInfoByPath`
+- `draggable` on split and tabs nodes
+- `pathSegment` on split and tabs nodes
+
+**Limited automatic migration:** The Zod schema uses `z.preprocess` to detect and convert **only** legacy binary tree formats (`{first, second, direction, splitPercentage?}`) to the new n-ary format with `children` arrays.
+
+**Manual migration required for:**
+
+- The outer `{ type: 'mosaic', nodes: ... }` wrapper (must be removed)
+- N-ary `splitPercentages` arrays on nodes that already use `children` arrays (must be converted to per-child `defaultSize`)
+- Any other v1 layout formats not in binary tree shape
+
+#### Layout config: remove the outer wrapper
+
+The `{ type: 'mosaic', nodes: ... }` wrapper and `LayoutTypes` enum are no longer needed.
+
+##### Before
+
+```ts
+import {LayoutTypes} from '@sqlrooms/layout-config';
+
+const layout = {
+  type: LayoutTypes.enum.mosaic,
+  nodes: {
+    type: 'split',
+    direction: 'row',
+    children: ['data', 'main'],
+    splitPercentages: [30, 70],
+  },
+};
+```
+
+##### After
+
+```ts
+import {LayoutConfig} from '@sqlrooms/layout-config';
+
+const layout: LayoutConfig = {
+  type: 'split',
+  direction: 'row',
+  children: [
+    {type: 'panel', id: 'data', defaultSize: '30%'},
+    {type: 'panel', id: 'main', defaultSize: '70%'},
+  ],
+};
+```
+
+#### `splitPercentages` replaced by per-node sizing
+
+`splitPercentages` and `savedPercentages` on split nodes have been removed. Sizing is now specified on individual child nodes via `defaultSize`, `minSize`, `maxSize`, `collapsedSize`, and `collapsible`.
+
+##### Before
+
+```ts
+{
+  type: 'split',
+  direction: 'row',
+  children: ['sidebar', 'main'],
+  splitPercentages: [25, 75],
+}
+```
+
+##### After
+
+```ts
+{
+  type: 'split',
+  direction: 'row',
+  children: [
+    {type: 'panel', id: 'sidebar', defaultSize: '25%', minSize: '150px'},
+    'main',
+  ],
+}
+```
+
+Size values accept CSS units (`'200px'`, `'25%'`, `'1rem'`). A plain string without a unit suffix is treated as a percentage.
+
+#### New `type: 'panel'` leaf node
+
+A new `panel` node type allows specifying sizing constraints on individual panels:
+
+```ts
+{
+  type: 'panel',
+  id: 'sidebar',
+  defaultSize: '25%',
+  minSize: '150px',
+  maxSize: '50%',
+  collapsedSize: '0px',
+  collapsible: true,
+}
+```
+
+Plain string keys (e.g. `'main'`) still work as leaf nodes without sizing constraints.
+
+#### Type renames
+
+All `MosaicLayout*` types have been renamed to `Layout*`. The old names are still exported as deprecated aliases.
+
+| Old name                      | New name                |
+| ----------------------------- | ----------------------- |
+| `MosaicLayoutConfig`          | `LayoutConfig`          |
+| `MosaicLayoutNode`            | `LayoutNode`            |
+| `MosaicLayoutSplitNode`       | `LayoutSplitNode`       |
+| `MosaicLayoutTabsNode`        | `LayoutTabsNode`        |
+| `MosaicLayoutMosaicNode`      | `LayoutMosaicNode`      |
+| `MosaicLayoutParent`          | `LayoutSplitNode`       |
+| `MosaicLayoutDirection`       | `LayoutDirection`       |
+| `MosaicLayoutNodeKey`         | `LayoutNodeKey`         |
+| `isMosaicLayoutParent()`      | `isLayoutSplitNode()`   |
+| `isMosaicLayoutSplitNode()`   | `isLayoutSplitNode()`   |
+| `isMosaicLayoutTabsNode()`    | `isLayoutTabsNode()`    |
+| `isMosaicLayoutMosaicNode()`  | `isLayoutMosaicNode()`  |
+| `createDefaultMosaicLayout()` | `createDefaultLayout()` |
+| `DEFAULT_MOSAIC_LAYOUT`       | _(removed)_             |
+| `LayoutTypes`                 | _(removed)_             |
+
+Deprecated helper renames in `@sqlrooms/layout`:
+
+| Old name                       | New name                  |
+| ------------------------------ | ------------------------- |
+| `makeMosaicStack`              | `makeLayoutStack`         |
+| `visitMosaicLeafNodes`         | `visitLayoutLeafNodes`    |
+| `getVisibleMosaicLayoutPanels` | `getVisibleLayoutPanels`  |
+| `findMosaicNodePathByKey`      | `findLayoutNodePathByKey` |
+| `removeMosaicNodeByKey`        | `removeLayoutNodeByKey`   |
+
+#### Panel `placement` is deprecated
+
+The `placement` property on panel info (`'sidebar'`, `'main'`, etc.) is deprecated and no longer used. Panel location is now determined entirely by the layout tree structure, not by a property on the panel definition.
+
+##### Before
+
+```ts
+panels: {
+  data: {title: 'Data', component: DataPanel, placement: 'sidebar'},
+}
+```
+
+##### After
+
+```ts
+panels: {
+  data: {title: 'Data', component: DataPanel},
+}
+```
+
+Panel location is controlled by the layout configuration structure (e.g., which `split`, `tabs`, or `panel` node references the panel key).
+
+#### New `LayoutRenderer` component
+
+`LayoutRenderer` is the new top-level renderer that handles all node types (`split`, `tabs`, `mosaic`, `panel`, and string leaves). `MosaicLayout` is still available for rendering mosaic-only sub-trees.
+
+#### Render callbacks API
+
+`createLayoutSlice` now accepts `renderPanel` and `renderTabStrip` callbacks for custom rendering:
+
+```ts
+createLayoutSlice({
+  config: {
+    /* ... */
+  },
+  panels: {
+    /* ... */
+  },
+  renderPanel: (context) => {
+    // Return custom JSX or undefined to use default
+  },
+  renderTabStrip: (context) => {
+    // Return custom tab strip JSX or undefined for default
+  },
+});
+```
+
+#### Panel padding removed from `LeafLayoutPanel` (breaking)
+
+`LeafLayoutPanel` no longer applies `p-2` padding by default. Panel components must now add their own padding.
+
+##### Before
+
+Panel content inherited `p-2` padding from `LeafLayoutPanel`:
+
+```tsx
+export const MyPanel: RoomPanelComponent = () => {
+  return <div>My content</div>;
+};
+```
+
+##### After
+
+Add `p-2` to your panel component:
+
+```tsx
+export const MyPanel: RoomPanelComponent = () => {
+  return <div className="p-2">My content</div>;
+};
+```
+
+#### Area-based panel management
+
+Named `tabs` nodes (with an `id`) act as areas with new management methods:
+
+```ts
+state.layout.setActivePanel(areaId, panelId);
+state.layout.addPanelToArea(areaId, panelId);
+state.layout.removePanelFromArea(areaId, panelId);
+state.layout.setAreaCollapsed(areaId, collapsed);
+state.layout.toggleAreaCollapsed(areaId);
+state.layout.getAreaPanels(areaId);
+state.layout.getActivePanel(areaId);
+state.layout.isAreaCollapsed(areaId);
+```
+
+#### `react-mosaic-component` removed
+
+`react-mosaic-component` has been removed and replaced with `react-resizable-panels` for all layout rendering. The layout tree structure changed from a binary format (`first`/`second`) to an n-ary format (`children[]`). Binary tree layouts are migrated automatically via `z.preprocess`, but other formats require manual migration (see above).
+
+## 0.28.0
+
+### Tailwind v3 to v4
+
+Tailwind in SQLRooms is now upgraded from v3 to v4.
+
+For the full migration checklist and additional breaking changes, see the official Tailwind upgrade guide: [https://tailwindcss.com/docs/upgrade-guide](https://tailwindcss.com/docs/upgrade-guide).
+
+You can use the official migration tool directly in your repository:
+
+```sh
+npx @tailwindcss/upgrade
+```
+
+#### Manual steps
+
+The main migration step is moving template/content discovery from `tailwind.config.js` into your global CSS using `@source` directives (see `examples/query/src/index.css` for a complete example).
+
+##### Step 1
+
+Move content paths from `tailwind.config.js` to global css `index.css`. Also, add `index.html` and pay attention to relative paths since `index.css` is usually located under `src/` folder while `tailwind.config.js` is in the root.
+
+```css
+/* index.css */
+
+@import 'tailwindcss';
+
+@import '@sqlrooms/ui/tailwind-preset.css';
+
+@source '../index.html';
+@source './**/*.{ts,tsx}';
+@source '../node_modules/@sqlrooms/*/dist/';
+
+/* styles */
+```
+
+##### Step 2
+
+Remove `tailwind.config.js`
+
+##### Step 3
+
+Remove `@layer base { ... }` from `index.css`
+
+Before:
+
+```css
+/* index.css */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    /* ... */
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    /* ... */
+  }
+}
+```
+
+After:
+
+```css
+/* index.css */
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  /* ... */
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  /* ... */
+}
+```
+
+##### Step 4: For Vite projects
+
+- Install `@tailwindcss/vite` and add it to your `vite.config.js` file,
+
+```bash
+pnpm add -D @tailwindcss/vite
+```
+
+```javascript
+// vite.config.js
+
+import {defineConfig} from 'vite';
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+});
+```
+
+- Remove `autoprefixer` and `postcss`
+- Remove `postcss.config.js`
+
+##### Step 4: For NextJS projects
+
+Update `postcss.config.js`
+
+Before:
+
+```javascript
+// postcss.config.js
+
+const config = {
+  plugins: ['@tailwindcss/postcss'],
+};
+
+export default config;
+```
+
+After:
+
+```javascript
+// postcss.config.js
+
+const config = {
+  plugins: {
+    '@tailwindcss/postcss': {},
+  },
+};
+export default config;
+```
+
 ## 0.27.0-rc.0
 
 ### @sqlrooms/mosaic
@@ -80,10 +1265,9 @@ function MyComponent() {
 
 ```tsx
 import {Query, useMosaicClient} from '@sqlrooms/mosaic';
-import {Table} from 'apache-arrow';
 
 function MapView() {
-  const {data, isLoading, client} = useMosaicClient<Table>({
+  const {data, isLoading, client} = useMosaicClient({
     selectionName: 'brush',
     query: (filter: any) => {
       return Query.from('earthquakes')
@@ -117,7 +1301,8 @@ AI chat state is now **scoped per session** (instead of a single global chat ins
   - `getPrompt(sessionId)` / `setPrompt(sessionId, prompt)`
   - `getIsRunning(sessionId)` / `setIsRunning(sessionId, isRunning)`
 - **New hook**: `useSessionChat(sessionId)` for session-scoped chat (replaces legacy single-instance patterns)
-- **Mounting requirement**: if you render AI primitives directly (e.g. `QueryControls`, `AnalysisResultsContainer`) you must mount chat providers once via `Chat.Root` (it mounts `SessionChatManager`).
+- **Lifecycle**: session chat execution is owned by the AI slice. Starting a run
+  does not require a mounted React chat provider.
 
 #### Before
 
@@ -135,7 +1320,9 @@ await useRoomStore.getState().ai.startAnalysis(sendMessage);
 const currentSession = useRoomStore((s) => s.ai.getCurrentSession());
 const sessionId = currentSession?.id;
 
-const prompt = useRoomStore((s) => (sessionId ? s.ai.getPrompt(sessionId) : ''));
+const prompt = useRoomStore((s) =>
+  sessionId ? s.ai.getPrompt(sessionId) : '',
+);
 const isRunning = useRoomStore((s) =>
   sessionId ? s.ai.getIsRunning(sessionId) : false,
 );
@@ -147,7 +1334,8 @@ if (sessionId) {
 
 #### Recommended UI composition
 
-Use `Chat.Root` once at the top of your AI UI tree (it mounts `SessionChatManager`):
+Use `Chat.Root` once at the top of your AI UI tree to provide the compound chat
+presentation context:
 
 ```tsx
 import {Chat} from '@sqlrooms/ai';
@@ -289,6 +1477,7 @@ This release focuses on standardizing terminology across the codebase and improv
   <RoomShell.Sidebar />
   <RoomShell.LayoutComposer />
   <RoomShell.LoadingProgress />
+  <RoomShell.CommandPalette />
 </RoomShell>
 ```
 

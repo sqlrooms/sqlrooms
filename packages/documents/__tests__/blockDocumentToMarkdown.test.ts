@@ -1,0 +1,483 @@
+import {blockDocumentToMarkdown} from '../src/blockDocumentToMarkdown';
+import type {BlockDocumentContent} from '../src/BlockDocumentSliceConfig';
+
+function doc(content: BlockDocumentContent['content']): BlockDocumentContent {
+  return {type: 'doc', content};
+}
+
+describe('blockDocumentToMarkdown', () => {
+  it('serializes headings, paragraphs, and marks', () => {
+    const content = doc([
+      {
+        type: 'heading',
+        attrs: {level: 2},
+        content: [{type: 'text', text: 'Section'}],
+      },
+      {
+        type: 'paragraph',
+        content: [
+          {type: 'text', text: 'Hello '},
+          {type: 'text', text: 'world', marks: [{type: 'bold'}]},
+          {type: 'text', text: ' and '},
+          {type: 'text', text: 'more', marks: [{type: 'italic'}]},
+        ],
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe(
+      '## Section\n\nHello **world** and *more*',
+    );
+  });
+
+  it('serializes lists, tasks, code, and blockquotes', () => {
+    const content = doc([
+      {
+        type: 'bulletList',
+        content: [
+          {
+            type: 'listItem',
+            content: [
+              {
+                type: 'paragraph',
+                content: [{type: 'text', text: 'Item 1'}],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        type: 'taskList',
+        content: [
+          {
+            type: 'taskItem',
+            attrs: {checked: true},
+            content: [
+              {
+                type: 'paragraph',
+                content: [{type: 'text', text: 'Done'}],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        type: 'codeBlock',
+        content: [{type: 'text', text: 'const x = 1;'}],
+      },
+      {
+        type: 'blockquote',
+        content: [
+          {type: 'paragraph', content: [{type: 'text', text: 'Quote'}]},
+        ],
+      },
+    ]);
+
+    const markdown = blockDocumentToMarkdown(content);
+    expect(markdown).toContain('- Item 1');
+    expect(markdown).toContain('- [x] Done');
+    expect(markdown).toContain('```\nconst x = 1;\n```');
+    expect(markdown).toContain('> Quote');
+  });
+
+  it('serializes tables', () => {
+    const content = doc([
+      {
+        type: 'table',
+        content: [
+          {
+            type: 'tableRow',
+            content: [
+              {
+                type: 'tableHeader',
+                content: [
+                  {type: 'paragraph', content: [{type: 'text', text: 'A'}]},
+                ],
+              },
+              {
+                type: 'tableHeader',
+                content: [
+                  {type: 'paragraph', content: [{type: 'text', text: 'B'}]},
+                ],
+              },
+            ],
+          },
+          {
+            type: 'tableRow',
+            content: [
+              {
+                type: 'tableCell',
+                content: [
+                  {type: 'paragraph', content: [{type: 'text', text: '1'}]},
+                ],
+              },
+              {
+                type: 'tableCell',
+                content: [
+                  {type: 'paragraph', content: [{type: 'text', text: '2'}]},
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const markdown = blockDocumentToMarkdown(content);
+    expect(markdown).toContain('| A   | B   |');
+    expect(markdown).toContain('| 1   | 2   |');
+  });
+
+  it('renders a chart block with its caption', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChart',
+        attrs: {id: 'c1', tableName: 'sales', caption: 'Revenue by quarter'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe(
+      '![Revenue by quarter](chart)',
+    );
+  });
+
+  it('escapes markdown-special characters in captions', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChart',
+        attrs: {id: 'c1', tableName: 'sales', caption: 'Revenue [by] quarter'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe(
+      '![Revenue \\[by\\] quarter](chart)',
+    );
+  });
+
+  it('replaces newlines in captions with spaces', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChart',
+        attrs: {id: 'c1', tableName: 'sales', caption: 'Line 1\nLine 2'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![Line 1 Line 2](chart)');
+  });
+
+  it('escapes a backslash before a closing bracket in captions', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChart',
+        attrs: {id: 'c1', tableName: 'sales', caption: 'Revenue \\] quarter'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe(
+      String.raw`![Revenue \\\] quarter](chart)`,
+    );
+  });
+
+  it('replaces a bare carriage return in captions with a space', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChart',
+        attrs: {id: 'c1', tableName: 'sales', caption: 'Line 1\rLine 2'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![Line 1 Line 2](chart)');
+  });
+
+  it('escapes parentheses in image sources', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentImage',
+        attrs: {id: 'i1', assetId: 'a)b', caption: 'A chart'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![A chart](a\\)b)');
+  });
+
+  it('encodes whitespace in image sources', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentImage',
+        attrs: {id: 'i1', assetId: 'asset one', caption: 'A chart'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![A chart](asset%20one)');
+  });
+
+  it('encodes line endings in image sources', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentImage',
+        attrs: {id: 'i1', assetId: 'a\nb', caption: 'A chart'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![A chart](a%0Ab)');
+  });
+
+  it('encodes angle brackets in image sources', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentImage',
+        attrs: {id: 'i1', assetId: '<asset>', caption: 'A chart'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![A chart](%3Casset%3E)');
+  });
+
+  it('escapes entity introducers in image sources', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentImage',
+        attrs: {id: 'i1', assetId: 'asset&copy;1', caption: 'A chart'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![A chart](asset\\&copy;1)');
+  });
+
+  it('encodes line endings in stateful block sources', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentStatefulBlock',
+        attrs: {
+          id: 'm1',
+          blockType: 'map\nblock',
+          caption: 'Store locations',
+        },
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe(
+      '![Store locations](map%0Ablock)',
+    );
+  });
+
+  it('escapes emphasis characters in captions', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChart',
+        attrs: {id: 'c1', tableName: 'sales', caption: 'Revenue *by* quarter'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe(
+      '![Revenue \\*by\\* quarter](chart)',
+    );
+  });
+
+  it('escapes entity introducers in captions', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChart',
+        attrs: {id: 'c1', tableName: 'sales', caption: 'Revenue &copy; 2026'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe(
+      '![Revenue \\&copy; 2026](chart)',
+    );
+  });
+
+  it('renders a chart block without a caption using a fallback label', () => {
+    const content = doc([
+      {type: 'blockDocumentChart', attrs: {id: 'c1', tableName: 'sales'}},
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![Chart](chart)');
+  });
+
+  it('renders a stateful block (map) with its caption', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentStatefulBlock',
+        attrs: {
+          id: 'm1',
+          blockType: 'map',
+          blockInstanceId: 'm1',
+          caption: 'Store locations',
+        },
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![Store locations](map)');
+  });
+
+  it('renders a stateful block without a caption using the block type', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentStatefulBlock',
+        attrs: {id: 'd1', blockType: 'dashboard', blockInstanceId: 'd1'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![dashboard](dashboard)');
+  });
+
+  it('renders an image block with its caption and asset id', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentImage',
+        attrs: {id: 'i1', assetId: 'asset-1', caption: 'A chart'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![A chart](asset-1)');
+  });
+
+  it('renders a chart image block with its caption', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentChartImage',
+        attrs: {id: 'ci1', assetId: 'asset-2', caption: 'Snapshot'},
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content)).toBe('![Snapshot](asset-2)');
+  });
+
+  it('prepends the document title as a heading', () => {
+    const content = doc([
+      {
+        type: 'paragraph',
+        content: [{type: 'text', text: 'Body text'}],
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content, {title: 'My Report'})).toBe(
+      '# My Report\n\nBody text',
+    );
+  });
+
+  it('returns only the title when the body is empty', () => {
+    expect(blockDocumentToMarkdown(doc([]), {title: 'Empty'})).toBe('# Empty');
+  });
+
+  it('normalizes line breaks in the title', () => {
+    const content = doc([
+      {
+        type: 'paragraph',
+        content: [{type: 'text', text: 'Body text'}],
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content, {title: 'Report\nInjected'})).toBe(
+      '# Report Injected\n\nBody text',
+    );
+  });
+
+  it('escapes markdown characters in the title', () => {
+    const content = doc([
+      {
+        type: 'paragraph',
+        content: [{type: 'text', text: 'Body text'}],
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content, {title: 'Report [x](y)'})).toBe(
+      '# Report \\[x\\](y)\n\nBody text',
+    );
+  });
+
+  it('escapes trailing hashes in the title', () => {
+    const content = doc([
+      {
+        type: 'paragraph',
+        content: [{type: 'text', text: 'Body text'}],
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content, {title: 'Version #'})).toBe(
+      '# Version \\#\n\nBody text',
+    );
+  });
+
+  it('escapes emphasis, code, and html in the title', () => {
+    const content = doc([
+      {
+        type: 'paragraph',
+        content: [{type: 'text', text: 'Body text'}],
+      },
+    ]);
+
+    expect(
+      blockDocumentToMarkdown(content, {title: '*Draft* `Report` <em>x</em>'}),
+    ).toBe('# \\*Draft\\* \\`Report\\` \\<em\\>x\\</em\\>\n\nBody text');
+  });
+
+  it('escapes entity introducers in the title', () => {
+    const content = doc([
+      {
+        type: 'paragraph',
+        content: [{type: 'text', text: 'Body text'}],
+      },
+    ]);
+
+    expect(blockDocumentToMarkdown(content, {title: 'Report &copy;'})).toBe(
+      '# Report \\&copy;\n\nBody text',
+    );
+  });
+
+  it('returns an empty string for an empty document without a title', () => {
+    expect(blockDocumentToMarkdown(doc([]))).toBe('');
+  });
+
+  it('uses a resolved data URL as the chart src', () => {
+    const content = doc([
+      {type: 'blockDocumentChart', attrs: {id: 'c1', tableName: 'sales'}},
+    ]);
+
+    expect(
+      blockDocumentToMarkdown(content, {
+        resolveDataUrl: (node) =>
+          node.attrs?.id === 'c1' ? 'data:image/png;base64,AAAA' : undefined,
+      }),
+    ).toBe('![Chart](data:image/png;base64,AAAA)');
+  });
+
+  it('keeps the placeholder when the resolver returns undefined', () => {
+    const content = doc([
+      {type: 'blockDocumentChart', attrs: {id: 'c1', tableName: 'sales'}},
+    ]);
+
+    expect(
+      blockDocumentToMarkdown(content, {resolveDataUrl: () => undefined}),
+    ).toBe('![Chart](chart)');
+  });
+
+  it('resolves data URLs for maps and images independently by block id', () => {
+    const content = doc([
+      {
+        type: 'blockDocumentStatefulBlock',
+        attrs: {id: 'm1', blockType: 'map', caption: 'Store locations'},
+      },
+      {
+        type: 'blockDocumentImage',
+        attrs: {id: 'i1', assetId: 'asset-1', caption: 'A chart'},
+      },
+      // Not capturable — the resolver returns nothing for this block id.
+      {type: 'blockDocumentChart', attrs: {id: 'c1', tableName: 'sales'}},
+    ]);
+
+    const expectDataUrl = (id: string) => `data:image/png;base64,${id}`;
+
+    const markdown = blockDocumentToMarkdown(content, {
+      resolveDataUrl: (node) => {
+        const id =
+          typeof node.attrs?.id === 'string' ? node.attrs.id : undefined;
+        return id === 'm1' || id === 'i1' ? expectDataUrl(id) : undefined;
+      },
+    });
+
+    expect(markdown).toContain('![Store locations](data:image/png;base64,m1)');
+    expect(markdown).toContain('![A chart](data:image/png;base64,i1)');
+    expect(markdown).toContain('![Chart](chart)');
+  });
+});

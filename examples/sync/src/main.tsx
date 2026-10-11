@@ -1,3 +1,4 @@
+import {databaseUrl, pageToken} from './auth';
 import {useEffect, useState} from 'react';
 import ReactDOM from 'react-dom/client';
 import {schema} from 'loro-mirror';
@@ -24,7 +25,8 @@ const sharedValueSchema = schema.LoroMap({
 
 const useStore = create<AppState>()((set, get, storeApi) => {
   const connector = createWebSocketSyncConnector({
-    url: (import.meta as any).env?.VITE_SYNC_WS_URL ?? 'ws://localhost:4000',
+    url: databaseUrl.href,
+    token: pageToken,
     roomId: (import.meta as any).env?.VITE_SYNC_ROOM_ID ?? 'demo-room',
   });
 
@@ -83,7 +85,7 @@ function App() {
     >
       <h1>SQLRooms CRDT Sync</h1>
       <p style={{color: '#555'}}>
-        Connects to sqlrooms-server with CRDT enabled.
+        Connects to the authenticated SQLRooms runtime with CRDT enabled.
       </p>
 
       <div

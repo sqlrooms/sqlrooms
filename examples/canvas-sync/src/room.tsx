@@ -1,14 +1,15 @@
-import {RoomShell, RoomShellSidebarButtons} from '@sqlrooms/room-shell';
+import {RoomShell} from '@sqlrooms/room-shell';
 import {
+  ThemeSwitch,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-  ThemeSwitch,
 } from '@sqlrooms/ui';
 import {Zap, ZapOff} from 'lucide-react';
-import {InputApiKey} from './InputApiKey';
+import {InputApiKey} from './components/InputApiKey';
 import {roomStore, useRoomStore} from './store';
+import type {FC} from 'react';
 
 type ConnectionStatusVisual = {
   label: string;
@@ -32,7 +33,7 @@ function ConnectionStatusIndicator() {
     <TooltipProvider delayDuration={150}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="text-muted-foreground flex items-center gap-2 text-xs">
             <Icon
               className={`h-3 w-3 ${visual.colorClass}`}
               fill="currentColor"
@@ -47,19 +48,20 @@ function ConnectionStatusIndicator() {
   );
 }
 
-export function Room() {
+export const Room: FC = () => {
   return (
     <RoomShell className="h-screen w-screen" roomStore={roomStore}>
-      <div className="flex h-full w-12 flex-col items-center gap-2 bg-muted/70 px-1 py-4">
+      <RoomShell.SidebarContainer>
         <ConnectionStatusIndicator />
-        <RoomShellSidebarButtons />
-        <div className="flex items-center justify-between gap-3 pr-2">
-          <ThemeSwitch />
-        </div>
-      </div>
-      <RoomShell.LayoutComposer tileClassName="p-0" />
-      {/* <RoomShell.LoadingProgress /> */}
-      <InputApiKey className="absolute right-[60px] top-5 z-10" />
+        <RoomShell.TabButtons />
+        <div className="flex-1" />
+        <RoomShell.CommandPalette.Button />
+        <ThemeSwitch />
+      </RoomShell.SidebarContainer>
+      <RoomShell.LayoutComposer />
+      <RoomShell.LoadingProgress />
+      <RoomShell.CommandPalette />
+      <InputApiKey className="absolute top-5 right-15 z-10" />
     </RoomShell>
   );
-}
+};

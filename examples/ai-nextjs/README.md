@@ -20,7 +20,7 @@ The client-side code is similar to the `ai-core` example but configured to use a
 - `app/store.ts`: Creates the room store with AI slice, pointing to `/api/chat` endpoint
 - `components/main-view.tsx`: Main UI with chat interface and settings panel
 - `components/WebSearchToolResult.tsx`: Custom component for displaying web search tool results
-- `app/lib/tools.ts`: Defines both client-side and server-side tools using OpenAssistant utils
+- `app/lib/tools.ts`: Defines both client-side and server-side tools using AI SDK `tool()` helper
 
 ### Server-Side
 
@@ -34,7 +34,7 @@ The client-side code is similar to the `ai-core` example but configured to use a
 
 ### Prerequisites
 
-- Node.js >= 22
+- Node.js >= 24.9
 - OpenAI API key (or other supported AI provider)
 - pnpm package manager
 
@@ -100,6 +100,8 @@ To add your own tools, modify the `app/lib/tools.ts` file:
 2. **Client-side tools**: Add to `clientTools` array - these execute in the browser
 
 Both tool types are automatically registered with the AI system through the `getServerAiSDKTools()` and `getClientTools()` functions.
+Also list hybrid client-side tool names in `remoteClientToolNames` in
+`app/store.ts` so pending browser output is not confused with server execution.
 
 ### Using Different AI Models
 
@@ -127,4 +129,3 @@ The main UI components are in the `components/` directory:
 - [SQLRooms Documentation](https://sqlrooms.dev)
 - [Vercel AI SDK v5](https://sdk.vercel.ai)
 - [Next.js Documentation](https://nextjs.org/docs)
-- [OpenAssistant Utils](https://github.com/openassistant/utils) - Tool system utilities

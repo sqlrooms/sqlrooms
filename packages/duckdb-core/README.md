@@ -22,6 +22,19 @@ A powerful wrapper around DuckDB-WASM that provides React hooks and utilities fo
 - **Data Export**: Export query results to CSV files with pagination for large datasets
 - **Batch Processing**: Handle large datasets efficiently with built-in pagination support
 
+### SQL Statement Utilities
+
+`splitSqlStatements` splits DuckDB SQL without treating semicolons inside quoted
+strings, dollar-quoted strings, or comments as statement boundaries. Comments are
+removed safely by default; preserve them when the original SQL will be rewritten
+or re-executed:
+
+```ts
+import {splitSqlStatements} from '@sqlrooms/duckdb-core';
+
+const statements = splitSqlStatements(sql, {removeComments: false});
+```
+
 ## Installation
 
 ```bash
@@ -142,11 +155,30 @@ function ArrowTableSchemaExample() {
 }
 ```
 
+### Classifying Column Types
+
+Use the shared type category helpers when UI code needs semantic answers such
+as numeric, temporal, categorical, or binary instead of exact DuckDB type names:
+
+```ts
+import {
+  getDuckDbTypeCategory,
+  isColumnNumeric,
+  isColumnQuantitative,
+} from '@sqlrooms/duckdb';
+
+getDuckDbTypeCategory('DECIMAL(10, 2)'); // "number"
+isColumnNumeric({name: 'magnitude', type: 'DOUBLE'}); // true
+isColumnQuantitative('TIMESTAMP_MS'); // true
+```
+
 ## Working with Tables
 
 ### Using the Store for Direct Database Operations
 
 ```tsx
+import {Button} from '@sqlrooms/ui';
+
 function DatabaseManager() {
   const createTableFromQuery = useRoomStore(
     (state) => state.db.createTableFromQuery,
@@ -183,10 +215,10 @@ function DatabaseManager() {
 
   return (
     <div>
-      <button onClick={handleCreateTable}>Create Filtered Users Table</button>
-      <button onClick={handleAddTable}>Add New Users Table</button>
-      <button onClick={handleDropTable}>Drop Old Table</button>
-      <button onClick={refreshTableSchemas}>Refresh Schemas</button>
+      <Button onClick={handleCreateTable}>Create Filtered Users Table</Button>
+      <Button onClick={handleAddTable}>Add New Users Table</Button>
+      <Button onClick={handleDropTable}>Drop Old Table</Button>
+      <Button onClick={refreshTableSchemas}>Refresh Schemas</Button>
 
       <h3>Available Tables:</h3>
       <ul>
@@ -204,14 +236,39 @@ function DatabaseManager() {
 ### Working with Qualified Table Names
 
 ```tsx
-import {makeQualifiedTableName} from '@sqlrooms/duckdb';
+import {
+  getRawSqlTableReference,
+  getTableDisplayName,
+  getTableIdentity,
+  makeQualifiedTableName,
+  parseTableIdentity,
+  resolveTableReference,
+} from '@sqlrooms/duckdb';
 
 // Support for database.schema.table naming
 const qualifiedTable = makeQualifiedTableName({
   database: 'mydb',
+  defaultDatabase: 'mydb',
   schema: 'public',
   table: 'users',
 });
+// qualifiedTable.toString(): '"public"."users"'
+// qualifiedTable.toFullString(): '"mydb"."public"."users"'
+
+const tableId = getTableIdentity(qualifiedTable);
+// tableId: '"public"."users"'
+
+const rehydratedTableId = parseTableIdentity(tableId);
+// rehydratedTableId: '"public"."users"'
+
+const tableSql = getRawSqlTableReference(qualifiedTable);
+// tableSql: '"public"."users"'
+
+const resolved = resolveTableReference([{table: qualifiedTable}], 'users');
+// resolved.table?.table.toString(): '"public"."users"'
+
+const tableLabel = getTableDisplayName(qualifiedTable);
+// tableLabel: 'users'
 
 // Use with table operations
 await createTableFromQuery(qualifiedTable, 'SELECT * FROM source_table');
@@ -225,6 +282,7 @@ const tableExists = await checkTableExists(qualifiedTable);
 
 ```tsx
 import {loadCSV, loadJSON, loadParquet, loadObjects} from '@sqlrooms/duckdb';
+import {Button} from '@sqlrooms/ui';
 
 function DataLoader() {
   const getConnector = useRoomStore((state) => state.db.getConnector);
@@ -263,7 +321,7 @@ function DataLoader() {
           if (e.target.files?.[0]) handleLoadCSV(e.target.files[0]);
         }}
       />
-      <button onClick={handleLoadObjects}>Load Sample Data</button>
+      <Button onClick={handleLoadObjects}>Load Sample Data</Button>
     </div>
   );
 }
@@ -305,6 +363,7 @@ function AdvancedDataLoader() {
 
 ```tsx
 import {useExportToCsv} from '@sqlrooms/duckdb';
+import {Button} from '@sqlrooms/ui';
 
 function ExportButton() {
   const {exportToCsv} = useExportToCsv();
@@ -313,7 +372,7 @@ function ExportButton() {
     await exportToCsv('SELECT * FROM users ORDER BY name', 'users_export.csv');
   };
 
-  return <button onClick={handleExport}>Export to CSV</button>;
+  return <Button onClick={handleExport}>Export to CSV</Button>;
 }
 ```
 
@@ -358,6 +417,8 @@ async function cancelExample() {
 ### Advanced operations with the Zustand store
 
 ```tsx
+import {Button} from '@sqlrooms/ui';
+
 function AdvancedOperations() {
   const executeSql = useRoomStore((s) => s.db.executeSql);
   const sqlSelectToJson = useRoomStore((s) => s.db.sqlSelectToJson);
@@ -380,7 +441,7 @@ function AdvancedOperations() {
     console.log('Table exists:', exists);
   };
 
-  return <button onClick={handleAdvancedQuery}>Run Advanced Operations</button>;
+  return <Button onClick={handleAdvancedQuery}>Run Advanced Operations</Button>;
 }
 ```
 

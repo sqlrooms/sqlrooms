@@ -1,0 +1,8 @@
+{
+  "name": "roomie",
+  "version": "0.1.0",
+  "description": "Author local DuckDB documents in Roomie through its MCP commands.",
+  "author": {
+    "name": "SQLRooms Contributors"
+  }
+}

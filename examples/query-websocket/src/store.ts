@@ -1,10 +1,10 @@
+import {databaseUrl, pageToken} from './auth';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
-  LayoutTypes,
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
@@ -15,8 +15,8 @@ import {
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {DataPanel} from './DataPanel';
-import {MainView} from './MainView';
+import {DataSourcesPanel} from './components/DataSourcesPanel';
+import {MainView} from './components/MainView';
 
 // Local DuckDB bundle files for bundler environments
 // import duckdb_wasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
@@ -43,7 +43,7 @@ import {MainView} from './MainView';
 //   },
 // };
 
-export const RoomPanelTypes = z.enum(['data', 'main'] as const);
+export const RoomPanelTypes = z.enum(['left', 'data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
@@ -79,8 +79,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       // Base room slice
       ...createRoomShellSlice({
         connector: createWebSocketDuckDbConnector({
-          authToken: 'secret123',
-          wsUrl: 'ws://localhost:4000',
+          authToken: pageToken,
+          wsUrl: databaseUrl.href,
           subscribeChannels: ['table:earthquakes'],
           onNotification: (payload) => {
             console.log('Notification from server:', payload);
@@ -97,24 +97,39 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              first: RoomPanelTypes.enum['data'],
-              second: RoomPanelTypes.enum['main'],
-              direction: 'row',
-              splitPercentage: 30,
-            },
-          },
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'tabs',
+                id: RoomPanelTypes.enum.left,
+                children: [RoomPanelTypes.enum.data],
+                defaultSize: '30%',
+                maxSize: '50%',
+                minSize: '300px',
+                activeTabIndex: 0,
+                collapsible: true,
+                collapsed: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum.main,
+                panel: RoomPanelTypes.enum.main,
+                defaultSize: '70%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
-            [RoomPanelTypes.enum['main']]: {
+            [RoomPanelTypes.enum.main]: {
               component: MainView,
-              placement: 'main',
             },
-            [RoomPanelTypes.enum['data']]: {
+            [RoomPanelTypes.enum.data]: {
               title: 'Data',
-              component: DataPanel,
+              component: DataSourcesPanel,
               icon: DatabaseIcon,
-              placement: 'sidebar',
             },
           },
         },

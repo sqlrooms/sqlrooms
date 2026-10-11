@@ -76,3 +76,41 @@ Key features include:
 - **Infrastructure Scenarios**: Model the impact of road closures, new routes, or construction
 - **Digital Transportation Twins**: Build comprehensive models of transportation systems
 - **Local Data Exploration**: Visualize, filter, and aggregate simulation results directly in the browser
+
+## [Dekart](https://dekart.xyz/)
+
+[Dekart](https://dekart.xyz/) is a geospatial analytics tool that turns SQL queries into interactive maps and dashboards. It helps data teams make geodata accessible to stakeholders and GIS agencies deliver dashboards to customers. It can run on localhost or be self-hosted.
+
+<video src="/media/case-studies/dekart-sqlrooms.mp4" alt="Dekart: Interactive geospatial maps and dashboards" width="450" poster="/media/case-studies/dekart.webp" loop muted controls autoplay>
+  <img src="/media/case-studies/dekart.webp" alt="Dekart: Interactive geospatial maps and dashboards" width="450" />
+</video>
+
+Dekart queries BigQuery and other database sources, then uses DuckDB in the browser to aggregate dashboard data and apply filters locally. This keeps maps, charts, and widgets interactive without sending another warehouse query for each filter change.
+
+Key features include:
+
+- **SQL-driven Maps**: Combine multiple layers and data sources on one map
+- **Local Dashboard Analytics**: Filter and aggregate maps, charts, and widgets in the browser with DuckDB
+- **Files and Database Sources**: Upload files, query them, and join them with database results in DuckDB
+- **AI-assisted Geospatial Workflows**: Use GeoSQL with Claude or Codex to build and refine dashboards, including H3 aggregation and chart configuration
+- **Flexible Deployment**: Run locally or self-host an open-source geospatial workspace
+
+[Explore the project on GitHub →](https://github.com/dekart-xyz/dekart)
+
+## [ChordShell.com](https://www.chordshell.com/) {#chordshellcom}
+
+[ChordShell.com](https://www.chordshell.com/) is a harmony workspace for musicians built with SQLRooms. It adapts SQLRooms' room, artifact, layout, document, and AI primitives for music theory workflows, bringing chord exploration, scale exploration, chord sheets, recordings, notes, and an assistant into one composable workspace.
+
+<video src="/media/case-studies/chordshell.mp4" alt="ChordShell.com harmony workspace" width="450" loop muted controls autoplay>
+  <img src="/media/case-studies/chordshell.webp" alt="ChordShell.com harmony workspace" width="450" />
+</video>
+
+ChordShell demonstrates SQLRooms beyond traditional analytics dashboards: musical structures become inspectable workspace state, and the assistant can use the same application tools as the UI to analyze theory and make edits.
+
+Key features include:
+
+- **Domain-specific Artifacts**: Compose chords explorers, scales explorers, chord sheets, recordings, and documents inside a shared SQLRooms workspace
+- **Interactive Harmony Exploration**: Explore guitar and piano voicings, tunings, note spellings, chord tones, scales, and circle-of-fifths relationships
+- **AI-Assisted Music Theory**: Parse chord symbols, analyze notes, harmonize scales, suggest scales over chords, and update workspace artifacts through app-level tools
+- **Composable Workspace Model**: Keep musical context visible across panels so chord sheets, theory views, recordings, notes, and assistant conversations can work together
+- **Musician-Friendly Playback**: Audition selected chords and scales while changing voicings, instruments, and harmonic context

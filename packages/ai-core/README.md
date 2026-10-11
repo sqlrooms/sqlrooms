@@ -1,547 +1,1136 @@
-# @sqlrooms/ai
+Core AI slice, chat UI primitives, and tool-streaming utilities for SQLRooms.
 
-An AI integration package for SQLRooms that provides components and utilities for adding AI-powered features to your data applications. This package enables natural language querying, data analysis, and AI-assisted insights.
-
-## Features
-
-- 🤖 **AI Query Interface**: Natural language to SQL conversion
-- 📊 **Automated Analysis**: AI-powered data analysis and insights
-- 🔄 **State Management**: Zustand-based state management for AI features
-- 🧩 **UI Components**: Ready-to-use components for AI interactions
-- 📝 **Query History**: Track and manage AI query history
-- 🎯 **Tool Integration**: Framework for AI tools and actions
-- 🤖 **Agent Framework**: Framework for building AI agents
+Use `@sqlrooms/ai-core` when you want lower-level control over AI state/transport/UI.
+For most apps, use the higher-level `@sqlrooms/ai` package.
 
 ## Installation
 
 ```bash
-npm install @sqlrooms/ai
-# or
-yarn add @sqlrooms/ai
+npm install @sqlrooms/ai-core @sqlrooms/room-store @sqlrooms/ui zod ai
 ```
 
-## Basic Usage
+`@sqlrooms/ui` is a peer dependency used for Chat UI rendering/styling.
+You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui` must be installed for the visual components to work.
 
-### Setting Up SqlRooms AI Chat for Browser-only application
+## Store setup (core mode)
+
+`createAiSlice` requires:
+
+- `tools` – an AI SDK `ToolSet` (created via the `tool()` helper from `ai`)
+- `getInstructions`
+- `toolRenderers` (optional) – a `ToolRendererRegistry` mapping tool names to React components
+- `getAvailableModels` (optional) – returns selectable `{provider, value}` pairs so new sessions can fall back to the first available model when the configured default is missing, and so `hasResolvableModel` knows which models this app offers. It is consulted on every readiness check, which React selectors run on each store update, so return a memoized or module-level array rather than rebuilding one per call.
+- `getCustomModel` (optional) – returns a pre-constructed AI SDK `LanguageModel`, bypassing the OpenAI-compatible fallback entirely. Use this when a model is produced some other way, e.g. an app streaming through a server-side model proxy so no API key ever reaches the browser.
+
+The built-in OpenAI-compatible chat transport sends images returned by tools as
+image attachments immediately after the corresponding tool-result batch. This
+avoids the adapter serializing image pixels as JSON text. Tool-call IDs and
+text results are preserved, and persisted chat messages are unchanged. Custom
+models keep their own native tool-output handling.
+
+Send readiness (`ai.hasResolvableModel()`) reflects whichever of these paths can produce a model, so apps relying solely on `getCustomModel` do not need to register a phantom entry in `@sqlrooms/ai-settings`'s model list just to satisfy the composer's UI check. The predicate only checks that `getCustomModel` **was configured**; it never calls it.
+
+It consults the model registries in the order a session's selection is actually resolved: `getAvailableModels` first when one is supplied, then `@sqlrooms/ai-settings`, then a plain "the session names a provider and a model" check. An app that owns its own model list therefore only has to supply `getAvailableModels` — the same option new sessions already resolve against — for the composer to agree with it. This matters because mounting `@sqlrooms/ai-settings` installs a stock provider registry whether or not the app manages models there, so the slice's presence alone cannot say who owns model listing; without `getAvailableModels`, that stock registry would veto every selection the app made through `setAiModel` or `defaultProvider`/`defaultModel`, and the composer would report "No model selected" as soon as a session existed.
+
+Its counterpart `ai.requiresApiKey()` reports whether the path in effect needs a browser-held key at all — `false` when a `chatEndPoint` is configured (the remote transport sends server-side, so no key reaches the browser), and `false` when `getCustomModel` is configured **and currently returns a model**, since that model carries its own credentials. A configured factory returning `undefined` still needs a key, because the transport then falls back to the built-in OpenAI-compatible client. Unlike `hasResolvableModel()`, this predicate therefore invokes the factory: guessing optimistically about readiness only risks a failed send, but guessing optimistically about credentials hides the only UI for entering one. The result is cached per resolved provider/model pair — keyed, so returning to a previously selected model does not re-probe — meaning a mounted composer asks the factory once per distinct selection rather than once per store update. Keep it idempotent for a given selection. The composer's `needsApiKey` is gated on it, so an app behind a server-side proxy is never asked for a key it has no use for.
+
+Both model paths consult `getCustomModel`: the chat transport, and the one-shot `ai.sendPrompt()` helper. In `sendPrompt` a resolved custom model also wins over the `modelProvider`, `modelName`, and `baseUrl` options that call passes, because an app reaching its provider only through a proxy has no other usable endpoint; those options still select the API key and base URL for the fallback client, which is built only when the factory returns `undefined`. Unlike `requiresApiKey()`, `sendPrompt` calls the factory fresh on every request rather than reading the cached probe, so a host that swaps its model at runtime takes effect on the next send. A factory that throws is logged and treated as `undefined`.
+
+> **Upgrading from 0.28.x?** See the [0.29.0 migration guide](https://sqlrooms.org/upgrade-guide#_0-29-0-upcoming) for the full list of breaking changes: `parameters` → `inputSchema`, `component` → `toolRenderers`, `setSessionToolAdditionalData` removed.
 
 ```tsx
-import {createAiSlice, createAiSettingsSlice} from '@sqlrooms/ai';
-import {createRoomStore} from '@sqlrooms/room-shell';
-
-// Create a room store with AI capabilities
-const {roomStore, useRoomStore} = createRoomStore({
-  // Base room configuration
-  ...createRoomShellSlice({
-    config: {
-      // Your room configuration
-    },
-  }),
-  // Ai model config slice
-  ...createAiSettingsSlice({})(set, get, store),
-  // Add AI slice
-  ...createAiSlice({
-    getInstructions: () => {
-      return `You are an AI assistant that can answer questions and help with tasks.`;
-    },
-    initialPrompt: 'What insights can you provide from my data?',
-    tools: {
-      // Your tools
-    },
-    getInstructions: () => {
-      // add custom instructions here
-      return createDefaultAiInstructions(store);
-    },
-  })(set, get, store),
-});
-
-function MyApp() {
-  return (
-    <RoomStateProvider roomStore={roomStore}>
-      <MyDataApp />
-    </RoomStateProvider>
-  );
-}
-```
-
-### Setting Up SqlRooms AI Chat for Server-side application
-
-- api/chat/route.ts
-
-```typescript
-export async function POST(req: Request) {
-  const {messages} = await req.json();
-
-  const stream = createUIMessageStream({
-    execute: async ({writer}) => {
-      const result = streamText({
-        model: openai('gpt-4.1'),
-        system: systemPrompt,
-        messages,
-        tools: {
-          // Your tools: remove exeucte for client tools so they run on the client side
-        },
-      });
-      writer.merge(result.toUIMessageStream({originalMessages: messages}));
-    },
-  });
-
-  return stream.toUIMessageStreamResponse();
-}
-```
-
-- page.tsx
-
-```typescript
-const {roomStore, useRoomStore} = createRoomStore({
-  ...createRoomShellSlice({
-    // Your room configuration
-    })(set, get, store),
-  ...createAiSettingsSlice({
-    // Your AI settings
-  })(set, get, store),
-  ...createAiSlice({
-    chatEndPoint: '/api/chat', // Point to the server-side endpoint
-    tools: {
-      // Your tools
-    },
-  })(set, get, store),
-});
-
-function MyApp() {
-  return (
-    <RoomStateProvider roomStore={roomStore}>
-      <MyDataApp />
-    </RoomStateProvider>
-  );
-}
-```
-
-See [ai-nextjs](https://github.com/sqlrooms/sqlrooms/tree/main/examples/ai-nextjs) for a complete example.
-
-## Data Structure
-
-The basic data structure of the AI package is:
-
-```ts
-ai: {
-  sessions: [
-    {
-      id: string,                    // CUID2 identifier
-      name: string,                   // Session display name
-      modelProvider: string,          // e.g., 'openai', 'anthropic'
-      model: string,                  // e.g., 'gpt-4o', 'claude-3-5-sonnet'
-      createdAt: Date,
-      // Primary storage: Full conversation history (AI SDK v5 format)
-      uiMessages: UIMessage[],
-      // Secondary storage: Error messages and legacy compatibility
-      analysisResults: AnalysisResult[],
-      // Tool execution data
-      toolAdditionalData: Record<string, unknown>,
-    },
-  ],
-  currentSessionId: string,
-}
-```
-
-### Session Schema
-
-Each session contains:
-
-#### `uiMessages` - Complete Chat History
-
-The `uiMessages` array stores the complete, flat conversation history using the Vercel AI SDK v5 `UIMessage` format. This includes:
-
-- User messages
-- Assistant messages
-- Tool call messages
-- All message parts (text, tool invocations, etc.)
-
-This is the **primary data structure** and serves as:
-
-- The full context for AI model interactions
-- The source for displaying conversation history
-- The base for reconstructing analysis results
-
-```tsx
-// Example: Accessing UI messages
-const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
-const messages = currentSession?.uiMessages || [];
-```
-
-#### `analysisResults` - Structured Analysis View
-
-The `analysisResults` array is a **derived structure** that organizes messages into user prompt → AI response pairs. It primarily serves to:
-
-- Store error messages that occur during analysis
-- Provide backward compatibility with legacy data
-- Offer a simplified view of analysis history
-
-Analysis results are dynamically generated from `uiMessages` using the `transformMessagesToAnalysisResults` utility function.
-
-```ts
-type AnalysisResult = {
-  id: string; // Matches the UIMessage.id
-  prompt: string; // User's question/request
-  errorMessage?: ErrorMessageSchema; // Error if analysis failed
-  isCompleted: boolean; // Whether AI finished responding
-};
-```
-
-#### `toolAdditionalData` - Rich Tool Outputs
-
-Each session also maintains a `toolAdditionalData` object that stores additional data from tool executions, keyed by `toolCallId`. This data is used for:
-
-- Rendering tool-specific UI components
-- Passing data between tool calls
-- Preserving rich data that doesn't go back to the LLM
-
-```ts
-type ToolAdditionalData = Record<string, unknown>;
-
-// Example: Storing tool additional data
-const setToolData = useRoomStore((state) => state.ai.setSessionToolAdditionalData);
-setToolData(sessionId, toolCallId, {chartData: [...]});
-```
-
-## Tools
-
-In AI package, we provide a OpenAssistantTool type that supports not only `execute` function, but also `context` object and `component` object:
-
-- `execute` needs to return
-  - llmResult: the result send back to LLM (no raw data)
-  - additionalData: the data will be used by `component` and next `tool`
-- `context`
-  - provide e.g. runtime or async data for `execute`
-  - `execute` can access `context` via `options.context`
-- `component`
-  - use `additionalData` to render a React component for this `tool`
-
-For example, the `weather` tool is defined as follows:
-
-```ts
-const weatherTool: OpenAssistantTool = {
-  name: 'weather',
-  description: 'Get the weather in a city from a weather station',
-  parameters: z.object({cityName: z.string()}),
-  execute: async ({cityName}, options) => {
-    const getStation = options.context?.getStation;
-    const station = getStation ? await getStation(cityName) : null;
-    return {
-      llmResult: {
-        success: true,
-        details: `The weather in ${cityName} is sunny from weather station ${station}.`,
-      },
-      additionalData: {
-        weather: 'sunny',
-        station,
-      },
-    };
-  },
-  context: {
-    getStation: async (cityName: string) => {
-      const stations = {
-        'New York': '123',
-        'Los Angeles': '456',
-        Chicago: '789',
-      };
-      return stations[cityName];
-    },
-  },
-  component: WeatherStationComponent,
-};
-```
-
-### Tool Execution Flow
-
-1. User sends a prompt → creates a user `UIMessage`
-2. AI processes and may call tools → creates assistant `UIMessage` with tool invocations
-3. Tools execute and return:
-   - `llmResult`: Text summary sent back to the LLM
-   - `additionalData`: Rich data stored in `toolAdditionalData` for UI rendering
-4. AI responds with final answer → creates assistant `UIMessage` with text
-5. On completion: `uiMessages` updated, `analysisResult` created with user message ID
-
-### Rendering Tool Results
-
-```text
-|--------------------------------|
-| AnalysisResultsContainer       |
-|--------------------------------|
-|  |--------------------------|  |
-|  | AnalysisResult           |  |
-|  |                          |  |
-|  | ErrorMessage             |  |
-|  | ------------             |  |
-|  | UIMessage                |  |
-|  |                          |  |
-|  | |---------------------|  |  |
-|  | | Parts               |  |  |
-|  | |---------------------|  |  |
-|  | | |---------------|   |  |  |
-|  | | |TextPart       |   |  |  |
-|  | | |---------------|   |  |  |
-|  | | |ToolPart       |   |  |  |
-|  | | |---------------|   |  |  |
-|  | |    ...              |  |  |
-|  | |---------------------|  |  |
-|  |                          |  |
-|  |--------------------------|  |
-|--------------------------------|
-```
-
-### Transfer Additional Tool Output Data to Client
-
-#### The Problem
-
-When tools execute, they often generate additional data (like detailed search results, charts, metadata) that needs to be sent to the client for UI rendering, but should NOT be included in the conversation history sent back to the LLM.
-
-If the tool execution is done on the server side, the additional data needs to be transferred to the client side for UI rendering. We use the `data-tool-additional-output` data part type to transfer the additional data to the client.
-
-#### Using `transient: true`
-
-The AI SDK v5 provides a built-in solution through the `transient` flag on data parts. When you write a data part with `transient: true`, the SDK automatically prevents it from being added to the message history.
-
-##### Backend Implementation (route.ts)
-
-```typescript
-writer.write({
-  type: 'data-tool-additional-output',
-  transient: true, // Won't be added to message history
-  data: {
-    toolCallId: chunk.toolCallId,
-    toolName: chunk.toolName,
-    output: getToolAdditionalData(chunk.toolCallId),
-    timestamp: new Date().toISOString(),
-  },
-});
-```
-
-#### The Flow
-
-```text
-Backend (route.ts)
-  │
-  ├─> Tool executes
-  │   └─> writer.write({
-  │         type: 'data-tool-additional-output',
-  │         transient: true,  // ✅ SDK handles exclusion
-  │         data: {...}
-  │       })
-  │
-  ↓
-Client receives stream
-  │
-  ├─> onData callback
-  │   └─> setSessionToolAdditionalData() ✅ Stores in toolAdditionalData
-  │
-  └─> messages array ✅ Automatically excludes transient data parts
-
-Session Storage (clean) → AI SDK → UI Display
-                              ↓
-                        Session Storage
-                              ↓
-                        Backend/LLM
-```
-
-#### Benefits of This Approach
-
-1. **✅ Clean Conversation History**: Transient data parts never appear in message history
-2. **✅ Efficient Token Usage**: No unnecessary data sent to the LLM
-3. **✅ Proper Data Storage**: Tool data is stored separately in `toolAdditionalData`
-4. **✅ UI Flexibility**: Components can access tool data via `toolAdditionalData[toolCallId]`
-5. **✅ Simple & Native**: Uses built-in SDK feature, no custom utilities needed
-6. **✅ Maintainable**: Follows SDK conventions and patterns
-7. **✅ No Manual Filtering**: SDK handles exclusion automatically
-
-#### Usage in Components
-
-To access the additional tool data in your components:
-
-```tsx
-const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
-const toolData = currentSession?.toolAdditionalData?.[toolCallId];
-```
-
-#### Alternative Considered: Message Annotations
-
-AI SDK v5 supports message annotations, but these are still part of the message structure. The `transient` flag is specifically designed for data that should only be sent once and not persist in conversation history.
-
-## Agent Framework
-
-The agent framework enables building autonomous AI agents that can use tools and make multi-step decisions. Built on top of AI SDK v5's `Experimental_Agent` class, it provides utilities for integrating agents as tools within the main chat interface.
-
-### What are Agents?
-
-Agents differ from regular tools in that they:
-- Can autonomously decide which tools to call and when
-- Execute multiple steps to accomplish a goal
-- Maintain their own reasoning loop until completion
-- Can be embedded as tools within the main conversation
-
-### Creating an Agent Tool
-
-Agent tools follow the same OpenAssistantTool pattern but use the `processAgentStream` utility to handle streaming and progress tracking:
-
-```typescript
-import {Experimental_Agent as Agent, tool} from 'ai';
-import {processAgentStream} from '@sqlrooms/ai';
+import {
+  createAiSlice,
+  type AiSliceState,
+  type ToolRendererRegistry,
+} from '@sqlrooms/ai-core';
+import {
+  BaseRoomStoreState,
+  createBaseRoomSlice,
+  createRoomStore,
+} from '@sqlrooms/room-store';
+import {tool} from 'ai';
 import {z} from 'zod';
 
-export function weatherAgentTool(store: StoreApi<RoomState>) {
-  return {
-    name: 'agent-weather',
-    description: 'A specialized agent for weather-related queries',
-    parameters: z.object({
-      prompt: z.string().describe('The user\'s weather question')
-    }),
-    execute: async ({prompt}, options) => {
-      const state = store.getState();
-      const currentSession = state.ai.getCurrentSession();
+const EchoResult = ({
+  output,
+}: {
+  output: {success: boolean; text: string} | undefined;
+}) => <div>{output?.text}</div>;
 
-      // Create the agent with its own set of tools
-      const weatherAgent = new Agent({
-        model: getModel(state),
-        tools: {
-          weather: tool({
-            description: 'Get current weather in a location',
-            inputSchema: z.object({
-              location: z.string()
-            }),
-            execute: async ({location}) => ({
-              location,
-              temperature: 72 + Math.floor(Math.random() * 21) - 10
-            })
-          }),
-          convertTemperature: tool({
-            description: 'Convert temperature units',
-            inputSchema: z.object({
-              temperature: z.number(),
-              from: z.enum(['F', 'C']),
-              to: z.enum(['F', 'C'])
-            }),
-            execute: async ({temperature, from, to}) => {
-              // Conversion logic
-            }
-          })
-        },
-        stopWhen: stepCountIs(10) // Limit agent steps
-      });
+type State = BaseRoomStoreState & AiSliceState;
 
-      // Stream the agent's execution
-      const agentResult = await weatherAgent.stream({prompt});
-
-      // Process the stream and track progress
-      const resultText = await processAgentStream(
-        agentResult,
-        store,
-        options.toolCallId
-      );
-
-      return {
-        llmResult: {
-          success: true,
-          details: resultText
-        }
-      };
-    }
-  };
-}
-```
-
-Use the agent as a tool in your main LLM:
-
-```typescript
-createAiSlice({
-  tools: {
-    query: QueryTool,
-    'agent-weather': weatherAgentTool(store)  // ⚡ Agent as tool
-  }
-})
-```
-
-### The `processAgentStream` Utility
-
-The `processAgentStream` function handles the complexity of integrating agent execution into the main conversation:
-
-```typescript
-await processAgentStream(agentResult, store, parentToolCallId, abortSignal)
-```
-
-**What it handles:**
-
-1. **Progress Tracking**: Monitors all tool calls made by the agent in real-time
-2. **State Updates**: Updates `toolAdditionalData` with agent progress for UI rendering
-3. **Error Handling**: Captures and reports tool execution errors
-4. **Result Aggregation**: Collects the final text output from the agent
-
-**Stored Data Structure:**
-
-Each agent tool call stores structured progress data:
-
-```typescript
-interface AgentToolCallAdditionalData {
-  agentToolCalls: Array<{
-    toolCallId: string;
-    toolName: string;
-    output?: unknown;
-    errorText?: string;
-    state: 'pending' | 'success' | 'error';
-  }>;
-  finalOutput?: string;
-  timestamp: string;
-}
-```
-
-### Rendering Agent Progress
-
-If you are using the `sqlrooms/ai-core` package, the rendering of agent progress is handled automatically.
-
-However, you can also use the `useRoomStore` hook to access the agent progress data in your components to show real-time execution:
-
-```tsx
-const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
-const agentData = currentSession?.toolAdditionalData?.[toolCallId] as AgentToolCallAdditionalData;
-
-return (
-  <div>
-    <h3>Agent Progress:</h3>
-    {agentData?.agentToolCalls.map((call) => (
-      <div key={call.toolCallId}>
-        {call.toolName}: {call.state}
-        {call.output && <pre>{JSON.stringify(call.output, null, 2)}</pre>}
-        {call.errorText && <span className="error">{call.errorText}</span>}
-      </div>
-    ))}
-    {agentData?.finalOutput && (
-      <div className="final-result">{agentData.finalOutput}</div>
-    )}
-  </div>
+export const {roomStore, useRoomStore} = createRoomStore<State>(
+  (set, get, store) => ({
+    ...createBaseRoomSlice()(set, get, store),
+    ...createAiSlice({
+      getInstructions: () => 'You are a helpful analytics assistant.',
+      tools: {
+        echo: tool({
+          description: 'Echo text back',
+          inputSchema: z.object({text: z.string()}),
+          execute: async ({text}) => ({success: true, text: `Echo: ${text}`}),
+        }),
+      },
+      toolRenderers: {
+        echo: EchoResult,
+      },
+    })(set, get, store),
+  }),
 );
 ```
 
-### Best Practices
+## Chat UI
 
-1. **Limit Steps**: Always use `stopWhen` to prevent infinite loops
-2. **Specific Tools**: Give agents focused, domain-specific tools
-3. **Clear Descriptions**: Write precise tool descriptions for better agent reasoning
-4. **Error Handling**: Handle agent errors gracefully with try-catch in execute
-5. **Progress UI**: Use `toolAdditionalData` to show agent progress to users
+```tsx
+import {Chat} from '@sqlrooms/ai-core';
 
-### Use Cases
+export function AiPanel() {
+  return (
+    <Chat>
+      <Chat.Sessions />
+      <Chat.Messages />
+      <Chat.PromptSuggestions>
+        <Chat.PromptSuggestions.Item text="What trends should I investigate first?" />
+      </Chat.PromptSuggestions>
+      <Chat.Composer
+        placeholder="Ask a question"
+        topActions={<Chat.PromptSuggestions.VisibilityToggle />}
+      >
+        <Chat.Composer.Attachments />
+      </Chat.Composer>
+    </Chat>
+  );
+}
+```
 
-- **Multi-step Analysis**: Agents that need to gather data from multiple sources
-- **Decision Trees**: Complex workflows requiring conditional logic
-- **Specialized Domains**: Weather, finance, or data analysis agents with domain-specific tools
-- **Autonomous Tasks**: Tasks that require planning and execution without human intervention
+When no chat session exists, the composer and prompt suggestions share the
+transient `ai.draftPrompt` value. `ai.setDraftPrompt()` can populate that draft,
+and the first `ai.createSession()` transfers it to the new session.
 
+Use `Chat.Composer`'s `topActions` slot for compact controls that should sit in
+the prompt's top row, right-aligned beside context selectors.
 
-## Advanced Features
+Attachments are opt-in. Add `<Chat.Composer.Attachments />` as a composer child
+to accept images and plain-text or Markdown files. Its paperclip menu shows the
+supported categories and opens a type-specific file picker for each one.
+Pending files render in the composer footer and are sent as AI SDK file parts.
+Posted files remain part of the user message: images open at full size in a
+dialog, while text and Markdown open in a scrollable text or rendered-Markdown
+dialog. The default limits are four files, 1 MiB per image and across all
+pending images, 128 KiB per text file, and 128 KiB across all pending text
+files; the component props can override those limits. A file can be sent
+without adding prompt text.
 
-- **Custom AI Tools**: Define custom tools for AI to use with the tool() function
-- **Multiple Sessions**: Create and manage multiple analysis sessions for different purposes
-- **Model Selection**: Switch between different AI models and providers
-- **Result Management**: Save, delete, and organize analysis results
-- **Conversation Context**: Maintain context across multiple queries in a session
-- **Feedback Loop**: Collect user feedback to improve AI responses
+> `<InlineApiKeyInput>` assumes session mode: it calls `useStoreWithAi`
+> unconditionally, so passing it as a `Chat.Composer` child under
+> `Chat.LocalAgentRoot` throws. Local-agent apps have no concept of a
+> browser-held API key, so omit it there.
 
-For more information, visit the SQLRooms documentation.
+### Composable composer and prompt-suggestions primitives
+
+`Chat.Composer` and `Chat.PromptSuggestions` are recipes: fully-styled,
+opinionated defaults built on two lower layers that are themselves public API
+for hosts that need a different visual shape.
+
+**Layering**, thinnest to thickest:
+
+1. **Behavior hooks** — `useChatComposer()` and `usePromptSuggestions()`. No
+   DOM, no styling. Normalized state and actions that read identically
+   whether the surrounding `Chat` is in session mode (`Chat.Root`) or
+   local-agent mode (`Chat.LocalAgentRoot`).
+2. **Unstyled primitives** — thin components built on the hooks above. All
+   accept `asChild` (via Radix's `Slot`) to render as a single host-supplied
+   child instead of their default DOM element, and none carry position,
+   size, overflow, truncation, or other visual styling of their own.
+3. **Recipes** — `Chat.Composer` and `Chat.PromptSuggestions`. SQLRooms' own
+   opinionated, styled defaults, built entirely from the primitives above.
+   Most apps only need these. Both supply their own state boundary, so they
+   also work under a bare `RoomStateProvider` with no `<Chat>` ancestor —
+   though as siblings that gives each its own state, so a shared pre-send
+   policy needs a common ancestor (see below).
+
+Reach for a lower layer only when a recipe's fixed appearance does not fit —
+a host design system's own textarea, button, or list component, a
+popover-anchored suggestions panel, or a horizontal carousel instead of the
+vertical default.
+
+`useChatComposer()` returns
+`{mode, prompt, setPrompt, send, cancel, canSend, isRunning, isBusy, needsApiKey, sendBlocked}`.
+Use it directly for anything that isn't textarea-shaped (a rich editor, a
+custom input surface); `Input` below is built on it for the common textarea
+case. It (and `ChatComposerStateBoundary`, for use outside any `<Chat>`
+ancestor) is also how a suggestions list rendered elsewhere in the tree can
+stay in sync with a composer mounted somewhere else.
+
+Composer primitives (imported from `@sqlrooms/ai-core`, or via
+`Chat.Composer.Input` / `.Send` / `.Stop` / `.DropTarget`):
+
+- **`Input`** — binds the composer's prompt to a `<textarea>` (or, with
+  `asChild`, a host-supplied one). Owns the Enter-to-send keymap (with an
+  IME-composition guard and a no-modifiers check), optional auto-resize, and
+  disables itself while busy. Host event handlers passed as props are
+  merged, not replaced: the host's handler runs first, and calling
+  `event.preventDefault()` suppresses this component's own behavior for that
+  event — this is how `submitOnEnter` can be overridden by a host that wants
+  full keymap control. Accepts a synchronous `onBeforeSend` pre-send veto
+  (return `false` to abort a send).
+
+  **The forwarded ref must reach the real DOM `<textarea>`.** With `asChild`,
+  auto-resize measures and mutates inline `height` through the ref this
+  component receives; if the host component that owns that ref does not
+  forward it down to its own `<textarea>`, auto-resize silently does
+  nothing — no error, and nothing a type check would catch.
+
+- **`Send`** — sends the current prompt on activation. Renders nothing
+  (`null`) while a run is in flight; disabled whenever `canSend` is `false`.
+  Accepts the same synchronous `onBeforeSend` veto as `Input`.
+
+  Both primitives render a `<button type="button">`, including under
+  `asChild` — an untyped HTML button defaults to `submit`, which would post an
+  enclosing host `<form>` and lose the draft. An `asChild` child that sets its
+  own `type` keeps it.
+
+- **`Stop`** — cancels the in-flight run on activation. Renders nothing while
+  idle; never disabled once a run is in flight.
+- **`DropTarget`** — marks an element as a drop target for in-app context
+  items dragged into the composer (built on dnd-kit). **Handles in-app
+  context items only, not file uploads** — dnd-kit observes pointer-driven
+  drags between elements it manages, not native HTML5 file-drag events; a
+  file drop needs a separate, native-drag-based primitive. **Requires
+  `RoomDndProvider`**, not merely any dnd-kit `DndContext`: without a
+  `DndContext` at all it throws rather than degrading to a no-op, and under a
+  plain one it renders but never fires `onDrop`, because drops are accepted
+  only for collisions carrying the `pointerWithin` marker that
+  `RoomDndProvider`'s collision detector adds.
+
+The styled **`Chat.Composer.Attachments`** recipe is intentionally separate
+from those unstyled primitives: mounting it enables the file input and footer
+previews for that chat root. For a custom attachment UI, use
+`useChatAttachments()` under the same composer state boundary. Pass
+asynchronous file preparation to `appendAsync` so a file that finishes reading
+after the user switches sessions is discarded:
+
+```tsx
+const {appendAsync} = useChatAttachments();
+
+await appendAsync(async () => [await fileToChatAttachmentPart(file)]);
+```
+
+### Pre-send policy: `useRegisterBeforeSend`
+
+`onBeforeSend` on `Input` and `Send` vetoes sends from _that control_. When the
+policy belongs to the chat rather than to one button — "create an artifact
+before the first message", "route this through my own session management" —
+register it on the composer state instead:
+
+```tsx
+useRegisterBeforeSend(
+  useCallback((text: string) => (isAllowed(text) ? undefined : false), []),
+);
+```
+
+Every send routed through `useChatComposer()`'s `send` then consults it,
+whatever triggered it — the composer's own controls, a prompt suggestion row, a
+command. This is what `Chat.Composer`'s `onRun` prop is built on, and why
+clicking a suggestion cannot bypass a veto the composer enforces. The handler
+is synchronous; return `false` to abort.
+
+The registry is **one per `<Chat>` root**, which is what gives it that reach.
+Two `Chat.Composer`s under one root are two views of one chat — same session,
+same prompt — so a policy registered by either applies to sends from both;
+independent surfaces need their own root, and a duplicate `onRun` warns in
+development rather than merging silently.
+
+Sharing is by React ancestry, which has one consequence worth knowing when
+using the recipes **standalone**. `Chat.Composer` and `Chat.PromptSuggestions`
+each supply their own state boundary when no `<Chat>` is above them, so as
+siblings under a bare `RoomStateProvider` they get _separate_ registries and a
+suggestion click will not run the composer's `onRun`. Give them a common
+`<Chat>` or `<ChatSuggestionsStateBoundary>` ancestor whenever the policy has
+to span both — which is also what `<Chat>` does for you by default.
+
+For a state that makes sending impossible outright rather than conditionally —
+a missing credential, say — use `useBlockSends()` instead. It reports through
+`useChatComposer()`'s `sendBlocked`, so `canSend` and suggestion rows render
+disabled rather than looking live and doing nothing. `Chat.Composer` uses it
+when it swaps to inline API-key entry.
+
+`usePromptSuggestions()` returns
+`{mode, visible, setVisible, toggle, items, isSessionEmpty, fill, send, isReadyToSend}`,
+normalized the same way across both runtime modes. `send`/`isReadyToSend` reuse
+the composer's own send action and readiness signals, so a suggestion and the
+composer's send control can never disagree about whether sending is currently
+possible — and any registered pre-send veto applies to both.
+
+`isSessionEmpty` is true only when the chat has no messages _and_ no
+in-progress prompt, counting a draft typed before any session exists. Branch on
+it to show suggestions only on a genuinely empty chat.
+
+Suggestions primitives:
+
+- **`Root`** — visibility gate: renders nothing when suggestions are hidden,
+  its child otherwise. Accepts an `open` override for hosts whose own
+  popover, dropdown, or overlay already owns open/closed state; pair it with
+  `onOpenChange`, since while controlled the `VisibilityToggle` and `Dismiss`
+  controls _inside_ this root report through that callback instead of writing
+  the store `open` overrides. Controls rendered outside a controlled root keep
+  targeting the store, so controlling one list does not retarget unrelated
+  toggles.
+- **`Item`** — a single suggestion. Fills the prompt on activation by
+  default; pass `submit` to send immediately instead. Disabled whenever
+  `isReadyToSend` is `false`.
+- **`VisibilityToggle`** — toggles visibility; exposes `aria-pressed` for
+  styling pressed/unpressed. Inside a controlled `Root` it writes through
+  `onOpenChange` rather than the overridden store, but since such a root
+  renders nothing while hidden it can only close from there — render it
+  outside the root for a control that also re-opens.
+- **`Dismiss`** — hides suggestions unconditionally (unlike
+  `VisibilityToggle`, it never re-shows them).
+
+`useControlledVisibility()` returns the nearest controlled `Root`'s
+`{visible, setVisible}`, or `null` when visibility is owned by the normalized
+store. A host writing its own visibility control needs it: writing
+`usePromptSuggestions().setVisible(false)` directly has no effect inside a
+controlled root, whose `open` overrides the store. Prefer the controlled state
+when it is present and fall back to the store otherwise, which is what
+`Dismiss` and `VisibilityToggle` do.
+
+None of the suggestions primitives carry position, size, overflow,
+truncation, or tooltip styling — a host's own vertical list, popover, or
+horizontal scroller owns all of that. `examples/ai-rag` builds a horizontal
+carousel directly from these primitives (composed with `@sqlrooms/ui`'s
+`ScrollableRow`) — it stays in the repo specifically to prove the primitives
+impose no layout of their own, alongside `examples/ai`'s use of the vertical
+recipe.
+
+#### Breaking changes in this release
+
+- **Local-agent `Enter` while streaming no longer stops the run.** It is now
+  a no-op, matching session mode: `Enter` sends when ready, and never
+  cancels a run in flight.
+- **`Chat.PromptSuggestions` now defaults to a full-width vertical list**
+  with click-to-send and CSS-ellipsis truncation (plus a native `title` for
+  the full text), replacing the previous horizontal card carousel that
+  filled the prompt for editing and truncated by character count. A
+  horizontal layout is still available — build it from the suggestions
+  primitives, as `examples/ai-rag` does.
+
+### Customizable chat presentation
+
+SQLRooms owns the **semantic model** for each turn (activity, status, reasoning,
+outputs, timing, nesting, chronological grouping, hoist eligibility). Host apps
+optionally own **presentation** (layout, disclosure, labels, styling, visibility)
+through `Chat.Rendering`.
+
+Most apps keep the polished default recipe and only need `<Chat.Messages />`.
+Missing slots always inherit SQLRooms defaults; nested providers merge rather
+than replace the parent recipe.
+
+#### How `<Chat.Messages />` uses the slots
+
+`<Chat.Messages />` is the session list surface: it derives chat turns from the
+current session's `uiMessages` and renders one `ChatTurnView` per turn. It does
+**not** own chrome for prompts, reasoning, tools, or answers.
+
+Each `ChatTurnView` builds the turn's semantic model (what happened, in what
+order, what is hoistable / running / completed), then asks the nearest
+`Chat.Rendering` recipe to present it. The recipe is a map of slot components:
+
+| Slot            | Role                                                          |
+| --------------- | ------------------------------------------------------------- |
+| `ActiveStatus`  | Current in-flight run status and elapsed-time presentation    |
+| `Turn`          | Full turn layout recipe — composes pre-wired semantic regions |
+| `Prompt`        | User prompt and attachment chrome for the turn                |
+| `Activity`      | Collapsible / status chrome around in-progress work           |
+| `Reasoning`     | Model thinking / reasoning disclosure                         |
+| `ToolActivity`  | One tool (or nested agent) line inside Activity               |
+| `TextOutput`    | Assistant text / markdown answer regions                      |
+| `HoistedOutput` | Rich tool UI lifted out of the activity stream                |
+| `Error`         | Turn-level error feedback                                     |
+| `Actions`       | Available per-turn operations such as copy and fork           |
+
+Composition looks like this:
+
+```text
+Chat
+└─ Chat.Rendering          ← optional; supplies / merges slot components
+   └─ Chat.Messages        ← lists turns from the session
+      └─ ChatTurnView      ← builds semantic model, then renders Turn
+         └─ Turn           ← composes pre-wired regions
+            ├─ Prompt
+            ├─ Timeline    ← default source-order body
+            ├─ Activity    ← aggregated activity for custom layouts
+            ├─ Response / Summary
+            ├─ HoistedOutputs
+            ├─ Error
+            └─ Actions
+```
+
+So:
+
+- Wrap `<Chat.Messages />` in `<Chat.Rendering>` to change presentation for that
+  subtree (or nest providers to layer overrides).
+- Override leaf slots (`Prompt`, `Reasoning`, …) when you only need different
+  look for those regions; `Turn` keeps deciding where they appear.
+- Override `Turn` when the regional structure itself must change. It receives
+  pre-wired region components, so it can reorder or omit regions without
+  rebuilding search ids, tool classification, or leaf-slot props.
+
+Without a `Chat.Rendering` ancestor, `ChatTurnView` uses the built-in SQLRooms
+defaults for every slot.
+
+#### Activity timing
+
+`ChatActivityProps` carries the timing an activity header needs:
+
+The turn-level activity reports `isRunning` until the turn itself ends, not
+just while a tool is pending: between steps no tool is in flight (the model is
+writing the next call), and following that would make the header, its clock and
+the open body flicker in every gap. Timeline groups still report their own
+pending state, since each one really has settled.
+
+- `startedAt` — epoch ms of the earliest tool start in the group. While
+  `isRunning` is true, chrome can render a clock that ticks from it (the
+  default recipe shows `· 12s · step 3`). Derive it with
+  `computeActivityTimeSpan(toolCallIds, toolTimings)?.startedAt`, or with
+  `computeTimeSpan(timings)` when the calls carry their own timing instead of
+  being looked up by id. Both ignore a call with no recorded start, so a
+  partially recorded entry cannot stretch the span or reverse it.
+- `toolCount` — tools in the group, shown as the current step while running.
+- `computationTimeMs` / `computationTimeLabel` — aggregated duration for a
+  settled group, as a raw number and a presentation-ready label. Nested agent
+  activities receive both as well, so a custom `Activity` never has to parse
+  the duration back out of `summaryLabel`.
+
+A group holding an `approval-requested` call is labelled `Waiting for approval`
+rather than `Thinking`: the run is paused on the user, which is what
+`ChatActiveStatus` reports at the same time. The clock keeps running, since the
+wait is part of the span the final duration reports. The turn-level label uses
+`ChatTurnModel.isAwaitingApproval` for the same distinction — a subset of
+`isActivityRunning` that also covers approvals requested by nested agents.
+
+`turn.activity` carries `startedAt` and `computationTimeMs` too, so a custom
+`Turn` that lays the region out itself can render its own live timer instead of
+falling back to the pre-wired `Content`.
+
+`ActivityBox` takes the same values as `startedAt`, `stepCount` and
+`computationTimeLabel`; the duration replaces the derived step count once the
+activity has settled, so a summary that already names the tool count is not
+repeated.
+
+```tsx
+<ActivityBox
+  isRunning={isRunning}
+  summaryLabel={isRunning ? 'Thinking' : 'Worked with 3 tools'}
+  startedAt={startedAt}
+  stepCount={isRunning ? toolCount : undefined}
+  computationTimeLabel={isRunning ? undefined : computationTimeLabel}
+>
+  {children}
+</ActivityBox>
+```
+
+`ChatActionsProps` carries `completedAt` alongside the copy/fork actions, so an
+actions row can show how long ago the turn finished. The default recipe renders
+it as a relative label that refreshes every 30s.
+
+`completedAt` is the moment the run terminated, recorded on the turn when the
+stream ends, is cancelled, or errors — not the end of the last tool call, so a
+text-only turn is timestamped too. It is absent while the turn is still
+running, and for turns recorded before it was persisted, where `ChatTurnView`
+falls back to the end of the turn's tool span.
+
+It is persisted in the turn's own message metadata. Read it back with
+`getChatTurnCompletedAt(message)` rather than reaching into `message.metadata`,
+which keeps the storage shape private to the package;
+`getChatTurnsFromUiMessages()` already surfaces it as each `ChatTurn`'s
+`completedAt`.
+
+```ts
+import {getChatTurnCompletedAt} from '@sqlrooms/ai-core';
+
+// Epoch ms, or undefined for a turn that is still running or predates the stamp.
+const finishedAt = getChatTurnCompletedAt(turn.userMessage);
+```
+
+`useRelativeTime(timestamp, intervalMs?)` builds that label: it returns a
+formatted "x ago" string for an epoch-ms `timestamp`, re-reading the clock every
+`intervalMs` (default 30s) so the value stays current while the turn is on
+screen. A timestamp newer than the last clock read is measured against itself
+rather than the stale reference, so a fresh value never renders as a
+future-relative label. Returns `undefined` when `timestamp` is
+undefined.
+
+```tsx
+const label = useRelativeTime(completedAt); // "18 minutes ago"
+```
+
+#### Override a single slot
+
+Pass a partial `components` map. Only the slots you provide change; everything
+else keeps the SQLRooms (or parent) recipe.
+
+**Activity chrome only** — keep default turn order and prompt/reasoning look:
+
+```tsx
+import {Chat, type ChatActivityProps} from '@sqlrooms/ai-core';
+
+function AppActivity({children, isRunning, summaryLabel}: ChatActivityProps) {
+  return (
+    <section data-running={isRunning}>
+      {summaryLabel ? <header>{summaryLabel}</header> : null}
+      {children}
+    </section>
+  );
+}
+
+export function AiPanel() {
+  return (
+    <Chat>
+      <Chat.Rendering components={{Activity: AppActivity}}>
+        <Chat.Messages />
+      </Chat.Rendering>
+    </Chat>
+  );
+}
+```
+
+**Prompt look only** — restyle the user message bubble without touching turn
+layout or tool activity:
+
+```tsx
+import {
+  Chat,
+  HighlightedChatSearchText,
+  type ChatPromptProps,
+} from '@sqlrooms/ai-core';
+
+function AppPrompt({prompt, searchBlockId}: ChatPromptProps) {
+  return (
+    <blockquote className="border-l-2 pl-3">
+      <HighlightedChatSearchText text={prompt} blockId={searchBlockId} />
+    </blockquote>
+  );
+}
+
+<Chat.Rendering components={{Prompt: AppPrompt}}>
+  <Chat.Messages />
+</Chat.Rendering>;
+```
+
+**Reasoning look only** — change thinking disclosure while keeping default
+activity boxes and answer rendering:
+
+```tsx
+import {
+  Chat,
+  HighlightedChatSearchText,
+  type ChatReasoningProps,
+} from '@sqlrooms/ai-core';
+
+function AppReasoning({text, isRunning, searchBlockId}: ChatReasoningProps) {
+  return (
+    <aside aria-busy={isRunning}>
+      <strong>{isRunning ? 'Thinking…' : 'Thoughts'}</strong>
+      <pre>
+        <HighlightedChatSearchText text={text} blockId={searchBlockId} />
+      </pre>
+    </aside>
+  );
+}
+
+<Chat.Rendering components={{Reasoning: AppReasoning}}>
+  <Chat.Messages />
+</Chat.Rendering>;
+```
+
+You can combine any of these in one `components` map by providing both the
+`Prompt` and `Reasoning` entries.
+
+**Active run status** — change or suppress the progress indicator without
+reimplementing chat-run state derivation. The exported `getChatActiveStatus`
+helper is also available when the indicator needs to be placed outside
+`Chat.Messages`:
+
+```tsx
+import {Chat, type ChatActiveStatusProps} from '@sqlrooms/ai-core';
+
+function AppActiveStatus({status}: ChatActiveStatusProps) {
+  return <MyProgressIndicator label={status.label} />;
+}
+
+<Chat.Rendering components={{ActiveStatus: AppActiveStatus}}>
+  <Chat.Messages />
+</Chat.Rendering>;
+```
+
+Set `ActiveStatus` to a component that returns `null` when the host owns the
+indicator's placement entirely. For that case, call `getChatActiveStatus` with
+the current messages and `ToolRenderBehavior` to reuse the same status model.
+
+`status.kind` separates a run that is working (`model`, `tool`) from one that
+has stopped and is waiting on the user (`approval`). The default indicator
+animates the former and labels the latter "Paused…" — with `status.label` kept
+for assistive technology — since animated dots on a halted run read as
+progress that is not happening.
+
+Pass the slice's `agentProgress` as the third argument to see approvals raised
+_inside_ a nested agent, whose own part still looks like a tool in progress.
+The same recursive check is exported from the turn model as
+`areAnyNestedAwaitingApproval()` and backs `ChatTurnModel.isAwaitingApproval`.
+
+`TextOutput` receives `isAnswer=true` only for text that is the final message
+part. Planning text followed by tool activity remains regular response text.
+
+**Tool activity** — customize top-level and nested tool or agent rows through
+one normalized contract. `toolCall` is always present; `part` is only present
+when the activity originated from a top-level AI SDK message part:
+
+```tsx
+import {Chat, type ChatToolActivityProps} from '@sqlrooms/ai-core';
+
+function AppToolActivity({toolCall, isAgent}: ChatToolActivityProps) {
+  return (
+    <div data-state={toolCall.state}>
+      {isAgent ? 'Agent' : 'Tool'}: {toolCall.toolName}
+    </div>
+  );
+}
+
+<Chat.Rendering components={{ToolActivity: AppToolActivity}}>
+  <Chat.Messages />
+</Chat.Rendering>;
+```
+
+The same recipe also applies inside nested agents. Similarly, an `Activity`
+override controls their activity chrome when `nestedActivityMode="own-boxes"`.
+For agent rows, `toolCall.agentToolCalls` follows live agent progress and then
+the persisted final output, so the same renderer works during streaming.
+
+**Action controls** — compose available operations without recreating their
+behavior. Optional `copy` and `fork` objects are capabilities: omitting one
+hides it, while its `Content` keeps the built-in control wired correctly:
+
+```tsx
+import {Chat, type ChatActionsProps} from '@sqlrooms/ai-core';
+
+function AppActions({copy}: ChatActionsProps) {
+  const Copy = copy?.Content;
+  return (
+    <div className="flex gap-1">
+      {Copy && <Copy />}
+      <MyCustomButton />
+    </div>
+  );
+}
+
+<Chat.Rendering components={{Actions: AppActions}}>
+  <Chat.Messages />
+</Chat.Rendering>;
+```
+
+Apps can replace a control's visuals while preserving its behavior:
+
+```tsx
+function AppActions({fork}: ChatActionsProps) {
+  return fork ? <MyForkButton onClick={fork.run} /> : null;
+}
+```
+
+An absent capability cannot be enabled accidentally: `fork` is only present
+when the turn can actually be forked.
+
+#### Fully custom turn layout
+
+Override `Turn` when you need a different regional order or structure (for
+example activity → response → hoisted → summary). Pair with
+`nestedActivityMode="embed"` when nested agents should contribute log lines
+into the parent Activity instead of creating their own boxes. Each region
+exposes semantic data and a pre-wired `Content` component, so custom layouts
+can inspect status and items without rebuilding search, tool, or hoist wiring:
+
+```tsx
+import {Chat, type ChatTurnSlotProps} from '@sqlrooms/ai-core';
+
+function AppChatTurn({turn}: ChatTurnSlotProps) {
+  const Prompt = turn.prompt.Content;
+  const Activity = turn.activity.Content;
+  const Response = turn.response.Content;
+  const HoistedOutputs = turn.hoistedOutputs.Content;
+  const Summary = turn.summary.Content;
+  const Error = turn.error?.Content;
+  const Actions = turn.actions.Content;
+
+  return (
+    <article data-turn-id={turn.id} aria-busy={!turn.isCompleted}>
+      <Prompt />
+      <Activity />
+      <Response />
+      <HoistedOutputs />
+      <Summary />
+      {Error && <Error />}
+      <Actions />
+    </article>
+  );
+}
+
+<Chat.Rendering
+  nestedActivityMode="embed"
+  components={{Turn: AppChatTurn, Prompt: AppPrompt, Reasoning: AppReasoning}}
+>
+  <Chat.Messages />
+</Chat.Rendering>;
+```
+
+Errors are deliberately separate from actions in the turn model. The default
+layout keeps them adjacent, but a custom `Turn` may place or omit each region
+independently.
+
+Activity and hoisted-output regions are also disjoint: nested agent activity
+contains status/log presentation, while nested rich outputs are rendered once
+through `turn.hoistedOutputs` in decomposed layouts. The pre-wired `Timeline`
+keeps owning both when the default source-order layout is used.
+
+For finer composition, iterate semantic items and render their pre-wired leaf
+components. Tool items expose state, agent, and hoist metadata:
+
+```tsx
+function AppActivity({turn}: ChatTurnSlotProps) {
+  return turn.activity.items.map((item) => {
+    const Content = item.Content;
+    return (
+      <section
+        key={item.id}
+        data-state={item.kind === 'tool' ? item.state : undefined}
+      >
+        <Content />
+      </section>
+    );
+  });
+}
+```
+
+Pair a custom `Turn` with leaf-slot overrides as needed. Prefer keeping the
+default turn (or a host-owned turn recipe) and swapping only the slots that
+must differ, unless the regional order itself has to change.
+
+`Chat.Header` and `Chat.History` can delegate session creation to the host app
+with `onCreateSession`. `Chat.History` also accepts `filterSession` and
+`emptyLabel` so apps can present scoped histories without changing the generic
+AI session schema.
+
+`createAiSlice({onChatFinish})` lets host apps observe a non-aborted turn after
+the completed messages have been persisted and the analysis has ended. Use this
+for app-owned follow-up behavior, such as forking a completed chat into a new
+workspace target, while keeping the generic AI slice unaware of app-specific
+state.
+
+### Optional timeout safety limits
+
+Chat and tool timeouts are disabled by default. Apps can opt into a generous
+run limit, an idle-stream watchdog, and tool execution limits through
+`createAiSlice`. Timeout options are runtime behavior and are not persisted in
+workspace configuration.
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  // Hybrid tools that omit `execute` on the configured remote endpoint.
+  remoteClientToolNames: ['weather'],
+  timeouts: {
+    runMs: 30 * 60_000,
+    idleStreamMs: 5 * 60_000,
+    toolExecutionMs: 5 * 60_000,
+    tools: {
+      query: undefined, // Allow long-running queries.
+      fetchMetadata: 30_000,
+    },
+  },
+});
+```
+
+`runMs` covers the complete multi-step run. `idleStreamMs` resets when the UI
+receives observable message progress and pauses while waiting for tool
+approval. A silent operation that is still working is indistinguishable from a
+stalled operation, so idle timeouts should remain conservative. Tool timeouts
+abort the signal passed to the tool and fail its pending call; tools should
+honor `abortSignal` to stop their underlying work promptly. Local executable
+tools and registered tools awaiting client output are covered, including hybrid
+client tools named by `remoteClientToolNames` whose remote definition omits
+`execute`. Remote endpoints remain responsible for enforcing timeouts around
+tools they execute server-side.
+
+### Tool-call repair
+
+When the model emits tool-call arguments that fail the tool's input schema, the
+AI SDK aborts the run with an opaque `InvalidToolInputError`. The local chat
+transport attempts to heal this by default: it re-asks the model to correct the
+call (forcing a fresh call to the same tool, without running the tool's side
+effects). Repair is best-effort — if it fails, hits its per-tool limit, or
+produces no corrected call, the original `InvalidToolInputError` still surfaces.
+Each repair costs one extra LLM request, so apps that want to trade that
+resilience away can opt out — either through `createAiSlice` or directly on the
+transport factory:
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  repairInvalidToolCalls: false, // default: true
+});
+```
+
+The primitive is also exported for hosts that build their own `ToolLoopAgent`
+sub-agents:
+
+```ts
+import {createModelToolCallRepair} from '@sqlrooms/ai-core';
+
+new ToolLoopAgent({
+  model,
+  tools,
+  experimental_repairToolCall: createModelToolCallRepair(model, {
+    abortSignal, // cancel a pending repair when the run is stopped
+    providerOptions, // inherit the run's caching/reasoning configuration
+    onRepairUsage: (usage) => accumulate(usage), // account repair tokens
+  }),
+});
+```
+
+`createModelToolCallRepair(model, options)` never recurses into itself, never
+triggers tool side effects (the failing tool is re-sent as a schema-only
+definition, stripped of `execute` and input-lifecycle/approval callbacks),
+leaves the outer step limit untouched, and stops after `maxRepairsPerTool`
+(default `2`) failures for the same tool so a persistently-invalid call cannot
+fan out into unbounded repair requests. The returned handler is single-run — its
+per-tool counter lives in the closure, so construct a fresh handler for each
+agent run. It never logs validation-error text or regenerated arguments, so user
+data does not leak into the console.
+
+Assistant messages can be forked into a new active chat through
+`ai.forkSessionFromMessage()`. The action snapshots the source session's
+`uiMessages` through the selected message or chat turn, inherits the source
+session's model and draft context item ids, records `sessionForks` provenance,
+and lets `Chat.Messages` show a `Forked from` link back to the source chat.
+
+Use `generateSessionTitle` when apps want an imperative helper that turns a
+session's early user messages into a concise title via `ai.sendPrompt`, cleans
+the model output, and renames the session. Use `useGenerateSessionTitle` in React
+surfaces that should watch the current session and trigger the helper after new
+user messages. The hook handles debouncing and duplicate-generation guards.
+Apps can pass `enabled`, `isDefaultSessionName`, and `getPromptOptions` to keep
+app-specific readiness checks and model choices outside the shared package.
+
+`ai.sendPrompt` reports a failed model call by resolving with a placeholder
+string rather than throwing, so a caller that treats the response as content
+cannot tell it apart from a real answer. Pass `onError` in its options to
+observe the failure itself:
+
+```ts
+let failed = false;
+const text = await sendPrompt(prompt, {onError: () => (failed = true)});
+```
+
+`generateSessionTitle` does exactly this and, instead of using the failed
+response as a name, renames the session to `Untitled Chat` and returns
+`{status: 'generation-failed'}`. That name is matched by
+`isDefaultGeneratedSessionName`, so the next user message can still replace it
+with a real title — a transient model failure costs the chat nothing
+permanent. Pass `existingSessionNames` to number repeats (`Untitled Chat 1`,
+...) so two failures do not produce the same name.
+
+Judging failure from `onError` rather than from the response text means a
+conversation that legitimately produces the placeholder wording as its title is
+still renamed normally.
+
+## Local Agent Chat
+
+Use `Chat.LocalAgentRoot` when a transient surface should be driven by a
+pre-constructed `ToolLoopAgent` instead of the session-backed AI slice. The
+message and composer components stay under the same `Chat` compound API.
+
+```tsx
+<Chat.LocalAgentRoot
+  agent={agent}
+  initialSuggestions={['Get started', 'Show me an example']}
+  onMessagesChange={(msgs) => console.log(msgs)}
+>
+  <Chat.Messages />
+  <Chat.PromptSuggestions />
+  <Chat.Composer placeholder="Ask anything..." />
+</Chat.LocalAgentRoot>
+```
+
+## Chat runtime providers
+
+`Chat.Root` and `Chat.LocalAgentRoot` render one of two runtime providers that
+the `Chat` message and composer components read via `useChatRuntime()`:
+
+- `SessionChatRuntimeProvider` — the default. Selects the **session** runtime, so
+  the UI is driven by the session-backed AI slice (`Chat.Root` wraps this).
+- `LocalAgentChatRuntimeProvider` — selects the **local-agent** runtime, driving
+  the same UI from a pre-constructed `ToolLoopAgent` with its own local message
+  state (`Chat.LocalAgentRoot` wraps this). It takes the same props as
+  `Chat.LocalAgentRoot` (`agent`, `initialMessages`, `initialSuggestions`,
+  `onMessagesChange`).
+
+The two are mutually exclusive modes, not layers: a `Chat` subtree is wrapped by
+exactly one of them. Most apps use `Chat.Root` / `Chat.LocalAgentRoot` and never
+touch these directly; they are exported for advanced setups that compose the
+runtime themselves. Both must wrap the `Chat` components that call
+`useChatRuntime()`; used outside a provider, the runtime defaults to session mode.
+
+Session chat execution itself is owned by the AI slice, independently of these
+presentation providers. `startAnalysis(sessionId)` lazily creates an ephemeral
+chat runtime for the session, so a run can continue when no React chat surface is
+mounted. `useSessionChat(sessionId)` only subscribes React to the runtime's chat.
+Persisted messages and session state remain in `ai.config`, while SDK chat
+instances, subscriptions, and timers remain ephemeral.
+
+## Chat search
+
+`Chat` renders a `ChatSearchProvider` and exposes `Chat.Search`, an in-conversation
+find bar that highlights matches in the current session's messages.
+
+For building search UIs outside the chat (e.g. a session list that searches across
+all sessions), the underlying matching primitives are exported and can be used
+without the provider:
+
+- `normalizeChatSearchQuery(query)` — trims + lower-cases a query (the casing rule
+  the search uses).
+- `findChatSearchMatches(blocks, query)` — returns positional matches
+  (`ChatSearchMatch[]`) for a list of `ChatSearchBlock`s. Useful for highlighting
+  matched substrings consistently with `Chat.Search`.
+- `markdownToPlainText(markdown)` — extracts plain text from markdown so message
+  content can be made searchable.
+
+```tsx
+import {findChatSearchMatches, type ChatSearchBlock} from '@sqlrooms/ai-core';
+
+const blocks: ChatSearchBlock[] = [
+  {id: 'title', resultId: 'title', text: title},
+];
+const matches = findChatSearchMatches(blocks, query);
+```
+
+**Keeping highlighting in a replaced slot.** A host that swaps out a chat leaf
+slot renders its own text, so it loses the highlighting the default slot got for
+free. `HighlightedChatSearchText` restores it. Pass the same `blockId` the turn
+model registered for that part; without it there are no matches to highlight and
+the component renders the text unchanged. The `Prompt` slot example above shows
+the shape.
+
+Matches are wrapped in `<mark>`, and the active match carries the match id as its
+DOM id, so a host can scroll it into view. `useOptionalChatSearch()` exposes the
+same state directly (`activeMatchId`, `getMatchesForBlock`) for slots that need
+to do their own anchoring. It returns `null` outside a `ChatSearchProvider`, so a
+component rendered away from `Chat.Root` degrades instead of throwing.
+
+Indexing follows what actually rendered, not just what got registered. A block
+that a slot returns `null` for, or that stays hidden behind a user preference,
+never mounts `HighlightedChatSearchText` (or the equivalent reporting) and so
+contributes no matches. Search never points at content the user can't see.
+The text a slot renders is also the text that gets indexed: `HighlightedChatSearchText`
+matches and highlights against the `text` prop it was given, so a slot showing
+a transformed or shortened string is searchable by what it actually displays,
+not by whatever text the block was originally registered with.
+
+Custom Markdown components are opaque rendering boundaries. Text beneath an
+overridden Markdown element is excluded from automatic search because the
+component may replace or hide its children; other default-rendered text in the
+same message stays searchable. Overriding `mark` disables automatic search for
+that message because generated highlights may never reach the DOM.
+
+A slot that paints its own matches instead of rendering through
+`HighlightedChatSearchText` must call `useReportRenderedChatSearchBlock(blockId)`
+itself, or its block never counts as rendered and contributes no matches.
+
+A slot that hides its content behind a disclosure or a toggle can key an effect
+on `useActiveChatSearchMatchKey(blockId)` to reveal that content for every
+selection attempt, including repeated navigation to the same match. This keeps
+scrolling from landing on something still hidden and is what the default
+reasoning disclosure uses to open itself.
+
+## Devtools
+
+`@sqlrooms/ai-core/devtools` exposes development-only inspection helpers and UI
+for session debugging without adding the debug surface to the main
+`@sqlrooms/ai-core` barrel.
+
+```tsx
+import {ChatSessionDebugView} from '@sqlrooms/ai-core/devtools';
+
+function DebugPanel({
+  sessionId,
+  onClose,
+}: {
+  sessionId: string;
+  onClose?: () => void;
+}) {
+  return <ChatSessionDebugView sessionId={sessionId} onClose={onClose} />;
+}
+```
+
+`ChatSessionDebugView` reads the current AI store context and renders a tabbed
+debug view for one chat session: the chronological timeline, registered tools,
+run context, raw session JSON, model settings, tool calls, nested agent work,
+and optional agent snapshots.
+
+Agent snapshot capture is opt-in on `createAiSlice`:
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  devtools: {
+    captureAgentSnapshots: true,
+    persistAgentSnapshots: true,
+    maxAgentSnapshotBytes: 64_000,
+  },
+});
+```
+
+Snapshots are bounded serializable metadata only: agent/tool names,
+descriptions, capability flags, approval hints, and settings. They must not
+store executable tools, closures, secrets, or unbounded prompt/output content.
+Persist snapshots only for debugging workflows where cross-tab or post-mortem
+inspection is useful.
+
+Captured snapshots and snapshot controls live under the AI state's devtools
+namespace:
+
+```ts
+const snapshots = useRoomStore((state) => state.ai.devtools.agentSnapshots);
+state.ai.devtools.clearAgentSnapshots();
+```
+
+### Provider-context diagnostics
+
+Provider-context capture is also opt-in. Enable it when creating the AI slice;
+records are kept in memory and the oldest record is discarded when the limit
+is exceeded (the default limit is `100`):
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  devtools: {
+    captureProviderContexts: true,
+    maxProviderContextRecords: 100,
+  },
+});
+
+const providerContexts = useRoomStore(
+  (state) => state.ai.devtools.providerContexts,
+);
+roomStore.getState().ai.devtools.clearProviderContexts();
+```
+
+Each `ProviderContextDiagnostic` describes one provider step using metadata
+only: role, provider/model, session and step identifiers, instruction/message
+sizes, tool names and schema sizes, source labels, optional preparation
+metrics, and provider-reported input tokens when available. Raw instructions,
+messages, and tool schemas are not copied into the record. The records are
+transient devtools state and are also shown by `ChatSessionDebugView`.
+
+Core chat and `ai.sendPrompt()` provider steps are captured automatically when
+the option is enabled. Custom or nested agents can use
+`state.ai.devtools.measureProviderContext(input)` to measure and append the same
+record shape while respecting the capture flag. The main package also exports
+`measureProviderContext`, `tryMeasureProviderContext`,
+`MeasureProviderContextArgs`, and `ProviderContextDiagnostic` for integrations
+that need to measure outside a slice method. `measureProviderContext` is the
+strict helper and rejects measurement failures; `tryMeasureProviderContext` is
+the fail-open request-path helper that logs a warning and returns `undefined`
+so diagnostics cannot abort a valid provider request. Callers using either
+standalone helper are responsible for writing the returned record to their
+chosen diagnostics store.
+
+## Useful exports
+
+- Slice/hooks: `createAiSlice`, `useStoreWithAi`, `generateSessionTitle`, `useGenerateSessionTitle`, `AiSliceState`
+- Chat UI: `Chat`, `ChatMessagesContainer`, `ChatTurnView`, `MessageContent`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
+- Block Ask AI: `BlockAiPromptPopover`, `createAskAiBlockHeaderAction`, `AskAiBlockHeaderActionRenderContext`, `CreateAskAiBlockHeaderActionOptions`
+- Devtools subexport: `@sqlrooms/ai-core/devtools`
+- Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `AnalysisAnswer`, `ErrorMessage`
+- Session helpers: `ChatSessionSchema`, `isChatSessionEmpty`, `getChatTurnsFromUiMessages`
+- Forking: `ai.forkSessionFromMessage()`, `AiSessionForkOrigin`, `ForkSessionFromMessageArgs`
+- Types: `ChatTurn`, `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
+- Provider diagnostics: `measureProviderContext`, `tryMeasureProviderContext`, `MeasureProviderContextArgs`, `ProviderContextDiagnostic`
+- Tool/agent utilities:
+  - `cleanupPendingUiMessages`
+  - `cleanupPendingAnalysisResults`
+  - `fixIncompleteToolCalls`
+  - `streamSubAgent`
+  - `withRunContextTools`
+
+### Forwarding execution scope into nested agents
+
+Top-level tools receive the invoking turn's `sessionId` and `AiRunContext`
+because the chat transport wraps `state.ai.tools` with `withRunContextTools`.
+Tools handed to a nested `ToolLoopAgent` are not wrapped by the transport, so
+without the same wrapper they execute with no scope and any target resolution
+that defaults to "the current artifact/map" silently follows mutable UI
+selection instead of the artifact captured when the prompt was submitted.
+
+Wrap nested toolsets with the parent's execution options:
+
+```ts
+import {withRunContextTools} from '@sqlrooms/ai-core';
+
+const nestedTool = tool({
+  inputSchema,
+  execute: async (input, options) => {
+    const agent = new ToolLoopAgent({
+      model,
+      instructions,
+      // `options` carries the parent turn's scope; forward it verbatim.
+      tools: withRunContextTools(
+        nestedTools,
+        options as AiToolExecutionContext,
+      ),
+    });
+    return streamSubAgent(
+      agent,
+      prompt,
+      store,
+      options.toolCallId,
+      // The wrapper preserves `abortSignal` for the nested tools, but the
+      // sub-agent loop itself only observes cancellation through this argument.
+      options.abortSignal,
+    );
+  },
+});
+```
+
+Forward `options.abortSignal` to `streamSubAgent`. `withRunContextTools` leaves
+the signal intact for the tools the sub-agent calls, but the agent loop —
+including the model stream and any approval wait — is only cancellable through
+`streamSubAgent`'s fifth argument, so omitting it lets a stopped parent turn
+leave the nested run going.
+
+When a sub-agent stream fails, `streamSubAgent` throws `SUB_AGENT_ERROR_MESSAGE` rather than the provider's own text, and logs the raw error to the console. Callers serialize the thrown message into a tool result that the parent model receives, and a child agent can run on a different provider than its parent, so an exception carrying an endpoint, account detail, or credential would otherwise cross that boundary. A host that has verified parent and child share a trust boundary can pass `{formatError: getSubAgentErrorMessage}` as the sixth argument to get the underlying text back, or supply its own formatter. Local diagnostics are unaffected either way.
+
+Pass the parent's `getAiRunContext` (not a copied `aiRunContext`) so an in-turn
+retarget via `set_primary_context_artifact` is visible to subsequent nested tool
+calls. Parent scope wins over inner options, so a nested agent cannot reassign
+the owning session; fields the parent leaves `undefined` are preserved.
+
+`AnalysisSessionSchema`, `isAnalysisSessionEmpty`, `AnalysisResultsContainer`,
+`AnalysisResult`, `AnalysisAnswer`, `processAnalysisAnswerContent`, and
+`cleanupPendingAnalysisResults` remain compatibility exports for existing apps.
+New code should prefer `ChatSessionSchema`, `isChatSessionEmpty`,
+`Chat.Messages`, `ChatTurnView`, `MessageContent`, `uiMessages`, and derived
+`ChatTurn` helpers.
+
+Legacy persisted sessions that contain `analysisResults` still load through
+schema migration, but parsed and newly created chat sessions no longer include
+that field.
+
+## Related packages
+
+- `@sqlrooms/ai` (recommended high-level integration)
+- `@sqlrooms/ai-settings` (provider/model settings slice + UI)
+- `@sqlrooms/ai-config` (config schemas and migrations)

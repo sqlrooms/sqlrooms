@@ -1,14 +1,22 @@
 import {
+  ArrowDataTableValueFormatter,
   DataTablePaginated,
   useArrowDataTable,
-  ArrowDataTableValueFormatter,
 } from '@sqlrooms/data-table';
-import type {Row} from '@tanstack/react-table';
-import {cn, SpinnerPane, Button} from '@sqlrooms/ui';
+import {
+  Button,
+  cn,
+  SpinnerPane,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
+import type {Row, RowSelectionState} from '@tanstack/react-table';
+import {MessageCircleQuestion} from 'lucide-react';
 import React from 'react';
 import {isQueryWithResult, useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {MessageCircleQuestion} from 'lucide-react';
 import {QueryResultLimitSelect} from './QueryResultLimitSelect';
 
 /**
@@ -41,6 +49,8 @@ function arrowTableToExplainText(result: any): string {
 export interface QueryResultPanelProps {
   /** Custom class name for styling */
   className?: string;
+  /** Query id to render results for. Defaults to the selected query tab. */
+  queryId?: string;
   /** Custom actions to render in the query result panel */
   renderActions?: (query: string) => React.ReactNode;
   /** Custom font size for the table e.g. text-xs, text-sm, text-md, text-lg, text-base */
@@ -59,31 +69,67 @@ export interface QueryResultPanelProps {
     row: Row<any>;
     event: React.MouseEvent<HTMLTableRowElement>;
   }) => void;
+  /** Custom content to render in the error state (e.g., QueryResultPanel.AskAi) */
+  children?: React.ReactNode;
   /**
+   * @deprecated Use children with QueryResultPanel.AskAi instead
    * Called when the "Ask AI" button is clicked on an error message.
    * Receives the current query and error text.
    */
   onAskAiAboutError?: (query: string, error: string) => void;
+  /**
+   * Enables row selection with checkboxes.
+   */
+  enableRowSelection?: boolean;
+  /**
+   * Controlled row selection state. Keys are row indices, values are selection status.
+   */
+  rowSelection?: RowSelectionState;
+  /**
+   * Called when row selection changes.
+   */
+  onRowSelectionChange?: (rowSelection: RowSelectionState) => void;
   /** Custom value formatter for arrow data */
   formatValue?: ArrowDataTableValueFormatter;
+  /** Additional content rendered in the result footer next to the row count. */
+  footerDetails?: React.ReactNode;
+  /** Custom class name for the inner paginated data table. */
+  dataTableClassName?: string;
 }
 
-export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
+/**
+ * Result table for a SQL editor query.
+ *
+ * Prefer `SqlQuery.Results` when composing a complete single-query surface. Use
+ * this component directly when only the result panel is needed.
+ */
+const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
   className,
+  queryId,
   renderActions,
   fontSize = 'text-xs',
   onRowClick,
   onRowDoubleClick,
+  children,
   onAskAiAboutError,
+  enableRowSelection,
+  rowSelection,
+  onRowSelectionChange,
   formatValue,
+  footerDetails,
+  dataTableClassName,
 }) => {
   const queryResult = useStoreWithSqlEditor((s) => {
-    const selectedId = s.sqlEditor.config.selectedQueryId;
-    return s.sqlEditor.queryResultsById[selectedId];
+    const resolvedQueryId = queryId ?? s.sqlEditor.config.selectedQueryId;
+    return s.sqlEditor.queryResultsById[resolvedQueryId];
   });
-  const getCurrentQuery = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.getCurrentQuery,
-  );
+  const currentQuery = useStoreWithSqlEditor((s) => {
+    if (!queryId) return s.sqlEditor.getCurrentQuery();
+    return (
+      s.sqlEditor.config.queries.find((query) => query.id === queryId)?.query ??
+      ''
+    );
+  });
   const setQueryResultLimit = useStoreWithSqlEditor(
     (s) => s.sqlEditor.setQueryResultLimit,
   );
@@ -110,11 +156,10 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
 
   const handleAskAiAboutError = React.useCallback(() => {
     if (queryResult?.status === 'error' && onAskAiAboutError) {
-      const currentQuery = getCurrentQuery();
       const errorText = queryResult.error;
-      onAskAiAboutError(currentQuery, errorText);
+      onAskAiAboutError?.(currentQuery, errorText);
     }
-  }, [queryResult, getCurrentQuery, onAskAiAboutError]);
+  }, [queryResult, currentQuery, onAskAiAboutError]);
 
   if (!queryResult) {
     return null;
@@ -126,29 +171,44 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
 
   if (queryResult?.status === 'aborted') {
     return (
-      <div className="p-5 font-mono text-xs leading-tight text-red-500">
+      <div
+        role="alert"
+        className="p-5 font-mono text-xs leading-tight text-red-500"
+      >
         Query was aborted
+        {queryResult.warning && (
+          <div className="text-muted-foreground mt-2">
+            {queryResult.warning}
+          </div>
+        )}
       </div>
     );
   }
   if (queryResult?.status === 'error') {
+    // Backward compat: if no children but onAskAiAboutError is provided, render default button
+    const errorActions =
+      children ??
+      (onAskAiAboutError && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleAskAiAboutError}
+          title="Ask AI for help"
+        >
+          <MessageCircleQuestion className="h-4 w-4" />
+        </Button>
+      ));
+
     return (
       <div className="relative h-full w-full overflow-auto p-5">
-        {onAskAiAboutError && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-2 top-2 h-8 w-8"
-            onClick={handleAskAiAboutError}
-            title="Ask AI for help"
-          >
-            <MessageCircleQuestion className="h-4 w-4" />
-          </Button>
+        {errorActions && (
+          <div className="absolute top-2 right-2">{errorActions}</div>
         )}
         <pre
           className={cn(
-            'whitespace-pre-wrap text-xs leading-tight text-red-500',
-            onAskAiAboutError && 'pr-12',
+            'text-xs leading-tight whitespace-pre-wrap text-red-500',
+            errorActions && 'pr-12',
           )}
         >
           {queryResult.error}
@@ -159,7 +219,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
 
   if (queryResult?.status === 'success') {
     const contentWrapperClassName = cn(
-      'relative flex h-full w-full flex-grow flex-col overflow-hidden',
+      'relative flex h-full w-full grow flex-col overflow-hidden',
       className,
     );
 
@@ -168,10 +228,10 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
       return (
         <div className={contentWrapperClassName}>
           <div className="flex h-full w-full flex-col overflow-hidden">
-            <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-tight">
+            <pre className="flex-1 overflow-auto p-4 font-mono text-xs leading-tight wrap-break-word whitespace-pre-wrap">
               {explainText}
             </pre>
-            <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
+            <div className="bg-background flex w-full items-center gap-2 border-t px-4 py-1">
               <div className="font-mono text-xs">EXPLAIN</div>
               <div className="flex-1" />
               {renderActions
@@ -189,14 +249,18 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
         <div className={contentWrapperClassName}>
           <div className="flex h-full w-full flex-col">
             <DataTablePaginated
-              {...arrowTableData}
-              className="flex-grow overflow-hidden"
+              data={arrowTableData?.data}
+              columns={arrowTableData?.columns}
+              className={cn('grow overflow-hidden', dataTableClassName)}
               fontSize={fontSize}
               isFetching={false}
               onRowClick={onRowClick}
               onRowDoubleClick={onRowDoubleClick}
+              enableRowSelection={enableRowSelection}
+              rowSelection={rowSelection}
+              onRowSelectionChange={onRowSelectionChange}
             />
-            <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
+            <div className="bg-background flex w-full items-center gap-2 border-t px-4 py-1">
               {queryResult.result ? (
                 <>
                   <div className="font-mono text-xs">
@@ -213,6 +277,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
                 </>
               ) : null}
               <div className="flex-1" />
+              {footerDetails}
               {renderActions
                 ? renderActions(queryResult.lastQueryStatement)
                 : undefined}
@@ -234,3 +299,71 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
 
   return null;
 };
+
+export interface QueryResultPanelAskAiProps {
+  /** Query id to read the error/query from. Defaults to the selected query tab. */
+  queryId?: string;
+  /** Called when clicked with the current query and error message */
+  onClick?: (query: string, error: string) => void;
+  /** Custom icon (defaults to MessageCircleQuestion) */
+  icon?: React.ReactNode;
+  /** Custom className */
+  className?: string;
+  /** Tooltip text to display on hover */
+  tooltipContent?: string;
+}
+
+const QueryResultPanelAskAi = React.forwardRef<
+  HTMLButtonElement,
+  QueryResultPanelAskAiProps
+>(
+  (
+    {queryId, onClick, icon, className, tooltipContent = 'Ask AI for help'},
+    ref,
+  ) => {
+    const queryResult = useStoreWithSqlEditor((s) => {
+      const resolvedQueryId = queryId ?? s.sqlEditor.config.selectedQueryId;
+      return s.sqlEditor.queryResultsById[resolvedQueryId];
+    });
+    const currentQuery = useStoreWithSqlEditor((s) => {
+      if (!queryId) return s.sqlEditor.getCurrentQuery();
+      return (
+        s.sqlEditor.config.queries.find((query) => query.id === queryId)
+          ?.query ?? ''
+      );
+    });
+
+    // Only render in error state
+    if (queryResult?.status !== 'error') return null;
+
+    const handleClick = () => {
+      onClick?.(currentQuery, queryResult.error);
+    };
+
+    return (
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              ref={ref}
+              variant="ghost"
+              size="icon"
+              className={cn('h-8 w-8', className)}
+              onClick={handleClick}
+            >
+              {icon ?? <MessageCircleQuestion className="h-4 w-4" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-xs">{tooltipContent}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  },
+);
+QueryResultPanelAskAi.displayName = 'QueryResultPanel.AskAi';
+
+export const QueryResultPanel = Object.assign(QueryResultPanelRoot, {
+  AskAi: QueryResultPanelAskAi,
+});

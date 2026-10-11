@@ -64,9 +64,15 @@ const fromBase64 = (value: string) => {
   return out;
 };
 
+function importAndCheckoutLatest(doc: LoroDoc, bytes: Uint8Array) {
+  doc.import(bytes);
+  doc.checkoutToLatest();
+}
+
 export type WebSocketSyncOptions = {
   url: string;
   roomId: string;
+  /** Authenticate with an initial `auth` frame and await `authAck` before syncing. Never sent in the URL. */
   token?: string;
   params?: Record<string, string>;
   protocols?: string | string[];
@@ -186,7 +192,6 @@ export function createWebSocketSyncConnector(
   const buildUrl = () => {
     const url = new URL(options.url);
     url.searchParams.set('roomId', options.roomId);
-    if (options.token) url.searchParams.set('token', options.token);
     if (options.params) {
       Object.entries(options.params).forEach(([k, v]) =>
         url.searchParams.set(k, v),
@@ -259,6 +264,14 @@ export function createWebSocketSyncConnector(
     ensureLocalSubscription(doc);
 
     const attachSocketListenersFor = (ws: WebSocketLike) => {
+      let authenticated = !options.token;
+      let authenticationTimer: ReturnType<typeof setTimeout> | undefined;
+      const beginSync = () => {
+        attempt = 0;
+        sendStatus('open');
+        sendJoin();
+        if (sendSnapshotOnConnect) sendSnapshot(subscribedDoc ?? doc);
+      };
       // Ensure browser websockets deliver binary frames as ArrayBuffer (not Blob)
       if ('binaryType' in ws) {
         try {
@@ -269,6 +282,23 @@ export function createWebSocketSyncConnector(
       }
 
       const handleMessage = (event: any) => {
+        if (!authenticated) {
+          try {
+            if (
+              typeof event.data !== 'string' ||
+              JSON.parse(event.data)?.type !== 'authAck'
+            ) {
+              ws.close();
+              return;
+            }
+            authenticated = true;
+            clearTimeout(authenticationTimer);
+            beginSync();
+          } catch {
+            ws.close();
+          }
+          return;
+        }
         // Use the currently connected doc reference (not the doc that created the socket),
         // so a later connect(doc) call can rebind without needing a new WebSocket.
         const activeDoc = subscribedDoc ?? doc;
@@ -286,7 +316,7 @@ export function createWebSocketSyncConnector(
                   event.data.byteOffset,
                   event.data.byteLength,
                 );
-          activeDoc.import(bytes);
+          importAndCheckoutLatest(activeDoc, bytes);
           return;
         }
         if (typeof Blob !== 'undefined' && event.data instanceof Blob) {
@@ -294,7 +324,7 @@ export function createWebSocketSyncConnector(
             .arrayBuffer()
             .then((buf: ArrayBuffer) => {
               const bytes = new Uint8Array(buf);
-              activeDoc.import(bytes);
+              importAndCheckoutLatest(activeDoc, bytes);
             })
             .catch((error: unknown) =>
               console.warn('Failed to decode CRDT binary message', error),
@@ -358,7 +388,7 @@ export function createWebSocketSyncConnector(
                 // ignore
               }
 
-              activeDoc.import(bytes);
+              importAndCheckoutLatest(activeDoc, bytes);
               snapshotApplied = true;
               if (snapshotWaitTimer) {
                 clearTimeout(snapshotWaitTimer);
@@ -380,7 +410,6 @@ export function createWebSocketSyncConnector(
       };
 
       const handleOpen = () => {
-        attempt = 0;
         joined = false;
         snapshotApplied = false;
         seededAfterEmptyServerSnapshot = false;
@@ -389,10 +418,13 @@ export function createWebSocketSyncConnector(
           snapshotWaitTimer = undefined;
         }
         connecting = false;
-        sendStatus('open');
-        sendJoin();
-        if (sendSnapshotOnConnect) {
-          sendSnapshot(doc);
+        if (options.token) {
+          authenticated = false;
+          authenticationTimer = setTimeout(() => ws.close(), 5000);
+          (authenticationTimer as any)?.unref?.();
+          ws.send(JSON.stringify({type: 'auth', token: options.token}));
+        } else {
+          beginSync();
         }
         ensureLocalSubscription(doc);
       };
@@ -449,6 +481,7 @@ export function createWebSocketSyncConnector(
         ws.addEventListener('close', handleClose);
         ws.addEventListener('error', handleError);
         detachSocketListeners = () => {
+          clearTimeout(authenticationTimer);
           try {
             ws.removeEventListener('message', handleMessage);
             ws.removeEventListener('open', handleOpen);
@@ -464,6 +497,7 @@ export function createWebSocketSyncConnector(
         (ws as any).onclose = handleClose;
         (ws as any).onerror = handleError;
         detachSocketListeners = () => {
+          clearTimeout(authenticationTimer);
           try {
             (ws as any).onmessage = null;
             (ws as any).onopen = null;
@@ -490,6 +524,7 @@ export function createWebSocketSyncConnector(
       // Avoid keeping the Node.js event loop alive in tests/SSR environments.
       // No-op in browsers.
       (connectingTimeout as any)?.unref?.();
+      if (ws.readyState === WS_OPEN) handleOpen();
     };
 
     if (
@@ -499,15 +534,6 @@ export function createWebSocketSyncConnector(
       if (listeningSocket !== socket) {
         console.warn('[crdt] existing socket had no listeners; attaching now');
         attachSocketListenersFor(socket);
-        // If the socket is already open, we won't get an 'open' event, so act as if
-        // we just opened: (re)join and optionally send snapshot.
-        if (socket.readyState === WS_OPEN) {
-          attempt = 0;
-          joined = false;
-          sendStatus('open');
-          sendJoin();
-          if (sendSnapshotOnConnect) sendSnapshot(doc);
-        }
       }
       return;
     }

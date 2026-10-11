@@ -1,0 +1,32 @@
+{
+  "client": "aiohttp permessage-deflate=15; 3 runs; delayed reader 0.5s and CRDT reader 0.25s; concurrent HTTP observer",
+  "runs": [
+    {
+      "slow_three_44mb_ms": 4186.318417079747,
+      "cancel_ack_ms": 1300.143125001341,
+      "health_max_ms": 1328.528749756515,
+      "health_median_ms": 2.150624990463257,
+      "crdt_fast_ms": 2.9391669668257236,
+      "crdt_bytes": 8565,
+      "peak_rss_mib": 672.75
+    },
+    {
+      "slow_three_44mb_ms": 4198.898917064071,
+      "cancel_ack_ms": 1330.3651669993997,
+      "health_max_ms": 1341.01566625759,
+      "health_median_ms": 0.7418335881084204,
+      "crdt_fast_ms": 2.747667022049427,
+      "crdt_bytes": 8565,
+      "peak_rss_mib": 613.828125
+    },
+    {
+      "slow_three_44mb_ms": 4181.803457904607,
+      "cancel_ack_ms": 1291.0601668991148,
+      "health_max_ms": 1316.8667922727764,
+      "health_median_ms": 0.7308749482035637,
+      "crdt_fast_ms": 3.273374866694212,
+      "crdt_bytes": 8579,
+      "peak_rss_mib": 630.890625
+    }
+  ]
+}

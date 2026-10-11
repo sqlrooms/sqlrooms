@@ -30,7 +30,7 @@ DESCRIBE documents;
 SELECT COUNT(*) as total_documents FROM documents;
 
 -- Get database statistics
-SELECT 
+SELECT
     COUNT(*) as total_documents,
     AVG(length(text)) as avg_text_length,
     MIN(length(text)) as min_text_length,
@@ -41,16 +41,16 @@ FROM documents;
 SELECT text, metadata_ FROM documents LIMIT 1;
 
 -- List all unique source files
-SELECT DISTINCT metadata_->>'$.file_name' as file_name 
-FROM documents 
+SELECT DISTINCT metadata_->>'$.file_name' as file_name
+FROM documents
 WHERE metadata_ IS NOT NULL
 ORDER BY file_name;
 
 -- Count documents per source file
-SELECT 
+SELECT
     metadata_->>'$.file_name' as file_name,
     COUNT(*) as chunk_count
-FROM documents 
+FROM documents
 WHERE metadata_ IS NOT NULL
 GROUP BY metadata_->>'$.file_name'
 ORDER BY chunk_count DESC;
@@ -78,7 +78,7 @@ conn = duckdb.connect("sqlrooms_docs", read_only=True)
 
 # Find top 5 most similar documents using cosine similarity
 results = conn.execute("""
-    SELECT 
+    SELECT
         text,
         metadata_->>'$.file_name' as source_file,
         array_cosine_similarity(embedding, ?::FLOAT[384]) as similarity
@@ -110,12 +110,14 @@ uv run python query_duckdb_direct.py "How do I use DuckDB?"
 DuckDB provides several vector similarity functions:
 
 ### Cosine Similarity
+
 ```sql
 SELECT array_cosine_similarity(embedding, ?::FLOAT[384]) as similarity
 FROM documents;
 ```
 
 ### Euclidean Distance (L2)
+
 ```sql
 SELECT array_distance(embedding, ?::FLOAT[384]) as distance
 FROM documents
@@ -123,6 +125,7 @@ ORDER BY distance ASC;  -- Note: ascending order for distance
 ```
 
 ### Dot Product
+
 ```sql
 SELECT array_inner_product(embedding, ?::FLOAT[384]) as score
 FROM documents;
@@ -165,7 +168,7 @@ You can combine semantic search with text filters:
 ```python
 # Search semantically but only in specific files
 results = conn.execute("""
-    SELECT 
+    SELECT
         text,
         metadata_->>'$.file_name' as source,
         array_cosine_similarity(embedding, ?::FLOAT[384]) as similarity
@@ -192,7 +195,7 @@ COPY (
 
 ```sql
 COPY (
-    SELECT 
+    SELECT
         node_id,
         text,
         metadata_->>'$.file_name' as source_file
@@ -236,9 +239,9 @@ model = SentenceTransformer("BAAI/bge-small-en-v1.5")
 def search(q: str, limit: int = 5):
     embedding = model.encode(q).tolist()
     conn = duckdb.connect("sqlrooms_docs", read_only=True)
-    
+
     results = conn.execute("""
-        SELECT 
+        SELECT
             text,
             metadata_,
             array_cosine_similarity(embedding, ?::FLOAT[384]) as score
@@ -246,9 +249,9 @@ def search(q: str, limit: int = 5):
         ORDER BY score DESC
         LIMIT ?
     """, [embedding, limit]).fetchall()
-    
+
     conn.close()
-    
+
     return {
         "query": q,
         "results": [
@@ -287,14 +290,18 @@ console.log(results);
 ## Troubleshooting
 
 ### Database Locked Error
+
 If you get a lock error, make sure the database isn't open in another process:
+
 ```bash
 # Close any open DuckDB CLI sessions
 # Or use read_only=True in Python: duckdb.connect(path, read_only=True)
 ```
 
 ### Wrong Embedding Dimensions
+
 Make sure your query embeddings match the database dimensions:
+
 ```python
 # For bge-small-en-v1.5: 384 dimensions
 # Cast as FLOAT[384] in SQL
@@ -306,4 +313,3 @@ array_cosine_similarity(embedding, ?::FLOAT[384])
 - [DuckDB Documentation](https://duckdb.org/docs/)
 - [DuckDB Vector Functions](https://duckdb.org/docs/extensions/vss)
 - [Sentence Transformers](https://www.sbert.net/)
-

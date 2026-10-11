@@ -14,10 +14,11 @@ export {
 } from './RagSlice';
 export {
   createRagTool,
+  executeRagSearch,
+  ragToolRenderer,
   RagToolParameters,
   type RagToolLlmResult,
-  type RagToolAdditionalData,
-  type RagToolContext,
+  type RagToolOutput,
 } from './createRagTool';
 export {
   createAiEmbeddingProvider,

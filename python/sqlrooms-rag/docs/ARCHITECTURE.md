@@ -5,7 +5,9 @@
 The RAG system uses DuckDB with three main components:
 
 ### 1. `documents` Table (Chunks)
+
 Created by llama-index's DuckDBVectorStore:
+
 - `node_id` (VARCHAR) - Unique chunk identifier
 - `text` (TEXT) - Chunk content
 - `metadata_` (JSON) - File metadata (path, name, headers, etc.)
@@ -13,7 +15,9 @@ Created by llama-index's DuckDBVectorStore:
 - `doc_id` (VARCHAR) - **NEW**: Reference to source document
 
 ### 2. `source_documents` Table (Full Documents)
+
 Stores original documents before chunking:
+
 - `doc_id` (VARCHAR PRIMARY KEY) - Document identifier
 - `file_path` (VARCHAR) - Full file path
 - `file_name` (VARCHAR) - File name
@@ -22,7 +26,9 @@ Stores original documents before chunking:
 - `created_at` (TIMESTAMP) - Creation timestamp
 
 ### 3. FTS Tables (Full-Text Search)
+
 Created by DuckDB FTS extension:
+
 - `fts_main_documents` - FTS index on chunks
 - `fts_main_documents_docs` - Document mappings
 - `fts_main_documents_config` - FTS configuration
@@ -52,6 +58,7 @@ Ready for Hybrid Retrieval
 ## Preparation Pipeline
 
 ### `prepare_embeddings()`
+
 1. **Validate inputs** - Check directory exists, contains .md files
 2. **Load embedding model** - HuggingFace model (cached after first run)
 3. **Load documents** - Read all .md files recursively
@@ -67,6 +74,7 @@ All steps are automatic during `prepare_embeddings()` - no manual setup required
 ## Query Pipeline
 
 ### Hybrid Query (Recommended)
+
 ```
 User Query
     ↓
@@ -86,6 +94,7 @@ User Query
 ```
 
 ### Vector-Only Query
+
 ```
 User Query
     ↓
@@ -99,18 +108,21 @@ Return top-K chunks
 ## Retrieval Methods
 
 ### 1. Vector Similarity Search
+
 - Uses `array_cosine_similarity()` in DuckDB
 - Semantic/conceptual matching
 - Good for natural language queries
 - Embedding dimension: 384 (default)
 
 ### 2. Full-Text Search (FTS)
+
 - Uses DuckDB FTS extension with BM25
 - Keyword/exact term matching
 - Good for technical terms, acronyms, code
 - Porter stemmer + stopwords removal
 
 ### 3. Hybrid (RRF)
+
 - Combines both methods
 - Reciprocal Rank Fusion algorithm
 - No score normalization needed
@@ -119,33 +131,41 @@ Return top-K chunks
 ## Key Design Decisions
 
 ### Why Store Source Documents?
+
 **Problem**: Chunks are great for finding relevant content, but you often need full document context for RAG.
 
-**Solution**: 
+**Solution**:
+
 - Store complete original documents in `source_documents`
 - Link each chunk to its source via `doc_id`
 - Easy retrieval: `get_source_documents(chunk_ids)`
 
 **Use Cases**:
+
 - Show full documentation page to LLM
 - Display context around relevant snippets
 - Trace back to original source files
 
 ### Why Create FTS During Preparation?
+
 **Problem**: Users might forget to create FTS index, breaking hybrid search.
 
 **Solution**:
+
 - Automatically create FTS index during `prepare_embeddings()`
 - Graceful failure if FTS extension unavailable
 - One-time setup, no manual steps
 
 **Benefits**:
+
 - Better UX - works out of the box
 - No separate setup commands
 - Index always in sync with embeddings
 
 ### Why DuckDB?
+
 **Advantages**:
+
 - Embedded database (no server needed)
 - Fast vector operations
 - Native FTS support
@@ -154,11 +174,13 @@ Return top-K chunks
 - OLAP-optimized (great for analytics queries)
 
 **Alternative considered**: SQLite + separate vector DB
+
 - **Rejected**: More complex, two databases to manage
 
 ## Performance Characteristics
 
 ### Preparation
+
 - **Time**: ~1-2 seconds per document
 - **Memory**: 2-4GB during processing
 - **Storage**: ~2-3x original markdown size
@@ -167,6 +189,7 @@ Return top-K chunks
   - FTS index: ~0.2x text size
 
 ### Query
+
 - **Vector search**: 50-100ms for 10K chunks
 - **FTS search**: 10-30ms
 - **Hybrid (parallel)**: 60-120ms
@@ -174,6 +197,7 @@ Return top-K chunks
 - **Source doc retrieval**: 5-10ms per doc
 
 ### Scaling
+
 - Tested up to: 100K chunks (~10GB markdown)
 - Recommended: < 1M chunks
 - For larger: Consider chunking strategy or sharding
@@ -212,6 +236,7 @@ get_source_documents(
 ### Result Schema
 
 **Chunk Result**:
+
 ```python
 {
     'node_id': str,           # Chunk identifier
@@ -224,6 +249,7 @@ get_source_documents(
 ```
 
 **Source Document**:
+
 ```python
 {
     'doc_id': str,       # Document identifier
@@ -237,6 +263,7 @@ get_source_documents(
 ## Future Enhancements
 
 ### Considered for Next Version
+
 1. **Reranking**: Cross-encoder model for final reranking
 2. **Query expansion**: Use LLM to generate search variants
 3. **Multi-field FTS**: Index metadata separately with weights
@@ -246,6 +273,7 @@ get_source_documents(
 7. **Custom BM25 params**: Tune k1/b for specific corpus
 
 ### Not Planned
+
 - ❌ Multi-language support (English-only for now)
 - ❌ Real-time updates (batch processing model)
 - ❌ Distributed/sharded setup (single machine focus)
@@ -259,4 +287,3 @@ get_source_documents(
 - [BGE Embeddings](https://huggingface.co/BAAI/bge-small-en-v1.5)
 - [Reciprocal Rank Fusion Paper](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf)
 - [BM25 Algorithm](https://en.wikipedia.org/wiki/Okapi_BM25)
-

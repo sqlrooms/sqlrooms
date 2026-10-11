@@ -1,12 +1,13 @@
 // Copyright 2022 Foursquare Labs, Inc. All Rights Reserved.
 
 import {
+  cn,
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  cn,
+  DropdownMenuTrigger,
 } from '@sqlrooms/ui';
+import {EllipsisVerticalIcon} from 'lucide-react';
 import {
   ComponentPropsWithoutRef,
   ElementRef,
@@ -14,7 +15,6 @@ import {
   forwardRef,
   PropsWithChildren,
 } from 'react';
-import {EllipsisVerticalIcon} from 'lucide-react';
 
 export type TreeNodeActionsMenuProps = PropsWithChildren<{
   className?: string;
@@ -25,7 +25,7 @@ export type TreeNodeActionsMenuProps = PropsWithChildren<{
  * The menu items are passed as children.
  *
  * The menu is hidden by default and is shown when the user hovers over the node.
- * For this to work the parent element must have the `group` class.
+ * For this to work the parent element must have the `group/treenode` class.
  * It should also have classes `relative overflow-hidden`.
  *
  * @param children - The menu items.
@@ -33,11 +33,11 @@ export type TreeNodeActionsMenuProps = PropsWithChildren<{
 export const TreeNodeActionsMenu: FC<TreeNodeActionsMenuProps> = (props) => {
   const {children} = props;
   return (
-    <div className="absolute right-0 top-[1px] h-full opacity-0 outline-none group-hover:opacity-100">
+    <div className="absolute top-px right-0 h-full opacity-0 outline-hidden group-hover/treenode:opacity-100">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <div className="hover:bg-foreground/30 flex h-full w-7 items-center justify-center p-0 outline-none transition-colors">
-            <EllipsisVerticalIcon size="15px" className="relative top-[-1px]" />
+          <div className="bg-muted text-muted-foreground hover:text-foreground flex h-full w-7 items-center justify-center p-0 outline-hidden transition-colors">
+            <EllipsisVerticalIcon size="15px" className="relative -top-px" />
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="bottom">

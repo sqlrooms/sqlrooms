@@ -1,27 +1,28 @@
 import {cn} from '@sqlrooms/ui';
-import type * as Monaco from 'monaco-editor';
-import {useCallback, useRef} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {SqlMonacoEditor} from '../SqlMonacoEditor';
+import {SqlCodeMirrorEditor} from '../SqlCodeMirrorEditor';
 
-type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
-type MonacoInstance = typeof Monaco;
-
-const MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions = {
-  scrollBeyondLastLine: false,
-  automaticLayout: true,
-  minimap: {enabled: false},
-  wordWrap: 'on',
-  quickSuggestions: true,
-  suggestOnTriggerCharacters: true,
+const CODEMIRROR_OPTIONS = {
+  lineWrapping: true,
+  autocompletion: true,
+  highlightActiveLine: true,
 };
 
+/**
+ * @deprecated Prefer `SqlQuery.Editor` for newly composed single-query
+ * surfaces. This component remains for compatibility with the legacy tabbed
+ * query panel.
+ */
 export const QueryEditorPanelEditor: React.FC<{
   className?: string;
   queryId: string;
-}> = ({className, queryId}) => {
+  readOnly?: boolean;
+  autoHeight?: boolean;
+  compact?: boolean;
+}> = ({className, queryId, readOnly, autoHeight, compact}) => {
   const tableSchemas = useStoreWithSqlEditor((s) => s.db.tables);
-  const runQuery = useStoreWithSqlEditor((s) => s.sqlEditor.parseAndRunQuery);
+  const runQueryById = useStoreWithSqlEditor((s) => s.sqlEditor.runQueryById);
   const connector = useStoreWithSqlEditor((s) => s.db.connector);
 
   const queryText = useStoreWithSqlEditor(
@@ -30,47 +31,59 @@ export const QueryEditorPanelEditor: React.FC<{
   const updateQueryText = useStoreWithSqlEditor(
     (s) => s.sqlEditor.updateQueryText,
   );
-  // Editor instance ref for keyboard shortcuts
-  const editorRef = useRef<{
-    [key: string]: EditorInstance;
-  }>({});
 
   // Handle query text update
   const handleUpdateQuery = useCallback(
     (value: string | undefined) => {
-      if (!value) return;
-      updateQueryText(queryId, value);
+      updateQueryText(queryId, value ?? '');
     },
     [queryId, updateQueryText],
   );
 
-  // Handle editor mount
-  const handleEditorMount = useCallback(
-    (editor: EditorInstance, monaco: MonacoInstance) => {
-      editorRef.current[queryId] = editor;
-      // Add keyboard shortcut for running query
-      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-        const model = editor.getModel();
-        const selection = editor.getSelection();
-        if (model && selection && !selection.isEmpty()) {
-          runQuery(model.getValueInRange(selection));
-        } else {
-          runQuery(editor.getValue());
-        }
-      });
+  // Handle query execution via keyboard shortcut
+  const handleRunQuery = useCallback(
+    (query: string) => {
+      runQueryById(queryId, query);
     },
-    [queryId, runQuery],
+    [queryId, runQueryById],
+  );
+
+  const editorOptions = useMemo(
+    () => ({
+      ...CODEMIRROR_OPTIONS,
+      ...(compact
+        ? {
+            lineNumbers: false,
+            foldGutter: false,
+            highlightActiveLine: false,
+          }
+        : {}),
+    }),
+    [compact],
   );
 
   return (
-    <SqlMonacoEditor
+    <SqlCodeMirrorEditor
+      key={queryId}
       connector={connector}
       value={queryText ?? ''}
       onChange={handleUpdateQuery}
-      className={cn('h-full w-full flex-grow', className)}
-      options={MONACO_OPTIONS}
-      onMount={handleEditorMount}
+      className={cn(
+        autoHeight
+          ? [
+              'h-auto min-h-0 w-full grow',
+              '[&_.cm-content]:min-h-12',
+              '[&_.cm-editor]:h-auto [&_.cm-editor]:min-h-12',
+              '[&_.cm-scroller]:overflow-visible',
+            ]
+          : 'h-full w-full grow',
+        className,
+      )}
+      options={editorOptions}
+      onRunQuery={handleRunQuery}
       tableSchemas={tableSchemas}
+      readOnly={readOnly}
+      hideGutter={compact}
     />
   );
 };

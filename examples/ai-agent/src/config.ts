@@ -1,4 +1,4 @@
-import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
+import type {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
 
 // Constants for commonly used values
 export const OLLAMA_DEFAULT_BASE_URL = 'http://localhost:11434/v1';
@@ -15,15 +15,7 @@ export const PROVIDER_DEFAULT_BASE_URLS = {
 export const LLM_MODELS = [
   {
     name: 'openai',
-    models: [
-      'gpt-4.1-mini',
-      'gpt-4.1-nano',
-      'gpt-4.1',
-      'gpt-4o',
-      'gpt-4o-mini',
-      'gpt-4',
-      'gpt-5',
-    ],
+    models: ['gpt-5.2', 'gpt-5'],
   },
   {
     name: 'anthropic',
@@ -49,8 +41,17 @@ export const LLM_MODELS = [
   },
 ];
 
+type ExampleProviderSettings = Record<
+  string,
+  {
+    baseUrl: string;
+    apiKey: string;
+    models: Array<{id: string; modelName: string}>;
+  }
+>;
+
 export const AI_SETTINGS = {
-  providers: LLM_MODELS.reduce((acc: Record<string, any>, provider) => {
+  providers: LLM_MODELS.reduce<ExampleProviderSettings>((acc, provider) => {
     acc[provider.name] = {
       baseUrl:
         PROVIDER_DEFAULT_BASE_URLS[

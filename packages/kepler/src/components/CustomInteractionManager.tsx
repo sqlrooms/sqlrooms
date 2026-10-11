@@ -1,4 +1,4 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useMemo} from 'react';
 import {Switch, Checkbox, useTheme} from '@sqlrooms/ui';
 
 import {InteractionConfig} from '@kepler.gl/types';
@@ -38,7 +38,10 @@ const TooltipPanel: React.FC<{
   isDark: boolean;
   handleConfigChange: (configId: string, newConfig: any) => void;
   handleCoordinateToggle: () => void;
-  setColumnDisplayFormat: (format: any) => void;
+  setColumnDisplayFormat: (
+    dataId: string,
+    formats: {[key: string]: string},
+  ) => void;
 }> = ({
   tooltipConfig,
   coordinateConfig,
@@ -55,6 +58,13 @@ const TooltipPanel: React.FC<{
     [handleConfigChange],
   );
 
+  const handleDisplayFormatChange = useCallback(
+    (dataId: string, column: string, displayFormat: string) => {
+      setColumnDisplayFormat(dataId, {[column]: displayFormat});
+    },
+    [setColumnDisplayFormat],
+  );
+
   if (!tooltipConfig) return null;
   return (
     <div>
@@ -65,7 +75,7 @@ const TooltipPanel: React.FC<{
         onConfigChange={handleConfigChange}
       />
       {tooltipConfig.enabled && (
-        <div className="pl-4 pr-2">
+        <div className="pr-2 pl-4">
           <div className="flex items-center space-x-2 py-2">
             <Checkbox
               checked={coordinateConfig?.enabled || false}
@@ -80,7 +90,7 @@ const TooltipPanel: React.FC<{
             datasets={datasets}
             config={tooltipConfig.config}
             onChange={handleTooltipConfigChange}
-            onDisplayFormatChange={setColumnDisplayFormat}
+            onDisplayFormatChange={handleDisplayFormatChange}
             isDark={isDark}
           />
         </div>
@@ -101,8 +111,11 @@ export const CustomInteractionManager: React.FC<{mapId: string}> = ({
     (theme === 'system' &&
       window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-  const interactionConfig: Partial<InteractionConfig> =
-    keplerState?.visState.interactionConfig || {};
+  const rawInteractionConfig = keplerState?.visState.interactionConfig;
+  const interactionConfig = useMemo<Partial<InteractionConfig>>(
+    () => rawInteractionConfig ?? {},
+    [rawInteractionConfig],
+  );
   const datasets = keplerState?.visState.datasets || {};
   const {interactionConfigChange, setColumnDisplayFormat} =
     keplerActions.visStateActions;

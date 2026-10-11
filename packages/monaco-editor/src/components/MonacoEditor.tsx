@@ -1,13 +1,14 @@
 import {Editor, EditorProps, OnChange, OnMount} from '@monaco-editor/react';
-import {Spinner, cn, useTheme} from '@sqlrooms/ui';
-import React, {useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
+import {Spinner, cn, getResolvedTheme, useTheme} from '@sqlrooms/ui';
+import type {Theme} from '@sqlrooms/ui';
+import React, {useEffect, useMemo, useRef} from 'react';
 import {
-  getCssColorFromThemeMode,
   getJsonEditorTheme,
+  getMarkdownEditorTheme,
   getMenuColors,
-  getMonospaceFont,
 } from '../utils/color-utils';
 import type * as Monaco from 'monaco-editor';
+import {getCssColor, getMonospaceFont} from '@sqlrooms/utils';
 
 // Rendering issue fix for white rectangle appearing above text in Monaco.
 // Monaco creates a hidden textarea for IME input. If Monaco CSS loads late,
@@ -61,11 +62,11 @@ export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
    */
   language?: string;
   /**
-   * The theme of the editor
+   * The theme of the editor ('dark' | 'light' | 'system')
    * Can be explicitly set or will automatically use the app theme if not provided
-   * @default 'vs-dark'
+   * @default 'dark'
    */
-  theme?: 'vs-dark' | 'light';
+  theme?: Theme;
   /**
    * The value of the editor
    */
@@ -81,112 +82,65 @@ export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
   options?: Monaco.editor.IStandaloneEditorConstructionOptions;
 }
 
-let themesDefined = false;
-
-function defineSqlroomsThemes(monaco: typeof Monaco) {
-  if (themesDefined) return;
-  themesDefined = true;
-
-  {
-    monaco.editor.defineTheme('sqlrooms-light', {
-      base: 'vs',
-      inherit: true,
-      rules: [],
-      colors: {
-        // IMPORTANT: read variables for the *target mode* (light), not from current DOM state.
-        'editor.background': getCssColorFromThemeMode(
-          'light',
-          '--background',
-          '#ffffff',
-        ),
-        'editor.foreground': getCssColorFromThemeMode(
-          'light',
-          '--foreground',
-          '#000000',
-        ),
-        'editor.lineHighlightBackground': getCssColorFromThemeMode(
-          'light',
-          '--muted',
-          '#f5f5f5',
-        ),
-        'editorCursor.foreground': getCssColorFromThemeMode(
-          'light',
-          '--primary',
-          '#000000',
-        ),
-        'editor.selectionBackground': getCssColorFromThemeMode(
-          'light',
-          '--accent',
-          '#e3e3e3',
-        ),
-        'editorLineNumber.foreground': getCssColorFromThemeMode(
-          'light',
-          '--muted-foreground',
-          '#888888',
-        ),
-        ...getMenuColors(false, 'light'),
-      },
-    });
-
-    monaco.editor.defineTheme(
-      'sqlrooms-json-light',
-      getJsonEditorTheme(false, 'light'),
-    );
-  }
-
-  {
-    monaco.editor.defineTheme('sqlrooms-dark', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [],
-      colors: {
-        // IMPORTANT: read variables for the *target mode* (dark), not from current DOM state.
-        'editor.background': getCssColorFromThemeMode(
-          'dark',
-          '--background',
-          '#1e1e1e',
-        ),
-        'editor.foreground': getCssColorFromThemeMode(
-          'dark',
-          '--foreground',
-          '#d4d4d4',
-        ),
-        'editor.lineHighlightBackground': getCssColorFromThemeMode(
-          'dark',
-          '--muted',
-          '#2a2a2a',
-        ),
-        'editorCursor.foreground': getCssColorFromThemeMode(
-          'dark',
-          '--primary',
-          '#ffffff',
-        ),
-        'editor.selectionBackground': getCssColorFromThemeMode(
-          'dark',
-          '--accent',
-          '#264f78',
-        ),
-        'editorLineNumber.foreground': getCssColorFromThemeMode(
-          'dark',
-          '--muted-foreground',
-          '#858585',
-        ),
-        ...getMenuColors(true, 'dark'),
-      },
-    });
-
-    monaco.editor.defineTheme(
-      'sqlrooms-json-dark',
-      getJsonEditorTheme(true, 'dark'),
-    );
-  }
-}
-
-function setupMonacoThemes(monaco: typeof Monaco) {
+function defineMonacoThemes(
+  monaco: typeof Monaco,
+  isDark: boolean,
+  currentTheme: string,
+) {
   suppressMonacoTextareaFlash();
 
-  // Define themes once, but with the correct CSS vars for each mode.
-  defineSqlroomsThemes(monaco);
+  // Light theme
+  monaco.editor.defineTheme('sqlrooms-light', {
+    base: 'vs',
+    inherit: true,
+    rules: [],
+    colors: {
+      'editor.background': getCssColor('--background', '#ffffff'),
+      'editor.foreground': getCssColor('--foreground', '#000000'),
+      'editor.lineHighlightBackground': getCssColor('--muted', '#f5f5f5'),
+      'editorCursor.foreground': getCssColor('--primary', '#000000'),
+      'editor.selectionBackground': getCssColor('--accent', '#e3e3e3'),
+      'editorLineNumber.foreground': getCssColor(
+        '--muted-foreground',
+        '#888888',
+      ),
+      ...getMenuColors(false),
+    },
+  });
+
+  monaco.editor.defineTheme('sqlrooms-json-light', getJsonEditorTheme(false));
+  monaco.editor.defineTheme(
+    'sqlrooms-markdown-light',
+    getMarkdownEditorTheme(false),
+  );
+
+  // Dark theme
+  monaco.editor.defineTheme('sqlrooms-dark', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [],
+    colors: {
+      'editor.background': getCssColor('--background', '#1e1e1e'),
+      'editor.foreground': getCssColor('--foreground', '#d4d4d4'),
+      'editor.lineHighlightBackground': getCssColor('--muted', '#2a2a2a'),
+      'editorCursor.foreground': getCssColor('--primary', '#ffffff'),
+      'editor.selectionBackground': getCssColor('--accent', '#264f78'),
+      'editorLineNumber.foreground': getCssColor(
+        '--muted-foreground',
+        '#858585',
+      ),
+      ...getMenuColors(true),
+    },
+  });
+
+  monaco.editor.defineTheme('sqlrooms-json-dark', getJsonEditorTheme(true));
+  monaco.editor.defineTheme(
+    'sqlrooms-markdown-dark',
+    getMarkdownEditorTheme(true),
+  );
+
+  // Apply the correct theme variant (respects JSON-specific themes)
+  monaco.editor.setTheme(currentTheme);
 }
 
 const DEFAULT_MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions =
@@ -196,6 +150,8 @@ const DEFAULT_MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions
     automaticLayout: true,
     fontLigatures: true,
     fixedOverflowWidgets: true,
+    fontSize: 14,
+    lineHeight: 21,
     // Prevent an initial top "reserved" area that can appear briefly while Monaco
     // computes sticky scroll layout (shows up as a blank/white rectangle above text).
     stickyScroll: {enabled: false} as any,
@@ -206,7 +162,6 @@ const DEFAULT_MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions
 export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   className,
   language = 'javascript',
-  theme: explicitTheme,
   value = '',
   readOnly = false,
   onMount,
@@ -215,61 +170,51 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   beforeMount,
   ...props
 }) => {
-  const {theme: appTheme} = useTheme();
-
-  // Track system dark preference without setState-in-effect
-  const systemPrefersDark = useSyncExternalStore(
-    (onStoreChange) => {
-      if (appTheme !== 'system' || typeof window === 'undefined') {
-        return () => {};
-      }
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      mediaQuery.addEventListener('change', onStoreChange);
-      return () => mediaQuery.removeEventListener('change', onStoreChange);
-    },
-    () => {
-      if (appTheme !== 'system' || typeof window === 'undefined') return false;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    },
-    () => false,
-  );
-
-  const isDark =
-    explicitTheme === 'vs-dark'
-      ? true
-      : explicitTheme === 'light'
-        ? false
-        : appTheme === 'dark' || (appTheme === 'system' && systemPrefersDark);
+  const {theme} = useTheme();
+  const isDark = getResolvedTheme(theme) === 'dark';
 
   const monacoTheme =
     language === 'json'
       ? isDark
         ? 'sqlrooms-json-dark'
         : 'sqlrooms-json-light'
-      : isDark
-        ? 'sqlrooms-dark'
-        : 'sqlrooms-light';
+      : language === 'markdown'
+        ? isDark
+          ? 'sqlrooms-markdown-dark'
+          : 'sqlrooms-markdown-light'
+        : isDark
+          ? 'sqlrooms-dark'
+          : 'sqlrooms-light';
 
   const editorRef = useRef<any>(null);
+  const monacoRef = useRef<typeof Monaco | null>(null);
 
   const handleBeforeMount: NonNullable<EditorProps['beforeMount']> = (
     monaco,
   ) => {
-    suppressMonacoTextareaFlash();
-    setupMonacoThemes(monaco);
+    monacoRef.current = monaco;
+    defineMonacoThemes(monaco, isDark, monacoTheme);
     beforeMount?.(monaco);
   };
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
+    monacoRef.current = monaco;
 
     // Safety: in case beforeMount didn't run for any reason.
-    setupMonacoThemes(monaco);
+    defineMonacoThemes(monaco, isDark, monacoTheme);
 
     if (onMount) {
       onMount(editor, monaco);
     }
   };
+
+  // Redefine themes globally (once) when theme mode changes, then apply correct variant
+  useEffect(() => {
+    if (monacoRef.current) {
+      defineMonacoThemes(monacoRef.current, isDark, monacoTheme);
+    }
+  }, [isDark, monacoTheme, language]);
 
   // Apply readOnly option
   useEffect(() => {

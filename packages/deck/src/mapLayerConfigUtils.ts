@@ -1,0 +1,1465 @@
+import type {ColorScaleConfig, ColorScaleScheme} from '@sqlrooms/color-scales';
+import {isDeckMapTableDatasetSource, type DeckMapConfig} from './mapConfig';
+import {
+  applyDeckMapPointBinding,
+  createDeckMapArcTransformSql,
+  createDeckMapCentroidTransformSql,
+} from './mapConfigUtils';
+import type {DeckAutoLayerType} from './types';
+import {DEFAULT_HEATMAP_COLOR_RANGE} from './json/heatmapDefaults';
+import {isColorScaleFunction} from './json/layerConfig';
+
+export type DeckMapLayerRecord = Record<string, unknown>;
+
+export type DeckMapLayerColorScaleFunction = ColorScaleConfig & {
+  '@@function': 'colorScale';
+  /**
+   * Per-accessor opacity (0–1). Preferred over layer-level `opacity` so fill and
+   * stroke (or arc endpoints) can be dimmed independently.
+   */
+  opacity?: number;
+};
+
+export type DeckMapLayerColorAccessor =
+  | 'getFillColor'
+  | 'getLineColor'
+  | 'getColor'
+  | 'getSourceColor'
+  | 'getTargetColor';
+
+export const DECK_MAP_LAYER_TYPE_OPTIONS: ReadonlyArray<{
+  value: DeckAutoLayerType;
+  label: string;
+}> = [
+  {value: 'GeoArrowScatterplotLayer', label: 'Point'},
+  {value: 'GeoArrowHeatmapLayer', label: 'Heatmap'},
+  {value: 'GeoArrowColumnLayer', label: 'Column'},
+  {value: 'GeoArrowPathLayer', label: 'Path'},
+  {value: 'GeoArrowPolygonLayer', label: 'Polygon'},
+  {value: 'GeoArrowArcLayer', label: 'Arc'},
+  {value: 'GeoArrowTripsLayer', label: 'Trips'},
+  {value: 'GeoArrowH3HexagonLayer', label: 'H3 hexagon'},
+  {value: 'GeoJsonLayer', label: 'GeoJSON'},
+];
+
+/**
+ * Unprefixed deck.gl class names that are not registered in the Deck JSON
+ * converter, mapped to the GeoArrow class that should be used instead.
+ */
+export const DECK_MAP_LAYER_CLASS_ALIASES: Readonly<Record<string, string>> = {
+  ScatterplotLayer: 'GeoArrowScatterplotLayer',
+  HeatmapLayer: 'GeoArrowHeatmapLayer',
+  ColumnLayer: 'GeoArrowColumnLayer',
+  PathLayer: 'GeoArrowPathLayer',
+  PolygonLayer: 'GeoArrowPolygonLayer',
+  ArcLayer: 'GeoArrowArcLayer',
+  TripsLayer: 'GeoArrowTripsLayer',
+  H3HexagonLayer: 'GeoArrowH3HexagonLayer',
+};
+
+export const DECK_MAP_COLOR_ACCESSOR_OPTIONS: ReadonlyArray<{
+  value: DeckMapLayerColorAccessor;
+  label: string;
+}> = [
+  {value: 'getFillColor', label: 'Fill color'},
+  {value: 'getLineColor', label: 'Line color'},
+  {value: 'getColor', label: 'Color'},
+  {value: 'getSourceColor', label: 'Source color'},
+  {value: 'getTargetColor', label: 'Target color'},
+];
+
+export const DECK_MAP_COLOR_SCALE_TYPE_OPTIONS: ReadonlyArray<{
+  value: ColorScaleConfig['type'];
+  label: string;
+  defaultScheme: ColorScaleScheme;
+}> = [
+  {value: 'sequential', label: 'Sequential', defaultScheme: 'Viridis'},
+  {value: 'diverging', label: 'Diverging', defaultScheme: 'RdBu'},
+  {value: 'quantize', label: 'Quantize', defaultScheme: 'YlOrRd'},
+  {value: 'quantile', label: 'Quantile', defaultScheme: 'YlOrRd'},
+  {value: 'categorical', label: 'Categorical', defaultScheme: 'Tableau10'},
+];
+
+const GEOMETRY_COLUMN_LAYER_TYPES = new Set([
+  'geoarrowpolygonlayer',
+  'geoarrowsolidpolygonlayer',
+  'geoarrowpathlayer',
+  'geoarrowtripslayer',
+  'geojsonlayer',
+  'polygonlayer',
+  'solidpolygonlayer',
+  'geojson',
+  'polygon',
+  'solid polygon',
+]);
+
+const POINT_COORDINATE_LAYER_TYPES = new Set([
+  'geoarrowscatterplotlayer',
+  'geoarrowheatmaplayer',
+  'geoarrowcolumnlayer',
+  'scatterplotlayer',
+  'heatmaplayer',
+  'columnlayer',
+]);
+
+const H3_LAYER_TYPES = new Set(['geoarrowh3hexagonlayer', 'h3hexagonlayer']);
+
+const ARC_LAYER_TYPES = new Set(['geoarrowarclayer', 'arclayer']);
+
+const TRIPS_LAYER_TYPES = new Set([
+  'geoarrowtripslayer',
+  'decktripslayer',
+  'tripslayer',
+]);
+
+const RADIUS_LAYER_TYPES = new Set([
+  'geoarrowscatterplotlayer',
+  'scatterplotlayer',
+  'geojsonlayer',
+]);
+
+const COLUMN_RADIUS_LAYER_TYPES = new Set([
+  'geoarrowcolumnlayer',
+  'columnlayer',
+]);
+
+const EXTRUDABLE_LAYER_TYPES = new Set([
+  'geoarrowh3hexagonlayer',
+  'h3hexagonlayer',
+  'geoarrowcolumnlayer',
+  'columnlayer',
+  'geoarrowpolygonlayer',
+  'polygonlayer',
+  'geoarrowsolidpolygonlayer',
+  'solidpolygonlayer',
+  'geojsonlayer',
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function getObjectSpec(
+  config: DeckMapConfig,
+): Record<string, unknown> | undefined {
+  return isRecord(config.spec) ? config.spec : undefined;
+}
+
+export function getDeckMapLayerRecords(
+  config: DeckMapConfig,
+): DeckMapLayerRecord[] {
+  const layers = getObjectSpec(config)?.layers;
+  return Array.isArray(layers) ? layers.filter(isRecord) : [];
+}
+
+export function getDeckMapLayerDatasetId(
+  layer: DeckMapLayerRecord | undefined,
+): string | undefined {
+  const binding = layer?._sqlroomsBinding;
+  if (!isRecord(binding)) return undefined;
+  return typeof binding.dataset === 'string' ? binding.dataset : undefined;
+}
+
+export function usesGeometryColumnSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    GEOMETRY_COLUMN_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+/** Point/heatmap/column layers can use lon/lat *or* a geometry column. */
+export function usesPointCoordinateSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    POINT_COORDINATE_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesH3ColumnSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' && H3_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesArcColumnSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    ARC_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesRadiusSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    RADIUS_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesColumnRadiusSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    COLUMN_RADIUS_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesTripsSettings(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    TRIPS_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesExtrusionSettings(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    EXTRUDABLE_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+const STROKE_LAYER_TYPES = new Set([
+  'geoarrowscatterplotlayer',
+  'scatterplotlayer',
+  'geoarrowh3hexagonlayer',
+  'h3hexagonlayer',
+  'geoarrowpolygonlayer',
+  'polygonlayer',
+  // SolidPolygon: no stroked outlines (wireframe only).
+  'geojsonlayer',
+]);
+
+export function usesStrokeSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    STROKE_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+/** Polygon, GeoJSON, and H3 do not draw strokes while extruded. */
+export function usesStrokeExtrusionWarning(layerType: unknown) {
+  if (typeof layerType !== 'string') return false;
+  const type = layerType.toLowerCase();
+  return (
+    type === 'geojsonlayer' ||
+    type === 'geoarrowpolygonlayer' ||
+    type === 'polygonlayer' ||
+    H3_LAYER_TYPES.has(type)
+  );
+}
+
+/** True for GeoArrow / deck H3 hexagon layer class names. */
+export function isDeckMapH3HexagonLayer(layerType: unknown): boolean {
+  return (
+    typeof layerType === 'string' && H3_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+/** Effective `extruded`; H3 and Column default to true when omitted. */
+export function getDeckMapLayerExtruded(
+  layer: DeckMapLayerRecord | undefined,
+): boolean {
+  if (typeof layer?.extruded === 'boolean') return layer.extruded;
+  const layerType = layer?.['@@type'];
+  return (
+    isDeckMapH3HexagonLayer(layerType) || usesColumnRadiusSetting(layerType)
+  );
+}
+
+/** Default `stroked` when omitted. H3 strokes only when not extruded. */
+export function getDeckMapLayerStrokeDefault(
+  layerType: unknown,
+  options?: {extruded?: boolean},
+): boolean {
+  if (typeof layerType !== 'string') return false;
+  const type = layerType.toLowerCase();
+  if (
+    type.includes('scatterplot') ||
+    type.includes('solidpolygon') ||
+    type === 'solid polygon'
+  ) {
+    return false;
+  }
+  if (isDeckMapH3HexagonLayer(layerType)) {
+    const extruded = options?.extruded ?? true;
+    return !extruded;
+  }
+  return true;
+}
+
+function deckMapLayerHasActiveStroke(layer: DeckMapLayerRecord): boolean {
+  if (typeof layer.stroked === 'boolean') return layer.stroked;
+  return getDeckMapLayerStrokeDefault(layer['@@type'], {
+    extruded: getDeckMapLayerExtruded(layer),
+  });
+}
+
+/** Bake `layer.opacity` into flat alphas / colorScale.opacity, then drop it. */
+export function detachDeckMapLayerOpacity(
+  layer: DeckMapLayerRecord,
+): DeckMapLayerRecord {
+  const opacity = layer.opacity;
+  if (typeof opacity !== 'number' || !Number.isFinite(opacity)) {
+    return layer;
+  }
+  const factor = Math.max(0, Math.min(1, opacity));
+  const next: DeckMapLayerRecord = {...layer};
+  const accessors = getDeckMapColorAccessorOptions(next['@@type']);
+  // Implicit Deck defaults are still dimmed by layer.opacity — materialize
+  // them so dropping opacity does not leave a sibling channel fully opaque.
+  const implicitColor: [number, number, number, number] = [0, 0, 0, 255];
+  if (
+    accessors.some((option) => option.value === 'getFillColor') &&
+    next.getFillColor === undefined &&
+    next.filled !== false
+  ) {
+    next.getFillColor = [...implicitColor];
+  }
+  if (
+    accessors.some((option) => option.value === 'getLineColor') &&
+    next.getLineColor === undefined &&
+    deckMapLayerHasActiveStroke(next)
+  ) {
+    next.getLineColor = [...implicitColor];
+  }
+  for (const {value} of DECK_MAP_COLOR_ACCESSOR_OPTIONS) {
+    const color = next[value];
+    if (isDeckMapLayerFlatRgbaColor(color)) {
+      const channelAlpha = color[3] ?? 255;
+      next[value] = [
+        color[0]!,
+        color[1]!,
+        color[2]!,
+        Math.round(Math.max(0, Math.min(255, channelAlpha * factor))),
+      ];
+      continue;
+    }
+    const scale = getDeckMapLayerColorScale(next, value);
+    if (scale) {
+      next[value] = {
+        ...scale,
+        opacity: getDeckMapColorScaleOpacity(scale) * factor,
+      };
+    }
+  }
+  const {opacity: _droppedOpacity, ...rest} = next;
+  void _droppedOpacity;
+  return rest;
+}
+
+/** Opacity 0–1 on a color-scale accessor (default 1). */
+export function getDeckMapColorScaleOpacity(
+  colorScale: DeckMapLayerColorScaleFunction | undefined,
+): number {
+  const opacity = colorScale?.opacity;
+  if (typeof opacity === 'number' && Number.isFinite(opacity)) {
+    return Math.max(0, Math.min(1, opacity));
+  }
+  return 1;
+}
+
+/** Layer-level opacity factor 0–1 (1 when omitted). */
+export function getDeckMapLayerOpacityFactor(
+  layer: DeckMapLayerRecord | undefined,
+): number {
+  const opacity = layer?.opacity;
+  if (typeof opacity === 'number' && Number.isFinite(opacity)) {
+    return Math.max(0, Math.min(1, opacity));
+  }
+  return 1;
+}
+
+/**
+ * Effective 0–100 opacity for a color accessor, including legacy `layer.opacity`.
+ * Matches the value the Appearance slider should show before detaching.
+ */
+export function getDeckMapLayerChannelOpacityPercent(
+  layer: DeckMapLayerRecord | undefined,
+  accessor: DeckMapLayerColorAccessor,
+  fallbackFlatAlpha = 255,
+): number {
+  const factor = getDeckMapLayerOpacityFactor(layer);
+  const scale = getDeckMapLayerColorScale(layer, accessor);
+  if (scale) {
+    return Math.round(getDeckMapColorScaleOpacity(scale) * factor * 100);
+  }
+  const flat = getDeckMapLayerFlatColor(layer, accessor);
+  const alpha = flat?.[3] ?? fallbackFlatAlpha;
+  return Math.round((Math.max(0, Math.min(255, alpha * factor)) / 255) * 100);
+}
+
+function flatColorWithScaleOpacity(
+  color: readonly [number, number, number, number],
+  scale: DeckMapLayerColorScaleFunction | undefined,
+): [number, number, number, number] {
+  const opacity = getDeckMapColorScaleOpacity(scale);
+  const hasExplicitOpacity =
+    typeof scale?.opacity === 'number' && Number.isFinite(scale.opacity);
+  const alpha = hasExplicitOpacity
+    ? Math.round(Math.max(0, Math.min(255, opacity * 255)))
+    : (color[3] ?? 255);
+  return [color[0], color[1], color[2], alpha];
+}
+
+/** Replace a color scale with flat RGBA (bakes scale opacity into alpha). */
+export function replaceDeckMapLayerColorScaleWithFlat(
+  layer: DeckMapLayerRecord,
+  accessor: DeckMapLayerColorAccessor,
+  flatColor: readonly [number, number, number, number],
+): DeckMapLayerRecord {
+  const scale = getDeckMapLayerColorScale(layer, accessor);
+  return detachDeckMapLayerOpacity({
+    ...layer,
+    [accessor]: flatColorWithScaleOpacity(flatColor, scale),
+  });
+}
+
+/** Replace multiple color scales with flat RGBA (e.g. arc source+target). */
+export function replaceDeckMapLayerColorScalesWithFlat(
+  layer: DeckMapLayerRecord,
+  replacements: Partial<
+    Record<DeckMapLayerColorAccessor, readonly [number, number, number, number]>
+  >,
+): DeckMapLayerRecord {
+  const next: DeckMapLayerRecord = {...layer};
+  for (const accessor of Object.keys(
+    replacements,
+  ) as DeckMapLayerColorAccessor[]) {
+    const color = replacements[accessor];
+    if (!color) continue;
+    const scale = getDeckMapLayerColorScale(layer, accessor);
+    next[accessor] = flatColorWithScaleOpacity(color, scale);
+  }
+  return detachDeckMapLayerOpacity(next);
+}
+
+export function getDeckMapColorAccessorOptions(
+  layerType: unknown,
+): typeof DECK_MAP_COLOR_ACCESSOR_OPTIONS {
+  if (layerType === 'GeoArrowPathLayer' || layerType === 'GeoArrowTripsLayer') {
+    return DECK_MAP_COLOR_ACCESSOR_OPTIONS.filter(
+      (option) => option.value === 'getColor',
+    );
+  }
+
+  if (layerType === 'GeoArrowArcLayer') {
+    return DECK_MAP_COLOR_ACCESSOR_OPTIONS.filter(
+      (option) =>
+        option.value === 'getSourceColor' || option.value === 'getTargetColor',
+    );
+  }
+
+  if (layerType === 'GeoArrowHeatmapLayer') {
+    return [];
+  }
+
+  if (layerType === 'GeoArrowColumnLayer') {
+    return DECK_MAP_COLOR_ACCESSOR_OPTIONS.filter(
+      (option) => option.value === 'getFillColor',
+    );
+  }
+
+  return DECK_MAP_COLOR_ACCESSOR_OPTIONS.filter(
+    (option) =>
+      option.value === 'getFillColor' || option.value === 'getLineColor',
+  );
+}
+
+export function updateDeckMapLayer(
+  config: DeckMapConfig,
+  layerIndex: number,
+  updater: (layer: DeckMapLayerRecord) => DeckMapLayerRecord,
+): DeckMapConfig {
+  const spec = getObjectSpec(config);
+  if (!spec || !Array.isArray(spec.layers)) {
+    return config;
+  }
+
+  const layer = spec.layers[layerIndex];
+  if (!isRecord(layer)) {
+    return config;
+  }
+
+  return {
+    ...config,
+    spec: {
+      ...spec,
+      layers: spec.layers.map((candidate, index) =>
+        index === layerIndex ? updater({...layer}) : candidate,
+      ),
+    },
+  };
+}
+
+export function setDeckMapLayerType(
+  config: DeckMapConfig,
+  layerIndex: number,
+  layerType: string,
+): DeckMapConfig {
+  return updateDeckMapLayer(config, layerIndex, (layer) => {
+    const nextLayer: DeckMapLayerRecord = {
+      ...layer,
+      '@@type': layerType,
+    };
+    const lt = layerType.toLowerCase();
+    if (lt === 'geoarrowheatmaplayer') {
+      if (
+        !Array.isArray(nextLayer.colorRange) ||
+        nextLayer.colorRange.length === 0
+      ) {
+        nextLayer.colorRange = DEFAULT_HEATMAP_COLOR_RANGE;
+      }
+      return nextLayer;
+    }
+
+    const colorAccessors = getDeckMapColorAccessorOptions(layerType);
+    if (
+      colorAccessors.some((option) => option.value === 'getFillColor') &&
+      nextLayer.getFillColor === undefined &&
+      nextLayer.filled !== false
+    ) {
+      nextLayer.getFillColor = [...DECK_MAP_DEFAULT_LAYER_COLOR];
+    }
+    if (lt === 'geoarrowcolumnlayer') {
+      const radius =
+        typeof nextLayer.radius === 'number' &&
+        Number.isFinite(nextLayer.radius) &&
+        nextLayer.radius > 0
+          ? nextLayer.radius
+          : 50;
+      const withRadius = applyDeckMapColumnRadiusMeters(nextLayer, radius);
+      if (typeof withRadius.elevationScale !== 'number') {
+        withRadius.elevationScale = 1;
+      }
+      return withRadius;
+    }
+    return nextLayer;
+  });
+}
+
+// Point/heatmap radius leftovers (`getRadius`, pixel units) break ColumnLayer meters UI.
+const COLUMN_LAYER_RADIUS_CONFLICT_KEYS = [
+  'getRadius',
+  'radiusMinPixels',
+  'radiusMaxPixels',
+  'radiusPixels',
+] as const;
+
+/** Force meters and strip point/heatmap radius leftovers (does not set `radius`). */
+export function stripDeckMapColumnLayerRadiusConflicts(
+  layer: DeckMapLayerRecord,
+): DeckMapLayerRecord {
+  const next: DeckMapLayerRecord = {
+    ...layer,
+    radiusUnits: 'meters',
+  };
+  for (const key of COLUMN_LAYER_RADIUS_CONFLICT_KEYS) {
+    delete next[key];
+  }
+  return next;
+}
+
+/** True when ColumnLayer still carries point/heatmap radius props or pixel units. */
+export function deckMapColumnLayerHasRadiusConflicts(
+  layer: DeckMapLayerRecord,
+): boolean {
+  if (layer.radiusUnits === 'pixels') return true;
+  return COLUMN_LAYER_RADIUS_CONFLICT_KEYS.some(
+    (key) => layer[key] !== undefined,
+  );
+}
+
+/** Apply a column radius in meters and strip conflicting point/heatmap radius props. */
+export function applyDeckMapColumnRadiusMeters(
+  layer: DeckMapLayerRecord,
+  radiusMeters: number,
+): DeckMapLayerRecord {
+  return {
+    ...stripDeckMapColumnLayerRadiusConflicts(layer),
+    radius: radiusMeters,
+    radiusUnits: 'meters',
+  };
+}
+
+/** Set GeoArrowColumnLayer disk radius in meters. */
+export function setDeckMapLayerColumnRadius(
+  config: DeckMapConfig,
+  layerIndex: number,
+  radiusMeters: number,
+): DeckMapConfig {
+  return updateDeckMapLayer(config, layerIndex, (layer) =>
+    applyDeckMapColumnRadiusMeters(layer, radiusMeters),
+  );
+}
+
+function readGeneratedTransform(binding: Record<string, unknown>):
+  | {
+      kind: 'point' | 'centroid' | 'arc';
+      geometryColumn?: string;
+      sourceGeometryColumn?: string;
+      targetGeometryColumn?: string;
+    }
+  | undefined {
+  const value = binding.generatedTransform;
+  if (!isRecord(value)) return undefined;
+  const kind = value.kind;
+  if (kind !== 'point' && kind !== 'centroid' && kind !== 'arc') {
+    return undefined;
+  }
+  return {
+    kind,
+    ...(typeof value.geometryColumn === 'string'
+      ? {geometryColumn: value.geometryColumn}
+      : {}),
+    ...(typeof value.sourceGeometryColumn === 'string'
+      ? {sourceGeometryColumn: value.sourceGeometryColumn}
+      : {}),
+    ...(typeof value.targetGeometryColumn === 'string'
+      ? {targetGeometryColumn: value.targetGeometryColumn}
+      : {}),
+  };
+}
+
+export function setDeckMapLayerGeometryColumn(
+  config: DeckMapConfig,
+  layerIndex: number,
+  geometryColumn: string,
+  sourceColumns: ReadonlyArray<{name: string; type?: string}> = [],
+): DeckMapConfig {
+  const layer = getDeckMapLayerRecords(config)[layerIndex];
+  const datasetId = getDeckMapLayerDatasetId(layer);
+  if (!datasetId || !config.datasets?.[datasetId]) {
+    return config;
+  }
+
+  const dataset = config.datasets[datasetId];
+  const source = dataset.source;
+  const binding = isRecord(layer?._sqlroomsBinding)
+    ? layer._sqlroomsBinding
+    : {};
+  const generated = readGeneratedTransform(binding);
+  const currentFitToData = config.fitToData;
+  const leavingCoordinateFit = Boolean(
+    currentFitToData?.dataset === datasetId &&
+    currentFitToData.longitudeColumn &&
+    currentFitToData.latitudeColumn,
+  );
+  const generatedAlias =
+    generated?.kind === 'point' ? generated.geometryColumn : undefined;
+  const keepCoordinateFit = Boolean(
+    generatedAlias === geometryColumn ||
+    (leavingCoordinateFit &&
+      geometryColumn ===
+        (readBindingColumn(binding, 'geometryColumn') ||
+          dataset.geometryColumn)),
+  );
+  const creatingCentroid = Boolean(
+    !keepCoordinateFit &&
+    usesPointCoordinateSetting(layer?.['@@type']) &&
+    isDeckMapTableDatasetSource(source),
+  );
+  const droppingGenerated = Boolean(
+    !keepCoordinateFit &&
+    !creatingCentroid &&
+    isDeckMapTableDatasetSource(source) &&
+    source.transformSql &&
+    (generated?.kind === 'point' ||
+      generated?.kind === 'centroid' ||
+      leavingCoordinateFit),
+  );
+  let nextSource = source;
+  let nextGeometryEncodingHint = dataset.geometryEncodingHint;
+  if (keepCoordinateFit) {
+    nextSource = source;
+  } else if (creatingCentroid && isDeckMapTableDatasetSource(source)) {
+    nextSource = {
+      tableName: source.tableName,
+      transformSql: createDeckMapCentroidTransformSql({
+        geometryColumn,
+        geometryColumnType: sourceColumns.find(
+          (column) => column.name === geometryColumn,
+        )?.type,
+      }),
+    };
+    nextGeometryEncodingHint = 'wkb';
+  } else if (droppingGenerated && isDeckMapTableDatasetSource(source)) {
+    nextSource = {tableName: source.tableName};
+    nextGeometryEncodingHint = undefined;
+  }
+
+  const fitToData = keepCoordinateFit
+    ? currentFitToData
+    : currentFitToData && currentFitToData.dataset === datasetId
+      ? {
+          dataset: datasetId,
+          geometryColumn,
+          ...(typeof currentFitToData.padding === 'number'
+            ? {padding: currentFitToData.padding}
+            : {}),
+          ...(typeof currentFitToData.maxZoom === 'number'
+            ? {maxZoom: currentFitToData.maxZoom}
+            : {}),
+        }
+      : (currentFitToData ?? {
+          dataset: datasetId,
+          geometryColumn,
+          padding: 40,
+          maxZoom: 12,
+        });
+
+  const nextDataset = {
+    ...dataset,
+    source: nextSource,
+    geometryColumn,
+  };
+  if (nextGeometryEncodingHint) {
+    nextDataset.geometryEncodingHint = nextGeometryEncodingHint;
+  } else {
+    delete nextDataset.geometryEncodingHint;
+  }
+
+  const updatedConfig = {
+    ...config,
+    datasets: {
+      ...config.datasets,
+      [datasetId]: nextDataset,
+    },
+    fitToData,
+  };
+
+  return updateDeckMapLayer(updatedConfig, layerIndex, (l) => {
+    const nextBinding: Record<string, unknown> = {
+      ...(isRecord(l._sqlroomsBinding) ? l._sqlroomsBinding : {}),
+      geometryColumn,
+    };
+    if (!keepCoordinateFit) {
+      delete nextBinding.longitudeColumn;
+      delete nextBinding.latitudeColumn;
+      if (creatingCentroid) {
+        nextBinding.generatedTransform = {
+          kind: 'centroid',
+          geometryColumn,
+        };
+      } else if (droppingGenerated) {
+        delete nextBinding.generatedTransform;
+      }
+    }
+    return {
+      ...l,
+      _sqlroomsBinding: nextBinding,
+    };
+  });
+}
+
+/**
+ * Binds a point layer to longitude/latitude columns. A single-axis pick is
+ * stored on the layer binding and `fitToData`; once both axes are known the
+ * canonical WKB point transform is applied.
+ */
+export function setDeckMapLayerCoordinateColumns(
+  config: DeckMapConfig,
+  layerIndex: number,
+  columns: {
+    latitudeColumn?: string | null;
+    longitudeColumn?: string | null;
+  },
+  sourceColumns: ReadonlyArray<{name: string; type?: string}> = [],
+): DeckMapConfig {
+  const layer = getDeckMapLayerRecords(config)[layerIndex];
+  const datasetId = getDeckMapLayerDatasetId(layer);
+  if (!datasetId || !config.datasets?.[datasetId]) {
+    return config;
+  }
+
+  const dataset = config.datasets[datasetId];
+  const binding = isRecord(layer?._sqlroomsBinding)
+    ? layer._sqlroomsBinding
+    : {};
+  const generated = readGeneratedTransform(binding);
+  const currentFit =
+    config.fitToData?.dataset === datasetId ? config.fitToData : undefined;
+  const interactionCoordinates =
+    config.interaction?.type === 'point-radius-brush' &&
+    config.interaction.dataset === datasetId
+      ? config.interaction
+      : undefined;
+  const currentLatitude =
+    readBindingColumn(binding, 'latitudeColumn') ||
+    currentFit?.latitudeColumn ||
+    interactionCoordinates?.latitudeColumn;
+  const currentLongitude =
+    readBindingColumn(binding, 'longitudeColumn') ||
+    currentFit?.longitudeColumn ||
+    interactionCoordinates?.longitudeColumn;
+  const latitudeColumn =
+    columns.latitudeColumn === null
+      ? undefined
+      : columns.latitudeColumn?.trim() || currentLatitude;
+  const longitudeColumn =
+    columns.longitudeColumn === null
+      ? undefined
+      : columns.longitudeColumn?.trim() || currentLongitude;
+  const keepSourceGeometry = !latitudeColumn || !longitudeColumn;
+  const nextFitToData = {
+    dataset: datasetId,
+    ...(typeof currentFit?.padding === 'number'
+      ? {padding: currentFit.padding}
+      : {padding: 40}),
+    ...(typeof currentFit?.maxZoom === 'number'
+      ? {maxZoom: currentFit.maxZoom}
+      : {maxZoom: 12}),
+    ...(keepSourceGeometry
+      ? {
+          geometryColumn: currentFit?.geometryColumn ?? dataset.geometryColumn,
+        }
+      : {}),
+    ...(latitudeColumn ? {latitudeColumn} : {}),
+    ...(longitudeColumn ? {longitudeColumn} : {}),
+  };
+  const withBinding = updateDeckMapLayer(
+    {...config, fitToData: nextFitToData},
+    layerIndex,
+    (nextLayer) => {
+      const nextBinding: Record<string, unknown> = {
+        ...(isRecord(nextLayer._sqlroomsBinding)
+          ? nextLayer._sqlroomsBinding
+          : {}),
+      };
+      if (latitudeColumn) {
+        nextBinding.latitudeColumn = latitudeColumn;
+      } else {
+        delete nextBinding.latitudeColumn;
+      }
+      if (longitudeColumn) {
+        nextBinding.longitudeColumn = longitudeColumn;
+      } else {
+        delete nextBinding.longitudeColumn;
+      }
+      return {...nextLayer, _sqlroomsBinding: nextBinding};
+    },
+  );
+  if (!latitudeColumn || !longitudeColumn) {
+    return withBinding;
+  }
+
+  if (!dataset || !isDeckMapTableDatasetSource(dataset.source)) {
+    return withBinding;
+  }
+
+  const sourceColumnNames = new Set(
+    sourceColumns.map((column) => column.name.toLowerCase()),
+  );
+  if (
+    sourceColumnNames.size === 0 ||
+    !sourceColumnNames.has(latitudeColumn.toLowerCase()) ||
+    !sourceColumnNames.has(longitudeColumn.toLowerCase())
+  ) {
+    return withBinding;
+  }
+  const existingGeometryAlias =
+    (generated?.kind === 'point' ? generated.geometryColumn : undefined) ||
+    readBindingColumn(binding, 'geometryColumn');
+  const preserveGeometryAlias =
+    existingGeometryAlias &&
+    !sourceColumnNames.has(existingGeometryAlias.toLowerCase())
+      ? existingGeometryAlias
+      : undefined;
+  const bound = applyDeckMapPointBinding({
+    config: withBinding,
+    pointBinding: {
+      dataset: datasetId,
+      longitudeColumn,
+      latitudeColumn,
+      ...(preserveGeometryAlias ? {geometryColumn: preserveGeometryAlias} : {}),
+    },
+    sourceColumns,
+  });
+  return {
+    ...bound,
+    fitToData: {
+      ...bound.fitToData,
+      dataset: datasetId,
+      longitudeColumn,
+      latitudeColumn,
+    },
+  };
+}
+
+export function setDeckMapLayerHexagonColumn(
+  config: DeckMapConfig,
+  layerIndex: number,
+  hexagonColumn: string,
+): DeckMapConfig {
+  return updateDeckMapLayer(config, layerIndex, (layer) => ({
+    ...layer,
+    getHexagon: `@@=${hexagonColumn}`,
+    _sqlroomsBinding: {
+      ...(isRecord(layer._sqlroomsBinding) ? layer._sqlroomsBinding : {}),
+      hexagonColumn,
+    },
+  }));
+}
+
+const DEFAULT_ARC_SOURCE_GEOMETRY_COLUMN = 'source_geom';
+const DEFAULT_ARC_TARGET_GEOMETRY_COLUMN = 'target_geom';
+const FALLBACK_ARC_SOURCE_GEOMETRY_COLUMN = '__sqlrooms_source_geom';
+const FALLBACK_ARC_TARGET_GEOMETRY_COLUMN = '__sqlrooms_target_geom';
+function readBindingColumn(
+  binding: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = binding[key];
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function nextBindingColumn(
+  nextValue: string | null | undefined,
+  currentValue: string | undefined,
+): string | undefined {
+  if (nextValue === null) return undefined;
+  const trimmed = nextValue?.trim();
+  return trimmed || currentValue;
+}
+
+function pickUnusedColumnName(
+  sourceColumns: ReadonlyArray<{name: string}>,
+  preferred: string,
+  fallback: string,
+): string {
+  const names = new Set(
+    sourceColumns.map((column) => column.name.toLowerCase()),
+  );
+  if (!names.has(preferred.toLowerCase())) return preferred;
+  if (!names.has(fallback.toLowerCase())) return fallback;
+  let suffix = 2;
+  let candidate = `${fallback}_${suffix}`;
+  while (names.has(candidate.toLowerCase())) {
+    suffix += 1;
+    candidate = `${fallback}_${suffix}`;
+  }
+  return candidate;
+}
+
+function nextArcFitToData(
+  config: DeckMapConfig,
+  datasetId: string,
+  sourceGeometryColumn?: string,
+  targetGeometryColumn?: string,
+): DeckMapConfig['fitToData'] {
+  const current = config.fitToData;
+  const padding =
+    current?.dataset === datasetId && typeof current.padding === 'number'
+      ? current.padding
+      : 40;
+  const maxZoom =
+    current?.dataset === datasetId && typeof current.maxZoom === 'number'
+      ? current.maxZoom
+      : 12;
+  if (sourceGeometryColumn && targetGeometryColumn) {
+    return {
+      dataset: datasetId,
+      geometryColumns: [sourceGeometryColumn, targetGeometryColumn],
+      padding,
+      maxZoom,
+    };
+  }
+  if (sourceGeometryColumn || targetGeometryColumn) {
+    return {
+      dataset: datasetId,
+      geometryColumn: sourceGeometryColumn ?? targetGeometryColumn,
+      padding,
+      maxZoom,
+    };
+  }
+  if (current?.dataset === datasetId) {
+    return {dataset: datasetId, padding, maxZoom};
+  }
+  return current;
+}
+
+function withArcLayerBinding(
+  config: DeckMapConfig,
+  layerIndex: number,
+  datasetId: string,
+  dataset: NonNullable<DeckMapConfig['datasets']>[string],
+  nextSource: (typeof dataset)['source'],
+  nextBinding: Record<string, unknown>,
+  sourceGeometryColumn?: string,
+  targetGeometryColumn?: string,
+): DeckMapConfig {
+  return updateDeckMapLayer(
+    {
+      ...config,
+      datasets: {
+        ...config.datasets,
+        [datasetId]: {
+          ...dataset,
+          source: nextSource,
+          ...(sourceGeometryColumn
+            ? {geometryColumn: sourceGeometryColumn}
+            : {}),
+        },
+      },
+      fitToData: nextArcFitToData(
+        config,
+        datasetId,
+        sourceGeometryColumn,
+        targetGeometryColumn,
+      ),
+    },
+    layerIndex,
+    (layer) => ({
+      ...layer,
+      _sqlroomsBinding: nextBinding,
+    }),
+  );
+}
+
+/**
+ * Binds an arc layer to source/target geometry columns and drops a generated
+ * lon/lat transform once both selected names exist on `sourceColumns`.
+ * Transform-produced columns (e.g. `buffered_source`) keep the SQL.
+ */
+export function setDeckMapLayerArcGeometryColumns(
+  config: DeckMapConfig,
+  layerIndex: number,
+  columns: {
+    sourceGeometryColumn?: string | null;
+    targetGeometryColumn?: string | null;
+  },
+  sourceColumns: ReadonlyArray<{name: string}> = [],
+): DeckMapConfig {
+  const layer = getDeckMapLayerRecords(config)[layerIndex];
+  const datasetId = getDeckMapLayerDatasetId(layer);
+  if (!datasetId || !config.datasets?.[datasetId]) {
+    return config;
+  }
+
+  const dataset = config.datasets[datasetId];
+  const binding = isRecord(layer?._sqlroomsBinding)
+    ? layer._sqlroomsBinding
+    : {};
+  const sourceGeometryColumn = nextBindingColumn(
+    columns.sourceGeometryColumn,
+    readBindingColumn(binding, 'sourceGeometryColumn'),
+  );
+  const targetGeometryColumn = nextBindingColumn(
+    columns.targetGeometryColumn,
+    readBindingColumn(binding, 'targetGeometryColumn'),
+  );
+  const source = dataset.source;
+  const generated = readGeneratedTransform(binding);
+  const generatedAliases =
+    generated?.kind === 'arc'
+      ? {
+          sourceGeometryColumn: generated.sourceGeometryColumn,
+          targetGeometryColumn: generated.targetGeometryColumn,
+        }
+      : undefined;
+  const sourceColumnNames = new Set(
+    sourceColumns.map((column) => column.name.toLowerCase()),
+  );
+  const sourceOnTable = Boolean(
+    sourceGeometryColumn &&
+    sourceColumnNames.has(sourceGeometryColumn.toLowerCase()),
+  );
+  const targetOnTable = Boolean(
+    targetGeometryColumn &&
+    sourceColumnNames.has(targetGeometryColumn.toLowerCase()),
+  );
+  const leavingGenerated = Boolean(
+    generatedAliases &&
+    sourceOnTable &&
+    targetOnTable &&
+    sourceGeometryColumn !== generatedAliases.sourceGeometryColumn &&
+    targetGeometryColumn !== generatedAliases.targetGeometryColumn,
+  );
+  const nextSource =
+    leavingGenerated && isDeckMapTableDatasetSource(source)
+      ? {tableName: source.tableName}
+      : source;
+  const nextDataset = {...dataset};
+  // Drop the dataset-wide WKB hint as soon as either endpoint is a native
+  // source column so mixed WKT/GeoArrow + generated-alias binds, and maps
+  // authored before generatedTransform existed, are not forced through the
+  // WKB decoder. Leftover generated columns can still be inferred from type.
+  if (sourceOnTable || targetOnTable) {
+    delete nextDataset.geometryEncodingHint;
+  }
+  const nextBinding: Record<string, unknown> = {...binding};
+  if (sourceGeometryColumn) {
+    nextBinding.sourceGeometryColumn = sourceGeometryColumn;
+  } else {
+    delete nextBinding.sourceGeometryColumn;
+  }
+  if (targetGeometryColumn) {
+    nextBinding.targetGeometryColumn = targetGeometryColumn;
+  } else {
+    delete nextBinding.targetGeometryColumn;
+  }
+  delete nextBinding.sourceLatitudeColumn;
+  delete nextBinding.sourceLongitudeColumn;
+  delete nextBinding.targetLatitudeColumn;
+  delete nextBinding.targetLongitudeColumn;
+  if (leavingGenerated) {
+    delete nextBinding.generatedTransform;
+  }
+
+  return withArcLayerBinding(
+    config,
+    layerIndex,
+    datasetId,
+    nextDataset,
+    nextSource,
+    nextBinding,
+    sourceGeometryColumn,
+    targetGeometryColumn,
+  );
+}
+
+/**
+ * Binds an arc layer to origin/destination lon/lat columns. Incomplete picks
+ * stay on the layer binding; once all four axes are set the canonical WKB arc
+ * transform is applied.
+ */
+export function setDeckMapLayerArcCoordinateColumns(
+  config: DeckMapConfig,
+  layerIndex: number,
+  columns: {
+    sourceLatitudeColumn?: string | null;
+    sourceLongitudeColumn?: string | null;
+    targetLatitudeColumn?: string | null;
+    targetLongitudeColumn?: string | null;
+  },
+  sourceColumns: ReadonlyArray<{name: string; type?: string}> = [],
+): DeckMapConfig {
+  const layer = getDeckMapLayerRecords(config)[layerIndex];
+  const datasetId = getDeckMapLayerDatasetId(layer);
+  if (!datasetId || !config.datasets?.[datasetId]) {
+    return config;
+  }
+
+  const dataset = config.datasets[datasetId];
+  const binding = isRecord(layer?._sqlroomsBinding)
+    ? layer._sqlroomsBinding
+    : {};
+  const sourceLatitudeColumn = nextBindingColumn(
+    columns.sourceLatitudeColumn,
+    readBindingColumn(binding, 'sourceLatitudeColumn'),
+  );
+  const sourceLongitudeColumn = nextBindingColumn(
+    columns.sourceLongitudeColumn,
+    readBindingColumn(binding, 'sourceLongitudeColumn'),
+  );
+  const targetLatitudeColumn = nextBindingColumn(
+    columns.targetLatitudeColumn,
+    readBindingColumn(binding, 'targetLatitudeColumn'),
+  );
+  const targetLongitudeColumn = nextBindingColumn(
+    columns.targetLongitudeColumn,
+    readBindingColumn(binding, 'targetLongitudeColumn'),
+  );
+  const nextBinding: Record<string, unknown> = {...binding};
+  if (sourceLatitudeColumn) {
+    nextBinding.sourceLatitudeColumn = sourceLatitudeColumn;
+  } else {
+    delete nextBinding.sourceLatitudeColumn;
+  }
+  if (sourceLongitudeColumn) {
+    nextBinding.sourceLongitudeColumn = sourceLongitudeColumn;
+  } else {
+    delete nextBinding.sourceLongitudeColumn;
+  }
+  if (targetLatitudeColumn) {
+    nextBinding.targetLatitudeColumn = targetLatitudeColumn;
+  } else {
+    delete nextBinding.targetLatitudeColumn;
+  }
+  if (targetLongitudeColumn) {
+    nextBinding.targetLongitudeColumn = targetLongitudeColumn;
+  } else {
+    delete nextBinding.targetLongitudeColumn;
+  }
+
+  if (
+    !sourceLatitudeColumn ||
+    !sourceLongitudeColumn ||
+    !targetLatitudeColumn ||
+    !targetLongitudeColumn ||
+    !isDeckMapTableDatasetSource(dataset.source)
+  ) {
+    return updateDeckMapLayer(config, layerIndex, (nextLayer) => ({
+      ...nextLayer,
+      _sqlroomsBinding: nextBinding,
+    }));
+  }
+
+  const sourceColumnNames = new Set(
+    sourceColumns.map((column) => column.name.toLowerCase()),
+  );
+  if (
+    sourceColumnNames.size === 0 ||
+    !sourceColumnNames.has(sourceLatitudeColumn.toLowerCase()) ||
+    !sourceColumnNames.has(sourceLongitudeColumn.toLowerCase()) ||
+    !sourceColumnNames.has(targetLatitudeColumn.toLowerCase()) ||
+    !sourceColumnNames.has(targetLongitudeColumn.toLowerCase())
+  ) {
+    return updateDeckMapLayer(config, layerIndex, (nextLayer) => ({
+      ...nextLayer,
+      _sqlroomsBinding: nextBinding,
+    }));
+  }
+
+  const sourceGeometryColumn = pickUnusedColumnName(
+    sourceColumns,
+    DEFAULT_ARC_SOURCE_GEOMETRY_COLUMN,
+    FALLBACK_ARC_SOURCE_GEOMETRY_COLUMN,
+  );
+  const targetGeometryColumn = pickUnusedColumnName(
+    sourceColumns,
+    DEFAULT_ARC_TARGET_GEOMETRY_COLUMN,
+    FALLBACK_ARC_TARGET_GEOMETRY_COLUMN,
+  );
+  nextBinding.sourceGeometryColumn = sourceGeometryColumn;
+  nextBinding.targetGeometryColumn = targetGeometryColumn;
+  nextBinding.generatedTransform = {
+    kind: 'arc',
+    sourceGeometryColumn,
+    targetGeometryColumn,
+  };
+
+  return withArcLayerBinding(
+    config,
+    layerIndex,
+    datasetId,
+    {
+      ...dataset,
+      geometryEncodingHint: 'wkb',
+    },
+    {
+      tableName: dataset.source.tableName,
+      transformSql: createDeckMapArcTransformSql({
+        sourceLongitudeColumn,
+        sourceLatitudeColumn,
+        targetLongitudeColumn,
+        targetLatitudeColumn,
+        sourceGeometryColumn,
+        targetGeometryColumn,
+      }),
+    },
+    nextBinding,
+    sourceGeometryColumn,
+    targetGeometryColumn,
+  );
+}
+
+export function setDeckMapLayerTimestampColumn(
+  config: DeckMapConfig,
+  layerIndex: number,
+  timestampColumn: string,
+): DeckMapConfig {
+  return updateDeckMapLayer(config, layerIndex, (layer) => ({
+    ...layer,
+    _sqlroomsBinding: {
+      ...(isRecord(layer._sqlroomsBinding) ? layer._sqlroomsBinding : {}),
+      timestampColumn,
+    },
+  }));
+}
+
+export function getDeckMapLayerColorScale(
+  layer: DeckMapLayerRecord | undefined,
+  accessor: DeckMapLayerColorAccessor,
+): DeckMapLayerColorScaleFunction | undefined {
+  const value = layer?.[accessor];
+  return isColorScaleFunction(value)
+    ? (value as DeckMapLayerColorScaleFunction)
+    : undefined;
+}
+
+export function setDeckMapLayerColorScale(
+  config: DeckMapConfig,
+  layerIndex: number,
+  accessor: DeckMapLayerColorAccessor,
+  colorScale: DeckMapLayerColorScaleFunction,
+): DeckMapConfig {
+  return updateDeckMapLayer(config, layerIndex, (layer) => ({
+    ...layer,
+    [accessor]: colorScale,
+  }));
+}
+
+const DEFAULT_LAYER_FILL_COLOR: [number, number, number, number] = [
+  56, 189, 248, 180,
+];
+
+const DEFAULT_LAYER_STROKE_COLOR: [number, number, number, number] = [
+  0, 0, 0, 255,
+];
+
+/** Default flat fill RGBA. */
+export const DECK_MAP_DEFAULT_LAYER_COLOR: readonly [
+  number,
+  number,
+  number,
+  number,
+] = DEFAULT_LAYER_FILL_COLOR;
+
+/** Default stroke RGBA. */
+export const DECK_MAP_DEFAULT_STROKE_COLOR: readonly [
+  number,
+  number,
+  number,
+  number,
+] = DEFAULT_LAYER_STROKE_COLOR;
+
+/** True when `value` is a 3- or 4-channel numeric RGB(A) array. */
+export function isDeckMapLayerFlatRgbaColor(
+  value: unknown,
+): value is [number, number, number, number?] {
+  return (
+    Array.isArray(value) &&
+    value.length >= 3 &&
+    value.length <= 4 &&
+    value.every(
+      (channel) => typeof channel === 'number' && Number.isFinite(channel),
+    )
+  );
+}
+
+/** Flat RGBA for an accessor, or undefined if scaled/missing. */
+export function getDeckMapLayerFlatColor(
+  layer: DeckMapLayerRecord | undefined,
+  accessor: DeckMapLayerColorAccessor,
+): [number, number, number, number] | undefined {
+  const value = layer?.[accessor];
+  if (!isDeckMapLayerFlatRgbaColor(value)) return undefined;
+  return [value[0]!, value[1]!, value[2]!, value[3] ?? 255];
+}
+
+/** Set a color accessor to a constant RGB(A); alpha defaults to 255. */
+export function setDeckMapLayerFlatColor(
+  config: DeckMapConfig,
+  layerIndex: number,
+  accessor: DeckMapLayerColorAccessor,
+  color: readonly [number, number, number, number?],
+): DeckMapConfig {
+  const rgba: [number, number, number, number] = [
+    color[0],
+    color[1],
+    color[2],
+    color[3] ?? 255,
+  ];
+  return updateDeckMapLayer(config, layerIndex, (layer) => ({
+    ...layer,
+    [accessor]: rgba,
+  }));
+}
+
+/** RGBA → `#rrggbb` for `<input type="color">`. */
+export function deckMapRgbaToHex(
+  color: readonly [number, number, number, number?],
+): string {
+  const toHex = (channel: number) =>
+    Math.max(0, Math.min(255, Math.round(channel)))
+      .toString(16)
+      .padStart(2, '0');
+  return `#${toHex(color[0])}${toHex(color[1])}${toHex(color[2])}`;
+}
+
+export function clearDeckMapLayerColorScale(
+  config: DeckMapConfig,
+  layerIndex: number,
+  accessor: DeckMapLayerColorAccessor,
+): DeckMapConfig {
+  const defaultColor =
+    accessor === 'getLineColor'
+      ? DECK_MAP_DEFAULT_STROKE_COLOR
+      : DECK_MAP_DEFAULT_LAYER_COLOR;
+  return updateDeckMapLayer(config, layerIndex, (layer) =>
+    replaceDeckMapLayerColorScaleWithFlat(layer, accessor, defaultColor),
+  );
+}
+
+export function createDeckMapLayerColorScale(options: {
+  field: string;
+  type?: ColorScaleConfig['type'];
+  scheme?: ColorScaleScheme;
+  title?: string;
+  /** Per-accessor opacity 0–1. */
+  opacity?: number;
+}): DeckMapLayerColorScaleFunction {
+  const type = options.type ?? 'sequential';
+  const scheme =
+    options.scheme ??
+    DECK_MAP_COLOR_SCALE_TYPE_OPTIONS.find((option) => option.value === type)
+      ?.defaultScheme ??
+    'Viridis';
+  const opacity =
+    typeof options.opacity === 'number' && Number.isFinite(options.opacity)
+      ? Math.max(0, Math.min(1, options.opacity))
+      : undefined;
+  const base = {
+    '@@function': 'colorScale' as const,
+    field: options.field,
+    legend: {title: options.title ?? options.field},
+    ...(opacity !== undefined ? {opacity} : {}),
+  };
+
+  if (type === 'categorical') {
+    return {
+      ...base,
+      type,
+      scheme: scheme as Extract<
+        ColorScaleConfig,
+        {type: 'categorical'}
+      >['scheme'],
+    };
+  }
+
+  if (type === 'diverging') {
+    return {
+      ...base,
+      type,
+      scheme: scheme as Extract<
+        ColorScaleConfig,
+        {type: 'diverging'}
+      >['scheme'],
+      domain: 'auto',
+    };
+  }
+
+  if (type === 'quantize') {
+    return {
+      ...base,
+      type,
+      scheme: scheme as Extract<ColorScaleConfig, {type: 'quantize'}>['scheme'],
+      domain: 'auto',
+    };
+  }
+
+  if (type === 'quantile') {
+    return {
+      ...base,
+      type,
+      scheme: scheme as Extract<ColorScaleConfig, {type: 'quantile'}>['scheme'],
+    };
+  }
+
+  if (type === 'threshold') {
+    return {
+      ...base,
+      type,
+      scheme: scheme as Extract<
+        ColorScaleConfig,
+        {type: 'threshold'}
+      >['scheme'],
+      thresholds: [],
+    };
+  }
+
+  return {
+    ...base,
+    type: 'sequential',
+    scheme: scheme as Extract<ColorScaleConfig, {type: 'sequential'}>['scheme'],
+    domain: 'auto',
+  };
+}

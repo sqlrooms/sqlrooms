@@ -1,0 +1,113 @@
+import {LineChartSettings} from './schema';
+import {ValidateSpecOptions} from '../base-types';
+import {
+  ChartSpecError,
+  InvalidColumnTypeError,
+  MissingColumnsError,
+  RequiredFieldsError,
+} from '../errors';
+import {
+  isNumericType,
+  isQuantitativeType,
+  isTemporalType,
+} from '../../../column-types-utils';
+import {TableColumn} from '@sqlrooms/duckdb';
+import {AggregateFunction, TemporalInterval} from '../../../schemas';
+import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
+
+/** Resolved X/Y columns and metric used by the line-chart spec compiler. */
+export type ValidatedLineChartSettings = {
+  metric: 'aggregate' | 'count';
+  xColumn: TableColumn;
+  yColumns: {
+    field: string;
+    column: TableColumn;
+    aggregate: AggregateFunction;
+    color: string;
+  }[];
+  xInterval?: TemporalInterval;
+};
+
+/**
+ * Resolve chart fields against the source table and enforce the metric contract.
+ * Count mode requires quantitative X and no numeric Y series; numeric mode
+ * requires at least one numeric Y field and defaults to sum aggregation.
+ * @throws When fields are missing, column types are unsuitable, or count mode
+ * also supplies numeric Y series.
+ */
+export function validateLineChartSettings({
+  dataTable,
+  settings: {
+    x,
+    yFields: yFieldsInput,
+    xInterval: xIntervalInput,
+    metric: metricInput,
+  },
+}: ValidateSpecOptions<LineChartSettings>): ValidatedLineChartSettings {
+  // Nullish settings fields (the LLM may send `null`): normalize to the
+  // no-value form so the rest of the function works with clean values. A
+  // destructuring default only covers `undefined`, so `metric: null` would slip
+  // through as `null` — skipping the required-Y check and producing a blank
+  // chart reported as success — hence the explicit `?? 'aggregate'`.
+  const metric = metricInput ?? 'aggregate';
+  const yFields = yFieldsInput ?? [];
+  const xInterval = xIntervalInput ?? undefined;
+  // Basic validation for required fields
+  if (!x || (metric === 'aggregate' && yFields.length === 0)) {
+    throw new RequiredFieldsError([
+      ...(x ? [] : ['X-axis']),
+      ...(metric === 'count' || yFields.length > 0 ? [] : ['Y-axis']),
+    ]);
+  }
+
+  // Validate X and Y field existence
+  const xColumn = dataTable.columns.find((col) => col.name === x);
+  if (!xColumn) throw new MissingColumnsError(['X-axis']);
+  if (!isQuantitativeType(xColumn.type)) {
+    throw new InvalidColumnTypeError(xColumn.name, 'quantitative');
+  }
+  if (xInterval && !isTemporalType(xColumn.type)) {
+    throw new ChartSpecError(
+      `xInterval requires a temporal X-axis column; ${xColumn.name} has type ${xColumn.type}.`,
+    );
+  }
+  if (metric === 'count') {
+    if (yFields.length > 0) {
+      throw new ChartSpecError(
+        'Row counts use COUNT(*). Omit yFields when metric is count; use metric aggregate for numeric series.',
+      );
+    }
+    return {metric, xColumn, yColumns: [], xInterval};
+  }
+  const yColumns = yFields.map((y) => ({
+    field: y.field,
+    column: dataTable.columns.find((col) => col.name === y.field),
+    aggregate: y.aggregate ?? 'sum',
+    color: y.color ?? DEFAULT_CHART_FALLBACK_COLOR,
+  }));
+
+  const missingYColumns = yColumns.filter((y) => !y.column);
+
+  if (missingYColumns.length > 0) {
+    throw new MissingColumnsError(missingYColumns.map((y) => y.field));
+  }
+
+  // Validate X and Y field types
+  const invalidYFields = yColumns.filter((y) => {
+    return y.column && !isNumericType(y.column.type);
+  });
+
+  if (invalidYFields.length > 0) {
+    throw new InvalidColumnTypeError(
+      invalidYFields.map(({field}) => field),
+      'numeric',
+    );
+  }
+
+  return {
+    metric,
+    xColumn,
+    yColumns,
+    xInterval,
+  } as ValidatedLineChartSettings;
+}

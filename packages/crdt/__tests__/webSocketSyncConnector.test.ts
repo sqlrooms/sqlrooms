@@ -1,4 +1,4 @@
-import {describe, expect, it} from '@jest/globals';
+import {describe, expect, it, jest} from '@jest/globals';
 import {LoroDoc} from 'loro-crdt';
 
 import {createWebSocketSyncConnector} from '../src';
@@ -100,5 +100,105 @@ describe('createWebSocketSyncConnector', () => {
     expect(ws.sent[ws.sent.length - 1]).not.toEqual(
       expect.stringContaining('crdt-join'),
     );
+    await connector.disconnect();
   });
+
+  it.each([false, true])(
+    'authenticates before joining or sending document data (already open: %s)',
+    async (alreadyOpen) => {
+      const ws = new FakeWebSocket();
+      if (alreadyOpen) ws.readyState = 1;
+      const urls: string[] = [];
+      const connector = createWebSocketSyncConnector({
+        url: 'ws://example.test/ws/duckdb',
+        roomId: 'room-1',
+        token: 'page-secret',
+        createSocket: (url) => {
+          urls.push(url);
+          return ws;
+        },
+      });
+      const doc = new LoroDoc();
+      await connector.connect(doc);
+      if (!alreadyOpen) ws.open();
+      doc.getMap('map').set('local', 'value');
+      doc.commit();
+      expect(new URL(urls[0]!).searchParams.has('token')).toBe(false);
+      expect(urls[0]).not.toContain('page-secret');
+      expect(ws.sent).toEqual([
+        JSON.stringify({type: 'auth', token: 'page-secret'}),
+      ]);
+      ws.message(JSON.stringify({type: 'authAck'}));
+      expect(
+        ws.sent.slice(1).map((value) => JSON.parse(value as string).type),
+      ).toEqual(['crdt-join', 'crdt-snapshot']);
+      ws.message(JSON.stringify({type: 'crdt-joined'}));
+      const remote = new LoroDoc();
+      remote.getMap('map').set('remote', 'value');
+      remote.commit();
+      ws.message(
+        JSON.stringify({
+          type: 'crdt-snapshot',
+          data: Buffer.from(remote.export({mode: 'snapshot'})).toString(
+            'base64',
+          ),
+        }),
+      );
+      expect(doc.getMap('map').get('remote')).toBe('value');
+      expect(ws.sent.some((value) => typeof value !== 'string')).toBe(true);
+      await connector.disconnect();
+    },
+  );
+
+  it.each(['rejection', 'binary', 'timeout'])(
+    'fails closed on authentication %s and authenticates again on reconnect',
+    async (failure) => {
+      jest.useFakeTimers();
+      const sockets: FakeWebSocket[] = [];
+      const connector = createWebSocketSyncConnector({
+        url: 'ws://example.test/ws/duckdb',
+        roomId: 'room-1',
+        token: 'page-secret',
+        initialDelayMs: 1,
+        maxRetries: 1,
+        createSocket: () => {
+          const ws = new FakeWebSocket();
+          sockets.push(ws);
+          return ws;
+        },
+      });
+      try {
+        const doc = new LoroDoc();
+        await connector.connect(doc);
+        const ws = sockets[0]!;
+        ws.open();
+        if (failure === 'timeout') await jest.advanceTimersByTimeAsync(5000);
+        else
+          ws.message(
+            failure === 'binary'
+              ? new Uint8Array([1, 2])
+              : JSON.stringify({type: 'error', error: 'unauthorized'}),
+          );
+        expect(ws.readyState).toBe(3);
+        expect(ws.sent).toHaveLength(1);
+        await jest.advanceTimersByTimeAsync(1);
+        const retry = sockets[1]!;
+        retry.open();
+        expect(retry.sent).toEqual([
+          JSON.stringify({type: 'auth', token: 'page-secret'}),
+        ]);
+        if (failure === 'timeout') {
+          retry.message(JSON.stringify({type: 'authAck'}));
+          expect(retry.sent).toHaveLength(3);
+        } else {
+          retry.message(JSON.stringify({type: 'error', error: 'unauthorized'}));
+          await jest.advanceTimersByTimeAsync(10_000);
+          expect(sockets).toHaveLength(2);
+        }
+      } finally {
+        await connector.disconnect();
+        jest.useRealTimers();
+      }
+    },
+  );
 });

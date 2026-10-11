@@ -1,56 +1,9 @@
-import {AiSliceState} from '@sqlrooms/ai-core';
-import {DuckDbSliceState, DataTable} from '@sqlrooms/duckdb';
-import {StoreApi} from '@sqlrooms/room-shell';
+import type {AiSliceState} from '@sqlrooms/ai-core';
+import type {DuckDbSliceState} from '@sqlrooms/duckdb';
+import type {StoreApi} from '@sqlrooms/room-shell';
+import {formatTablesForLLM} from './tableSchemaContext';
 
-/**
- * Formats table schema information in a clean, LLM-friendly format
- * @param tables Array of DataTable objects from the DuckDB state
- * @param currentDatabase The current local database name to filter by
- * @returns Formatted string representation of table schemas
- */
-export function formatTablesForLLM(
-  tables: DataTable[],
-  currentDatabase?: string,
-): string {
-  if (!tables || tables.length === 0) {
-    return 'No tables available in the database.';
-  }
-
-  return tables
-    .filter((table) => {
-      const schemaName = table.table?.schema || table.schema;
-      const databaseName = table.table?.database || table.database;
-
-      // Only include tables from 'main' schema and the current local database
-      // This excludes tables from attached databases (MotherDuck, Iceberg, knowledge base, etc.)
-      const isMainSchema = !schemaName || schemaName === 'main';
-      const isLocalDatabase = !databaseName || databaseName === currentDatabase;
-
-      return isMainSchema && isLocalDatabase;
-    })
-    .map((table) => {
-      const tableName = table.table?.table || table.tableName;
-      const schemaName = table.table?.schema || table.schema;
-      const fullTableName =
-        schemaName && schemaName !== 'main'
-          ? `${schemaName}.${tableName}`
-          : tableName;
-
-      // Build table header with metadata
-      const header = [fullTableName];
-      if (table.rowCount !== undefined)
-        header.push(`[${table.rowCount.toLocaleString()} rows]`);
-
-      // Format columns with proper indentation
-      const columns = table.columns.map((col) => `  ${col.name}`).join('\n');
-
-      // Add comment if available
-      const comment = table.comment ? `  # ${table.comment}` : '';
-
-      return `${header.join(' ')}\n${columns}${comment ? '\n' + comment : ''}`;
-    })
-    .join('\n\n');
-}
+export {formatTablesForLLM} from './tableSchemaContext';
 
 /**
  * System prompt template for the AI assistant that provides instructions for:
@@ -81,7 +34,11 @@ Instructions for analysis:
   * Use comparisons and relative terms
   * Include only the most relevant values if necessary
 - Break down complex problems into smaller steps
-- Use "SUMMARIZE table_name"for quick overview of the table
+- Use "SUMMARIZE table_name" for a quick overview of the table (min/max/nulls/approx unique) — especially before choosing a map colorScale field, so flat or all-zero columns are avoided unless the user asked for them
+- Before writing SQL against a table whose columns are not shown, call read_table_schema.
+- Users may refer to tables by bare names such as "events"; after selecting or resolving a concrete table from the candidates, forward its canonical identity. When a tool accepts only a string, pass the exact tableId shown in table context or list_tables. tableId is the quoted SQLRooms table reference from QualifiedTableName.toString(); it may omit the default database, for example "schema"."events", and includes a database for non-default attached databases. Do not forward only the bare/display table name once a table is known.
+- Use list_tables to search or page through available tables when the prompt mentions a table that is not shown below, including other visible schemas or databases when relevant. Use its database, schema, and pattern filters when needed.
+- Call a directly available AI tool when it fits the request. search_commands searches only registered room commands, not other AI tools. For command discovery, keep includeInputSchema false, then use get_command only if you need the selected command's input schema, followed by execute_command. Commands with requiresInput false can use default input without get_command. Avoid repeated searches once you have the command or target IDs needed for the next action, and reserve full list_commands calls for broad debugging.
 - Please don't modify data
 - IMPORTANT: When you receive an error response from a tool call (where success: false):
   * Stop making any further tool calls immediately
@@ -106,7 +63,7 @@ For your final answer:
   * If no sample rows provided: Never fabricate data. Direct users to the table component for actual results.
   * If sample rows provided: Use them to enhance your analysis, but always direct users to the table component for complete results.
 
-Available tables in the local databases (format: tableName [rowCount] followed by indented columns):
+Available tables in the local database main schema (full schema format: tableName [rowCount] followed by indented "columnName type"; some larger catalogs may show only table names and row counts):
 
 `;
 

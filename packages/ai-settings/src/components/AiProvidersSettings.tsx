@@ -11,7 +11,7 @@ import {
   DialogTrigger,
   DialogFooter,
   useDisclosure,
-  useToast,
+  toast,
 } from '@sqlrooms/ui';
 import {
   Cone,
@@ -24,8 +24,13 @@ import {
 } from 'lucide-react';
 import {useStoreWithAiSettings} from '../AiSettingsSlice';
 
-export const AiProvidersSettings: FC = () => {
-  const {toast} = useToast();
+export interface AiProvidersSettingsProps {
+  showTitle?: boolean;
+}
+
+export const AiProvidersSettings: FC<AiProvidersSettingsProps> = ({
+  showTitle = true,
+}) => {
   const updateProvider = useStoreWithAiSettings(
     (state) => state.aiSettings.updateProvider,
   );
@@ -73,10 +78,8 @@ export const AiProvidersSettings: FC = () => {
     if (newProviderKey) {
       // Check if provider already exists
       if (providers[newProviderKey]) {
-        toast({
-          title: 'Provider already exists',
+        toast.error('Provider already exists', {
           description: `A provider with the key "${newProviderKey}" already exists. Please choose a different key.`,
-          variant: 'destructive',
         });
         return;
       }
@@ -87,8 +90,7 @@ export const AiProvidersSettings: FC = () => {
       setNewProviderBaseUrl('');
       onClose();
 
-      toast({
-        title: 'Provider added successfully',
+      toast.success('Provider added successfully', {
         description: `Provider "${newProviderKey}" has been added.`,
       });
     }
@@ -113,8 +115,7 @@ export const AiProvidersSettings: FC = () => {
       onDeleteClose();
       setProviderToDelete(null);
 
-      toast({
-        title: 'Provider deleted successfully',
+      toast.success('Provider deleted successfully', {
         description: `Provider "${providerToDelete.key}" and its associated models have been removed.`,
       });
     }
@@ -134,10 +135,12 @@ export const AiProvidersSettings: FC = () => {
 
   return (
     <div className="space-y-2">
-      <label className="text-md flex items-center gap-2 pb-6 font-medium">
-        <Cone className="h-4 w-4" />
-        Providers
-      </label>
+      {showTitle && (
+        <label className="text-md flex items-center gap-2 pb-6 font-medium">
+          <Cone className="h-4 w-4" />
+          Providers
+        </label>
+      )}
 
       {/* Existing Providers */}
       <div className="space-y-1">
@@ -146,26 +149,37 @@ export const AiProvidersSettings: FC = () => {
 
           return (
             <div key={providerKey} className="space-y-0 rounded-lg p-0">
-              {/* First row: Provider name, API key input, delete button, and cogwheel button */}
-              <div className="flex items-center gap-3">
-                <Label className="w-20 flex-shrink-0 text-sm">
+              <div className="grid items-end gap-3 sm:grid-cols-[minmax(8rem,9rem)_minmax(18rem,1fr)_2rem_2rem]">
+                <Label className="pb-2 text-sm font-medium whitespace-nowrap">
                   {providerKey.charAt(0).toUpperCase() + providerKey.slice(1)}
                 </Label>
-                <Input
-                  id={`${providerKey}-apiKey`}
-                  type="password"
-                  value={provider.apiKey}
-                  onChange={(e) =>
-                    handleUpdateProvider(providerKey, 'apiKey', e.target.value)
-                  }
-                  placeholder="Enter API key"
-                  className="flex-1"
-                />
+                <div className="min-w-0 space-y-1">
+                  <Label
+                    htmlFor={`${providerKey}-apiKey`}
+                    className="text-muted-foreground text-xs"
+                  >
+                    API key
+                  </Label>
+                  <Input
+                    id={`${providerKey}-apiKey`}
+                    type="password"
+                    value={provider.apiKey}
+                    onChange={(e) =>
+                      handleUpdateProvider(
+                        providerKey,
+                        'apiKey',
+                        e.target.value,
+                      )
+                    }
+                    placeholder="Enter API key"
+                    className="w-full"
+                  />
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDeleteProvider(providerKey)}
-                  className="h-6 h-8 w-6 w-8 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                  className="h-8 w-8 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -173,7 +187,7 @@ export const AiProvidersSettings: FC = () => {
                   variant="ghost"
                   size="icon"
                   onClick={() => toggleProviderExpanded(providerKey)}
-                  className="h-8 w-8 flex-shrink-0"
+                  className="h-8 w-8 shrink-0"
                 >
                   <Settings className="h-4 w-4" />
                 </Button>
@@ -181,15 +195,14 @@ export const AiProvidersSettings: FC = () => {
 
               {/* Second row: baseUrl input (toggleable) */}
               {isExpanded && (
-                <div className="flex items-center gap-3 pt-1">
-                  <div className="w-20 flex-shrink-0" />{' '}
-                  {/* Spacer to align with provider name above */}
-                  <div className="flex flex-1 items-center gap-3">
+                <div className="grid items-end gap-3 pt-2 sm:grid-cols-[minmax(8rem,9rem)_minmax(18rem,1fr)_2rem_2rem]">
+                  <div />
+                  <div className="min-w-0 space-y-1">
                     <Label
                       htmlFor={`${providerKey}-baseUrl`}
-                      className="text-muted-foreground flex-shrink-0 text-xs"
+                      className="text-muted-foreground text-xs"
                     >
-                      baseUrl:
+                      Base URL
                     </Label>
                     <Input
                       id={`${providerKey}-baseUrl`}
@@ -203,11 +216,11 @@ export const AiProvidersSettings: FC = () => {
                         )
                       }
                       placeholder="Enter base URL"
-                      className="flex-1"
+                      className="w-full"
                     />
                   </div>
-                  <div className="w-16 flex-shrink-0" />{' '}
-                  {/* Spacer to align with delete and cogwheel buttons above */}
+                  <div />
+                  <div />
                 </div>
               )}
             </div>
@@ -247,7 +260,7 @@ export const AiProvidersSettings: FC = () => {
                 Key
               </Label>
               <div className="relative flex-1">
-                <Cone className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                <Cone className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="new-provider-key"
                   value={newProviderKey}
@@ -263,7 +276,7 @@ export const AiProvidersSettings: FC = () => {
                 API Key
               </Label>
               <div className="relative flex-1">
-                <Key className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                <Key className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="new-provider-api-key"
                   type="password"
@@ -280,7 +293,7 @@ export const AiProvidersSettings: FC = () => {
                 baseUrl
               </Label>
               <div className="relative flex-1">
-                <Server className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                <Server className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="new-provider-url"
                   type="url"

@@ -41,6 +41,14 @@ caseStudies:
     href: '/case-studies.html#transcality'
     img: '/carousel/transcality-600px.webp'
     alt: 'Transcality screenshot'
+  - title: 'Dekart'
+    href: '/case-studies.html#dekart'
+    img: '/carousel/dekart.webp'
+    alt: 'Dekart geospatial dashboard screenshot'
+  - title: 'ChordShell.com'
+    href: '/case-studies.html#chordshellcom'
+    img: '/carousel/chordshell.webp'
+    alt: 'ChordShell.com harmony workspace screenshot'
 
 features:
   - title: Local Analytics, No Backend Required
@@ -73,7 +81,7 @@ features:
 To create a new project from the minimal example, run:
 
 ```sh
-npx degit sqlrooms/examples/minimal my-minimal-app/
+npx giget gh:sqlrooms/examples/minimal my-minimal-app/
 cd my-minimal-app
 npm install
 npm run dev

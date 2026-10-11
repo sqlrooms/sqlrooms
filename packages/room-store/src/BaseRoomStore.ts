@@ -1,6 +1,7 @@
 import {produce} from 'immer';
 import {StateCreator, StoreApi, createStore, useStore} from 'zustand';
-import {DEV_HMR} from './hmr';
+import {devtools} from 'zustand/middleware';
+import {DEV_HMR, IS_DEV} from './hmr';
 
 // Re-export for convenience
 export type {StateCreator};
@@ -20,6 +21,13 @@ export type BaseRoomStoreState = {
 };
 
 export type BaseRoomStore<RS extends BaseRoomStoreState> = StoreApi<RS>;
+type RoomStoreApiMethods<RS extends BaseRoomStoreState> = Pick<
+  StoreApi<RS>,
+  'getState' | 'setState' | 'subscribe' | 'getInitialState'
+>;
+export type UseRoomStore<RS extends BaseRoomStoreState> = {
+  <T>(selector: (state: RS) => T): T;
+} & RoomStoreApiMethods<RS>;
 
 export type CreateBaseRoomSliceProps = {
   captureException?: BaseRoomStoreState['room']['captureException'];
@@ -31,6 +39,12 @@ export type CreateRoomStoreOptions = {
    * Provide a project-specific key to force recreation when it changes.
    */
   storeKey?: string;
+  /**
+   * Whether to connect the store to the Redux DevTools extension.
+   * Defaults to `false`. Set to `true` to enable it (only takes effect in
+   * development; production never connects the extension).
+   */
+  devtools?: boolean;
 };
 
 type CreateRoomStoreArgs<TFactory extends (...args: any[]) => any> = [
@@ -102,9 +116,10 @@ export function createRoomStore<RS extends BaseRoomStoreState>(
   const storeCreator = factory(() => stateCreator);
   const roomStore = storeCreator.createRoomStore();
 
-  function useRoomStore<T>(selector: (state: RS) => T): T {
+  function useRoomStoreHook<T>(selector: (state: RS) => T): T {
     return storeCreator.useRoomStore(selector);
   }
+  const useRoomStore = withRoomStoreApi<RS>(useRoomStoreHook, () => roomStore);
 
   return {roomStore, useRoomStore};
 }
@@ -127,7 +142,7 @@ export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
     stateCreatorFactory: TFactory,
   ): {
     createRoomStore: (...args: CreateRoomStoreArgs<TFactory>) => StoreApi<RS>;
-    useRoomStore: <T>(selector: (state: RS) => T) => T;
+    useRoomStore: UseRoomStore<RS>;
   } {
     const defaultStoreKey = DEV_HMR?.nextId();
     let store: StoreApi<RS> | undefined;
@@ -136,7 +151,11 @@ export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
     function isCreateRoomStoreOptions(
       value: unknown,
     ): value is CreateRoomStoreOptions {
-      return typeof value === 'object' && value !== null && 'storeKey' in value;
+      return (
+        typeof value === 'object' &&
+        value !== null &&
+        ('storeKey' in value || 'devtools' in value)
+      );
     }
 
     function createRoomStore(
@@ -156,6 +175,7 @@ export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
         if (currentStoreKey && currentStoreKey !== storeKey) {
           const previousStore = DEV_HMR.get(currentStoreKey);
           if (previousStore) {
+            previousStore.devtools?.cleanup();
             const state = previousStore.getState();
             if (isRoomSliceWithDestroy(state.room)) {
               state.room.destroy().catch((error: unknown) => {
@@ -174,7 +194,23 @@ export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
         }
       }
 
-      store = createStore(stateCreatorFactory(...factoryArgs));
+      store = createStore(
+        devtools(stateCreatorFactory(...factoryArgs), {
+          name: storeKey ? `RoomStore:${storeKey}` : 'RoomStore',
+          // Off by default; opt in via the `devtools` option. Tests and
+          // production should not require the browser extension.
+          enabled: IS_DEV && (options?.devtools ?? false),
+          // The Redux DevTools extension JSON.stringifies the whole state on
+          // every action. Loaded data (e.g. integer columns) can contain BigInt
+          // values, which JSON.stringify cannot serialize, throwing
+          // "Do not know how to serialize a BigInt" inside setState. Convert
+          // BigInt to a string so DevTools serialization stays safe.
+          serialize: {
+            replacer: (_key: string, value: unknown) =>
+              typeof value === 'bigint' ? value.toString() : value,
+          },
+        }),
+      );
 
       // Dev-only: Register store for HMR preservation
       if (DEV_HMR && currentStoreKey) {
@@ -204,16 +240,52 @@ export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
       return store;
     }
 
-    function useRoomStore<T>(selector: (state: RS) => T): T {
+    function useRoomStoreHook<T>(selector: (state: RS) => T): T {
       if (!store)
         throw new Error(
           'Room store not initialized. Call createRoomStore first.',
         );
       return useStore(store, selector);
     }
+    const useRoomStore = withRoomStoreApi<RS>(useRoomStoreHook, () => store);
 
     return {createRoomStore, useRoomStore};
   };
+}
+
+function withRoomStoreApi<RS extends BaseRoomStoreState>(
+  useRoomStore: <T>(selector: (state: RS) => T) => T,
+  getStore: () => StoreApi<RS> | undefined,
+): UseRoomStore<RS> {
+  const getState: StoreApi<RS>['getState'] = () =>
+    getStoreOrThrow(getStore).getState();
+  const setState = ((...args: unknown[]) =>
+    (getStoreOrThrow(getStore).setState as (...args: unknown[]) => void)(
+      ...args,
+    )) as StoreApi<RS>['setState'];
+  const subscribe = ((...args: unknown[]) =>
+    (getStoreOrThrow(getStore).subscribe as (...args: unknown[]) => unknown)(
+      ...args,
+    )) as StoreApi<RS>['subscribe'];
+  const getInitialState: StoreApi<RS>['getInitialState'] = () =>
+    getStoreOrThrow(getStore).getInitialState();
+
+  return Object.assign(useRoomStore, {
+    getState,
+    setState,
+    subscribe,
+    getInitialState,
+  });
+}
+
+function getStoreOrThrow<RS extends BaseRoomStoreState>(
+  getStore: () => StoreApi<RS> | undefined,
+): StoreApi<RS> {
+  const store = getStore();
+  if (!store) {
+    throw new Error('Room store not initialized. Call createRoomStore first.');
+  }
+  return store;
 }
 
 export function isRoomSliceWithInitialize(

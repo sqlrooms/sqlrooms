@@ -1,48 +1,186 @@
 # SQLRooms CLI UI
 
-This package is the **Vite/React UI** that powers the Python `sqlrooms` CLI (`python/sqlrooms-cli`).
+This package is the **Vite/React UI** that powers the Python `sqlrooms` CLI (`python/sqlrooms`).
 
-In development it runs as a separate dev server (default `http://localhost:4174`) and **proxies API calls** to the Python server (default `http://localhost:4173`).
+The app's named production capability sets and their behavior-preserving
+baseline are documented in [docs/capability-profiles.md](docs/capability-profiles.md).
+
+In development it runs as a separate dev server (default `http://localhost:3100`) and **proxies API calls** to the Python server.
 
 In production (published `sqlrooms` wheel), the UI is served as **static assets** bundled into the Python package at:
 
-- `python/sqlrooms-cli/sqlrooms/web/static/`
+- `python/sqlrooms/sqlrooms/web/static/`
+
+## Map basemaps
+
+Maps use [OpenFreeMap](https://openfreemap.org/) vector tiles with **Positron**
+for light mode and **Dark** for dark mode. No API key or registration is required.
+
+New maps keep the light/dark style matching the app theme at creation, including
+after theme changes and workspace reloads. Change the saved style through
+**Map settings → Basemap**. Existing custom map styles are preserved.
+
+## Local CLI smoke test
+
+For local pre-publish testing, run the workspace package directly rather than
+assuming `sqlrooms` is installed globally:
+
+```bash
+cd /Users/ilya/Workspace/sqlrooms
+
+pnpm --dir python/sqlrooms build
+
+uv run --project python/sqlrooms sqlrooms \
+  --no-open-browser \
+  /tmp/sqlrooms-smoke.duckdb
+```
+
+Open the temporary single-use launch link printed in the interactive terminal.
+A bare base URL requires a fresh launch link. See the
+[authentication contract](../../python/sqlrooms/AUTHENTICATION.md) for session
+renewal, native handoff, and explicit development origin mapping.
+
+The bare CLI command works only after installing the CLI somewhere on your
+`PATH`:
+
+```bash
+uv tool install /Users/ilya/Workspace/sqlrooms/python/sqlrooms
+sqlrooms --no-open-browser /tmp/sqlrooms-smoke.duckdb
+```
+
+For release smoke testing, verify both local execution paths:
+
+```bash
+uv run --project python/sqlrooms sqlrooms --no-open-browser /tmp/sqlrooms-smoke.duckdb
+uv tool install --reinstall /Users/ilya/Workspace/sqlrooms/python/sqlrooms
+sqlrooms --no-open-browser /tmp/sqlrooms-smoke.duckdb
+```
+
+In the UI, drag in:
+
+```text
+/Users/ilya/Workspace/sqlrooms/python/sqlrooms/tests/fixtures/cars.csv
+```
+
+Verify `cars` appears, create a document/Mosaic chart/dashboard, stop the
+server, restart the same command, and confirm the state comes back.
+
+## Python CLI release workflow
+
+The Python CLI release is split into an intentional version step and a publish
+step. Publishing never bumps versions automatically.
+
+Before versioning or publishing, test a production build locally:
+
+```bash
+pnpm --dir python/sqlrooms build
+
+# Source/workspace check. This should reflect python/sqlrooms/package.json.
+uv run --project python/sqlrooms sqlrooms --version
+
+uv run --project python/sqlrooms sqlrooms --no-open-browser --experimental /tmp/sqlrooms-smoke.duckdb
+```
+
+For the closest local install check, install the freshly built wheel from
+`python/dist` into a `uv tool` environment. Use the exact wheel for the current
+`python/sqlrooms/package.json` version so older files in `python/dist` are not
+selected accidentally. Run these commands from the repository root:
+
+```bash
+SQLROOMS_VERSION=$(node -p "require('./python/sqlrooms/package.json').version")
+uv tool install --reinstall "python/dist/sqlrooms-${SQLROOMS_VERSION}-py3-none-any.whl"
+sqlrooms --version
+sqlrooms --no-open-browser /tmp/sqlrooms-smoke.duckdb
+```
+
+Open the printed UI URL, drag in the CSV fixture listed above, create a
+document/chart/dashboard, then restart against the same `/tmp/sqlrooms-smoke.duckdb` and
+confirm the imported data and workspace state come back.
+
+1. Use `sqlrooms` for the consolidated CLI, UI, and native runtime. The old
+   `sqlrooms-server` distribution is retired; see the [migration guide](../../python/sqlrooms/MIGRATION.md).
+2. Version the package explicitly:
+
+   ```bash
+   pnpm cli:version --target sqlrooms --bump patch
+   ```
+
+   Hatch reads the version from `python/sqlrooms/package.json`. `--target all`
+   is an equivalent spelling for the single maintained release target.
+
+3. Format the Python CLI packages before running publish checks:
+
+   ```bash
+   uv run --project python/sqlrooms ruff format
+   uv run --project python/sqlrooms ruff check --fix
+   ```
+
+4. Run the dry publish workflow for the intended target:
+
+   ```bash
+   pnpm cli:publish:dry --target sqlrooms
+   ```
+
+   The dry workflow runs validation and builds the selected package or packages,
+   but it does not upload to PyPI.
+
+5. Publish the same target:
+
+   ```bash
+   pnpm cli:publish --target sqlrooms
+   ```
+
+   Publishing runs validation, builds the package, then uploads the built
+   distributions with Twine. `--target all` selects the same consolidated package.
 
 ## Dev mode (UI + Python server together)
 
-From `python/sqlrooms-cli`:
+From the repo root:
 
 ```bash
-pnpm dev
+pnpm dev cli
 ```
 
 This starts:
 
-- the Python server on `http://127.0.0.1:4173`
-- the Vite UI on `http://localhost:4174` (proxying `/api` and `/config.json` to 4173)
+- the Python API server on `http://127.0.0.1:4273` with `--experimental` and without serving static UI, or the next free port
+- the Vite UI on `http://localhost:3100`, or the next free port, proxying `/api`, `/config.json`, and `/ws` to the selected Python API port
+- a per-session dev database named after the selected UI port, for example `sqlrooms-3100.db`
+- an authorized browser tab, opened after Vite is ready using a single-use launch ticket
 
-If you hit `address already in use`, pass different ports to the Python server:
+Use the temporary launch link printed in the terminal when opening another tab.
+The bare Vite URL cannot authorize a new browser session. Pass `--no-open-browser`
+to print the interactive-terminal link without opening a tab. Restarting the
+backend requires a fresh link; reloads retain the current page credential.
+
+If you want fixed ports, pass them to the Python server:
 
 ```bash
-pnpm dev:server -- --port 4176 --ws-port 4002
+pnpm dev cli -- --port 4274
 ```
 
-Then also update the Vite proxy target in `vite.config.ts` (or run Vite with a different proxy setup).
+For a public proxy, `--external-url` takes precedence over `SQLROOMS_EXTERNAL_URL`.
+The launcher uses the Vite origin only when neither is set. A matching
+`SQLROOMS_EXTERNAL_WS_URL` can be supplied, or omitted to derive the WebSocket route.
 
 ## Dev mode (separate terminals)
 
 Terminal A (Python server):
 
 ```bash
-cd python/sqlrooms-cli
-pnpm dev:server
+cd python/sqlrooms
+pnpm dev -- --no-ui
 ```
 
 Terminal B (UI):
 
 ```bash
-pnpm --filter sqlrooms-cli-app dev -- --host --port 4174
+pnpm --filter sqlrooms-cli-app dev -- --host --port 3100
 ```
+
+The Python package dev helper uses API port `4273` by default to match the
+Vite proxy. If you pass a different Python API port, also set
+`SQLROOMS_CLI_API_PROXY_TARGET` when starting Vite.
 
 ## Build the bundled UI (for the Python wheel)
 
@@ -54,9 +192,190 @@ pnpm --filter sqlrooms-cli-app build
 
 This builds the UI into `apps/sqlrooms-cli-ui/dist`.
 
-To copy it into the Python package bundle directory (so the published `sqlrooms` wheel can serve it), run:
+To prepare the Python package assets (the UI bundle and Claude plugin), run:
 
 ```bash
-cd python/sqlrooms-cli
+cd python/sqlrooms
 pnpm build:ui
 ```
+
+## Dashboard Layouts
+
+Dashboard artifacts are created with either a `dock` or `grid` Mosaic dashboard
+layout. Explicit dashboard creation commands and AI tools require `layoutType`
+so the choice is made once at creation time; auto-created dashboards from chart
+or Data Table Explorer flows use `grid`.
+
+## Document Artifacts
+
+Document artifacts are block-composed documents for active analytical work.
+Their canonical artifact type is `block-document`; the UI label remains
+“Document”. Loading an existing workspace migrates `worksheet` artifacts and
+`document` artifacts with block-document backing state to `block-document`.
+Markdown document artifacts and embedded blocks use `markdown-document`, commands use
+`markdown-document.*`, and their backing store and CRDT field are `markdownDocuments`.
+Local workspaces migrate the persisted `documents` slice to `markdownDocuments`
+and normalize `markdown` artifact and embedded block types to `markdown-document`.
+When both slice keys exist, disjoint records are preserved and canonical records
+take precedence for overlapping IDs. Experimental CRDT snapshots are not migrated;
+reset incompatible development sync state when upgrading.
+They can contain editable text, images, standalone Mosaic/vgplot chart blocks, and
+direct stateful blocks such as dashboards, pivot tables, Data Table Explorers,
+SQL queries, and Markdown documents.
+
+Workspace loading also migrates legacy AI/artifact associations from `createdAt`
+to `linkedAt`, removes the obsolete `linkType`, and moves pinned artifact IDs
+from `artifactAi` to `artifacts`. Saving stays disabled until the saved workspace
+has been successfully validated and restored. A loading failure shows an error
+and preserves the existing database snapshot for recovery.
+After successful restoration, migrations and startup changes retained by the
+merge are saved automatically if they differ from the loaded snapshot.
+
+Standalone chart blocks reuse the same Mosaic chart view and settings panel as
+dashboard charts. Charts with the same `selectionGroupId` in one Document share
+a crossfilter selection; charts without a group are independent.
+Agent-created blocks can persist an `intent` string describing the purpose they
+were created to serve, which helps later edits distinguish durable intent from
+raw model input.
+
+Hosted dashboards are stored as direct stateful blocks keyed by their block
+instance id. Each hosted dashboard keeps its own Mosaic dashboard state and
+selection scope, so multiple dashboards in one Document crossfilter
+independently.
+
+Hosted SQL queries reuse the `@sqlrooms/sql-editor` single-query block surface.
+The same query block can also be opened as a top-level SQL Query artifact tab.
+
+### Document Agent Context
+
+The document editing agent receives a fresh, bounded Markdown snapshot before
+each model step, including block order, IDs, stateful resource references, and
+map runtime issues. It uses those references directly and lists blocks only
+when required references are omitted. Selected-block edits remain restricted
+to their original target. Snapshots are transient model context; document
+changes continue through the existing tools and commands.
+
+## HTML App Revision History
+
+Generated `html-app` artifacts and document HTML app blocks store source
+revisions in `@sqlrooms/app-runtime` state. The CLI registers these room
+commands for palette and AI surfaces:
+
+- `html-app.write-revision`
+- `html-app.rename`
+- `html-app.restore-revision`
+- `html-app.undo-revision`
+- `html-app.redo-revision`
+
+Commands accept an optional `appId`. If omitted, the CLI resolves only a clearly
+selected top-level `html-app` artifact or a single known HTML app runtime.
+Ambiguous document cases fail with a clear message so the caller can ask the
+user to select the target block. Chat undo/redo should execute these commands
+instead of mutating app state through hidden paths or rewriting chat messages.
+
+## Document AI Block Writes
+
+Document AI tools compose generic block-document helpers with CLI-specific
+agent policy. Durable block appends route through the registered
+`block-document.append-blocks` command, so text and chart block creation use the
+same traceable mutation path as palette, API, and future skill surfaces.
+Stateful document blocks use CLI-owned commands that wrap the generic document
+commands and feature-specific state creation:
+
+- `block-document.add-dashboard-block`
+- `block-document.add-data-table-block`
+- `block-document.add-html-app-block`
+- `block-document.add-map-block`
+- `block-document.update-block-metadata`
+
+Topbar artifact title edits route through `artifact.rename`, which preserves
+artifact-type rename hooks and returns previous/new title metadata for traces.
+
+## AI Artifact Context
+
+The assistant captures selected artifact context at run start. The first
+selected item is the primary context artifact unless the run context carries an
+explicit `primaryItemId`.
+
+Direct AI tools can list and read context artifacts with
+`list_context_artifacts` and `read_context_artifact`. Mutating tools should pass
+an explicit `artifactId`; if omitted, dashboard chart tools only use an
+unambiguous primary dashboard. Reference artifacts are not implicit mutation
+targets. `set_primary_context_artifact` updates the current run and session
+context when the assistant creates or switches to a new primary artifact.
+
+## AI Rendering Tools
+
+The CLI UI always makes three read-only rendering tools available across all
+capability profiles:
+
+- `render_artifact_image`
+- `render_document_block_image`
+- `render_dashboard_panel_image`
+
+Visual-inspection requests use these tools directly. If the target block ID is
+missing, the assistant reads the Document once with `block-document.get`, then
+captures the matching block. It does not need to search for map configuration
+commands before inspecting the image. Rendering tools are separate from the
+command registry searched by `search_commands`.
+Visual-inspection instructions follow the registered toolset. Headless/eval
+stores omit browser rendering tools and tell the assistant that visual capture
+is unavailable.
+
+Each tool captures the target that is currently mounted in the workspace and
+returns a bounded PNG directly to the model. The image pixels use a small
+ephemeral cache; persisted chat history keeps only the target and capture
+metadata. Using the image results requires a vision-capable model and a provider
+that supports image tool results.
+Each rendering tool result includes a **View captured image** button showing
+the exact cached PNG, dimensions, and capture time. The preview never recaptures
+the current view. After a reload or eviction from the six-image cache, it
+explains that the capture is unavailable and must be run again.
+SQLRooms maps preserve their WebGL drawing buffer so captures include the
+basemap and interleaved deck.gl layers. Separate deck overlays preserve their
+buffer through deck.gl/luma.gl's default and are checked as well. Maps with an unavailable context or
+explicitly disabled buffer preservation return an actionable error.
+Iframe-backed content is still unsupported.
+
+Pre-release CRDT snapshots and saved AI run context are not migrated across
+document naming changes. Reset incompatible development sync state and saved
+sessions when upgrading. Existing local workspace migrations remain supported.
+
+### Headless external harness evaluation
+
+The browser and both evaluation targets share `createCliDomainSlice`. CLI MCP
+capabilities accept an injected store through `createCliCapabilityRuntime`; the
+browser retains its query approval policy. `block-document.inspect-block` reads a document block using explicit `artifactId`
+and `blockId`, resolving backing state through the registered block type. Maps
+register a reader; other stateful types without readers fail explicitly.
+The isolated host projects command discovery to require explicit document IDs;
+the browser retains its optional current-document read behavior.
+
+See [external harness evaluation](evals/EXTERNAL_HARNESS.md) for the Codex/MCP run
+command, isolated fixture policy, evidence, and fidelity limits. This does not
+change production AI/persistence behavior; browser external mode is a separate
+launcher option described below.
+
+### External Claude execution
+
+The Python launcher supports `sqlrooms --claude --profile document-charts-maps
+./my-project.duckdb` (opening or creating the database). It serves this browser app in `executionMode: "external"`,
+waits for the production MCP bridge, and attaches a native Claude Code terminal
+session. Capability profiles remain independent of execution mode. AI slices,
+model tools, chat actions and AI-settings autosave are absent in external mode;
+dormant saved conversations/settings round-trip through existing persistence.
+Manual authoring remains active. Verified reads of workspace tables run without
+prompting. External or unverified SELECTs and database-writing commands require
+per-request browser approval. CLI data commands materialize local files through
+`db.import-file`, or one SELECT through `db.create-table-from-query`, preserving
+existing tables unless replacement is explicit. `room.add-url-data-source` is
+removed from the CLI registry. See [data import](../../python/sqlrooms/AGENT_WORKSPACES.md#importing-data).
+
+`skills/sqlrooms` is the canonical guidance source for both external harnesses.
+`build-claude-plugin.mjs` generates the distributable plugin in the Python package
+from those files and `claude-plugin` metadata. The Python package's `build:ui`
+step runs this generator after the cached UI build, including when CI or deployment
+builds the wheel directly with `uv build`. Generated
+copies are ignored;
+edit the canonical source and rebuild. See the [launcher guide](../../python/sqlrooms/README.md#interactive-claude-code-workspace)
+and [evaluation adapter](evals/EXTERNAL_HARNESS.md#claude-code-adapter).

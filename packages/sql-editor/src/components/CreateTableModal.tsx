@@ -1,5 +1,4 @@
 import {zodResolver} from '@hookform/resolvers/zod';
-import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {SqlQueryDataSource} from '@sqlrooms/room-shell';
 import {
   Alert,
@@ -41,7 +40,7 @@ import {FC, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useForm} from 'react-hook-form';
 import * as z from 'zod';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {SqlMonacoEditor} from '../SqlMonacoEditor';
+import {SqlCodeMirrorEditor} from '../SqlCodeMirrorEditor';
 
 const VALID_TABLE_OR_COLUMN_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
 
@@ -262,6 +261,9 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
   const createTableFromQuery = useStoreWithSqlEditor(
     (state) => state.db.createTableFromQuery,
   );
+  const qualifyTableName = useStoreWithSqlEditor(
+    (state) => state.db.qualifyTableName,
+  );
   const refreshTableSchemas = useStoreWithSqlEditor(
     (state) => state.db.refreshTableSchemas,
   );
@@ -345,7 +347,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
           // New path: call createTableFromQuery directly
           const qualifiedName =
             schema || database
-              ? makeQualifiedTableName({table: tableName, schema, database})
+              ? qualifyTableName({table: tableName, schema, database})
               : tableName;
 
           await createTableFromQuery(qualifiedName, query, {
@@ -376,6 +378,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
       onAddOrUpdateSqlQuery,
       editDataSource?.tableName,
       createTableFromQuery,
+      qualifyTableName,
       allowMultipleStatements,
       refreshTableSchemas,
       onClose,
@@ -420,7 +423,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
 
           {form.formState.errors.root && (
             <Alert variant="destructive">
-              <AlertDescription className="whitespace-pre-wrap font-mono text-xs">
+              <AlertDescription className="font-mono text-xs whitespace-pre-wrap">
                 {form.formState.errors.root.message}
               </AlertDescription>
             </Alert>
@@ -432,7 +435,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
               control={form.control}
               name="tableName"
               render={({field}) => (
-                <FormItem className="min-w-0 flex-[2]">
+                <FormItem className="min-w-0 flex-2">
                   <FormLabel className="text-xs">
                     {watchView ? 'View name' : 'Table name'}
                   </FormLabel>
@@ -504,21 +507,16 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
             render={({field}) => (
               <FormItem className="relative flex h-[200px] flex-col">
                 <FormControl>
-                  <SqlMonacoEditor
+                  <SqlCodeMirrorEditor
                     connector={connector}
                     value={field.value}
                     onChange={field.onChange}
                     className="absolute inset-0 h-full w-full"
                     options={{
-                      scrollBeyondLastLine: false,
-                      automaticLayout: true,
-                      minimap: {enabled: false},
-                      wordWrap: 'on',
-                      folding: false,
-                      lineNumbers: 'off',
-                      readOnly: isSubmitting,
-                      fixedOverflowWidgets: false, // default true doesn't work well in a modal
+                      lineWrapping: true,
+                      lineNumbers: false,
                     }}
+                    readOnly={isSubmitting}
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />

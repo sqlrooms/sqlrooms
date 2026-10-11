@@ -1,0 +1,202 @@
+import {
+  buildColorScaleLegend as buildGenericColorScaleLegend,
+  coerceFiniteNumber,
+  createColorScaleMapper,
+  type ColorScaleConfig,
+  type ResolvedColorLegend,
+} from '@sqlrooms/color-scales';
+import type * as arrow from 'apache-arrow';
+import type {DeckColorScaleConfig} from './colorScaleFunction';
+
+function resolveFieldName(
+  schemaOwner: arrow.Table | arrow.RecordBatch,
+  requestedField: string,
+) {
+  const exactMatch = schemaOwner.schema.fields.find(
+    (field) => field.name === requestedField,
+  )?.name;
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const caseInsensitiveMatches = schemaOwner.schema.fields
+    .map((field) => field.name)
+    .filter(
+      (fieldName) => fieldName.toLowerCase() === requestedField.toLowerCase(),
+    );
+
+  if (caseInsensitiveMatches.length === 1) {
+    return caseInsensitiveMatches[0]!;
+  }
+
+  return undefined;
+}
+
+function getRowValue(row: unknown, fieldName: string) {
+  if (!row || typeof row !== 'object') {
+    return undefined;
+  }
+
+  const object = row as Record<string, unknown>;
+  const sources = [
+    object,
+    object.properties as Record<string, unknown> | undefined,
+  ].filter((value): value is Record<string, unknown> =>
+    Boolean(value && typeof value === 'object'),
+  );
+
+  for (const source of sources) {
+    if (fieldName in source) {
+      return source[fieldName];
+    }
+
+    const caseInsensitiveMatches = Object.keys(source).filter(
+      (key) => key.toLowerCase() === fieldName.toLowerCase(),
+    );
+    if (caseInsensitiveMatches.length === 1) {
+      return source[caseInsensitiveMatches[0]!] as unknown;
+    }
+  }
+
+  return undefined;
+}
+
+function getGeoArrowOrRowValue(options: {
+  value: unknown;
+  fieldName: string;
+  vector: arrow.Vector;
+}) {
+  const {value, fieldName, vector} = options;
+  if (
+    value &&
+    typeof value === 'object' &&
+    'index' in value &&
+    typeof (value as {index?: unknown}).index === 'number'
+  ) {
+    const objectInfo = value as {
+      index: number;
+      data?: {data?: arrow.Table | arrow.RecordBatch};
+    };
+    const batch = objectInfo.data?.data;
+    const batchFieldName = batch
+      ? resolveFieldName(batch, fieldName)
+      : undefined;
+
+    if (batch && batchFieldName) {
+      return batch.getChild(batchFieldName)?.get(objectInfo.index);
+    }
+
+    if (batch) {
+      // Batch is present (GeoArrow path) but the field wasn't found in it.
+      // The index is batch-local and cannot be safely used against the global
+      // vector which spans all batches. Return undefined so the mapper
+      // applies nullColor rather than reading the wrong row.
+      return undefined;
+    }
+
+    // No batch context (e.g. GeoJSON binary path): the index is global,
+    // so using the table-level vector is safe.
+    return vector.get(objectInfo.index);
+  }
+
+  return getRowValue(value, fieldName);
+}
+
+function getColumnValues(vector: arrow.Vector) {
+  return Array.from({length: vector.length}, (_, index) => vector.get(index));
+}
+
+function getColumn(table: arrow.Table, field: string) {
+  const resolvedFieldName = resolveFieldName(table, field);
+  if (!resolvedFieldName) {
+    throw new Error(`Unknown colorScale field "${field}".`);
+  }
+
+  const vector = table.getChild(resolvedFieldName);
+  if (!vector) {
+    throw new Error(`Unable to read colorScale field "${resolvedFieldName}".`);
+  }
+
+  return {
+    fieldName: resolvedFieldName,
+    vector,
+  };
+}
+
+const MISSING_FIELD_COLOR: [number, number, number, number] = [255, 0, 0, 200];
+
+export function compileColorScale(options: {
+  table: arrow.Table;
+  colorScale: DeckColorScaleConfig;
+}) {
+  const {table, colorScale} = options;
+  let column;
+  try {
+    column = getColumn(table, colorScale.field);
+  } catch {
+    console.warn(
+      `[compileColorScale] Field "${colorScale.field}" not found in dataset. Color scale will use fallback color.`,
+    );
+    return () => MISSING_FIELD_COLOR;
+  }
+  const {fieldName, vector} = column;
+  let mapper: ReturnType<typeof createColorScaleMapper>;
+  try {
+    mapper = createColorScaleMapper({
+      colorScale,
+      values: getColumnValues(vector),
+    });
+  } catch (err) {
+    console.warn(
+      `[compileColorScale] Failed to create color scale for field "${colorScale.field}":`,
+      err,
+    );
+    return () => MISSING_FIELD_COLOR;
+  }
+
+  return (value: unknown) => {
+    const color = mapper(getGeoArrowOrRowValue({value, fieldName, vector}));
+    const rawOpacity = colorScale.opacity;
+    const opacity =
+      typeof rawOpacity === 'number' && Number.isFinite(rawOpacity)
+        ? Math.max(0, Math.min(1, rawOpacity))
+        : 1;
+    if (opacity >= 1) return color;
+    const rgba = color as [number, number, number, number?];
+    return [
+      rgba[0],
+      rgba[1],
+      rgba[2],
+      Math.round(Math.max(0, Math.min(255, (rgba[3] ?? 255) * opacity))),
+    ] as [number, number, number, number];
+  };
+}
+
+export function buildColorScaleLegend(options: {
+  table: arrow.Table;
+  colorScale: ColorScaleConfig;
+  title?: string;
+}): ResolvedColorLegend | null {
+  const {table, colorScale} = options;
+  let column;
+  try {
+    column = getColumn(table, colorScale.field);
+  } catch {
+    return null;
+  }
+  const {vector} = column;
+  const values = getColumnValues(vector);
+
+  if (
+    colorScale.type !== 'categorical' &&
+    values.every((value) => coerceFiniteNumber(value) === undefined)
+  ) {
+    return null;
+  }
+
+  return buildGenericColorScaleLegend({
+    colorScale,
+    values,
+    title: options.title,
+  });
+}

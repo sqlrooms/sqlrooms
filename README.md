@@ -1,8 +1,29 @@
-# <img src=https://github.com/user-attachments/assets/dd6b2929-29f5-4c8b-a0c0-51ec84603e6b width=23> SQLRooms
+<h1>
+  <picture>
+    <source
+      media="(prefers-color-scheme: dark)"
+      srcset="docs/public/sqlrooms-logo-text-white.svg"
+    >
+    <img src="docs/public/sqlrooms-logo-text.svg" alt="SQLRooms" height="44">
+  </picture>
+</h1>
 
 Building blocks for React data analytics applications powered by [DuckDB](https://duckdb.org/docs/api/wasm/overview.html)
 
 [Documentation](https://sqlrooms.org/) | [Examples](https://sqlrooms.org/examples.html)
+
+---
+
+SQLRooms is part of the [OpenJS Foundation](https://openjsf.org/) through [vis.gl](http://vis.gl) and [Open Visualization Collaboration Space](https://www.openvisualization.org/).
+
+<div style="display:flex; gap:20px; align-items:center">
+  <a href="https://openjsf.org/">
+    <img src="docs/public/openjsf-logo.svg" alt="OpenJS Foundation" height="42">
+  </a>
+
+</div>
+
+---
 
 <!-- INCLUDE:overview.md -->
 
@@ -11,7 +32,7 @@ Building blocks for React data analytics applications powered by [DuckDB](https:
 SQLRooms provides a comprehensive foundation and rich set of building blocks for creating modern, interactive data-analytics applications that can run entirely in the browser.
 At its core is the concept of a **_Room_** — a self‑contained workspace where data lives, analysis happens, and (soon) collaborators meet. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools with or without a backend.
 
-![SQLRooms example apps](docs/media/overview/collage.webp)
+![SQLRooms example apps](https://sqlrooms.org/media/overview/collage.webp)
 
 ## Why SQLRooms?
 
@@ -28,16 +49,16 @@ SQLRooms is designed to empower developers and users with a modern, modular anal
 </div> -->
 
 <div style="display: flex; justify-content: center; margin: 2rem 0;">
-  <video src="docs/media/sqlrooms-intro-2.mp4" alt="SQLRooms AI example app" width="450" controls></video>
+  <video src="https://sqlrooms.org/media/sqlrooms-intro-2.mp4" alt="SQLRooms AI example app" width="450" controls></video>
 </div>
 
 ## Why Single-Node?
 
-SQLRooms is designed for single-node analytics: all computation happens on your device, whether in the browser or a desktop app (e.g. via [Electron](https://www.electronjs.org/)), with no backend required. Data can remain local if you choose, or be loaded from external sources like S3—always giving you full control over how and where your data is processed.
+SQLRooms is designed for single-node analytics: all computation happens on your device, whether in the browser or a desktop app (e.g. via [Electron](https://www.electronjs.org/)), with no backend required. Data can remain local if you choose, or be loaded from external sources like S3—always giving you full control over how and where your data is processed. If you are evaluating architecture options for your organization, see [Deployment Scenarios](https://sqlrooms.org/deployment-scenarios).
 
 - **Privacy:** All data remains on your device for simplified compliance and peace of mind—nothing leaves your browser unless you choose.
 - **Own Your Data:** You control your files and data, with no vendor lock-in or forced cloud storage. Your work is portable and future-proof.
-- **Offline Use:** SQLRooms [supports offline work](http://sqlrooms.org/offline-use)—query, analyze, and visualize your data even without an internet connection.
+- **Offline Use:** SQLRooms [supports offline work](https://sqlrooms.org/offline-use)—query, analyze, and visualize your data even without an internet connection.
 - **Fast Local Querying:** Queries run instantly in your browser, with no network roundtrip or server lag—results are available as soon as you ask.
 - **Private AI Insights:** AI agents generate insights and run queries locally, so your data is never shared with external model providers. You get the power of AI-driven analytics without sacrificing privacy.
 
@@ -49,15 +70,17 @@ While SQLRooms does not yet implement sync or collaboration, it is already capab
 
 ## Next Steps
 
-- **Review the [Key Concepts](http://sqlrooms.org/key-concepts)** to understand the core ideas and architecture.
+- **Review the [Key Concepts](https://sqlrooms.org/key-concepts)** to understand the core ideas and architecture.
 
-- **Explore the [Modular Architecture](http://sqlrooms.org/modular-architecture)** to see how you can compose and extend your app.
+- **Explore the [Modular Architecture](https://sqlrooms.org/modular-architecture)** to see how you can compose and extend your app.
 
-- **Check the [Example Applications](http://sqlrooms.org/examples)** to see what can be built with the framework.
+- **Check the [Example Applications](https://sqlrooms.org/examples)** to see what can be built with the framework.
 
-<!-- - **Quick start the [Getting Started Guide](http://sqlrooms.org/getting-started)** to set up your first room.
+- **Compare [Deployment Scenarios](https://sqlrooms.org/deployment-scenarios)** to choose the right setup for your team.
 
-- **Read the [API reference](http://sqlrooms.org/packages/)** for deeper integration. -->
+<!-- - **Quick start the [Getting Started Guide](https://sqlrooms.org/getting-started)** to set up your first room.
+
+- **Read the [API reference](https://sqlrooms.org/packages/)** for deeper integration. -->
 
 <!-- END:overview.md -->
 
@@ -65,7 +88,7 @@ While SQLRooms does not yet implement sync or collaboration, it is already capab
 
 # Getting Started with SQLRooms
 
-SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture and core ideas, check out the [Key Concepts](http://sqlrooms.org/key-concepts) and [Modular Architecture](http://sqlrooms.org/modular-architecture) pages.
+SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture and core ideas, check out the [Key Concepts](https://sqlrooms.org/key-concepts) and [Modular Architecture](https://sqlrooms.org/modular-architecture) pages.
 
 ## Try the Minimal Example
 
@@ -74,7 +97,7 @@ The [Minimal Example](https://github.com/sqlrooms/examples/tree/main/minimal) is
 To create a new project from the minimal example, run:
 
 ```bash
-npx degit sqlrooms/examples/minimal my-minimal-app/
+npx giget gh:sqlrooms/examples/minimal my-minimal-app/
 cd my-minimal-app
 npm install
 npm run dev
@@ -89,7 +112,7 @@ The [Get Started Example](https://github.com/sqlrooms/examples/tree/main/get-sta
 To create a new project from the get-started example, run:
 
 ```bash
-npx degit sqlrooms/examples/get-started myapp/
+npx giget gh:sqlrooms/examples/get-started myapp/
 cd myapp
 npm install
 npm run dev
@@ -131,47 +154,25 @@ yarn add @sqlrooms/room-shell @sqlrooms/duckdb @sqlrooms/ui
 
 ### Configure Tailwind CSS
 
-You can follow [this guide](https://v3.tailwindcss.com/docs/installation) to install and configure Tailwind 3 (Tailwind 4 support is still experimental).
+You can follow [this guide](https://tailwindcss.com/docs/installation/using-vite) to install and configure Tailwind 4.
 
 ::: code-group
 
 ```bash [npm]
-npm install -D tailwindcss@3
-npx tailwindcss init
+npm install -D tailwindcss@4
 ```
 
 ```bash [pnpm]
-pnpm add -D tailwindcss@3
-npx tailwindcss init
+pnpm add -D tailwindcss@4
 ```
 
 ```bash [yarn]
-yarn add -D tailwindcss@3
-npx tailwindcss init
+yarn add -D tailwindcss@4
 ```
 
 :::
 
-SQLRooms provides a Tailwind preset that includes all the necessary styles. Update your `tailwind.config.js` or `tailwind.config.ts`:
-
-```typescript
-import {sqlroomsTailwindPreset} from '@sqlrooms/ui';
-import type {Config} from 'tailwindcss';
-
-const config = {
-  presets: [sqlroomsTailwindPreset()],
-  content: [
-    // Your content paths...
-    './src/**/*.{ts,tsx}',
-    // Add SQLRooms packages to content paths
-    './node_modules/@sqlrooms/**/dist/**/*.js',
-  ],
-} satisfies Config;
-
-export default config;
-```
-
-Make sure to import the preset Tailwind styles in your main CSS file:
+SQLRooms provides a Tailwind preset that includes all the necessary styles. Make sure to import the preset Tailwind styles in your main CSS file:
 
 ```css
 @import '@sqlrooms/ui/tailwind-preset.css';
@@ -201,7 +202,6 @@ export type RoomState = RoomShellSliceState & {
 2. Create your room store:
 
 ```typescript
-import {LayoutTypes} from '@sqlrooms/room-shell';
 import {DatabaseIcon} from 'lucide-react';
 import {MainView} from './components/MainView';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
@@ -225,26 +225,23 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
       layout: {
         config: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: 'data-sources',
-            second: 'main',
-            splitPercentage: 30,
-          },
+          type: 'split',
+          direction: 'row',
+          children: [
+            {type: 'panel', id: 'data-sources', defaultSize: '30%'},
+            'main',
+          ],
         },
         panels: {
           'data-sources': {
             title: 'Data Sources',
             icon: DatabaseIcon,
             component: DataSourcesPanel,
-            placement: 'sidebar',
           },
           main: {
             title: 'Main view',
             icon: () => null,
             component: MainView,
-            placement: 'main',
           },
         },
       },
@@ -285,10 +282,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              // layout configuration
-            },
+            type: 'split',
+            direction: 'row',
+            children: [
+              {type: 'panel', id: 'data-sources', defaultSize: '30%'},
+              'main',
+            ],
           },
           panels: {
             // Panel definitions
@@ -315,6 +314,7 @@ export const Room = () => (
       <RoomShell.Sidebar />
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
+      <RoomShell.CommandPalette />
     </RoomShell>
   </ThemeProvider>
 );
@@ -395,9 +395,26 @@ The `useSql` hook automatically re-runs queries when the database state changes 
 
 ## Develop locally
 
-    pnpm install
-    pnpm build
-    pnpm dev
+Repository development and testing require Node.js `>=24.9`. This tooling
+requirement does not change the Node.js versions supported by published
+packages.
+
+```bash
+pnpm install
+pnpm build
+```
+
+Start all core packages in dev/watch mode:
+
+```bash
+pnpm dev
+```
+
+Start a specific workspace (plus all of its dependencies), for example an example app:
+
+```bash
+pnpm dev notebook-example
+```
 
 ## Develop documentation locally
 
@@ -453,4 +470,4 @@ This project uses Git Large File Storage (LFS) for managing media files in the d
    git lfs pull
    ```
 
-4. When adding new media files to the `docs/media/` directory, they will be automatically tracked by Git LFS as specified in the `.gitattributes` file.
+4. When adding new media files to the `docs/public/media/` directory, they will be automatically tracked by Git LFS as specified in the `.gitattributes` file.

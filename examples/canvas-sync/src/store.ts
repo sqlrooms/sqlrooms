@@ -1,8 +1,15 @@
+import {databaseUrl, pageToken} from './auth';
 import {Canvas, CanvasSliceState, createCanvasSlice} from '@sqlrooms/canvas';
 import {createCanvasCrdtMirror} from '@sqlrooms/canvas/crdt';
 import {
+  CellsSliceState,
+  createCellsSlice,
+  createDefaultCellRegistry,
+} from '@sqlrooms/cells';
+import {
   CrdtSliceState,
   createCrdtSlice,
+  createIndexedDbDocStorage,
   // createIndexedDbDocStorage,
   createWebSocketSyncConnector,
 } from '@sqlrooms/crdt';
@@ -10,13 +17,14 @@ import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createRoomShellSlice,
   createRoomStore,
-  LayoutTypes,
+  LayoutConfig,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {setAutoFreeze} from 'immer';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {DataSourcesPanel} from './DataSourcesPanel';
+import {DataSourcesPanel} from './components/DataSourcesPanel';
+import {CanvasArtifactPanel} from './components/CanvasArtifactPanel';
 
 // Loro Mirror can’t stamp $cid on frozen objects, so disable auto-freeze.
 setAutoFreeze(false);
@@ -27,17 +35,17 @@ export type AppConfig = z.infer<typeof AppConfig>;
 
 export type RoomState = RoomShellSliceState &
   CanvasSliceState &
+  CellsSliceState &
   CrdtSliceState & {
     app: {
       config: AppConfig;
       setApiKey: (apiKey: string) => void;
     };
   };
-export const RoomPanelTypes = z.enum(['main', 'data'] as const);
+export const RoomPanelTypes = z.enum(['main', 'left', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-const SERVER_URL =
-  (import.meta as any).env?.VITE_SYNC_WS_URL ?? 'ws://localhost:4000';
+const SERVER_URL = databaseUrl.href;
 const ROOM_ID =
   (import.meta as any).env?.VITE_SYNC_ROOM_ID ?? 'canvas-sync-room';
 
@@ -45,39 +53,62 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => {
     return {
       ...createRoomShellSlice({
-        connector: createWebSocketDuckDbConnector({wsUrl: SERVER_URL}),
+        connector: createWebSocketDuckDbConnector({
+          wsUrl: SERVER_URL,
+          authToken: pageToken,
+        }),
         layout: {
           config: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: 'main',
-          },
+            id: 'root',
+            type: 'split',
+            direction: 'row',
+            children: [
+              {
+                type: 'tabs',
+                id: RoomPanelTypes.enum.left,
+                children: [RoomPanelTypes.enum.data],
+                defaultSize: '20%',
+                maxSize: '50%',
+                minSize: '300px',
+                activeTabIndex: 0,
+                collapsible: true,
+                collapsed: true,
+                collapsedSize: 0,
+                hideTabStrip: true,
+              },
+              {
+                type: 'panel',
+                id: RoomPanelTypes.enum.main,
+                panel: RoomPanelTypes.enum.main,
+                defaultSize: '80%',
+              },
+            ],
+          } satisfies LayoutConfig,
           panels: {
-            main: {
-              title: 'Canvas',
-              icon: () => null,
-              component: Canvas,
-              placement: 'main',
-            },
-            data: {
+            [RoomPanelTypes.enum.data]: {
               title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
-              placement: 'sidebar',
+            },
+            [RoomPanelTypes.enum.main]: {
+              title: 'Canvas',
+              icon: () => null,
+              component: CanvasArtifactPanel,
             },
           },
         },
       })(set, get, store),
 
-      ...createCanvasSlice({
-        ai: {
-          getApiKey: () => get().app.config.apiKey,
-          defaultModel: 'gpt-4.1-mini',
-        },
+      ...createCellsSlice({
+        cellRegistry: createDefaultCellRegistry(),
       })(set, get, store),
 
+      ...createCanvasSlice({})(set, get, store),
+
       ...createCrdtSlice({
-        // storage: createIndexedDbDocStorage({key: 'sqlrooms-canvas-sync'}),
+        storage: createIndexedDbDocStorage({key: 'sqlrooms-canvas-sync'}),
         sync: createWebSocketSyncConnector({
+          token: pageToken,
           url: SERVER_URL,
           roomId: ROOM_ID,
           // Server already sends a snapshot on join; only send incremental updates.

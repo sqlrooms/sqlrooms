@@ -1,0 +1,181 @@
+/**
+ * {@include ../README.md}
+ * @packageDocumentation
+ */
+
+export {ColorScaleLegend} from '@sqlrooms/color-scales';
+export {createDeckJsonSpecFromDatasets} from './createDeckJsonSpecFromDatasets';
+export {DeckMapBlockSettings} from './BlockMapSettings';
+export {
+  DeckMapSettingsPanel,
+  type DeckMapSettingsPanelProps,
+} from './MapSettings';
+export {
+  DeckMapBlockRenderer,
+  ensureDeckMapResourceState,
+  type DeckMapBlockRendererProps,
+} from './block';
+export {
+  asDeckJsonMapConfig,
+  createEmptyDeckMapConfig,
+  createDeckMapDashboardPanelConfig,
+  DEFAULT_DECK_MAP_MAX_DATA_POINTS,
+  DECK_MAP_DASHBOARD_PANEL_TYPE,
+  isDeckMapDashboardSqlDatasetSource,
+  isDeckMapDashboardTableDatasetSource,
+} from './mapConfig';
+export {getDeckMapDataPolicy, type DeckMapDataPolicy} from './mapDataPolicy';
+export {
+  applyDeckMapPointBinding,
+  createDeckMapDashboardConfigForTable,
+  createDeckMapConfigForTable,
+  createDeckMapDashboardPanelConfigForTable,
+  createDeckMapPointTransformSql,
+  findDeckMapLongitudeLatitudeColumns,
+  findGeometryColumn,
+  findLongitudeLatitudeColumns,
+  normalizeDeckMapFillColor,
+  normalizeDeckMapPointConfig,
+  quoteDeckMapSqlIdentifier,
+  quoteDeckMapSqlTableReference,
+  regenerateMapConfigForTable,
+} from './mapConfigUtils';
+export type {
+  DeckMapConfigColumn,
+  DeckMapFillColor,
+  DeckMapPointBinding,
+  DeckMapTableReference,
+} from './mapConfigUtils';
+export {
+  getFirstDatasetSourceTableName,
+  hasSqlOnlyDatasetSource,
+} from './datasetSourceUtils';
+export type {DeckMapDatasetSourceConfig} from './datasetSourceUtils';
+export {
+  DeckMapResourceConfigParameter,
+  DeckMapResourceToolParameters,
+} from './mapAiConfig';
+export {
+  normalizeAiDeckMapConfig,
+  prepareAiDeckMapConfig,
+  validateAndFixColorScaleFields,
+  type NormalizeAiDeckMapConfigOptions,
+  type PrepareAiDeckMapConfigOptions,
+  type ResolveColorScaleTable,
+} from './aiNormalize';
+export {
+  DeckMapResourceConfigError,
+  assertDeckMapResourceConfig,
+  getDeckMapResourceAiInstructions,
+  getDeckMapResourceConfigIssues,
+  mergeDeckMapResourceConfigPatch,
+  type DeckMapResourceConfigMergeOptions,
+  type DeckMapResourceConfigIssue,
+  type DeckMapResourceConfigValidationOptions,
+} from './mapResourceAuthoring';
+export {
+  createOrUpdateDeckMapResource,
+  type CreateOrUpdateDeckMapResourceHost,
+  type CreateOrUpdateDeckMapResourceParams,
+  type CreateOrUpdateDeckMapResourceResult,
+} from './createOrUpdateDeckMapResource';
+export {
+  DeckMapResourceSchema,
+  DeckMapsSliceConfig,
+  createDeckMapsSlice,
+  useStoreWithDeckMaps,
+} from './DeckMapsSlice';
+export type {
+  DeckMapResource,
+  DeckMapRuntimeIssue,
+  DeckMapRuntimeIssueReporter,
+  DeckMapsSliceState,
+} from './DeckMapsSlice';
+export {
+  DeckMapSurface,
+  directDeckMapDataAdapter,
+  type DeckMapDataAdapter,
+  type DeckMapSurfaceProps,
+} from './DeckMapSurface';
+export {
+  DECK_MAP_BLOCK_DEFAULT_HEIGHT,
+  DECK_MAP_BLOCK_DEFAULT_TITLE,
+  DECK_MAP_BLOCK_TYPE,
+  createDeckMapBlockDocumentCommandType,
+  createDeckMapBlockDocumentType,
+  type DeckMapBlockDocumentRegistrationOptions,
+} from './blockDocumentRegistration';
+export type {
+  DeckMapConfigMode,
+  DeckMapDashboardFitToDataConfig,
+  CreateDeckMapDashboardPanelConfigOptions,
+  DeckMapDashboardDatasetConfig,
+  DeckMapDataPolicyOverride,
+  DeckMapDashboardInteractionConfig,
+  DeckMapDashboardPanelConfig,
+  DeckMapConfig,
+  DeckMapDatasetConfig,
+  DeckMapDatasetSource,
+  DeckMapFitToDataConfig,
+  DeckMapInteractionConfig,
+} from './mapConfig';
+export {DeckJsonMap} from './DeckJsonMap';
+export {DECK_MAP_BASEMAP_STYLES, getDefaultDeckMapStyle} from './mapStyles';
+export {
+  createProtomapsBasemapProvider,
+  createProtomapsDefaultStyles,
+  createProtomapsStyle,
+  type ProtomapsFlavor,
+} from './protomapsStyles';
+export {
+  DeckMapDefaultStylesProvider,
+  useDeckMapDefaultStyles,
+} from './DeckMapDefaultStylesProvider';
+export {
+  resolveDeckMapStyle,
+  type DeckMapBasemapProvider,
+  type DeckMapDefaultStyles,
+  type DeckMapStyle,
+} from './basemap';
+export {
+  ColorScaleFunction,
+  GeometryEncodingHint as DeckGeometryEncodingHint,
+  DeckJsonMapLayerSpec,
+  DeckJsonMapSpec,
+  DeckMapGeneratedTransform,
+  LayerBindingConfig,
+  LayerBindingProps,
+} from './DeckJsonMapSpec';
+export {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
+export {prepareDeckDataset} from './prepare/prepareDeckDataset';
+
+export type {ColorLegendConfig, ColorScaleConfig} from '@sqlrooms/color-scales';
+export type {
+  GeometryEncodingHint,
+  PreparedDeckDataset,
+  PreparedGeoArrowLayerData,
+  ResolvedGeometryColumn,
+  ResolvedGeometryEncoding,
+} from './prepare/types';
+export {
+  isArrowTableDatasetInput,
+  isSqlDatasetInput,
+  isTableDatasetInput,
+} from './types';
+export {
+  DECK_TABLE_DATASET_SOURCE_RELATION,
+  createDeckTableDatasetSql,
+} from './datasets/tableDatasetSql';
+export type {
+  CreateDeckJsonSpecFromDatasetsOptions,
+  DeckArrowTableDatasetInput,
+  DeckAutoLayerType,
+  DeckDatasetInput,
+  DeckJsonMapHandle,
+  DeckJsonMapProps,
+  DeckJsonSpecDatasetHint,
+  DeckSqlDatasetInput,
+  DeckTableDatasetInput,
+  DeckTable,
+  PreparedDeckDatasetState,
+} from './types';

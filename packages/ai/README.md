@@ -1,459 +1,591 @@
-An AI integration package for SQLRooms that provides components and utilities for adding AI-powered features to your data applications. This package enables natural language querying, data analysis, and AI-assisted insights.
+High-level AI package for SQLRooms.
 
-## Features
+This package combines:
 
-- 🤖 **AI Query Interface**: Natural language to SQL conversion
-- 📊 **Automated Analysis**: AI-powered data analysis and insights
-- 🔄 **State Management**: Zustand-based state management for AI features
-- 🧩 **UI Components**: Ready-to-use components for AI interactions
-- 📝 **Query History**: Track and manage AI query history
-- 🎯 **Tool Integration**: Framework for AI tools and actions
+- AI slice state/logic (`@sqlrooms/ai-core`)
+- AI settings UI/state (`@sqlrooms/ai-settings`)
+- AI config schemas (`@sqlrooms/ai-config`)
+- SQL query and schema discovery tool helpers (`createDefaultAiTools`, `createQueryTool`)
+
+Use this package when you want AI chat + tool execution in a SQLRooms app without wiring low-level pieces manually.
+
+`createDefaultAiInstructions` includes a hybrid DuckDB table context: small
+current-database `main` catalogs include full schemas for every table, while
+larger catalogs include a few full schemas, additional table names with row
+counts, and instructions to call
+`read_table_schema` before querying tables whose columns are not shown.
+`createDefaultAiTools` registers `list_tables` and `read_table_schema` by
+default so apps can expose the same table discovery workflow. These tools
+search the current database `main` schema by default, and accept broader
+`schema`, `database`, and pattern filters for other visible schemas or attached
+databases.
+
+`createDefaultAiTools` also registers command-layer tools when the room store
+has a command registry:
+
+- `search_commands` for compact intent-based command discovery;
+- `get_command` for full command metadata and input schema after selecting a
+  command;
+- `execute_command` for invoking the selected command;
+- `list_commands` for broad command-registry debugging.
+
+Model-facing flows should prefer
+`search_commands -> get_command (when input schema is needed) -> execute_command`
+instead of repeatedly listing the full command catalog. Keep schemas out of
+search results by default; commands with `requiresInput: false` can run with
+default input without a schema lookup. Search covers registered commands only;
+other directly available AI tools should be called directly.
+
+Search requires text relevance before applying resource/action hints or
+availability bonuses. It ignores common filler words and matches query tokens
+as words or command-ID segments. Read requests (`get`, `read`, `list`, `show`,
+`inspect`) favor relevant read-only commands; exact command IDs retain priority.
+Resource and action parameters remain ranking hints, while `riskLevel` is a
+filter. Unmatched queries return zero commands; an empty query can still browse
+the catalog. The reported match count is computed before the result limit.
+
+`execute_command` refuses high-risk or
+confirmation-required commands until the caller sets `confirmed: true` after an
+explicit user confirmation. Skill runtimes can pass `skillId`, `toolCallId`,
+`traceId`, and metadata through tool execution options; the command invocation
+receives those fields for trace callbacks. When the current AI run has a
+primary artifact context item, command tools also propagate it as the
+invocation target. They read the mutable tool execution context first and fall
+back to the invoking session's stored run context, never the visibly selected
+chat. This keeps omitted artifact targets stable for the turn while allowing
+`set_primary_context_artifact` to retarget later calls in the same turn.
+`DEFAULT_SKILL_RUNTIME_TOOL_POLICY`
+documents the default command, artifact-context, table/query, and high-level
+agent tool policy for future skill runtimes. Hosts with product-specific agent
+tool names can call `createSkillRuntimeToolPolicy()` to substitute names such
+as their own block document agent while keeping the package defaults generic.
+
+Hosts can scope a command tool instance with `commandGuard`. Denied descriptors
+are omitted from `search_commands`, `list_commands`, and `get_command`, and
+`execute_command` refuses them before validation, confirmation, or invocation.
+The refusal uses `command-not-available-to-caller` unless the guard supplies a
+custom code; a custom message can direct the model to an owning agent tool.
+Direct `store.commands.invokeCommand` calls are unaffected.
+
+```tsx
+const commandTools = createCommandTools(store, {
+  commandGuard: (descriptor) =>
+    descriptor.id.startsWith('block-document.') && !descriptor.readOnly
+      ? {
+          allowed: false,
+          code: 'use-document-agent',
+          message: 'Use the document agent tool for document edits.',
+        }
+      : {allowed: true},
+});
+```
 
 ## Installation
 
 ```bash
-npm install @sqlrooms/ai
-# or
-yarn add @sqlrooms/ai
+npm install @sqlrooms/ai @sqlrooms/room-shell @sqlrooms/duckdb @sqlrooms/ui
 ```
 
-Since version 0.8.2, you will need to install the LLM providers you want to use. For example, to use XAI, you can install the `@ai-sdk/xai` package:
-
-```bash
-npm install @ai-sdk/xai
-```
-
-Since version 0.26.0, you don't need to install the LLM providers anymore. You can use AiSettingsSlice to configure the LLM providers, and sqlrooms/ai will use the configured LLM providers via OpenAI compatible SDK.
+## Quick start
 
 ```tsx
-import {createAiSettingsSlice} from '@sqlrooms/ai';
-
-// Create a room store with AI capabilities
-const {roomStore, useRoomStore} = createRoomStore({
-  ...createAiSettingsSlice({
-    config: {
-      providers: {
-    openai: {
-      baseUrl: 'https://api.openai.com/v1',
-      apiKey: '',
-      models: [
-        {
-          id: 'gpt-4.1',
-          modelName: 'gpt-4.1',
-        },
-      },
-    },
-  }),
-});
-```
-
-You can also pass a custom model provider to the AiSlice.
-
-```tsx
-import {createAiSlice} from '@sqlrooms/ai';
-
-// Create a room store with AI capabilities
-const {roomStore, useRoomStore} = createRoomStore({
-  ...createAiSlice({
-    getCustomModel: () => {
-      return xai('grok-4');
-    },
-    ...
-  }),
-});
-```
-
-## Basic Usage
-
-### Setting Up AI Integration
-
-```tsx
-import {createAiSlice} from '@sqlrooms/ai';
-import {createRoomStore} from '@sqlrooms/room-shell';
-
-// Create a room store with AI capabilities
-const {roomStore, useRoomStore} = createRoomStore({
-  // Base room configuration
-  ...createRoomShellSlice({
-    config: {
-      // Your room configuration
-    },
-  }),
-  // Add AI settings slice
-  ...createAiSettingsSlice({
-    config: {
-      // Your AI settings configuration
-    },
-  }),
-  // Add AI slice
-  ...createAiSlice({
-    initialPrompt: 'What insights can you provide from my data?',
-    // Optional: Add custom tools
-    tools: {
-      // Your custom tools
-    },
-    // Optional: Custom instructions for the AI
-    getInstructions: (tablesSchema) => {
-      return `Analyze the following tables: ${tablesSchema.map((t) => t.name).join(', ')}`;
-    },
-  }),
-});
-
-function MyApp() {
-  return (
-    <RoomStateProvider roomStore={roomStore}>
-      <MyDataApp />
-    </RoomStateProvider>
-  );
-}
-```
-
-### Advanced Store Configuration
-
-For more complex applications, you can combine multiple slices:
-
-```tsx
-import {createAiSlice} from '@sqlrooms/ai';
 import {
-  createSqlEditorSlice,
-  createDefaultSqlEditorConfig,
-} from '@sqlrooms/sql-editor';
-import {createRoomStore, createRoomShellSlice} from '@sqlrooms/room-shell';
+  AiSettingsSliceState,
+  AiSliceState,
+  createAiSettingsSlice,
+  createAiSlice,
+  createDefaultAiInstructions,
+  createDefaultAiTools,
+} from '@sqlrooms/ai';
+import {
+  createRoomShellSlice,
+  createRoomStore,
+  RoomShellSliceState,
+} from '@sqlrooms/room-shell';
 
-// Define your application state type
-export type RoomState = RoomState<RoomConfig> &
-  AiSliceState &
-  SqlEditorSliceState;
+type RoomState = RoomShellSliceState & AiSliceState & AiSettingsSliceState;
 
-// Create the store with multiple slices
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
-    // Base room slice
     ...createRoomShellSlice({
       config: {
-        // Base room slice config
-      },
-    }),
-    // AI settings slice
-    ...createAiSettingsSlice({
-      config: {
-        // Your AI settings configuration
-      },
-    }),
-    // Ai config slice
-    ...createAiConfigSlice({
-      config: {
-        // Optional: Pre-configured AI sessions
-        sessions: [
+        dataSources: [
           {
-            id: 'default-session',
-            name: 'Default Analysis',
-            modelProvider: 'openai',
-            model: 'gpt-4o',
-            analysisResults: [],
-            createdAt: new Date(),
+            type: 'url',
+            tableName: 'earthquakes',
+            url: 'https://huggingface.co/datasets/sqlrooms/earthquakes/resolve/main/earthquakes.parquet',
           },
         ],
-        currentSessionId: 'default-session',
       },
-    }),
-    // AI slice
+    })(set, get, store),
+
+    ...createAiSettingsSlice()(set, get, store),
+
     ...createAiSlice({
-      initialPrompt: 'What insights can you provide from my data?',
       tools: {
-        // Your custom tools
+        ...createDefaultAiTools(store),
       },
-      getInstructions: (tablesSchema) => {
-        return `Analyze the following tables: ${tablesSchema.map((t) => t.name).join(', ')}`;
+      getInstructions: () => createDefaultAiInstructions(store),
+      // Optional: observe completed, non-aborted turns for app-owned behavior
+      // such as audit logging or analytics.
+      onChatFinish: ({sessionId, messages}) => {
+        void sessionId;
+        void messages;
       },
-    }),
-    // SQL Editor slice
-    ...createSqlEditorSlice(),
+    })(set, get, store),
   }),
 );
 ```
 
-### Using AI Query Controls
+## Render chat UI
 
 ```tsx
-import {QueryControls} from '@sqlrooms/ai';
+import {Chat} from '@sqlrooms/ai';
+import {useRoomStore} from './store';
 
-function AiQueryPanel() {
+function AiPanel() {
+  const updateProvider = useRoomStore(
+    (state) => state.aiSettings.updateProvider,
+  );
+
   return (
-    <div className="rounded-lg border p-4">
-      <h2 className="mb-4 text-xl font-bold">Ask AI</h2>
-      <QueryControls
-        placeholder="Ask a question about your data..."
-        onSubmit={(query) => console.log('Processing query:', query)}
-      />
-    </div>
+    <Chat>
+      <Chat.Sessions />
+      <Chat.Messages />
+      <Chat.PromptSuggestions>
+        <Chat.PromptSuggestions.Item text="Summarize the available tables" />
+      </Chat.PromptSuggestions>
+      <Chat.Composer placeholder="Ask a question about your data">
+        <Chat.InlineApiKeyInput
+          onSaveApiKey={(provider, apiKey) => {
+            updateProvider(provider, {apiKey});
+          }}
+        />
+        <Chat.Composer.Attachments />
+        <Chat.ModelSelector />
+      </Chat.Composer>
+    </Chat>
   );
 }
 ```
 
-### Displaying Analysis Results
-
-```tsx
-import {AnalysisResultsContainer, AnalysisResult} from '@sqlrooms/ai';
-
-function AnalysisPanel() {
-  // Get the current session and its analysis results
-  const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
-  const analysisResults = currentSession?.analysisResults || [];
-
-  return (
-    <div className="rounded-lg border p-4">
-      <h2 className="mb-4 text-xl font-bold">AI Analysis</h2>
-      <AnalysisResultsContainer>
-        {analysisResults.map((result) => (
-          <AnalysisResult key={result.id} result={result} />
-        ))}
-      </AnalysisResultsContainer>
-    </div>
-  );
-}
-```
-
-### Working with AI State
-
-```tsx
-function AiStatusIndicator() {
-  const isRunning = useRoomStore((state) => state.ai.isRunning);
-  const prompt = useRoomStore((state) => state.ai.prompt);
-  const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
-  const lastResult =
-    currentSession?.analysisResults[currentSession.analysisResults.length - 1];
-
-  if (isRunning) {
-    return <div>AI is analyzing your data...</div>;
-  }
-
-  if (lastResult?.errorMessage) {
-    return <div>Error: {lastResult.errorMessage.message}</div>;
-  }
-
-  if (prompt) {
-    return <div>Last query: "{prompt}"</div>;
-  }
-
-  return <div>Ask AI a question about your data</div>;
-}
-```
-
-## AiSlice API Reference
-
-The AiSlice provides a comprehensive set of state fields and methods for managing AI interactions in your application.
-
-### State Fields
-
-#### `prompt`
-
-The current prompt text entered by the user for analysis.
-
-```tsx
-const prompt = useRoomStore((state) => state.ai.prompt);
-```
-
-#### `isRunning`
-
-Boolean flag indicating whether an analysis is currently in progress.
-
-```tsx
-const isRunning = useRoomStore((state) => state.ai.isRunning);
-```
-
-#### `tools`
-
-Record of available AI tools that can be used during analysis.
-
-```tsx
-const availableTools = useRoomStore((state) => state.ai.tools);
-```
-
-#### `abortController`
-
-Optional AbortController instance that can be used to cancel an ongoing analysis.
-
-```tsx
-const abortController = useRoomStore((state) => state.ai.abortController);
-```
-
-### Methods
-
-#### `setPrompt(prompt: string)`
-
-Sets the current analysis prompt text.
-
-```tsx
-const setPrompt = useRoomStore((state) => state.ai.setPrompt);
-setPrompt('Analyze sales trends for the last quarter');
-```
-
-#### `startAnalysis()`
-
-Starts the analysis process using the current prompt.
-
-```tsx
-const startAnalysis = useRoomStore((state) => state.ai.startAnalysis);
-await startAnalysis();
-```
-
-#### `cancelAnalysis()`
-
-Cancels any ongoing analysis.
-
-```tsx
-const cancelAnalysis = useRoomStore((state) => state.ai.cancelAnalysis);
-cancelAnalysis();
-```
-
-#### `setAiModel(modelProvider: string, model: string)`
-
-Sets the AI model and provider for the current session.
-
-```tsx
-const setModel = useRoomStore((state) => state.ai.setAiModel);
-setModel('openai', 'gpt-4o');
-```
-
-#### `createSession(name?: string, modelProvider?: string, model?: string)`
-
-Creates a new analysis session with optional name and model settings.
-
-```tsx
-const createSession = useRoomStore((state) => state.ai.createSession);
-createSession('Financial Analysis', 'openai', 'gpt-4o');
-```
-
-#### `switchSession(sessionId: string)`
-
-Switches to a different analysis session by ID.
-
-```tsx
-const switchSession = useRoomStore((state) => state.ai.switchSession);
-switchSession('session-123');
-```
-
-#### `renameSession(sessionId: string, name: string)`
-
-Renames an existing analysis session.
-
-```tsx
-const renameSession = useRoomStore((state) => state.ai.renameSession);
-renameSession('session-123', 'Q4 Sales Analysis');
-```
-
-#### `deleteSession(sessionId: string)`
-
-Deletes an analysis session by ID.
-
-```tsx
-const deleteSession = useRoomStore((state) => state.ai.deleteSession);
-deleteSession('session-123');
-```
-
-#### `getCurrentSession()`
-
-Returns the current active analysis session.
-
-```tsx
-const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
-```
-
-#### `deleteAnalysisResult(sessionId: string, resultId: string)`
-
-Deletes a specific analysis result from a session.
-
-```tsx
-const deleteResult = useRoomStore((state) => state.ai.deleteAnalysisResult);
-deleteResult('session-123', 'result-456');
-```
-
-#### `findToolComponent(toolName: string)`
-
-Finds the React component associated with a specific tool.
-
-```tsx
-const ChartComponent = useRoomStore((state) =>
-  state.ai.findToolComponent('chart'),
-);
-```
-
-## Data Structure
-
-See [ai-core](https://github.com/sqlrooms/sqlrooms/tree/main/packages/ai-core) for the data structure.
-
-## Advanced Features
-
-- **Custom AI Tools**: Define custom tools for AI to use with the tool() function
-- **Multiple Sessions**: Create and manage multiple analysis sessions for different purposes
-- **Model Selection**: Switch between different AI models and providers
-- **Result Management**: Save, delete, and organize analysis results
-- **Conversation Context**: Maintain context across multiple queries in a session
-- **Feedback Loop**: Collect user feedback to improve AI responses
-
-For more information, visit the SQLRooms documentation.
-
-## AI Settings Configuration
-
-This package now includes comprehensive AI settings components. These components provide a complete set of UI elements for managing AI model configuration, parameters, and usage tracking.
-
-### AI Settings Features
-
-- **createAiSettingsSlice**: Function to create a Zustand slice for managing AI model configuration with room-shell integration
-- **AiSettingsPanel**: Main configuration panel with modular sub-components for different configuration aspects
-- **ProvidersSettings**: Component for configuring AI providers (OpenAI, Anthropic, etc.) with API keys and base URLs
-- **ModelsSettings**: Component for managing available models and their parameters
-- **ModelParametersSettings**: Component for configuring model parameters like max steps and system instructions
-- **ModelSelector**: Standalone model selector component for quick model switching
-
-### AI Settings Usage
-
-#### Individual Components
+`Chat.Composer.Attachments` is opt-in. It accepts images plus plain-text and
+Markdown files through explicit choices in the paperclip menu, shows removable
+previews before sending, and renders posted attachments as clickable previews
+that open in a larger dialog.
+
+### Customize chat presentation
+
+`Chat.Rendering` accepts a partial set of presentation slots. Unspecified slots
+keep the SQLRooms defaults, so an app can replace one region or row without
+reimplementing the rest of the chat. `ToolActivity` is used for top-level and
+nested tool rows; recursive agent progress and non-hoisted rich tool content
+remain pre-wired when that row is customized.
 
 ```tsx
 import {
-  AiSettingsPanel,
-  ModelSelector,
+  Chat,
+  type ChatActivityProps,
+  type ChatToolActivityProps,
 } from '@sqlrooms/ai';
-import {useRoomStore} from '../store';
 
-// Main configuration panel with sub-components
-<AiSettingsPanel isOpen={isConfigOpen} setIsOpen={setIsConfigOpen}>
-  <AiSettingsPanel.ProvidersSettings />
-  <AiSettingsPanel.ModelsSettings />
-  <AiSettingsPanel.ModelParametersSettings  />
-</AiSettingsPanel>
+function AppActivity({children, isRunning}: ChatActivityProps) {
+  return <section aria-busy={isRunning}>{children}</section>;
+}
 
-// Standalone model selector
-<Chat.ModelSelector />
+function AppToolActivity({toolCall, isAgent}: ChatToolActivityProps) {
+  return (
+    <div>
+      {isAgent ? 'Agent' : 'Tool'}: {toolCall.toolName}
+    </div>
+  );
+}
+
+function AiMessages() {
+  return (
+    <Chat.Rendering
+      components={{
+        Activity: AppActivity,
+        ToolActivity: AppToolActivity,
+      }}
+    >
+      <Chat.Messages />
+    </Chat.Rendering>
+  );
+}
 ```
 
-### AI Settings API Reference
+Use the `Turn` slot for a custom overall layout. Its semantic regions expose
+pre-wired `Content` components, while activity items and action capabilities
+remain available for deeper composition.
 
-#### Core Components
+## Block-scoped Ask AI actions
 
-- **`AiSettingsPanel`**: Main configuration panel with modular sub-components
-  - `AiSettingsPanel.ProvidersSettings`: Configure AI providers (OpenAI, Anthropic, etc.)
-  - `AiSettingsPanel.ModelsSettings`: Manage available models and their parameters
-  - `AiSettingsPanel.ModelParametersSettings`: Configure model parameters and instructions
-- **`ModelSelector`**: Standalone model selector for quick switching
+`createAskAiBlockHeaderAction(...)` builds a block-header actions renderer for
+hosts that expose Ask AI on selected block types. The host controls the
+`supportsAiEditing` policy and owns the submit flow; `onSubmit` receives the
+block-document target context plus the submitted prompt. Pass the returned
+renderer to the block-document chart/stateful renderer providers.
 
-#### Slice Configuration
+```tsx
+import {createAskAiBlockHeaderAction} from '@sqlrooms/ai';
 
-The package uses a slice-based configuration system that integrates with SQLRooms room-shell:
+const renderBlockHeaderActions = createAskAiBlockHeaderAction({
+  supportsAiEditing: (blockType) => ['chart', 'map'].includes(blockType),
+  onSubmit: (target, prompt) => {
+    void openBlockScopedChat({target, prompt});
+  },
+});
+```
 
-- **`createAiSettingsSlice()`**: Creates the AI settings configuration slice for state management
-- **`AiSettingsSliceConfig`**: TypeScript type for configuration schema
-- **`createDefaultAiSettings(providers)`**: Helper to create default configuration with providers
-- **`getApiKey(config, provider, model)`**: Utility to get API key from configuration
-- **`getBaseUrl(config, provider, model)`**: Utility to get base URL from configuration
+`BlockAiPromptPopover` is also re-exported for hosts that need a custom trigger
+or placement. The public integration types are
+`AskAiBlockHeaderActionRenderContext`, `CreateAskAiBlockHeaderActionOptions`,
+and `BlockAiPromptPopoverProps`.
 
-#### Store Integration
+## Generate Chat Titles
 
-The AI settings configuration integrates with the main AI slice through helper functions:
+`generateSessionTitle` turns a session's early user messages into a concise title
+via `ai.sendPrompt`, cleans the model output, and renames the session.
+If the model call fails, `ai.sendPrompt` resolves with a placeholder string
+instead of throwing; pass `onError` in its options to observe the failure.
+`generateSessionTitle` does so and renames the session to `Untitled Chat`
+rather than to the error text, returning `{status: 'generation-failed'}`. That
+name still counts as a default one, so the next user message can try again.
 
-- **`getApiKey()`**: Function to retrieve API key from current session and model config
-- **`getMaxSteps()`**: Function to get max steps from model configuration
-- **`getBaseUrl()`**: Function to get base URL from current session and model config
-- **`getInstructions(tablesSchema)`**: Function to generate system instructions with optional custom instructions
+`useGenerateSessionTitle` wraps that helper for React surfaces that should watch
+the current session and trigger title generation after new user messages. Apps
+can keep product-specific policy outside the shared package by passing options
+such as `enabled`, `isDefaultSessionName`, and `getPromptOptions`.
+
+```tsx
+import {Chat, useGenerateSessionTitle} from '@sqlrooms/ai';
+
+function AiPanel() {
+  useGenerateSessionTitle({
+    enabled: true,
+    getPromptOptions: () => ({useTools: false}),
+  });
+
+  return (
+    <Chat>
+      <Chat.Messages />
+      <Chat.Composer />
+    </Chat>
+  );
+}
+```
+
+## Chat search
+
+`Chat` renders a `ChatSearchProvider` and exposes `Chat.Search`, an in-conversation
+find bar that highlights matches in the current session's messages.
+
+For building search UIs outside the chat (e.g. a session list that searches across
+all sessions), the underlying matching primitives are re-exported and can be used
+without the provider:
+
+- `normalizeChatSearchQuery(query)` — trims + lower-cases a query (the casing rule
+  the search uses).
+- `findChatSearchMatches(blocks, query)` — returns positional matches
+  (`ChatSearchMatch[]`) for a list of `ChatSearchBlock`s. Useful for highlighting
+  matched substrings consistently with `Chat.Search`.
+- `markdownToPlainText(markdown)` — extracts plain text from markdown so message
+  content can be made searchable.
+
+```tsx
+import {findChatSearchMatches, type ChatSearchBlock} from '@sqlrooms/ai';
+
+const blocks: ChatSearchBlock[] = [
+  {id: 'title', resultId: 'title', text: title},
+];
+const matches = findChatSearchMatches(blocks, query);
+```
+
+**Keeping highlighting in a replaced slot.** A host that swaps out a chat leaf
+slot renders its own text, so it loses the highlighting the default slot got for
+free. `HighlightedChatSearchText` restores it. Pass the same `blockId` the turn
+model registered for that part; without it there are no matches to highlight and
+the component renders the text unchanged.
+
+```tsx
+import {HighlightedChatSearchText} from '@sqlrooms/ai';
+
+function AppPrompt({prompt, searchBlockId}: ChatPromptProps) {
+  return (
+    <MyPromptBubble>
+      <HighlightedChatSearchText text={prompt} blockId={searchBlockId} />
+    </MyPromptBubble>
+  );
+}
+```
+
+Matches are wrapped in `<mark>`, and the active match carries the match id as its
+DOM id, so a host can scroll it into view. `useOptionalChatSearch()` exposes the
+same state directly (`activeMatchId`, `getMatchesForBlock`) for slots that need
+to do their own anchoring. It returns `null` outside a `ChatSearchProvider`, so a
+component rendered away from `Chat.Root` degrades instead of throwing.
+
+Indexing follows what actually rendered, not just what got registered. A slot
+that returns `null`, or a region hidden behind a user preference, never mounts
+`HighlightedChatSearchText` and so contributes no matches. Nothing is indexed
+without something on screen to highlight. The text a slot renders is also the
+text that gets indexed: a slot showing a transformed or shortened string is
+searchable by what it actually displays, not by whatever text the block was
+originally registered with.
+
+Custom Markdown components are opaque rendering boundaries. Text beneath an
+overridden Markdown element is excluded from automatic search because the
+component may replace or hide its children; other default-rendered text in the
+same message stays searchable. Overriding `mark` disables automatic search for
+that message because generated highlights may never reach the DOM.
+
+A slot that paints its own matches instead of rendering through
+`HighlightedChatSearchText` must call `useReportRenderedChatSearchBlock(blockId)`
+itself, or its block never counts as rendered and contributes no matches.
+
+A slot that hides its content behind a disclosure or a toggle can key an effect
+on `useActiveChatSearchMatchKey(blockId)` to reveal that content for every
+selection attempt, including repeated navigation to the same match. This keeps
+scrolling from landing on something still hidden and is what the default
+reasoning disclosure uses to open itself.
+
+## Chat Session Types
+
+Use `ChatSessionSchema` for persisted chat session validation and
+`isChatSessionEmpty` for session emptiness checks. `AnalysisSessionSchema`,
+`AnalysisResultSchema`, `isAnalysisSessionEmpty`, `AnalysisResultsContainer`,
+and `AnalysisResult` remain compatibility exports for existing apps, but new
+code should prefer `Chat.Messages`, `uiMessages`, and derived `ChatTurn` helpers
+such as `getChatTurnsFromUiMessages`.
+
+Old persisted sessions that contain `analysisResults` still load, but parsed and
+new `ChatSessionSchema` state no longer includes that field.
+
+## Devtools
+
+`@sqlrooms/ai/devtools` exposes development-oriented inspection components and
+helpers without adding CodeMirror-heavy debug UI to the main `@sqlrooms/ai`
+barrel.
+
+```tsx
+import {ChatSessionDebugView} from '@sqlrooms/ai/devtools';
+
+function DebugPanel({
+  sessionId,
+  onClose,
+}: {
+  sessionId: string;
+  onClose?: () => void;
+}) {
+  return <ChatSessionDebugView sessionId={sessionId} onClose={onClose} />;
+}
+```
+
+`ChatSessionDebugView` reads the existing AI store context and shows session
+metadata, model selection, registered tools, run context, raw `uiMessages`, and
+a tabbed chronological timeline that keeps message parts, tool calls, nested
+`agentProgress`, optional agent snapshots, and copyable JSON blocks together.
+
+Agent snapshot capture is opt-in on the AI slice:
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  devtools: {
+    captureAgentSnapshots: true,
+    persistAgentSnapshots: true,
+    maxAgentSnapshotBytes: 64_000,
+  },
+});
+```
+
+Enable persistence when you need post-mortem or cross-tab debugging in saved
+workspace state. Snapshots are serializable metadata only; tool names,
+descriptions, capability flags, and approval hints may be stored, but
+implementations, closures, secrets, and unbounded prompt/output content should
+not be stored.
+
+## Add custom tools
+
+```tsx
+import {tool} from 'ai';
+import {z} from 'zod';
+import {
+  createAiSlice,
+  createDefaultAiInstructions,
+  createDefaultAiTools,
+} from '@sqlrooms/ai';
+
+// inside createRoomStore(...):
+createAiSlice({
+  tools: {
+    ...createDefaultAiTools(store),
+    echo: tool({
+      description: 'Return user text back to the chat',
+      inputSchema: z.object({
+        text: z.string(),
+      }),
+      execute: async ({text}) => ({
+        success: true,
+        details: `Echo: ${text}`,
+      }),
+    }),
+  },
+  getInstructions: () => createDefaultAiInstructions(store),
+})(set, get, store);
+```
+
+Tool `execute` callbacks receive hidden run-context helpers in their second
+argument. Apps can use `getRunContext` to capture selected artifacts at the
+start of a run, expose them in `formatRunContextInstructions`, and then let
+tools update the effective primary context with `setPrimaryRunContextItem`.
+Old contexts without `primaryItemId` remain valid; the first item is treated as
+primary. Artifact-specific context tools live in `@sqlrooms/artifacts/ai`.
+
+## Tool-call repair
+
+When the model emits tool-call arguments that fail a tool's input schema, the AI
+SDK aborts the run with an opaque `InvalidToolInputError`. The local chat
+transport attempts to heal this by default: it re-asks the model to correct the
+call (forcing a fresh call to the same tool, without running the tool's side
+effects). Repair is best-effort — if it fails, hits its per-tool limit, or
+produces no corrected call, the original `InvalidToolInputError` still surfaces.
+Each repair costs one extra LLM request, so apps can opt out via `createAiSlice`:
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  repairInvalidToolCalls: false, // default: true
+})(set, get, store);
+```
+
+The underlying helper `createModelToolCallRepair` is re-exported for hosts that
+build their own `ToolLoopAgent` sub-agents (pass the same `model`, and optionally
+`abortSignal`, `providerOptions`, and an `onRepairUsage` callback so repair
+inherits the run's configuration, is cancelled with it, and its tokens are
+accounted). It never recurses, never triggers tool side effects, caps repairs
+per tool (`maxRepairsPerTool`, default `2`), and never logs user data. See the
+[`@sqlrooms/ai-core` README](../ai-core/README.md#tool-call-repair) for details.
+
+## Use remote endpoint mode
+
+If you want server-side model calls, set `chatEndPoint` and optional `chatHeaders`:
+
+```tsx
+// inside createRoomStore(...):
+...createAiSlice({
+  tools: {
+    ...createDefaultAiTools(store),
+  },
+  getInstructions: () => createDefaultAiInstructions(store),
+  chatEndPoint: '/api/chat',
+  chatHeaders: {
+    'x-app-name': 'my-sqlrooms-app',
+  },
+})(set, get, store),
+```
+
+## Skills
+
+The skills subsystem lets you define, store, and author reusable AI "skills" — named instruction sets that can be loaded into an agent at runtime.
+
+### Storage and types
+
+`SkillStorage` is the interface that abstracts where skills live (filesystem, database, cloud, etc.). Implement it to plug in your own backend:
+
+- `listRoots()` — enumerate available skill root locations
+- `listSkills(rootId)` — list all skills under a root
+- `readSkill(ref)` / `writeSkill(ref, content)` / `deleteSkill(ref)` — CRUD on individual skills
+- `resolveSkillId(id)` — resolve a bare id to its highest-priority `SkillRef`
+- `subscribe?(listener)` — _optional_; subscribe to change notifications. Returns an unsubscribe function. Implementations that don't mutate (read-only/static) may omit this method.
+
+Supporting types: `SkillRoot`, `SkillManifest`, `SkillRef`, `SkillRecord`, `SkillListing`, `SkillWriteContent`, `SkillFile`.
+
+### Composite storage
+
+`CompositeSkillStorage` priority-merges multiple `SkillStorage` instances behind a single `SkillStorage` interface. Children are passed in priority order (highest first); they win conflicts in `resolveSkillId` and appear first in `listRoots`. Each child must own a unique set of `rootId`s.
+
+`subscribe` fans out to every child that exposes the optional `subscribe?` method and aggregates the unsubscribes. If no child supports subscribe, `composite.subscribe(...)` is a noop returning a noop unsubscribe — consumers can call it unconditionally.
+
+```tsx
+import {CompositeSkillStorage} from '@sqlrooms/ai';
+
+// Higher-priority `userStorage` wins on id collisions; both contribute roots
+// and listings to the merged view.
+const storage = new CompositeSkillStorage([userStorage, builtInStorage]);
+
+const roots = await storage.listRoots(); // [user roots..., built-in roots...]
+const all = await storage.listSkills(); // union, with duplicates
+
+// Optional change notification: composite forwards from any subscribe-capable
+// child.
+const unsubscribe = storage.subscribe(() => {
+  void refreshUi();
+});
+// later: unsubscribe();
+```
+
+### Manifest utilities
+
+- `parseSkillManifest(raw)` — parse and validate a skill manifest (Zod-backed, throws `SkillManifestError` on failure)
+- `serializeSkillManifest(manifest)` — serialize a manifest back to its raw form
+- `loadSkillFromFiles(files)` — assemble a `SkillRecord` from a set of `SkillFile` objects (manifest + instruction body)
+
+### Error types
+
+All skill errors extend `SkillError` and carry a typed `SkillErrorCode`:
+
+| Class                    | When thrown                         |
+| ------------------------ | ----------------------------------- |
+| `SkillManifestError`     | Manifest parse/validation failure   |
+| `SkillNotFoundError`     | Skill ref does not exist in storage |
+| `SkillRootReadOnlyError` | Write attempted on a read-only root |
+| `SkillConflictError`     | Skill ID collision on write         |
+
+### Skill authoring
+
+A built-in agent-driven authoring flow that generates skill content through a conversational UI:
+
+- `createSkillAuthoringAgent(options)` — construct a `ToolLoopAgent` scoped to skill creation; accepts `CreateSkillAuthoringAgentOptions`
+- `createSkillDraftStore()` — Zustand store for tracking the in-progress draft (`SkillDraftStore`, `SkillDraftState`)
+- `SkillAuthoringPanel` — drop-in panel component that wires `Chat.LocalAgentRoot` to the authoring agent; accepts `SkillAuthoringPanelProps`
+- `SkillDraftPreview` — read-only preview of the current draft manifest and instructions; accepts `SkillDraftPreviewProps`
+- `DefaultSkillAuthoringPanelHeader` — default header for `SkillAuthoringPanel`
+
+Types: `SkillAuthoringContext`, `SkillDraft`, `SkillDraftStatus`, `SaveSkillCallback`, `CreateSkillAuthoringAgentOptions`.
+
+Lower-level authoring tools (exported for advanced use): `createWriteManifestTool`, `createWriteInstructionsTool`, `createSaveSkillTool`, `buildSkillAuthoringSystemPrompt`, `containsForbidden`, `DEFAULT_SKILL_AUTHORING_STOP_STEPS`.
+
+```tsx
+import {
+  createSkillAuthoringAgent,
+  createSkillDraftStore,
+  SkillAuthoringPanel,
+} from '@sqlrooms/ai';
+
+const draftStore = createSkillDraftStore();
+
+const agent = createSkillAuthoringAgent({
+  model: myLanguageModel,
+  draftStore,
+  onSave: async (skill) => {
+    await mySkillStorage.writeSkill(
+      {rootId: 'default', skillId: skill.id},
+      skill,
+    );
+  },
+});
+
+function SkillCreator() {
+  return <SkillAuthoringPanel agent={agent} draftStore={draftStore} />;
+}
+```
+
+## Related packages
+
+- `@sqlrooms/ai-core` for lower-level AI slice and chat primitives
+- `@sqlrooms/ai-settings` for settings slice/components only
+- `@sqlrooms/ai-config` for Zod schemas and migrations

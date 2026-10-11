@@ -1,15 +1,93 @@
 import {AiSettingsPanel, Chat} from '@sqlrooms/ai';
-import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
-import {Settings} from 'lucide-react';
+import {
+  ChatSuggestionsItem,
+  ChatSuggestionsRoot,
+  ChatSuggestionsVisibilityToggle,
+  usePromptSuggestions,
+} from '@sqlrooms/ai-core';
+import {
+  Button,
+  ScrollableRow,
+  SkeletonPane,
+  cn,
+  useDisclosure,
+} from '@sqlrooms/ui';
+import {Lightbulb, Settings} from 'lucide-react';
 import {useRoomStore} from '../store';
+import type {FC} from 'react';
 
-export const MainView: React.FC = () => {
+const SUGGESTIONS = [
+  'What questions can I ask to get insights from my data?',
+  'Show me a summary of the data',
+  'What are the key trends?',
+  'Help me understand the data structure',
+];
+
+/**
+ * A horizontal carousel built from the suggestions primitives rather than the
+ * vertical `Chat.PromptSuggestions` recipe — deliberately, as the in-repo
+ * proof that the primitives impose no layout. Don't "fix" it to the recipe.
+ */
+const HorizontalPromptSuggestions: FC = () => (
+  <ChatSuggestionsRoot asChild>
+    <ScrollableRow
+      className="w-full py-1"
+      scrollClassName="flex gap-2 overflow-x-auto px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
+      {SUGGESTIONS.map((text) => (
+        <ChatSuggestionsItem
+          key={text}
+          text={text}
+          submit
+          title={text}
+          className={cn(
+            'w-56 shrink-0 rounded-md border px-3 py-2 text-left text-xs',
+            'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border-border transition-colors',
+            'disabled:pointer-events-none disabled:opacity-50',
+          )}
+        >
+          <span className="line-clamp-2">{text}</span>
+        </ChatSuggestionsItem>
+      ))}
+    </ScrollableRow>
+  </ChatSuggestionsRoot>
+);
+
+/** Toggle for the carousel above, styled locally — the primitive has no look. */
+const HorizontalPromptSuggestionsVisibilityToggle: FC = () => {
+  const suggestions = usePromptSuggestions();
+  return (
+    <ChatSuggestionsVisibilityToggle
+      className={cn(
+        'flex h-6 w-6 shrink-0 items-center justify-center rounded-md',
+        suggestions.visible
+          ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+          : 'text-muted-foreground hover:text-foreground',
+      )}
+      aria-label={
+        suggestions.visible
+          ? 'Hide prompt suggestions'
+          : 'Show prompt suggestions'
+      }
+      title={
+        suggestions.visible
+          ? 'Hide prompt suggestions'
+          : 'Show prompt suggestions'
+      }
+    >
+      <Lightbulb className="h-4 w-4" />
+    </ChatSuggestionsVisibilityToggle>
+  );
+};
+
+export const MainView: FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.config.currentSessionId || null,
   );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
 
   const settingsPanelOpen = useDisclosure();
+  const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
@@ -18,7 +96,7 @@ export const MainView: React.FC = () => {
           <Chat.Sessions className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
           <Button
             variant="outline"
-            className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center transition-colors hover:bg-accent"
+            className="hover:bg-accent absolute top-0 right-0 flex h-8 w-8 items-center justify-center transition-colors"
             onClick={settingsPanelOpen.onToggle}
             title="Configuration"
           >
@@ -27,18 +105,16 @@ export const MainView: React.FC = () => {
         </div>
 
         {settingsPanelOpen.isOpen ? (
-          <div className="flex-grow overflow-auto">
-            {currentSessionId && (
-              <AiSettingsPanel disclosure={settingsPanelOpen}>
-                <AiSettingsPanel.ProvidersSettings />
-                <AiSettingsPanel.ModelsSettings />
-                <AiSettingsPanel.ModelParametersSettings />
-              </AiSettingsPanel>
-            )}
+          <div className="grow overflow-auto">
+            <AiSettingsPanel disclosure={settingsPanelOpen}>
+              <AiSettingsPanel.ProvidersSettings />
+              <AiSettingsPanel.ModelsSettings />
+              <AiSettingsPanel.ModelParametersSettings />
+            </AiSettingsPanel>
           </div>
         ) : (
           <>
-            <div className="flex-grow overflow-auto">
+            <div className="grow overflow-auto">
               {isDataAvailable ? (
                 <Chat.Messages
                   key={currentSessionId} // will prevent scrolling to bottom after changing current session
@@ -46,23 +122,23 @@ export const MainView: React.FC = () => {
               ) : (
                 <div className="flex h-full w-full flex-col items-center justify-center">
                   <SkeletonPane className="p-4" />
-                  <p className="mt-4 text-muted-foreground">
+                  <p className="text-muted-foreground mt-4">
                     Loading database...
                   </p>
                 </div>
               )}
             </div>
 
-            <Chat.PromptSuggestions>
-              <Chat.PromptSuggestions.Item text="What questions can I ask to get insights from my data?" />
-              <Chat.PromptSuggestions.Item text="Show me a summary of the data" />
-              <Chat.PromptSuggestions.Item text="What are the key trends?" />
-              <Chat.PromptSuggestions.Item text="Help me understand the data structure" />
-            </Chat.PromptSuggestions>
+            <HorizontalPromptSuggestions />
 
             <Chat.Composer placeholder="What would you like to learn about the data?">
+              <Chat.InlineApiKeyInput
+                onSaveApiKey={(provider, apiKey) => {
+                  updateProvider(provider, {apiKey});
+                }}
+              />
               <div className="flex items-center justify-end gap-2">
-                <Chat.PromptSuggestions.VisibilityToggle />
+                <HorizontalPromptSuggestionsVisibilityToggle />
                 <Chat.ModelSelector />
               </div>
             </Chat.Composer>

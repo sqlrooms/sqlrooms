@@ -1,7 +1,10 @@
+import {ToolErrorMessage} from '@sqlrooms/ai-core';
 import {useSql} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
 import React from 'react';
 import {VegaLiteArrowChart} from '../VegaLiteArrowChart';
+import {getCategoryAwareVegaChartHeight} from '../chartSizing';
+import type {VegaChartHeight, VegaChartHeightResolver} from '../chartSizing';
 import {useVegaEditorContext} from './VegaEditorContext';
 
 export interface VegaChartDisplayProps {
@@ -14,6 +17,14 @@ export interface VegaChartDisplayProps {
    * @default 16/9
    */
   aspectRatio?: number;
+  /**
+   * Fixed outer chart height, or `'auto'` for category-aware sizing.
+   */
+  height?: VegaChartHeight;
+  /**
+   * Optional height policy evaluated with the parsed spec and loaded data.
+   */
+  getHeight?: VegaChartHeightResolver;
   /**
    * Children passed through to VegaLiteArrowChart (e.g., action components)
    */
@@ -38,6 +49,8 @@ export interface VegaChartDisplayProps {
 export const VegaChartDisplay: React.FC<VegaChartDisplayProps> = ({
   className,
   aspectRatio = 16 / 9,
+  height,
+  getHeight,
   children,
 }) => {
   const {state, arrowTable, options} = useVegaEditorContext();
@@ -58,6 +71,14 @@ export const VegaChartDisplay: React.FC<VegaChartDisplayProps> = ({
   // This ensures the chart keeps rendering during typing even with invalid JSON
   const spec = state.parsedSpec ?? state.lastValidSpec;
 
+  const resolvedHeight = React.useMemo(() => {
+    const context = {spec, arrowTable: chartData};
+    const requestedHeight = getHeight?.(context) ?? height;
+    return requestedHeight === 'auto'
+      ? getCategoryAwareVegaChartHeight(context)
+      : requestedHeight;
+  }, [chartData, getHeight, height, spec]);
+
   // Show loading state
   if (sqlQuery && !arrowTable && sqlResult.isLoading) {
     return (
@@ -76,13 +97,14 @@ export const VegaChartDisplay: React.FC<VegaChartDisplayProps> = ({
   // Show error state
   if (sqlQuery && !arrowTable && sqlResult.error) {
     return (
-      <div
-        className={cn(
-          'flex items-center justify-center text-red-500',
-          className,
-        )}
-      >
-        <span className="text-sm">Error: {sqlResult.error.message}</span>
+      <div className={className}>
+        <ToolErrorMessage
+          error={sqlResult.error}
+          triggerLabel="SQL query failed"
+          title="Query error"
+          align="start"
+          details={sqlQuery}
+        />
       </div>
     );
   }
@@ -94,6 +116,7 @@ export const VegaChartDisplay: React.FC<VegaChartDisplayProps> = ({
         spec={spec}
         arrowTable={chartData}
         aspectRatio={aspectRatio}
+        height={resolvedHeight}
         options={options}
       >
         {children}

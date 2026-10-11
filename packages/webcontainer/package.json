@@ -1,0 +1,42 @@
+{
+  "name": "@sqlrooms/webcontainer",
+  "version": "0.29.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "license": "MIT",
+  "author": "SQLRooms Contributors",
+  "sideEffects": false,
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
+  },
+  "dependencies": {
+    "@sqlrooms/monaco-editor": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
+    "@sqlrooms/schema-tree": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "@webcontainer/api": "^1.6.1",
+    "@xterm/xterm": "^5.5.0",
+    "ai": "^6.0.177",
+    "immer": "^11.0.1",
+    "just-bash": "^2.14.0",
+    "lucide-react": "^0.555.0",
+    "react": "^19.2.0",
+    "zod": "^4.1.8"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

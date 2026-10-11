@@ -4,6 +4,16 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 import turboPlugin from 'eslint-plugin-turbo';
 import tseslint from 'typescript-eslint';
 
+const restrictedSqlroomsSubpathPatterns = [
+  '@sqlrooms/*/dist',
+  '@sqlrooms/*/dist/**',
+  '@sqlrooms/*/src',
+  '@sqlrooms/*/src/**',
+  '@sqlrooms/*/*/*',
+  '@sqlrooms/*/*/*/**',
+  '!@sqlrooms/preset-*/**',
+];
+
 /**
  * A shared ESLint configuration for the repository.
  *
@@ -19,17 +29,17 @@ export const config = [
     },
     rules: {
       'turbo/no-undeclared-env-vars': 'warn',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': 'warn',
-      'no-unused-vars': 'warn',
+      'no-unused-vars': 'off',
       'no-restricted-imports': [
         'error',
         {
           patterns: [
             {
-              group: ['@sqlrooms/*/**', '!@sqlrooms/preset-*/**'],
+              group: restrictedSqlroomsSubpathPatterns,
               message:
-                "Only import from '@sqlrooms/<package>', not subpaths like '@sqlrooms/<package>/...'",
+                "Only import from '@sqlrooms/<package>' or one-level public subexports like '@sqlrooms/<package>/<subexport>'; do not import from src, dist, or arbitrary deeper subpaths.",
             },
           ],
         },
@@ -39,9 +49,9 @@ export const config = [
         {
           patterns: [
             {
-              group: ['@sqlrooms/*/**', '!@sqlrooms/preset-*/**'],
+              group: restrictedSqlroomsSubpathPatterns,
               message:
-                "Only import from '@sqlrooms/<package>', not subpaths like '@sqlrooms/<package>/...'",
+                "Only import from '@sqlrooms/<package>' or one-level public subexports like '@sqlrooms/<package>/<subexport>'; do not import from src, dist, or arbitrary deeper subpaths.",
             },
           ],
         },

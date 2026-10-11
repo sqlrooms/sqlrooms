@@ -23,7 +23,7 @@ export function MapControls({
   onShowInfo,
 }: MapControlsProps) {
   return (
-    <div className="absolute right-4 top-4 z-50 flex w-64 flex-col gap-4 rounded-sm border-slate-700 bg-[#1f1d1b]/90 p-2 shadow-xl backdrop-blur">
+    <div className="absolute top-4 right-4 z-50 flex w-64 flex-col gap-4 rounded-sm border-slate-700 bg-[#1f1d1b]/90 p-2 shadow-xl backdrop-blur">
       <div className="flex items-center gap-2">
         {!dbReady && (
           <>

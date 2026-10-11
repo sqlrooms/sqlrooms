@@ -1,6 +1,7 @@
 import * as arrow from 'apache-arrow';
 import {FC, useMemo, useState} from 'react';
-import DataTablePaginated, {
+import {
+  DataTablePaginated,
   DataTablePaginatedProps,
 } from './DataTablePaginated';
 import useArrowDataTable, {

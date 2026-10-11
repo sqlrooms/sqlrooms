@@ -4,26 +4,31 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  toast,
 } from '@sqlrooms/ui';
 import {FC, PropsWithChildren, useState} from 'react';
 import {useStoreWithCanvas} from '../CanvasSlice';
 
 export const AddNodePopover: FC<
   PropsWithChildren<{
+    artifactId: string;
     className?: string;
     parentId?: string;
   }>
-> = ({className, parentId, children}) => {
+> = ({artifactId, className, parentId, children}) => {
   const [open, setOpen] = useState(false);
   const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
-  const onAddSql = () => {
-    addNode({parentId, nodeType: 'sql'});
-    setOpen(false);
+  const registry = useStoreWithCanvas((s) => s.cells.cellRegistry);
+
+  const onAdd = (type: string) => {
+    if (artifactId) {
+      addNode({artifactId, parentId, nodeType: type});
+      setOpen(false);
+    } else {
+      toast.error('No artifact selected');
+    }
   };
-  const onAddVega = () => {
-    addNode({parentId, nodeType: 'vega'});
-    setOpen(false);
-  };
+
   return (
     <div className={cn(className)}>
       <Popover open={open} onOpenChange={setOpen}>
@@ -31,16 +36,13 @@ export const AddNodePopover: FC<
         <PopoverContent
           side="right"
           align="center"
-          className="max-w-[100px] border-none bg-transparent p-0 shadow-none"
+          className="flex w-auto flex-col gap-2 p-2"
         >
-          <div className="flex flex-col gap-2">
-            <Button size="xs" onClick={onAddSql}>
-              Query
+          {Object.entries(registry).map(([type, reg]) => (
+            <Button key={type} size="xs" onClick={() => onAdd(type)}>
+              {reg.title}
             </Button>
-            <Button size="xs" onClick={onAddVega}>
-              Visualize
-            </Button>
-          </div>
+          ))}
         </PopoverContent>
       </Popover>
     </div>

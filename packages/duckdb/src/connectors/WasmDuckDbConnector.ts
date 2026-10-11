@@ -99,6 +99,22 @@ export function createWasmDuckDbConnector(
 
         conn = await db.connect();
       } catch (err) {
+        if (conn) {
+          try {
+            await conn.close();
+          } catch {
+            /* best-effort */
+          }
+        }
+        if (db) {
+          try {
+            await db.terminate();
+          } catch {
+            /* best-effort */
+          }
+        } else if (worker) {
+          worker.terminate();
+        }
         db = null;
         conn = null;
         worker = null;
@@ -209,6 +225,12 @@ export function createWasmDuckDbConnector(
       await withTempRegisteredFile(file, async (fileName) => {
         if (opts && isSpatialLoadFileOptions(opts)) {
           await conn!.query(loadSpatial(tableName, fileName, opts));
+        } else if (!opts?.method && /\.geojson$/i.test(fileName)) {
+          try {
+            await conn!.query(loadSpatial(tableName, fileName, opts ?? {}));
+          } catch {
+            await conn!.query(load('auto', tableName, fileName, opts));
+          }
         } else {
           await conn!.query(
             load(opts?.method ?? 'auto', tableName, fileName, opts),

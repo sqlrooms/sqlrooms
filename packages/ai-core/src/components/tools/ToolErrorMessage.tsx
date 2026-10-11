@@ -1,4 +1,4 @@
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
+import {JsonCodeMirrorEditor} from '@sqlrooms/codemirror';
 import {
   Button,
   Popover,
@@ -11,7 +11,7 @@ import {
   useDisclosure,
 } from '@sqlrooms/ui';
 import {TriangleAlertIcon} from 'lucide-react';
-import React, {memo, useMemo} from 'react';
+import {memo, useMemo} from 'react';
 
 type TabKey = 'error' | 'details';
 
@@ -50,7 +50,7 @@ const ToolErrorMessageContent = memo(
         </TabsList>
 
         <TabsContent value="error" className="mt-0">
-          <div className="max-h-[300px] overflow-auto whitespace-pre-wrap font-mono text-xs">
+          <div className="max-h-[300px] overflow-auto font-mono text-xs whitespace-pre-wrap">
             {errorText}
           </div>
         </TabsContent>
@@ -60,15 +60,14 @@ const ToolErrorMessageContent = memo(
             className="w-full overflow-hidden rounded-md border"
             style={{height: editorHeightPx}}
           >
-            <JsonMonacoEditor
+            <JsonCodeMirrorEditor
               className="h-full"
               value={details}
               readOnly
+              hideGutter
               options={{
-                lineNumbers: 'off',
-                minimap: {enabled: false},
-                scrollBeyondLastLine: false,
-                wordWrap: 'on',
+                lineNumbers: false,
+                lineWrapping: true,
               }}
             />
           </div>

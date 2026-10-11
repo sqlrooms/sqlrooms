@@ -4,11 +4,12 @@
     "interface": true,
     "type": true
   },
+  "ignoreDependencies": ["identity-obj-proxy", "jest-environment-node"],
   "ignore": [
     "python/**",
     "docs/**",
     "examples/app-builder/app-scaffolds/**",
-    "submodules/**"
+    "apps/sqlrooms-cli-ui/app-scaffolds/get-started/**"
   ],
   "exclude": ["exports", "types", "duplicates"],
   "workspaces": {
@@ -18,22 +19,28 @@
         "@types/*",
         "@lerna-lite/*",
         "glob",
+        "mermaid",
         "remove",
         "vitepress-plugin-llms",
         "typescript-language-server"
       ],
-      "ignoreBinaries": ["madge", "uv"]
+      "ignoreBinaries": [
+        "uv",
+        "apps/sqlrooms-cli-ui/evals/promptfooconfig.yaml"
+      ]
     },
     "packages/*": {
       "entry": ["src/index.{ts,tsx}"]
     },
+    "packages/artifacts": {
+      "ignoreDependencies": ["ts-jest"]
+    },
+    "packages/evals": {
+      "entry": ["src/promptfoo/export.ts"]
+    },
     "packages/preset-jest": {
       "entry": ["*.js"],
-      "ignoreDependencies": [
-        "@testing-library/*",
-        "identity-obj-proxy",
-        "jest-environment-jsdom"
-      ]
+      "ignoreDependencies": ["@testing-library/*", "jest-environment-jsdom"]
     },
     "packages/preset-eslint": {
       "entry": ["*.js"]
@@ -45,15 +52,20 @@
       "entry": ["*.json"]
     },
     "examples/*nextjs*": {
-      "entry": ["app/page.tsx", "app/api/**/*.ts", "postcss.config.mjs"]
-    },
-    "examples/canvas": {
-      "entry": ["src/main.tsx"],
-      "ignoreDependencies": []
+      "entry": ["src/app/**/{page.tsx,api/**/*.ts}"]
     },
     "examples/*": {
-      "entry": ["src/main.{ts,tsx}"],
-      "ignoreDependencies": []
+      "entry": ["src/main.{ts,tsx}"]
+    },
+    "apps/*": {},
+    "apps/sqlrooms-cli-ui": {
+      "entry": [
+        "src/main.{ts,tsx}",
+        "src/evals/promptfooProvider.ts",
+        "src/evals/external/runExternalSuite.ts",
+        "claude-plugin/headers.mjs"
+      ],
+      "ignoreDependencies": ["@duckdb/node-api"]
     }
   }
 }

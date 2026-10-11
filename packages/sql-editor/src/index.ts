@@ -11,14 +11,67 @@ export {default as SqlEditor} from './SqlEditor';
 export type {SqlEditorProps} from './SqlEditor';
 export {default as SqlEditorModal} from './SqlEditorModal';
 export {createSqlEditorSlice} from './SqlEditorSlice';
-export type {QueryResult, SqlEditorSliceState} from './SqlEditorSlice';
+export type {
+  EnsureSqlQueryOptions,
+  QueryResult,
+  SqlEditorQuery,
+  SqlEditorSliceState,
+} from './SqlEditorSlice';
 export {SqlQueryDataSourcesPanel} from './components/SqlQueryDataSourcesPanel';
+/**
+ * @deprecated Use SqlCodeMirrorEditor instead.
+ * SqlMonacoEditor will be removed in the next major version.
+ */
 export {SqlMonacoEditor} from './SqlMonacoEditor';
-export type {SqlMonacoEditorProps} from './SqlMonacoEditor';
+/**
+ * @deprecated Use SqlCodeMirrorEditor instead.
+ * SqlMonacoEditor will be removed in the next major version.
+ */
+export type {
+  SqlMonacoEditorProps,
+  SqlMonacoRunQueryOptions,
+} from './SqlMonacoEditor';
+export {SqlCodeMirrorEditor} from './SqlCodeMirrorEditor';
+export type {SqlCodeMirrorEditorProps} from './SqlCodeMirrorEditor';
+export {SqlQuery} from './SqlQuery';
+export type {
+  SqlQueryRootProps,
+  SqlQueryHeaderProps,
+  SqlQueryToolbarProps,
+  SqlQueryActionsProps,
+  SqlQueryEditorProps,
+  SqlQueryResultsProps,
+} from './SqlQuery';
+export {
+  SQL_QUERY_BLOCK_TYPE,
+  SqlQueryBlock,
+  createSqlQueryBlockDefinition,
+} from './SqlQueryBlock';
+export type {
+  SqlQueryBlockProps,
+  CreateSqlQueryBlockDefinitionOptions,
+} from './SqlQueryBlock';
+export {SqlDialects} from './codemirror/extensions/create-sql-extension';
+export type {SqlDialect} from './codemirror/extensions/create-sql-extension';
+export {SchemaExplorer} from './components/SchemaExplorer';
+export type {
+  SchemaExplorerRootProps,
+  SchemaExplorerHeaderProps,
+  SchemaExplorerTreeProps,
+} from './components/SchemaExplorer';
+/**
+ * @deprecated Use `SchemaExplorer` instead.
+ */
 export {TableStructurePanel} from './components/TableStructurePanel';
+/**
+ * @deprecated Use `SchemaExplorer` instead.
+ */
 export type {TableStructurePanelProps} from './components/TableStructurePanel';
 export {QueryResultPanel} from './components/QueryResultPanel';
-export type {QueryResultPanelProps} from './components/QueryResultPanel';
+export type {
+  QueryResultPanelProps,
+  QueryResultPanelAskAiProps,
+} from './components/QueryResultPanel';
 export {SqlEditorHeader} from './components/SqlEditorHeader';
 export type {SqlEditorHeaderProps} from './components/SqlEditorHeader';
 export {

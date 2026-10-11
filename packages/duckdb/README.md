@@ -4,7 +4,7 @@ A powerful wrapper around DuckDB-WASM that provides React hooks and utilities fo
 
 ### React Integration & Type Safety
 
-- **React Hooks**: Seamless integration with React applications via `useSql`
+- **React Hooks**: Seamless integration with React applications via `useSql` and `useDataTable`
 - **Runtime Validation**: Optional Zod schema validation for query results with type transformations
 - **Typed Row Accessors**: Type-safe row access with validation and multiple iteration methods
 
@@ -21,6 +21,19 @@ A powerful wrapper around DuckDB-WASM that provides React hooks and utilities fo
 - **Query Cancellation**: Cancel running queries with full composability support via `QueryHandle` interface ([learn more](https://sqlrooms.org/query-cancellation))
 - **Data Export**: Export query results to CSV files with pagination for large datasets
 - **Batch Processing**: Handle large datasets efficiently with built-in pagination support
+
+### SQL Statement Utilities
+
+`splitSqlStatements` splits DuckDB SQL without treating semicolons inside quoted
+strings, dollar-quoted strings, or comments as statement boundaries. Comments are
+removed safely by default; preserve them when the original SQL will be rewritten
+or re-executed:
+
+```ts
+import {splitSqlStatements} from '@sqlrooms/duckdb';
+
+const statements = splitSqlStatements(sql, {removeComments: false});
+```
 
 ## Installation
 
@@ -56,6 +69,72 @@ function UserList() {
 ```
 
 For more information and examples on using the `useSql` hook, see the [useSql API documentation](/api/duckdb/functions/useSql).
+
+### Table visibility and catalog inspection
+
+`createDuckDbSlice({loadTableSchemasFilter})` filters `db.tables` and
+`db.loadTableSchemas()`, which provide table choices for charts and explorers.
+Its callback receives `(qualifiedName, metadata)`; metadata includes `isView` and
+columns. For example, `(table, metadata) => metadata?.isView === false` limits
+selectors to physical tables. Existing callbacks accepting only the name continue
+to work.
+
+`loadSchemaCatalogFilter` independently controls `db.schemaTrees`. Supply it when
+the catalog should retain relations excluded from table selectors, such as views
+that remain available for SQL inspection. Table callbacks also receive metadata
+as a second argument; database/schema callbacks do not. When omitted, the table
+filter applies to catalog table entries too. `null` disables the respective filter.
+Hiding a database, schema, or table from the catalog does not remove tables
+accepted by `loadTableSchemasFilter` from `db.tables`.
+
+### Monitoring WebSocket DuckDB Connections
+
+`createWebSocketDuckDbConnector()` exposes the persistent WebSocket lifecycle
+through `connectionStatus`, `subscribeConnectionStatus()`, and the optional
+`onConnectionStatusChange` callback. Use this for live UI affordances such as
+lost-connection dialogs. Call `reconnect()` to reopen the socket and rerun the
+connector initialization SQL without destroying the connector instance.
+
+```tsx
+import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
+
+const connector = createWebSocketDuckDbConnector({
+  wsUrl: 'ws://localhost:4000',
+  onConnectionStatusChange: (status) => {
+    console.log('DuckDB WebSocket status:', status);
+  },
+});
+
+const unsubscribe = connector.subscribeConnectionStatus((status) => {
+  if (status === 'disconnected') {
+    console.warn('DuckDB WebSocket disconnected');
+  }
+});
+
+await connector.reconnect();
+```
+
+### Looking up Table Metadata
+
+Use `useDataTable()` in React components or `db.findTable()` from the room
+store. String references are parsed like SQL identifiers, so use quotes for
+literal dots in table names.
+
+```tsx
+import {useDataTable} from '@sqlrooms/duckdb';
+
+function TableColumns() {
+  const table = useDataTable('"memory"."main"."earthquakes"');
+
+  return (
+    <ul>
+      {table?.columns.map((column) => (
+        <li key={column.name}>{column.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
 
 ### Using Zod for Runtime Validation
 
@@ -147,6 +226,9 @@ function ArrowTableSchemaExample() {
 ### Using the Store for Direct Database Operations
 
 ```tsx
+import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
+
 function DatabaseManager() {
   const createTableFromQuery = useRoomStore(
     (state) => state.db.createTableFromQuery,
@@ -183,10 +265,10 @@ function DatabaseManager() {
 
   return (
     <div>
-      <button onClick={handleCreateTable}>Create Filtered Users Table</button>
-      <button onClick={handleAddTable}>Add New Users Table</button>
-      <button onClick={handleDropTable}>Drop Old Table</button>
-      <button onClick={refreshTableSchemas}>Refresh Schemas</button>
+      <Button onClick={handleCreateTable}>Create Filtered Users Table</Button>
+      <Button onClick={handleAddTable}>Add New Users Table</Button>
+      <Button onClick={handleDropTable}>Drop Old Table</Button>
+      <Button onClick={refreshTableSchemas}>Refresh Schemas</Button>
 
       <h3>Available Tables:</h3>
       <ul>
@@ -204,19 +286,64 @@ function DatabaseManager() {
 ### Working with Qualified Table Names
 
 ```tsx
-import {makeQualifiedTableName} from '@sqlrooms/duckdb';
+import {quoteTableReference, resolveTableReference} from '@sqlrooms/duckdb';
+import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
-// Support for database.schema.table naming
-const qualifiedTable = makeQualifiedTableName({
-  database: 'mydb',
-  schema: 'public',
-  table: 'users',
+function QualifiedTableOps() {
+  const qualifyTableName = useRoomStore((state) => state.db.qualifyTableName);
+  const createTableFromQuery = useRoomStore(
+    (state) => state.db.createTableFromQuery,
+  );
+  const dropTable = useRoomStore((state) => state.db.dropTable);
+  const checkTableExists = useRoomStore((state) => state.db.checkTableExists);
+
+  const run = async () => {
+    // Store-aware qualification knows which database is the default.
+    const qualifiedTable = qualifyTableName({
+      database: 'mydb',
+      schema: 'public',
+      table: 'users',
+    });
+    // toString() is the canonical portable table ID; toFullString() includes
+    // the database when explicit catalog qualification is needed.
+    const tableSql = quoteTableReference(qualifiedTable.toString());
+    const resolved = resolveTableReference([{table: qualifiedTable}], 'users');
+
+    await createTableFromQuery(qualifiedTable, 'SELECT * FROM source_table');
+    console.log('Quoted table reference:', tableSql);
+    console.log('Fully qualified reference:', qualifiedTable.toFullString());
+    console.log('Resolved table:', resolved.table?.table.toString());
+    const tableExists = await checkTableExists(qualifiedTable);
+    console.log('Table exists after create:', tableExists);
+    await dropTable(qualifiedTable);
+  };
+
+  return <Button onClick={() => void run()}>Run qualified table ops</Button>;
+}
+```
+
+### Loading the Schema Catalog
+
+Use `loadSchemaCatalog()` when you need the database/schema/table hierarchy,
+including empty schemas and attached databases whose `main` schema has no
+tables yet. The catalog filter receives typed entries for databases, schemas,
+and tables, so schema visibility does not depend on fake table names.
+Related option and filter types are exported for callers that wrap these
+helpers in their own APIs.
+
+```ts
+import {
+  defaultLoadSchemaCatalogFilter,
+  loadSchemaCatalog,
+} from '@sqlrooms/duckdb';
+
+const catalog = await loadSchemaCatalog(connector, {
+  filterFunction: (entry) =>
+    entry.type === 'schema' && entry.schema === 'scratch'
+      ? false
+      : defaultLoadSchemaCatalogFilter(entry),
 });
-
-// Use with table operations
-await createTableFromQuery(qualifiedTable, 'SELECT * FROM source_table');
-await dropTable(qualifiedTable);
-const tableExists = await checkTableExists(qualifiedTable);
 ```
 
 ## Loading Data from Files
@@ -225,6 +352,8 @@ const tableExists = await checkTableExists(qualifiedTable);
 
 ```tsx
 import {loadCSV, loadJSON, loadParquet, loadObjects} from '@sqlrooms/duckdb';
+import {useRoomStore} from './store';
+import {Button} from '@sqlrooms/ui';
 
 function DataLoader() {
   const getConnector = useRoomStore((state) => state.db.getConnector);
@@ -263,7 +392,7 @@ function DataLoader() {
           if (e.target.files?.[0]) handleLoadCSV(e.target.files[0]);
         }}
       />
-      <button onClick={handleLoadObjects}>Load Sample Data</button>
+      <Button onClick={handleLoadObjects}>Load Sample Data</Button>
     </div>
   );
 }
@@ -272,21 +401,32 @@ function DataLoader() {
 ### Using the Connector Directly
 
 ```tsx
+import * as arrow from 'apache-arrow';
+import {useRoomStore} from './store';
+
 function AdvancedDataLoader() {
-  const connector = useRoomStore((state) => state.db.connector);
+  const getConnector = useRoomStore((state) => state.db.getConnector);
 
   const handleFileUpload = async (file: File) => {
-    // Load file directly using the connector
-    await connector.loadFile(file, 'uploaded_data', {
-      method: 'auto', // Auto-detect file type
-      replace: true,
-      temp: false,
-    });
+    try {
+      const connector = await getConnector();
+      await connector.loadFile(file, 'uploaded_data', {
+        method: 'auto', // Auto-detect file type
+        replace: true,
+        temp: false,
+      });
+    } catch (error) {
+      console.error('Failed to load uploaded file:', error);
+    }
   };
 
   const handleLoadArrowTable = async (arrowTable: arrow.Table) => {
-    // Load Arrow table directly
-    await connector.loadArrow(arrowTable, 'arrow_data');
+    try {
+      const connector = await getConnector();
+      await connector.loadArrow(arrowTable, 'arrow_data');
+    } catch (error) {
+      console.error('Failed to load Arrow table:', error);
+    }
   };
 
   return (
@@ -294,7 +434,9 @@ function AdvancedDataLoader() {
       type="file"
       accept=".csv,.json,.parquet"
       onChange={(e) => {
-        if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
+        if (e.target.files?.[0]) {
+          void handleFileUpload(e.target.files[0]);
+        }
       }}
     />
   );
@@ -305,6 +447,7 @@ function AdvancedDataLoader() {
 
 ```tsx
 import {useExportToCsv} from '@sqlrooms/duckdb';
+import {Button} from '@sqlrooms/ui';
 
 function ExportButton() {
   const {exportToCsv} = useExportToCsv();
@@ -313,7 +456,7 @@ function ExportButton() {
     await exportToCsv('SELECT * FROM users ORDER BY name', 'users_export.csv');
   };
 
-  return <button onClick={handleExport}>Export to CSV</button>;
+  return <Button onClick={handleExport}>Export to CSV</Button>;
 }
 ```
 
@@ -322,9 +465,11 @@ function ExportButton() {
 ### Basic direct usage
 
 ```tsx
+import {roomStore} from './store';
+
 async function executeCustomQuery() {
-  // Grab the connector directly (no React hook necessary inside plain TS)
-  const connector = useRoomStore((state) => state.db.connector);
+  // Plain TS/JS usage: read connector from the store API directly.
+  const connector = roomStore.getState().db.connector;
 
   // QueryHandle is promise-like – await it directly
   const result = await connector.query('SELECT COUNT(*) AS count FROM users');
@@ -338,12 +483,14 @@ async function executeCustomQuery() {
 ### Cancellation examples
 
 ```tsx
+import {roomStore} from './store';
+
 async function cancelExample() {
-  const connector = useRoomStore((state) => state.db.connector);
+  const connector = roomStore.getState().db.connector;
 
   // 1. Manual cancel via the handle
   const query = connector.query('SELECT * FROM large_table');
-  setTimeout(() => h.cancel(), 2000); // cancel after 2 s
+  setTimeout(() => query.cancel(), 2000); // cancel after 2 s
   await query; // throws if cancelled
 
   // 2. Composable cancellation – many queries, one controller
@@ -358,6 +505,8 @@ async function cancelExample() {
 ### Advanced operations with the Zustand store
 
 ```tsx
+import {Button} from '@sqlrooms/ui';
+
 function AdvancedOperations() {
   const executeSql = useRoomStore((s) => s.db.executeSql);
   const sqlSelectToJson = useRoomStore((s) => s.db.sqlSelectToJson);
@@ -380,7 +529,7 @@ function AdvancedOperations() {
     console.log('Table exists:', exists);
   };
 
-  return <button onClick={handleAdvancedQuery}>Run Advanced Operations</button>;
+  return <Button onClick={handleAdvancedQuery}>Run Advanced Operations</Button>;
 }
 ```
 

@@ -1,0 +1,44 @@
+{
+  "name": "roomie-cli-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "dev": "vite --host 127.0.0.1 --port 3200",
+    "mcp:contract:generate": "node build-contract.mjs",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sqlrooms/app-runtime": "workspace:*",
+    "@sqlrooms/artifacts": "workspace:*",
+    "@sqlrooms/db": "workspace:*",
+    "@sqlrooms/documents": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/mcp": "workspace:*",
+    "@sqlrooms/mosaic": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "@uwdata/mosaic-core": "^0.21.0",
+    "@uwdata/mosaic-sql": "^0.21.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.3.0",
+    "@sqlrooms/preset-jest": "workspace:*",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "tailwindcss": "^4.1.18",
+    "ts-jest": "^29.4.4",
+    "typescript": "^5.9.2",
+    "vite": "^8.2.0",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0"
+  }
+}

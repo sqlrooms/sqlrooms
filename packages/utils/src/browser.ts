@@ -1,7 +1,19 @@
+type NavigatorWithUserAgentData = Navigator & {
+  userAgentData?: {
+    platform?: string;
+  };
+};
+
 /**
- * Function to detect if the user is on a Mac device
- * @returns boolean indicating if the user is on a Mac
+ * Detects whether the current browser platform is macOS.
+ *
+ * Uses User-Agent Client Hints when available and falls back to the legacy
+ * navigator platform string. Returns false outside browser environments.
+ *
+ * @returns True when the current platform appears to be macOS.
  */
 export function isMacOS(): boolean {
-  return navigator.platform.toLowerCase().includes('mac');
+  if (typeof navigator === 'undefined') return false;
+  const {platform, userAgentData} = navigator as NavigatorWithUserAgentData;
+  return /mac/i.test(userAgentData?.platform ?? platform ?? '');
 }

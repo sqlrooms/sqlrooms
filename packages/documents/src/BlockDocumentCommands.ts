@@ -1,0 +1,1043 @@
+import {
+  resolveArtifactTargetId,
+  type ArtifactMetadataType,
+} from '@sqlrooms/artifacts';
+import type {BaseRoomStoreState, RoomCommand} from '@sqlrooms/room-store';
+import {z} from 'zod';
+import {
+  BlockDocumentBlock,
+  BlockDocumentChartBlock,
+  BlockDocumentStatefulBlockBlock,
+  BlockDocumentContent,
+  blockDocumentBlockToNode,
+  createEmptyBlockDocumentContent,
+  type BlockDocumentBlock as BlockDocumentBlockType,
+} from './BlockDocumentSliceConfig';
+import type {BlockDocumentsSliceState} from './BlockDocumentsSlice';
+
+export const BLOCK_DOCUMENT_COMMAND_SUFFIXES = [
+  'list',
+  'get',
+  'inspect-block',
+  'create',
+  'append-blocks',
+  'insert-blocks',
+  'update-block',
+  'remove-block',
+  'move-block',
+  'create-chart-block',
+  'create-stateful-block',
+] as const;
+
+export type BlockDocumentCommandSuffix =
+  (typeof BLOCK_DOCUMENT_COMMAND_SUFFIXES)[number];
+
+export type BlockDocumentStatefulBlockCommandContext<TRoomState> = {
+  state: TRoomState;
+  artifactId: string;
+  blockId: string;
+  blockType: string;
+  blockInstanceId: string;
+  ownership: 'owned' | 'shared' | 'external';
+  title: string;
+  caption?: string;
+};
+
+export type BlockDocumentStatefulBlockCommandType<TRoomState> = {
+  blockType: string;
+  label?: string;
+  description?: string;
+  defaultTitle?: string;
+  defaultHeight?: number;
+  ensureState?: (
+    context: BlockDocumentStatefulBlockCommandContext<TRoomState>,
+  ) => void;
+  /**
+   * Read JSON-serializable backing state without creating or changing it.
+   * Return undefined when the referenced instance is missing. Omit when this
+   * block type does not support backing-state inspection.
+   */
+  readState?: (context: {
+    state: TRoomState;
+    blockInstanceId: string;
+  }) => unknown;
+};
+
+/**
+ * Configuration for a reusable block-document command family.
+ *
+ * `allowedBlockTypes` constrains generic block mutations. If it includes
+ * `statefulBlock`, an individual stateful block is accepted only when its
+ * `blockType` is also configured in `statefulBlockTypes`.
+ */
+export type CreateBlockDocumentCommandsOptions<
+  TRoomState extends BlockDocumentCommandState = BlockDocumentCommandState,
+> = {
+  commandGroup?: string;
+  defaultTitle?: string;
+  statefulBlockTypes?: BlockDocumentStatefulBlockCommandType<TRoomState>[];
+  /**
+   * Top-level block kinds accepted by generic create, append, insert, and
+   * update commands. Omit to accept every block kind.
+   *
+   * When `statefulBlock` is allowed, its `blockType` must also be present in
+   * `statefulBlockTypes`.
+   */
+  allowedBlockTypes?: readonly BlockDocumentBlockType['type'][];
+};
+
+type BlockDocumentCommandState = BaseRoomStoreState & {
+  artifacts: {
+    createArtifact: (artifact: {
+      type: string;
+      id?: string;
+      title?: string;
+    }) => string;
+    setCurrentArtifact: (id?: string) => void;
+    getArtifact: (id: string) => ArtifactMetadataType | undefined;
+    config: {
+      artifactsById: Record<string, ArtifactMetadataType>;
+      currentArtifactId?: string;
+    };
+  };
+} & BlockDocumentsSliceState;
+
+const BlockDocumentIdInput = z
+  .object({
+    artifactId: z
+      .string()
+      .optional()
+      .describe('Target block document artifact ID.'),
+  })
+  .default({});
+
+const BlockDocumentCreateInput = z
+  .object({
+    title: z.string().optional().describe('Optional artifact title.'),
+    blocks: z
+      .array(BlockDocumentBlock)
+      .optional()
+      .describe('Initial top-level blocks.'),
+    select: z
+      .boolean()
+      .optional()
+      .describe('Whether to select the new artifact.'),
+  })
+  .default({});
+
+const BlockDocumentBlocksInput = z.object({
+  artifactId: z.string().describe('Target block document artifact ID.'),
+  blocks: z.array(BlockDocumentBlock).describe('Blocks to add.'),
+});
+
+const BlockDocumentInsertBlocksInput = BlockDocumentBlocksInput.extend({
+  index: z.number().int().describe('Top-level insertion index.'),
+});
+
+const BlockDocumentUpdateBlockInput = z.object({
+  artifactId: z.string().describe('Target block document artifact ID.'),
+  blockId: z.string().describe('Block ID to update.'),
+  block: BlockDocumentBlock.describe('Replacement block. Its id is ignored.'),
+});
+
+const BlockDocumentBlockIdInput = z.object({
+  artifactId: z.string().describe('Target block document artifact ID.'),
+  blockId: z.string().describe('Target block ID.'),
+});
+
+const BlockDocumentMoveBlockInput = BlockDocumentBlockIdInput.extend({
+  toIndex: z.number().int().describe('Destination top-level block index.'),
+});
+
+const BlockDocumentCreateChartBlockInput = z.object({
+  artifactId: z.string().describe('Target block document artifact ID.'),
+  blockId: z.string().optional().describe('Optional explicit chart block ID.'),
+  intent: z
+    .string()
+    .optional()
+    .describe(
+      'Optional natural-language objective this chart block should satisfy.',
+    ),
+  tableName: z.string().describe('Mosaic table name to render.'),
+  config: z
+    .unknown()
+    .transform((val) => {
+      // If agent passes config as JSON string, parse it
+      if (typeof val === 'string') {
+        try {
+          return JSON.parse(val);
+        } catch {
+          // If parsing fails, return as-is and let validation catch it
+          return val;
+        }
+      }
+      return val;
+    })
+    .describe(
+      'Mosaic ChartConfig payload, for example {chartType:"histogram", settings:{field:"revenue"}} or {chartType:"count-plot", settings:{field:"category"}}.',
+    ),
+  selectionGroupId: z
+    .string()
+    .optional()
+    .describe('Optional crossfilter group for linked chart blocks.'),
+  caption: z.string().optional().describe('Optional chart caption.'),
+  index: z
+    .number()
+    .int()
+    .optional()
+    .describe('Optional top-level insertion index. Defaults to append.'),
+});
+
+const BlockDocumentCreateStatefulBlockInput = z.object({
+  artifactId: z.string().describe('Target block document artifact ID.'),
+  blockType: z
+    .string()
+    .describe('Stateful block type to create, for example dashboard or pivot.'),
+  intent: z
+    .string()
+    .optional()
+    .describe(
+      'Optional natural-language objective this stateful block should satisfy.',
+    ),
+  blockId: z
+    .string()
+    .optional()
+    .describe('Optional explicit document block ID.'),
+  blockInstanceId: z
+    .string()
+    .optional()
+    .describe(
+      'Optional explicit backing state instance ID. Defaults to blockId.',
+    ),
+  ownership: z
+    .enum(['owned', 'shared', 'external'])
+    .optional()
+    .describe('State ownership mode. Defaults to owned.'),
+  title: z
+    .string()
+    .optional()
+    .describe(
+      'Optional seed name for the backing state instance (e.g. dashboard/query name). Not stored on the document block.',
+    ),
+  caption: z.string().optional().describe('Optional document-local caption.'),
+  tableName: z
+    .string()
+    .optional()
+    .describe(
+      'Optional table this block reads from, for table-bound types like data-table.',
+    ),
+  height: z
+    .number()
+    .positive()
+    .optional()
+    .describe('Optional persisted block height in pixels.'),
+  index: z
+    .number()
+    .int()
+    .optional()
+    .describe('Optional top-level insertion index. Defaults to append.'),
+});
+
+function labelFromBlockType(blockType: string) {
+  return blockType
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function getBlockCapabilityError(
+  block: BlockDocumentBlockType,
+  allowedBlockTypes: ReadonlySet<string> | undefined,
+  statefulBlockTypes: ReadonlySet<string>,
+): string | undefined {
+  if (!allowedBlockTypes) return undefined;
+  if (!allowedBlockTypes.has(block.type)) {
+    return `Unsupported block type "${block.type}".`;
+  }
+  if (
+    block.type === 'statefulBlock' &&
+    !statefulBlockTypes.has(block.blockType)
+  ) {
+    return `Unsupported stateful block type "${block.blockType}".`;
+  }
+  return undefined;
+}
+
+function constrainBlockInput<TSchema extends z.ZodType<unknown>>(
+  schema: TSchema,
+  blocksFromInput: (input: z.infer<TSchema>) => BlockDocumentBlockType[],
+  allowedBlockTypes: ReadonlySet<string> | undefined,
+  statefulBlockTypes: ReadonlySet<string>,
+): TSchema {
+  if (!allowedBlockTypes) return schema;
+  return schema.superRefine((input, ctx) => {
+    for (const [index, block] of blocksFromInput(input).entries()) {
+      const error = getBlockCapabilityError(
+        block,
+        allowedBlockTypes,
+        statefulBlockTypes,
+      );
+      if (error) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['blocks', index],
+          message: error,
+        });
+      }
+    }
+  }) as TSchema;
+}
+
+/** Returns the canonical command IDs for block document operations. */
+export function createBlockDocumentCommandIds() {
+  return BLOCK_DOCUMENT_COMMAND_SUFFIXES.map(
+    (suffix) => `block-document.${suffix}`,
+  );
+}
+
+/**
+ * Builds the set of room commands (list, get, create, append-blocks, …) for a
+ * block-document artifact type using canonical `block-document.*` command IDs.
+ *
+ * @param options - Command group, default title, supported stateful block types,
+ * and optional generic-mutation constraints. When `allowedBlockTypes` includes
+ * `statefulBlock`, only types configured in `statefulBlockTypes` are accepted.
+ * @returns The list of {@link RoomCommand}s to register with the host store.
+ */
+export function createBlockDocumentCommands<
+  TRoomState extends BlockDocumentCommandState = BlockDocumentCommandState,
+>({
+  commandGroup = 'Block Document',
+  defaultTitle = 'Block Document',
+  statefulBlockTypes = [],
+  allowedBlockTypes,
+}: CreateBlockDocumentCommandsOptions<TRoomState> = {}): RoomCommand<TRoomState>[] {
+  const commandId = (suffix: BlockDocumentCommandSuffix) =>
+    `block-document.${suffix}`;
+  const statefulBlockTypesByType = new Map(
+    statefulBlockTypes.map((blockType) => [blockType.blockType, blockType]),
+  );
+  const allowedBlockTypeSet = allowedBlockTypes
+    ? new Set<string>(allowedBlockTypes)
+    : undefined;
+  const statefulBlockTypeSet = new Set(statefulBlockTypesByType.keys());
+  const createInputSchema = constrainBlockInput(
+    BlockDocumentCreateInput,
+    (input) => input.blocks ?? [],
+    allowedBlockTypeSet,
+    statefulBlockTypeSet,
+  );
+  const blocksInputSchema = constrainBlockInput(
+    BlockDocumentBlocksInput,
+    (input) => input.blocks,
+    allowedBlockTypeSet,
+    statefulBlockTypeSet,
+  );
+  const insertBlocksInputSchema = constrainBlockInput(
+    BlockDocumentInsertBlocksInput,
+    (input) => input.blocks,
+    allowedBlockTypeSet,
+    statefulBlockTypeSet,
+  );
+  const updateBlockInputSchema = constrainBlockInput(
+    BlockDocumentUpdateBlockInput,
+    (input) => [input.block],
+    allowedBlockTypeSet,
+    statefulBlockTypeSet,
+  );
+  const resolveMutableBlock = (
+    state: BlockDocumentCommandState,
+    artifactId: string,
+    blockId: string,
+    mutationCommandId: string,
+  ) => {
+    const block = findBlockById(state, artifactId, blockId);
+    if (!block) return missingBlock(mutationCommandId, blockId);
+    const error = getBlockCapabilityError(
+      block,
+      allowedBlockTypeSet,
+      statefulBlockTypeSet,
+    );
+    if (error) {
+      return {
+        success: false as const,
+        commandId: mutationCommandId,
+        error: `Block "${blockId}" cannot be changed: ${error}`,
+      };
+    }
+    return {success: true as const, block};
+  };
+
+  const commandsBySuffix = {
+    list: {
+      id: commandId('list'),
+      name: 'List block documents',
+      description: 'List block document artifacts in the room',
+      group: commandGroup,
+      keywords: ['block document', 'document', 'blocks', 'list'],
+      metadata: {readOnly: true, idempotent: true, riskLevel: 'low'},
+      execute: ({getState}) => {
+        const state = getState();
+        const documents = Object.values(state.artifacts.config.artifactsById)
+          .filter((artifact) => artifact.type === 'block-document')
+          .map((artifact) => {
+            const blockDocument = state.blockDocuments.getBlockDocument(
+              artifact.id,
+            );
+            return {
+              artifactId: artifact.id,
+              title: artifact.title,
+              updatedAt: blockDocument?.updatedAt,
+              blockCount: blockDocument?.content.content.length ?? 0,
+              assetCount: Object.keys(blockDocument?.assets ?? {}).length,
+            };
+          });
+        return {
+          success: true,
+          commandId: commandId('list'),
+          data: {documents},
+        };
+      },
+    },
+    get: {
+      id: commandId('get'),
+      name: 'Get block document',
+      description:
+        'Read blocks from a block document artifact. Defaults to the current block document artifact.',
+      group: commandGroup,
+      keywords: ['block document', 'read', 'get', 'blocks'],
+      inputSchema: BlockDocumentIdInput,
+      inputDescription:
+        'Optional block document artifact ID. Defaults to the current block document.',
+      metadata: {readOnly: true, idempotent: true, riskLevel: 'low'},
+      execute: ({getState, invocation}, input) => {
+        const state = getState();
+        const {artifactId: requestedArtifactId} =
+          (input as z.infer<typeof BlockDocumentIdInput> | undefined) ?? {};
+        const artifactId = resolveArtifactTargetId({
+          requestedArtifactId,
+          invocation,
+          currentArtifactId: state.artifacts.config.currentArtifactId,
+        });
+        const resolved = resolveBlockDocumentArtifact(
+          state,
+          artifactId,
+          commandId('get'),
+        );
+        if (!resolved.success) return resolved;
+        return {
+          success: true,
+          commandId: commandId('get'),
+          data: readBlockDocumentData(state, resolved.artifact.id),
+        };
+      },
+    },
+    'inspect-block': {
+      id: commandId('inspect-block'),
+      name: 'Inspect document block',
+      description:
+        'Read an explicitly targeted document block and its backing state, when stored separately. Use the document block ID, not its backing instance ID.',
+      group: commandGroup,
+      keywords: ['block document', 'read', 'inspect', 'block', 'state'],
+      inputSchema: z.object({
+        artifactId: z
+          .string()
+          .min(1)
+          .describe('Target block document artifact ID.'),
+        blockId: z.string().min(1).describe('ID of a block in that document.'),
+      }),
+      metadata: {readOnly: true, idempotent: true, riskLevel: 'low'},
+      execute: ({getState}, input) => {
+        const {artifactId, blockId} = input as z.infer<
+          typeof BlockDocumentBlockIdInput
+        >;
+        const state = getState();
+        const id = commandId('inspect-block');
+        const resolved = resolveBlockDocumentArtifact(state, artifactId, id);
+        if (!resolved.success) return resolved;
+        const block = findBlockById(state, artifactId, blockId);
+        if (!block) return missingBlock(id, blockId);
+        if (block.type !== 'statefulBlock') {
+          return {success: true, commandId: id, data: {artifactId, block}};
+        }
+        const readState = statefulBlockTypesByType.get(
+          block.blockType,
+        )?.readState;
+        if (!readState) {
+          return {
+            success: false,
+            commandId: id,
+            error: `Backing-state inspection is not supported for block type "${block.blockType}".`,
+          };
+        }
+        const backingState = readState({
+          state,
+          blockInstanceId: block.blockInstanceId,
+        });
+        if (backingState === undefined) {
+          return {
+            success: false,
+            commandId: id,
+            error: `Backing state for block "${blockId}" (instance "${block.blockInstanceId}") was not found.`,
+          };
+        }
+        return {
+          success: true,
+          commandId: id,
+          data: {artifactId, block, backingState},
+        };
+      },
+    },
+    create: {
+      id: commandId('create'),
+      name: 'Create block document',
+      description:
+        'Create a block document artifact with optional initial blocks',
+      group: commandGroup,
+      keywords: ['block document', 'create', 'new', 'blocks'],
+      inputSchema: createInputSchema,
+      inputDescription: 'Optional title, initial blocks, and select flag.',
+      metadata: {readOnly: false, idempotent: false, riskLevel: 'low'},
+      execute: (context, input) => {
+        const {
+          title,
+          blocks = [],
+          select = true,
+        } = (input as z.infer<typeof BlockDocumentCreateInput> | undefined) ??
+        {};
+        const state = context.getState();
+        const previousArtifactId = state.artifacts.config.currentArtifactId;
+        const artifactId = state.artifacts.createArtifact({
+          type: 'block-document',
+          title: title ?? defaultTitle,
+        });
+
+        state.blockDocuments.ensureBlockDocument(artifactId);
+        if (blocks.length) {
+          state.blockDocuments.setContent(artifactId, {
+            type: 'doc',
+            content: blocks.map((block) => blockDocumentBlockToNode(block)),
+          });
+        }
+        state.artifacts.setCurrentArtifact(
+          select ? artifactId : previousArtifactId,
+        );
+        return {
+          success: true,
+          commandId: commandId('create'),
+          message: `Created block document artifact "${artifactId}".`,
+          data: {
+            ...readBlockDocumentData(state, artifactId),
+          },
+        };
+      },
+    },
+    'append-blocks': {
+      id: commandId('append-blocks'),
+      name: 'Append block document blocks',
+      description: 'Append top-level blocks to a block document artifact',
+      group: commandGroup,
+      keywords: ['block document', 'append', 'blocks'],
+      inputSchema: blocksInputSchema,
+      inputDescription: 'Block document artifact ID and blocks to append.',
+      metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
+      execute: ({getState}, input) => {
+        const state = getState();
+        const {artifactId, blocks} = input as z.infer<
+          typeof BlockDocumentBlocksInput
+        >;
+        const resolved = resolveBlockDocumentArtifact(
+          state,
+          artifactId,
+          commandId('append-blocks'),
+        );
+        if (!resolved.success) return resolved;
+        state.blockDocuments.appendBlocks(artifactId, blocks);
+        return blockMutationSuccess(
+          state,
+          commandId('append-blocks'),
+          artifactId,
+          blockResultData(blocks),
+        );
+      },
+    },
+    'insert-blocks': {
+      id: commandId('insert-blocks'),
+      name: 'Insert block document blocks',
+      description: 'Insert top-level blocks into a block document artifact',
+      group: commandGroup,
+      keywords: ['block document', 'insert', 'blocks'],
+      inputSchema: insertBlocksInputSchema,
+      inputDescription:
+        'Block document artifact ID, insertion index, and blocks.',
+      metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
+      execute: ({getState}, input) => {
+        const state = getState();
+        const {artifactId, blocks, index} = input as z.infer<
+          typeof BlockDocumentInsertBlocksInput
+        >;
+        const resolved = resolveBlockDocumentArtifact(
+          state,
+          artifactId,
+          commandId('insert-blocks'),
+        );
+        if (!resolved.success) return resolved;
+        state.blockDocuments.insertBlocks(artifactId, index, blocks);
+        return blockMutationSuccess(
+          state,
+          commandId('insert-blocks'),
+          artifactId,
+          {
+            index,
+            ...blockResultData(blocks),
+          },
+        );
+      },
+    },
+    'update-block': {
+      id: commandId('update-block'),
+      name: 'Update block document block',
+      description: 'Replace one top-level block document block by block ID',
+      group: commandGroup,
+      keywords: ['block document', 'update', 'block'],
+      inputSchema: updateBlockInputSchema,
+      inputDescription:
+        'Block document artifact ID, block ID, and replacement block.',
+      metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
+      execute: ({getState}, input) => {
+        const state = getState();
+        const {artifactId, blockId, block} = input as z.infer<
+          typeof BlockDocumentUpdateBlockInput
+        >;
+        const resolved = resolveBlockDocumentArtifact(
+          state,
+          artifactId,
+          commandId('update-block'),
+        );
+        if (!resolved.success) return resolved;
+        const target = resolveMutableBlock(
+          state,
+          artifactId,
+          blockId,
+          commandId('update-block'),
+        );
+        if (!target.success) return target;
+        const replacementBlock = {
+          ...block,
+          id: blockId,
+        } as BlockDocumentBlockType;
+        const updated = state.blockDocuments.updateBlock(
+          artifactId,
+          blockId,
+          replacementBlock,
+        );
+        if (!updated) return missingBlock(commandId('update-block'), blockId);
+        return blockMutationSuccess(
+          state,
+          commandId('update-block'),
+          artifactId,
+          blockResultData([replacementBlock]),
+        );
+      },
+    },
+    'remove-block': {
+      id: commandId('remove-block'),
+      name: 'Remove block document block',
+      description: 'Remove one top-level block document block by block ID',
+      group: commandGroup,
+      keywords: ['block document', 'remove', 'delete', 'block'],
+      inputSchema: BlockDocumentBlockIdInput,
+      inputDescription: 'Block document artifact ID and block ID.',
+      metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
+      execute: ({getState}, input) => {
+        const state = getState();
+        const {artifactId, blockId} = input as z.infer<
+          typeof BlockDocumentBlockIdInput
+        >;
+        const resolved = resolveBlockDocumentArtifact(
+          state,
+          artifactId,
+          commandId('remove-block'),
+        );
+        if (!resolved.success) return resolved;
+        const target = resolveMutableBlock(
+          state,
+          artifactId,
+          blockId,
+          commandId('remove-block'),
+        );
+        if (!target.success) return target;
+        const removed = state.blockDocuments.removeBlock(artifactId, blockId);
+        if (!removed) return missingBlock(commandId('remove-block'), blockId);
+        return blockMutationSuccess(
+          state,
+          commandId('remove-block'),
+          artifactId,
+          {
+            removedBlock: target.block,
+            ...blockResultData([target.block]),
+          },
+        );
+      },
+    },
+    'move-block': {
+      id: commandId('move-block'),
+      name: 'Move block document block',
+      description: 'Move one top-level block document block by block ID',
+      group: commandGroup,
+      keywords: ['block document', 'move', 'reorder', 'block'],
+      inputSchema: BlockDocumentMoveBlockInput,
+      inputDescription:
+        'Block document artifact ID, block ID, and destination index.',
+      metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
+      execute: ({getState}, input) => {
+        const state = getState();
+        const {artifactId, blockId, toIndex} = input as z.infer<
+          typeof BlockDocumentMoveBlockInput
+        >;
+        const resolved = resolveBlockDocumentArtifact(
+          state,
+          artifactId,
+          commandId('move-block'),
+        );
+        if (!resolved.success) return resolved;
+        const target = resolveMutableBlock(
+          state,
+          artifactId,
+          blockId,
+          commandId('move-block'),
+        );
+        if (!target.success) return target;
+        const moved = state.blockDocuments.moveBlock(
+          artifactId,
+          blockId,
+          toIndex,
+        );
+        if (!moved) return missingBlock(commandId('move-block'), blockId);
+        return blockMutationSuccess(
+          state,
+          commandId('move-block'),
+          artifactId,
+          {
+            toIndex,
+            ...blockResultData([target.block]),
+          },
+        );
+      },
+    },
+    'create-chart-block': {
+      id: commandId('create-chart-block'),
+      name: 'Create block document chart block',
+      description: 'Create a standalone Mosaic/vgplot chart block',
+      group: commandGroup,
+      keywords: ['block document', 'chart', 'block', 'vgplot'],
+      inputSchema: BlockDocumentCreateChartBlockInput,
+      inputDescription:
+        'Block document artifact ID, tableName, ChartConfig, and optional selection group.',
+      metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
+      execute: ({getState}, input) => {
+        const state = getState();
+        const {
+          artifactId,
+          blockId = createBlockDocumentBlockId(),
+          intent,
+          tableName,
+          config,
+          selectionGroupId,
+          caption,
+          index,
+        } = input as z.infer<typeof BlockDocumentCreateChartBlockInput>;
+        const resolved = resolveBlockDocumentArtifact(
+          state,
+          artifactId,
+          commandId('create-chart-block'),
+        );
+        if (!resolved.success) return resolved;
+        const block = BlockDocumentChartBlock.parse({
+          id: blockId,
+          type: 'chart',
+          intent,
+          tableName,
+          config,
+          selectionGroupId,
+          caption,
+        });
+        insertOrAppendBlocks(state, artifactId, [block], index);
+        return blockMutationSuccess(
+          state,
+          commandId('create-chart-block'),
+          artifactId,
+          {
+            tableName,
+            selectionGroupId,
+            caption,
+            ...blockResultData([block]),
+          },
+        );
+      },
+    },
+    'create-stateful-block': {
+      id: commandId('create-stateful-block'),
+      name: 'Create block document stateful block',
+      description:
+        'Create a hosted stateful block such as a dashboard, pivot table, or document block',
+      group: commandGroup,
+      keywords: ['block document', 'stateful', 'block', 'dashboard', 'pivot'],
+      inputSchema: BlockDocumentCreateStatefulBlockInput,
+      inputDescription:
+        'Block document artifact ID, blockType, and optional seed title/caption/index.',
+      metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
+      execute: ({getState}, input) => {
+        const state = getState();
+        const {
+          artifactId,
+          blockType,
+          intent,
+          blockId = createBlockDocumentBlockId(),
+          ownership = 'owned',
+          title,
+          caption,
+          tableName,
+          height,
+          index,
+        } = input as z.infer<typeof BlockDocumentCreateStatefulBlockInput>;
+        const resolved = resolveBlockDocumentArtifact(
+          state,
+          artifactId,
+          commandId('create-stateful-block'),
+        );
+        if (!resolved.success) return resolved;
+
+        const blockConfig = statefulBlockTypesByType.get(blockType);
+        if (statefulBlockTypes.length > 0 && !blockConfig) {
+          return {
+            success: false,
+            commandId: commandId('create-stateful-block'),
+            error: `Unsupported stateful block type "${blockType}".`,
+          };
+        }
+
+        const blockInstanceId =
+          (input as z.infer<typeof BlockDocumentCreateStatefulBlockInput>)
+            .blockInstanceId ?? blockId;
+        const blockTitle =
+          title ??
+          blockConfig?.defaultTitle ??
+          blockConfig?.label ??
+          labelFromBlockType(blockType);
+
+        if (ownership === 'owned') {
+          blockConfig?.ensureState?.({
+            state,
+            artifactId,
+            blockId,
+            blockType,
+            blockInstanceId,
+            ownership,
+            title: blockTitle,
+            caption,
+          });
+        }
+
+        const block = BlockDocumentStatefulBlockBlock.parse({
+          id: blockId,
+          type: 'statefulBlock',
+          intent,
+          blockType,
+          blockInstanceId,
+          ownership,
+          caption,
+          tableName,
+          height: height ?? blockConfig?.defaultHeight,
+        });
+        insertOrAppendBlocks(state, artifactId, [block], index);
+        return blockMutationSuccess(
+          state,
+          commandId('create-stateful-block'),
+          artifactId,
+          {
+            blockInstanceId,
+            ownership,
+            instanceTitle: blockTitle,
+            caption,
+            height: height ?? blockConfig?.defaultHeight,
+            ...blockResultData([block]),
+          },
+        );
+      },
+    },
+  } satisfies Record<BlockDocumentCommandSuffix, RoomCommand<TRoomState>>;
+
+  return BLOCK_DOCUMENT_COMMAND_SUFFIXES.map(
+    (suffix) => commandsBySuffix[suffix],
+  );
+}
+
+function resolveBlockDocumentArtifact(
+  state: BlockDocumentCommandState,
+  artifactId: string | undefined,
+  commandId: string,
+) {
+  if (!artifactId) {
+    return {
+      success: false as const,
+      commandId,
+      error:
+        'No block document artifactId provided and current artifact is not a block document.',
+    };
+  }
+  const artifact = state.artifacts.getArtifact(artifactId);
+  if (!artifact) {
+    return {
+      success: false as const,
+      commandId,
+      error: `Unknown artifact "${artifactId}".`,
+    };
+  }
+  if (artifact.type !== 'block-document') {
+    return {
+      success: false as const,
+      commandId,
+      error: `Artifact "${artifactId}" is not a block document artifact.`,
+    };
+  }
+  return {success: true as const, artifact};
+}
+
+function createBlockDocumentBlockId() {
+  const randomUUID = globalThis.crypto?.randomUUID;
+  if (randomUUID) {
+    return randomUUID.call(globalThis.crypto);
+  }
+  return `block-document-block-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+}
+
+function insertOrAppendBlocks(
+  state: BlockDocumentCommandState,
+  artifactId: string,
+  blocks: BlockDocumentBlockType[],
+  index: number | undefined,
+) {
+  if (typeof index === 'number') {
+    state.blockDocuments.insertBlocks(artifactId, index, blocks);
+  } else {
+    state.blockDocuments.appendBlocks(artifactId, blocks);
+  }
+}
+
+function readBlockDocumentData(
+  state: BlockDocumentCommandState,
+  artifactId: string,
+) {
+  const artifact = state.artifacts.getArtifact(artifactId);
+  const blockDocument = state.blockDocuments.getBlockDocument(artifactId);
+  const content = BlockDocumentContent.parse(
+    blockDocument?.content ?? createEmptyBlockDocumentContent(),
+  );
+  return {
+    artifactId,
+    title: artifact?.title,
+    blocks: state.blockDocuments.getBlocks(artifactId),
+    content,
+    assets: Object.values(blockDocument?.assets ?? {}).map(
+      blockDocumentAssetMetadata,
+    ),
+    updatedAt: blockDocument?.updatedAt,
+  };
+}
+
+function findBlockById(
+  state: BlockDocumentCommandState,
+  artifactId: string,
+  blockId: string,
+) {
+  return state.blockDocuments
+    .getBlocks(artifactId)
+    .find((block) => block.id === blockId);
+}
+
+function blockResultData(blocks: BlockDocumentBlockType[]) {
+  const blockIds = blocks.map((block) => block.id);
+  const blockTypes = blocks.map((block) => block.type);
+  const data: Record<string, unknown> = {
+    blockIds,
+    blockTypes,
+    affectedBlocks: blocks,
+  };
+
+  if (blocks.length === 1) {
+    const block = blocks[0];
+    if (!block) {
+      return data;
+    }
+    data.blockId = block.id;
+    data.blockType = block.type;
+    data.block = block;
+
+    if (block.type === 'statefulBlock') {
+      data.statefulBlockType = block.blockType;
+      data.blockInstanceId = block.blockInstanceId;
+      data.ownership = block.ownership;
+      data.caption = block.caption;
+      data.height = block.height;
+    }
+
+    if (block.type === 'chart') {
+      data.tableName = block.tableName;
+      data.selectionGroupId = block.selectionGroupId;
+      data.caption = block.caption;
+    }
+  }
+
+  return data;
+}
+
+function blockMutationSuccess(
+  state: BlockDocumentCommandState,
+  commandId: string,
+  artifactId: string,
+  extraData: Record<string, unknown> = {},
+) {
+  return {
+    success: true,
+    commandId,
+    message: `Updated block document artifact "${artifactId}".`,
+    data: {
+      ...readBlockDocumentData(state, artifactId),
+      ...extraData,
+    },
+  };
+}
+
+function missingBlock(commandId: string, blockId: string) {
+  return {
+    success: false as const,
+    commandId,
+    error: `Unknown block "${blockId}".`,
+  };
+}
+
+function blockDocumentAssetMetadata(asset: {
+  id: string;
+  filename?: string;
+  mediaType: string;
+  encoding: string;
+  alt?: string;
+  title?: string;
+  createdAt: number;
+  updatedAt: number;
+}) {
+  return {
+    id: asset.id,
+    filename: asset.filename,
+    mediaType: asset.mediaType,
+    encoding: asset.encoding,
+    alt: asset.alt,
+    title: asset.title,
+    createdAt: asset.createdAt,
+    updatedAt: asset.updatedAt,
+  };
+}

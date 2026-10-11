@@ -1,0 +1,718 @@
+# @sqlrooms/documents
+
+Artifact-scoped Markdown documents, structured block documents, and
+knowledge-index utilities for SQLRooms.
+
+See the
+[Blocks and Block Documents developer guide](https://sqlrooms.org/blocks-and-documents)
+for the conceptual model, ownership rules, and a focused host setup.
+
+## Block inspection
+
+`createBlockDocumentCommands` registers the read-only
+`block-document.inspect-block({artifactId, blockId})` command. Both IDs are
+required. It verifies that the artifact is a document and that the block belongs
+to it; `blockId` is the document block ID, not a backing resource ID.
+
+Inline blocks return `{artifactId, block}`, including their inline configuration.
+For a stateful block, register an optional `readState` alongside `ensureState` in
+`statefulBlockTypes`:
+
+```ts
+statefulBlockTypes: [
+  {
+    blockType: 'map',
+    readState: ({state, blockInstanceId}) =>
+      state.deckMaps.config.mapsById[blockInstanceId],
+  },
+];
+```
+
+The command returns `{artifactId, block, backingState}` using that type's reader.
+Readers must return JSON-serializable data without initializing or changing state;
+`undefined` means the backing instance is missing. Unregistered types, types
+without readers, and missing backing instances return explicit failures. The
+command contains no map-specific lookup or AI dependency. Host authorization and
+transport result limits still apply.
+
+## Usage
+
+```tsx
+import {
+  BlockDocumentArtifact,
+  BlockDocumentsSliceConfig,
+  BlockDocumentChartRendererProvider,
+  BlockDocumentStatefulBlockRendererProvider,
+  MarkdownDocumentsSliceConfig,
+  buildKnowledgeIndex,
+  createBlockDocumentCommands,
+  createBlockDocumentFeatureSlices,
+  createMarkdownDocumentCommands,
+  createMarkdownDocumentsSlice,
+  createMarkdownDocumentBlockDefinition,
+} from '@sqlrooms/documents';
+import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
+import {
+  createArtifactTypeFromStatefulBlock,
+  defineArtifactTypes,
+} from '@sqlrooms/artifacts';
+
+const markdownBlockDefinition = createMarkdownDocumentBlockDefinition();
+
+const artifactTypes = defineArtifactTypes({
+  'markdown-document': createArtifactTypeFromStatefulBlock(
+    markdownBlockDefinition,
+  ),
+  'block-document': {
+    label: 'Block Document',
+    defaultTitle: 'Block Document',
+    component: BlockDocumentArtifact,
+    onCreate: ({artifactId, store}) => {
+      store.getState().blockDocuments.ensureBlockDocument(artifactId);
+    },
+    onEnsure: ({artifactId, store}) => {
+      store.getState().blockDocuments.ensureBlockDocument(artifactId);
+    },
+    onDelete: ({artifactId, store}) => {
+      store.getState().blockDocuments.removeBlockDocument(artifactId);
+    },
+  },
+});
+
+const roomStore = createRoomStore(
+  persistSliceConfigs(
+    {
+      name: 'my-room',
+      sliceConfigSchemas: {
+        markdownDocuments: MarkdownDocumentsSliceConfig,
+        blockDocuments: BlockDocumentsSliceConfig,
+      },
+    },
+    (set, get, store) => ({
+      ...createMarkdownDocumentsSlice()(set, get, store),
+      ...createBlockDocumentFeatureSlices({
+        onDeleteOwnedStatefulBlock: ({
+          blockType,
+          blockInstanceId,
+          getState,
+        }) => {
+          if (blockType === 'dashboard') {
+            getState().mosaicDashboard.removeDashboard(blockInstanceId);
+          }
+        },
+      })(set, get, store),
+    }),
+  ),
+);
+```
+
+`MarkdownDocument` uses the Tiptap-backed `MarkdownDocumentEditor`. It keeps
+Markdown as the controlled value, renders a rich document editing surface, and
+keeps the existing CodeMirror source panel for direct Markdown edits.
+
+`MarkdownDocumentEditor` is also exported as a reusable controlled editor:
+
+```tsx
+<MarkdownDocumentEditor
+  value={markdown}
+  assets={assets}
+  onChange={setMarkdown}
+/>
+```
+
+The rich editor is the primary surface. The optional Markdown source panel can
+be opened alongside it and edits the same canonical Markdown string:
+
+```tsx
+<MarkdownDocumentEditor
+  value={markdown}
+  onChange={setMarkdown}
+  sourcePanelOpen={showSource}
+  onSourcePanelOpenChange={setShowSource}
+/>
+```
+
+Markdown artifacts can reference artifact-owned assets with `asset://` URLs:
+
+```md
+![Revenue by week](asset://chart-revenue-week)
+```
+
+Pass the artifact asset map to `MarkdownDocumentEditor` to render those links as
+browser-loadable image data while preserving the canonical `asset://` link in
+Markdown source. `MarkdownDocument` handles this automatically for artifacts
+stored in the `markdownDocuments` slice.
+
+The `markdownDocuments` slice exposes `upsertAsset`, `removeAsset`, and `getAsset` for
+managing image assets alongside Markdown content. SVG assets may use `utf8` or
+`base64` encoding; PNG assets must use `base64` encoding.
+
+## Block Documents
+
+`createBlockDocumentsSlice()` exposes structured state for artifact types
+backed by composable blocks: text, lists, images, standalone Mosaic/vgplot
+charts, and direct stateful blocks such as dashboards, pivots, or Markdown
+documents.
+
+The shared block vocabulary lives in [`@sqlrooms/blocks`](../blocks/README.md).
+`@sqlrooms/documents` builds on those contracts with the concrete
+Tiptap-backed `BlockDocument` editor, persistence slice, commands, and AI
+authoring helpers.
+
+Block documents persist Tiptap/ProseMirror JSON as their canonical content
+and provide block DTO helpers for command and AI authoring surfaces:
+
+```tsx
+import {
+  BlockDocumentsSliceConfig,
+  createAddBlockDocumentTextBlockTool,
+  createBlockDocumentFeatureSlices,
+  createListBlockDocumentBlocksTool,
+  createMoveBlockDocumentBlockTool,
+} from '@sqlrooms/documents';
+
+const roomStore = createRoomStore(
+  persistSliceConfigs(
+    {
+      name: 'my-room',
+      sliceConfigSchemas: {
+        blockDocuments: BlockDocumentsSliceConfig,
+      },
+    },
+    (set, get, store) => ({
+      ...createBlockDocumentFeatureSlices()(set, get, store),
+    }),
+  ),
+);
+```
+
+Generic AI helpers use the same block DTOs as commands and the editor. Hosts
+provide a small `BlockDocumentAiAdapter` that ensures a document, lists its
+blocks, and appends new blocks; feature packages or apps can then compose these
+tools with their own stateful-block tools. Reorder tools require the narrower
+`BlockDocumentMoveBlockAiAdapter` capability:
+
+```ts
+const tools = {
+  add_block_document_text_block: createAddBlockDocumentTextBlockTool({
+    blockDocumentAdapter,
+    blockDocumentId,
+  }),
+  list_block_document_blocks: createListBlockDocumentBlocksTool({
+    blockDocumentAdapter,
+    blockDocumentId,
+  }),
+  move_block_document_block: createMoveBlockDocumentBlockTool({
+    blockDocumentAdapter,
+    blockDocumentId,
+  }),
+};
+```
+
+The block-listing tool returns the target `blockDocumentId` and a
+`documentExists` flag alongside `blocks`, so agents can distinguish an empty
+document from a missing or incompatible artifact.
+
+`BlockDocumentAiAdapter.addBlock` may return a block ID synchronously or from a
+promise. Hosts that already expose block-document mutations as room commands can
+therefore use `createBlockDocumentCommandAiAdapter` to invoke the canonical
+`block-document.append-blocks` and `block-document.move-block` commands while
+keeping generic AI tools package-neutral:
+
+```ts
+const blockDocumentAdapter = createBlockDocumentCommandAiAdapter({
+  store,
+});
+```
+
+The adapter accepts only `block-document` artifacts.
+
+### Markdown Export
+
+`blockDocumentToMarkdown(content, {title})` serializes a block document's
+Tiptap JSON content to Markdown. Standard nodes (headings, paragraphs, lists,
+tasks, tables, code, marks) are rendered by `@tiptap/markdown`; the block
+document's custom nodes render as image-style Markdown so their captions
+survive a paste into any Markdown renderer:
+
+- `blockDocumentTitle` → `# <text>`
+- `blockDocumentImage` / `blockDocumentChartImage` → `![<caption>](<assetId>)`
+- `blockDocumentChart` → `![<caption>](chart)`
+- `blockDocumentStatefulBlock` → `![<caption>](<blockType>)`
+
+Pass the artifact title via `options.title` to prepend it as an `# <title>`
+heading, since stored block document content does not include the title node.
+
+To embed real pixels in the copied Markdown, pass `options.resolveDataUrl`. It
+is an optional synchronous callback invoked per visual block; when it returns a
+data URL (e.g. `data:image/png;base64,...`) that URL becomes the image source
+instead of the placeholder:
+
+```ts
+blockDocumentToMarkdown(content, {
+  title: 'My Report',
+  resolveDataUrl: (node) => dataUrls[node.attrs?.id],
+});
+```
+
+Callers that need async work (DOM capture, store lookups) should precompute the
+data URLs up front and look them up by the node's `id` attribute here, as in
+the example above. `documentAssetToDataUrl(asset)` reconstructs a data URL from
+a stored `DocumentAsset`.
+
+### AI Document Context
+
+`formatBlockDocumentContext(content, {targetBlockId, maxChars, augmentBlockSummary})`
+creates a read-only text snapshot with zero-based block indices, stable IDs,
+stateful resource references, and Markdown content. It reuses the Markdown
+exporter without resolving image data or including visualization configuration.
+
+The default output budget is 24,000 characters (minimum 256). Individual block
+text is capped at 2,000 characters. Before summarizing or serializing, each block
+is copied with a budget of 2,000 text/attribute characters, 256 nodes (including
+marks), and 32 levels of nesting. Discarded subtrees are not visited, so large
+pasted logs or nested lists cannot make serialization process the entire block.
+Truncated text and omitted blocks are marked;
+a selected block and its neighbors receive priority, with included blocks still
+shown in document order. Blocks are considered lazily in priority order, stopping
+when the next block's metadata no longer fits. Optional host metadata can include
+live runtime issues.
+Regenerate the snapshot from current state when preparing an agent step, and use
+existing commands/tools for edits. This lossy view cannot round-trip a document.
+
+### Block-Scoped Ask AI
+
+`startBlockScopedChat(...)` opens or reuses an artifact-scoped AI session for a
+specific block in a block document. It is exported from `@sqlrooms/documents`
+so hosts can wire Ask AI buttons, block header actions, or context menus
+without duplicating session-selection rules.
+
+The helper intentionally depends on a small action adapter instead of importing
+a room store. Hosts provide artifact validation, session ownership, prompt
+updates, and assistant visibility through `StartBlockScopedChatActions`:
+
+```ts
+import {
+  startBlockScopedChat,
+  type StartBlockScopedChatActions,
+} from '@sqlrooms/documents';
+
+const actions: StartBlockScopedChatActions = {
+  getArtifact: (artifactId) =>
+    store.getState().artifacts.getArtifact(artifactId),
+  getCurrentArtifactId: () => store.getState().artifacts.currentArtifactId,
+  setCurrentArtifact: (artifactId) =>
+    store.getState().artifacts.setCurrentArtifact(artifactId),
+  getAiSessions: () => store.getState().ai.config.sessions,
+  getSessionArtifactLinks: () =>
+    store.getState().artifactAi.config.sessionArtifactLinks,
+  createArtifactScopedSession: () =>
+    store.getState().artifactAi.createArtifactScopedSession(),
+  switchSession: (sessionId) => store.getState().ai.switchSession(sessionId),
+  getSessionDraftContextItemIds: (sessionId) =>
+    store.getState().ai.getSessionDraftContextItemIds(sessionId),
+  setSessionDraftContextItemIds: (sessionId, ids) =>
+    store.getState().ai.setSessionDraftContextItemIds(sessionId, ids),
+  setPrompt: (sessionId, prompt) =>
+    store.getState().ai.setPrompt(sessionId, prompt),
+  startAnalysisWhenReady: (sessionId) =>
+    store.getState().ai.startAnalysisWhenReady(sessionId),
+};
+
+await startBlockScopedChat({
+  target: {
+    blockDocumentId,
+    blockId,
+    blockType: 'map',
+    blockInstanceId: mapId,
+  },
+  prompt: 'Repair this map',
+  revealAssistant: () => setAssistantOpen(true),
+  actions,
+  isValidBlockDocumentArtifact: (artifact) =>
+    artifact.type === 'block-document',
+});
+```
+
+`isValidBlockDocumentArtifact` is required because hosts may use
+product-specific artifact type names or compatibility aliases. The helper
+validates the target artifact before mutating UI state, switches to the target
+artifact when needed, and derives the block context item with
+`blockContextItemId(...)` unless `contextItemId` is provided.
+
+Only running sessions for the same artifact and context item block a new Ask AI
+turn. Finished sessions that already contain the block context are reused,
+their prompt is replaced, and their draft context is left untouched if it
+already includes the block item. When a matching running session exists, the
+helper switches to it, shows a toast, and returns without revealing the
+assistant, changing the prompt, or starting another analysis.
+
+The slice can create block documents, replace the Tiptap JSON body, and
+append/insert/update/remove/reorder top-level blocks. Supported block DTOs
+include headings, paragraphs, lists, todos, images, chart images,
+standalone chart blocks, and direct stateful blocks.
+
+`BlockDocumentArtifact` and `BlockDocumentEditor` provide the first rich
+editor surface for this structured state. `BlockDocumentArtifact` injects an
+editable, non-movable title node into the Tiptap document and reports title
+changes through `onTitleChange`, so hosts can keep artifact metadata and tab
+labels in sync. The editor owns Tiptap nodes for SQLRooms custom blocks, but
+chart and stateful block rendering are host-provided so `@sqlrooms/documents`
+does not import Mosaic, pivot, or other feature packages:
+
+```tsx
+<BlockDocumentChartRendererProvider renderer={MosaicBlockDocumentChartRenderer}>
+  <BlockDocumentStatefulBlockRendererProvider
+    renderers={{
+      dashboard: DashboardBlockRenderer,
+      pivot: PivotBlockRenderer,
+    }}
+    blockTypes={[
+      {
+        blockType: 'dashboard',
+        label: 'Dashboard',
+        description: 'Interactive dashboard',
+        createNode: (blockId) => ({
+          type: 'blockDocumentStatefulBlock',
+          attrs: {
+            id: blockId,
+            blockType: 'dashboard',
+            blockInstanceId: createDashboardBlockState(blockId),
+            ownership: 'owned',
+            caption: '',
+          },
+        }),
+      },
+    ]}
+  >
+    <BlockDocumentArtifact
+      artifactId={blockDocumentArtifactId}
+      title="Analysis"
+      onTitleChange={(title) =>
+        renameBlockDocument(blockDocumentArtifactId, title)
+      }
+    />
+  </BlockDocumentStatefulBlockRendererProvider>
+</BlockDocumentChartRendererProvider>
+```
+
+Hosts can customize a chart block's outer frame with
+`getBlockFrameClassName`. The callback receives the document ID, block ID,
+block type, and current selection state. Its classes are merged after the
+built-in frame classes, which is useful for host-owned states such as an
+in-progress AI edit:
+
+```tsx
+<BlockDocumentChartRendererProvider
+  renderer={MosaicBlockDocumentChartRenderer}
+  getBlockFrameClassName={({blockId, selected}) =>
+    editingBlockIds.has(blockId)
+      ? 'border-amber-500 ring-1 ring-amber-500'
+      : selected
+        ? 'border-primary'
+        : undefined
+  }
+>
+  <BlockDocumentArtifact artifactId={blockDocumentArtifactId} />
+</BlockDocumentChartRendererProvider>
+```
+
+Descendants implementing custom chart node views can read the same optional
+callback with `useBlockDocumentChartGetBlockFrameClassName()`. The getter is a
+plain function rather than a hook; hosts should subscribe to reactive state in
+their provider component and pass a fresh callback when frame styling changes.
+
+Stateful blocks carry document-local label/binding attributes, surfaced to
+renderers via `BlockDocumentStatefulBlockRendererProps`:
+
+- `caption` — the block's user-facing label in the document flow
+  (`onCaptionChange`).
+- `tableName` — the table a table-bound block reads from (e.g. `data-table`),
+  resolved via `db.findTable` like the `chart` block's `tableName`
+  (`onTableNameChange`). Block types that keep their data binding inside their
+  own backing state leave this unset.
+
+If no renderer is registered, chart and stateful blocks render a clear
+unsupported state while preserving their Tiptap JSON attributes. `blockTypes`
+controls both the host-specific entries shown in the plus menu and which
+stateful block types are editable. A persisted stateful block with a registered
+renderer but no matching `blockTypes` entry renders read-only and cannot be
+turned into, dragged, or deleted with the editor's shared block controls. This
+lets hosts preserve disabled blocks as placeholders without making the rest of
+the document read-only. Chart renderers also receive a `selected` flag so their
+controls can reflect whether the block is the active Tiptap node selection.
+When a block is converted through the handle menu, custom `createNode`
+callbacks receive an optional `{initialText}` value with the source block text;
+hosts can use it to seed stateful blocks such as embedded Markdown documents.
+Stateful block types can opt into persisted vertical resizing with
+`resizableHeight`, `defaultHeight`, `minHeight`, and `maxHeight`; the editor
+stores the resulting `height` on the block node and renders a bottom resize
+handle just below the block for writable documents. Interactive blocks can also opt into
+`requireScrollModifier`; ordinary wheel gestures then keep scrolling the
+document and show a short hint, while Cmd+scroll on macOS or Ctrl+scroll
+elsewhere scrolls nested overflow regions inside the block. Use
+`scrollHintLabel` to customize the hint target text.
+
+The backing instance owns its own display name. Hosts should seed that name
+when creating the backing state (for example from the registered block type's
+`label` or command `defaultTitle`) and resolve it from the instance when a UI
+needs the current name. Shared block-document state does not persist a
+stateful-block `title` mirror.
+
+Block and panel definitions can provide reusable settings components. The
+host settings shell is owned by `@sqlrooms/documents`, while feature packages
+own the actual settings UI. Settings components receive the selected
+`blockId`, optional parent `dashboardId`, optional `blockInstanceId`, and an
+optional `onClose` callback when the host shell can be collapsed. Custom
+controls that should reveal the settings shell can call
+`blockSettings.requestOpenSettingsPanel()`. Controls that represent the
+currently shown settings can read `blockSettings.runtime.isSettingsPanelOpen`
+and call `blockSettings.requestCloseSettingsPanel()` to toggle the shell closed.
+Hosts that want the standard resizable side panel shell can wrap their surface
+with `BlockSettingsPanelLayout`; pass `editor` and `documentId` when rendering
+outside a `BlockDocumentEditor` context, or omit them for dashboard panels that
+use `SelectablePanelWrapper`.
+
+`createBlockDocumentFeatureSlices()` composes `createBlockDocumentsSlice()` with
+the shared `createBlockSettingsSlice()` for apps that want a block document
+surface with reusable settings. If an app also uses another feature helper that
+includes block settings, install the shared settings slice only once by using
+one feature helper plus the other feature's lower-level slice.
+
+### Stateful Blocks
+
+Use a `statefulBlock` block when the document should host a stateful SQLRooms
+surface directly, without wrapping it in an artifact shell:
+
+```ts
+blockDocuments.appendBlocks(blockDocumentArtifactId, [
+  {
+    id: 'pivot-block',
+    type: 'statefulBlock',
+    blockType: 'pivot',
+    blockInstanceId: 'pivot-instance-1',
+    ownership: 'owned',
+    caption: 'Pivot table',
+  },
+]);
+```
+
+Hosts provide renderers through `BlockDocumentStatefulBlockRendererProvider`:
+
+```tsx
+<BlockDocumentStatefulBlockRendererProvider
+  renderers={{
+    pivot: PivotBlockRenderer,
+    dashboard: DashboardBlockRenderer,
+  }}
+  blockTypes={[
+    {
+      blockType: 'pivot',
+      label: 'Pivot Table',
+      description: 'Embedded pivot table',
+    },
+  ]}
+>
+  <BlockDocumentArtifact
+    artifactId={blockDocumentArtifactId}
+    title="Embedded Report"
+    onTitleChange={(title) =>
+      renameBlockDocument(blockDocumentArtifactId, title)
+    }
+  />
+</BlockDocumentStatefulBlockRendererProvider>
+```
+
+Top-level artifacts should wrap stateful blocks or block containers at the
+workspace/tab layer. Block documents host the stateful block directly instead
+of embedding an artifact shell.
+
+Owned stateful blocks are lifecycle-managed by the host app. Pass
+`onCreateOwnedStatefulBlock` to initialize feature state when a new owned block
+reference appears, and `onDeleteOwnedStatefulBlock` to clean it up when an owned
+block is removed from a document or when its owning block document is deleted.
+Blocks with `ownership: 'shared'` or `ownership: 'external'` are not cleaned up
+by the documents slice.
+Captions stay local to the block document. Backing instance names are changed
+through the owning feature's UI or commands, not by editing a block attribute.
+Stateful block renderers receive `onCaptionChange` when a writable document
+lets the embedded surface edit the document-local caption.
+
+The editor normalizes pasted or duplicated owned stateful blocks by assigning
+fresh top-level block IDs and fresh `blockInstanceId` values when a duplicate
+owned instance would otherwise point at the same backing state.
+
+### Standalone Chart Blocks
+
+Standalone `chart` blocks are meant for focused, in-document charts. They store
+the target `tableName`, a Mosaic `ChartConfig`, an optional caption, and an
+optional `selectionGroupId`:
+
+```ts
+blockDocuments.appendBlocks(blockDocumentArtifactId, [
+  {
+    id: 'revenue-histogram',
+    type: 'chart',
+    tableName: 'sales',
+    config: {
+      chartType: 'histogram',
+      settings: {field: 'revenue'},
+    },
+    selectionGroupId: 'overview',
+    caption: 'Revenue distribution',
+  },
+]);
+```
+
+Hosts can render these blocks with the same Mosaic/vgplot chart implementation
+and settings UI used inside dashboard panels, without embedding a full
+dashboard. Charts with the same `selectionGroupId` in one block document share
+a crossfilter selection. Charts without a group get independent
+document/block-scoped selections.
+
+### Hosted Dashboards
+
+Use a `statefulBlock` block when the document needs a multi-panel interactive
+dashboard. The block instance id should map to dashboard state in the host app's
+Mosaic slice, while the top-level artifact shell remains optional for workspace
+navigation.
+
+Standalone chart blocks are best for one chart with local context. Dashboard
+stateful blocks are best for coordinated multi-panel views, richer dashboard
+layout, or when dashboard AI tools are the natural authoring path.
+
+## Block headers
+
+`BlockHeader` is the shared chrome for a block's title bar. Chart, map, table
+and dashboard blocks all render through it, so their headings stay identical
+instead of drifting apart. Pair it with `BlockCaptionEditor`, which carries the
+shared caption typography and swallows commits that leave the caption
+unchanged — so merely clicking into a caption never dirties the document.
+
+```tsx
+import {BlockCaptionEditor, BlockHeader} from '@sqlrooms/documents';
+
+function MyBlockHeader({caption, onCaptionChange, readOnly}) {
+  return (
+    <BlockHeader actions={<SettingsButton />}>
+      <BlockCaptionEditor
+        value={caption ?? ''}
+        placeholder="Block caption"
+        isReadOnly={readOnly}
+        onChange={(value) => onCaptionChange(value || undefined)}
+      />
+    </BlockHeader>
+  );
+}
+```
+
+Pass `actionsClassName` when a block's actions need different spacing from the
+default icon-button gap.
+
+## Commands
+
+`createMarkdownDocumentCommands()` registers AI- and palette-friendly commands for
+Markdown artifacts:
+
+- `markdown-document.list`
+- `markdown-document.get`
+- `markdown-document.create`
+- `markdown-document.set-markdown`
+- `markdown-document.append-markdown`
+
+`createBlockDocumentCommands()` registers commands for structured block
+document artifacts. By default the command IDs are:
+
+- `block-document.list`
+- `block-document.get`
+- `block-document.inspect-block`
+- `block-document.create`
+- `block-document.append-blocks`
+- `block-document.insert-blocks`
+- `block-document.update-block`
+- `block-document.remove-block`
+- `block-document.move-block`
+- `block-document.create-chart-block`
+- `block-document.create-stateful-block`
+
+The artifact type is always `block-document`, command IDs always use
+`block-document.*`, and command descriptions use “block document”. Artifact type,
+label, and command namespace overrides are not supported. Hosts can customize
+UI labels in their artifact registry, and pass `commandGroup` and `defaultTitle`
+without changing the AI vocabulary.
+
+Hosts can pass `statefulBlockTypes` to expose supported feature-backed block
+types to `block-document.create-stateful-block`.
+
+Hosts with a narrower block surface can also pass `allowedBlockTypes`. The
+generic create, append, insert, and update commands then reject other block
+kinds; allowed `statefulBlock` payloads are additionally restricted to the
+configured `statefulBlockTypes`.
+
+Block mutation command results include the full refreshed document data plus
+focused mutation payloads such as `blockId`, `blockIds`, `blockType`,
+`blockTypes`, and `affectedBlocks`. Chart and stateful block creation also
+return follow-up IDs such as `tableName`, `blockInstanceId`,
+`statefulBlockType`, the seed `instanceTitle`, and chosen `caption` values.
+
+Structured block payloads may include an optional `intent` string. Use it for
+the durable natural-language purpose of an agent- or command-created block,
+such as the question a chart should answer or the job an embedded dashboard
+should serve. It is persisted with the block, unlike transient mutation
+metadata.
+
+## CRDT
+
+`@sqlrooms/documents/crdt` exposes Loro Mirror bindings for document state:
+
+```ts
+createCrdtSlice({
+  mirrors: {
+    documentState: createDocumentsCrdtMirror(),
+  },
+});
+```
+
+`createDocumentsCrdtMirror()` syncs Markdown bodies, block document Tiptap JSON
+content, document-owned assets, standalone chart block configs, block document
+and Markdown artifact metadata, and their artifact tab order.
+The current artifact selection is kept local.
+
+The mirror syncs `block-document` and `markdown-document` artifact metadata without
+legacy aliases. Pre-release sync snapshots and saved AI context are not migrated;
+reset incompatible development state when upgrading.
+
+Hosted dashboard state should continue to use the host app's Mosaic persistence,
+or a future Mosaic-specific CRDT mirror.
+
+## Knowledge Index
+
+`buildKnowledgeIndex` is a pure derived index. It does not persist data.
+
+```ts
+const index = buildKnowledgeIndex({
+  markdownDocuments: roomStore.getState().markdownDocuments.config,
+  artifacts: roomStore.getState().artifacts.config,
+});
+```
+
+It extracts `[[Document Title]]` wikilinks, body hashtags such as `#metrics`,
+and optional frontmatter tags. Links are resolved against Markdown artifact
+titles. Missing or ambiguous titles are reported as unresolved links.
+
+## Markdown document naming and persistence
+
+Markdown artifacts and embeddable blocks use `markdown-document`; their commands
+use `markdown-document.*`. Use `createMarkdownDocumentsSlice`,
+`MarkdownDocumentsSliceConfig`, `MarkdownDocumentsSliceState`, and
+`useStoreWithMarkdownDocuments` with the `markdownDocuments` store key.
+`createMarkdownDocumentCommands` provides the command family. These replace the
+former generic `DocumentsSlice*` APIs and `markdown.*` commands.
+
+The room state and CRDT field both use `markdownDocuments`. The CLI migrates local
+workspace snapshots from the persisted `documents` slice and `markdown` artifact/block
+types, preserving document content and assets. If both slice keys exist, canonical
+records take precedence while disjoint legacy records are retained. Experimental
+CRDT snapshots and saved AI context are not migrated; reset incompatible development
+sync and saved-session state when upgrading.
+`DocumentAsset` stays shared by both document families.

@@ -1,0 +1,25 @@
+{
+  "application": "roomie",
+  "schemaVersion": 1,
+  "artifacts": [
+    "block-document"
+  ],
+  "blocks": [
+    "chart",
+    "data-table",
+    "dashboard",
+    "html-app"
+  ],
+  "chartTypes": [
+    "histogram",
+    "count-plot",
+    "line-chart",
+    "heatmap",
+    "box-plot",
+    "scatter-plot"
+  ],
+  "dashboardPanels": [
+    "vgplot",
+    "data-table-explorer"
+  ]
+}

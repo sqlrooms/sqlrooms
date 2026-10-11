@@ -1,200 +1,693 @@
-import {StoreApi} from '@sqlrooms/room-store';
-import {AiSliceState} from '../AiSlice';
+import {ToolLoopAgent, ToolSet, UIMessageChunk, createAgentUIStream} from 'ai';
 import {ToolAbortError} from '../utils';
 import {TOOL_CALL_CANCELLED} from '../constants';
+import {ChatTimeoutError} from '../timeouts';
+import type {
+  AgentProgressSnapshot,
+  AgentStreamOutput,
+  AgentSnapshot,
+  AgentToolCall,
+  PendingSubAgentApproval,
+} from '../types';
 
 /**
- * Type definition for agent stream result (from ai package)
- * Represents the return value of Agent.stream()
+ * Minimal store interface required by streamSubAgent.
  */
-export type AgentStreamResult = {
-  toUIMessageStream(): AsyncIterable<UIMessageChunk>;
-  text: Promise<string>;
-};
-
-/**
- * Represents a chunk from the UI message stream
- */
-export type UIMessageChunk = {
-  type: string;
-  toolCallId?: string;
-  toolName?: string;
-  output?: unknown;
-  errorText?: string;
-  delta?: string;
-  id?: string;
-  providerMetadata?: unknown;
-};
-
-/**
- * Represents the state of a single tool call made by an agent
- */
-export type AgentToolCall = {
-  toolCallId: string;
-  toolName: string;
-  output?: unknown;
-  errorText?: string;
-  state: 'pending' | 'success' | 'error';
-};
-
-/**
- * Additional data stored for an agent tool call to track progress
- */
-export type AgentToolCallAdditionalData = {
-  agentToolCalls: AgentToolCall[];
-  finalOutput?: string;
-  timestamp: string;
-};
-
-/**
- * Updates the additional data for an agent tool call.
- */
-export function updateAgentToolCallData(params: {
-  store: StoreApi<AiSliceState>;
-  parentToolCallId: string;
-  agentToolCalls: AgentToolCall[];
-  sessionId: string;
-  finalOutput?: string;
-}): void {
-  const {store, parentToolCallId, agentToolCalls, sessionId, finalOutput} =
-    params;
-  const state = store.getState();
-  state.ai.setSessionToolAdditionalData(sessionId, parentToolCallId, {
-    agentToolCalls: [...agentToolCalls],
-    finalOutput,
-    timestamp: new Date().toISOString(),
-  } as AgentToolCallAdditionalData);
+interface AgentStreamStore {
+  getState(): {
+    ai: {
+      getToolCallSession?: (toolCallId: string) => string | undefined;
+      updateAgentProgress: (
+        parentToolCallId: string,
+        toolCalls: AgentToolCall[],
+      ) => void;
+      clearAgentProgress: (parentToolCallId: string) => void;
+      devtools?: {
+        shouldCaptureAgentSnapshots?: () => boolean;
+        writeAgentSnapshot?: (
+          parentToolCallId: string,
+          snapshot: AgentSnapshot,
+        ) => void;
+      };
+      requestSubAgentApproval?: (approval: PendingSubAgentApproval) => void;
+      resolveSubAgentApproval?: (approvalId: string, approved: boolean) => void;
+      clearSubAgentApproval?: (approvalId: string) => void;
+      writeAbortSnapshot?: (
+        toolCallId: string,
+        snapshot: AgentProgressSnapshot,
+      ) => void;
+      readAbortSnapshot?: (
+        toolCallId: string,
+      ) => AgentProgressSnapshot | undefined;
+    };
+  };
 }
 
 /**
- * Processes an agent stream result, tracking tool calls and forwarding chunks to the writer
- *
- * This function handles:
- * - Tracking all tool calls made by the agent
- * - Updating session additional data for UI progress rendering
- * - Forwarding text deltas and tool outputs to the stream writer
- * - Returning the final text result
- *
- * @param agentResult - The stream result from agent.stream()
- * @param store - The store containing AiSliceState
- * @param parentToolCallId - The tool call ID of the parent agent tool (for storing additional data)
- * @param sessionId - The session ID to use for storing additional data
- * @param abortSignal - The abort signal to use for cancelling the stream
- * @returns The final text output from the agent
+ * Carries text `onError` already produced, so the failure path does not format
+ * it a second time. A caller's `formatError` sees each error exactly once.
  */
-export async function processAgentStream(
-  agentResult: AgentStreamResult,
-  store: StoreApi<AiSliceState>,
-  parentToolCallId: string,
-  abortSignal?: AbortSignal,
-): Promise<string> {
-  const sessionId = store.getState().ai.getToolCallSession?.(parentToolCallId);
+class FormattedStreamError extends Error {}
 
-  if (!sessionId) {
-    throw new Error(
-      `Session ID not found for tool call "${parentToolCallId}". The tool may have been called outside of a valid session context.`,
-    );
+/**
+ * Message handed to the parent model when a sub-agent stream fails.
+ *
+ * The raw exception goes to the console instead. A child agent may run on a
+ * different provider than its parent, and callers serialize the thrown message
+ * into a tool result the parent model receives, so a provider error carrying an
+ * endpoint, account detail, or credential would cross that boundary. Pass
+ * `formatError` to opt into the raw text once the trust boundary is known.
+ */
+export const SUB_AGENT_ERROR_MESSAGE =
+  'The sub-agent request failed. See the browser console for the underlying error.';
+
+/**
+ * Extracts the underlying message from a thrown value.
+ *
+ * Local stand-in for `getErrorMessage`, which ai-core does not depend on.
+ * Exported so a host that has verified parent and child share a trust boundary
+ * can pass it as `formatError` to get the unredacted text back.
+ */
+export function getSubAgentErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (error === undefined || error === null) return 'unknown error';
+  try {
+    return JSON.stringify(error) ?? String(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function getAgentAvailableTools(
+  agent: unknown,
+): AgentSnapshot['availableTools'] {
+  const tools = (agent as {tools?: unknown}).tools;
+  if (!tools || typeof tools !== 'object') return [];
+
+  return Object.entries(tools as Record<string, unknown>).map(
+    ([name, tool]) => {
+      const record =
+        tool && typeof tool === 'object'
+          ? (tool as Record<string, unknown>)
+          : {};
+      return {
+        name,
+        description:
+          typeof record.description === 'string'
+            ? record.description
+            : undefined,
+        hasExecute: typeof record.execute === 'function',
+        hasRenderer:
+          typeof record.renderer === 'function' ||
+          typeof record.render === 'function',
+        needsApproval: Boolean(record.needsApproval),
+      };
+    },
+  );
+}
+
+/**
+ * Updates a tool call entry in the provided toolEditState map based on a stream chunk.
+ * Used by renderers to track per-tool-call progress.
+ *
+ * @param toolEditState - Mutable map of toolCallId to AgentToolCall
+ * @param chunk - A UIMessageChunk from the agent stream
+ */
+export function updateAgentToolCallData(
+  toolEditState: Map<string, AgentToolCall>,
+  chunk: UIMessageChunk,
+): void {
+  if (chunk.type === 'tool-input-available') {
+    toolEditState.set(chunk.toolCallId, {
+      toolCallId: chunk.toolCallId,
+      toolName: chunk.toolName,
+      input: chunk.input,
+      state: 'pending',
+    });
+  } else if (chunk.type === 'tool-output-available') {
+    const existing = toolEditState.get(chunk.toolCallId);
+    if (existing) {
+      existing.output = chunk.output;
+      existing.state = 'success';
+      const nested = extractNestedAgentToolCalls(chunk.output);
+      if (nested) {
+        existing.agentToolCalls = nested;
+      }
+    } else {
+      console.warn(
+        `Received tool-output-available for unknown toolCallId: ${chunk.toolCallId}`,
+      );
+    }
+  } else if (chunk.type === 'tool-output-error') {
+    const existing = toolEditState.get(chunk.toolCallId);
+    if (existing) {
+      existing.errorText = chunk.errorText;
+      existing.state = 'error';
+    } else {
+      console.warn(
+        `Received tool-output-error for unknown toolCallId: ${chunk.toolCallId}`,
+      );
+    }
+  } else if (chunk.type === 'tool-input-error') {
+    toolEditState.set(chunk.toolCallId, {
+      toolCallId: chunk.toolCallId,
+      toolName: chunk.toolName,
+      errorText: chunk.errorText,
+      state: 'error',
+    });
+  }
+}
+
+/**
+ * If a tool output looks like it came from a nested agent (contains agentToolCalls),
+ * extract and return those calls so the parent can embed them for recursive rendering.
+ */
+function extractNestedAgentToolCalls(
+  output: unknown,
+): AgentToolCall[] | undefined {
+  if (
+    output &&
+    typeof output === 'object' &&
+    'agentToolCalls' in output &&
+    Array.isArray((output as {agentToolCalls: unknown}).agentToolCalls)
+  ) {
+    return (output as {agentToolCalls: AgentToolCall[]}).agentToolCalls;
+  }
+  return undefined;
+}
+
+const MAX_OUTPUT_SUMMARY_LENGTH = 200;
+
+/**
+ * Truncate a tool output to a short summary suitable for LLM context.
+ */
+function summarizeOutput(output: unknown): unknown {
+  if (output == null) return output;
+  try {
+    const str = typeof output === 'string' ? output : JSON.stringify(output);
+    if (str.length <= MAX_OUTPUT_SUMMARY_LENGTH) return output;
+    return str.slice(0, MAX_OUTPUT_SUMMARY_LENGTH) + '...';
+  } catch {
+    return '[output too large to summarize]';
+  }
+}
+
+/**
+ * Transition any tool calls still in `pending` or `approval-requested` state
+ * to `error` with the cancellation message. Clears `approvalId` on the
+ * approval-requested path so downstream consumers don't act on a stale id.
+ */
+function markPendingToolCallsAsCancelled(
+  toolCallMap: Map<string, AgentToolCall>,
+  errorText: string = TOOL_CALL_CANCELLED,
+): void {
+  const now = Date.now();
+  for (const [id, tc] of toolCallMap) {
+    if (tc.state === 'pending' || tc.state === 'approval-requested') {
+      toolCallMap.set(id, {
+        ...tc,
+        state: 'error',
+        errorText,
+        completedAt: now,
+        approvalId: undefined,
+      });
+    }
+  }
+}
+
+/**
+ * Build an `AgentProgressSnapshot` from the current `toolCallMap` state.
+ * For any entry whose `toolName` starts with `agent-`, reads the child's
+ * abort snapshot from the store (written by the child's `streamSubAgent`
+ * before it threw) and embeds it as `childSnapshot`.
+ */
+function buildAbortSnapshot(
+  agentName: string,
+  toolCallMap: Map<string, AgentToolCall>,
+  finalText: string,
+  store: AgentStreamStore,
+): AgentProgressSnapshot {
+  const completedTools: AgentProgressSnapshot['completedTools'] = [];
+  const failedTools: AgentProgressSnapshot['failedTools'] = [];
+  const pendingTools: AgentProgressSnapshot['pendingTools'] = [];
+
+  for (const tc of toolCallMap.values()) {
+    const childSnapshot = store
+      .getState()
+      .ai.readAbortSnapshot?.(tc.toolCallId);
+
+    if (tc.state === 'success') {
+      completedTools.push({
+        toolName: tc.toolName,
+        input: tc.input,
+        output: summarizeOutput(tc.output),
+        ...(childSnapshot ? {childSnapshot} : {}),
+      });
+    } else if (tc.state === 'error') {
+      failedTools.push({
+        toolName: tc.toolName,
+        input: tc.input,
+        errorText: tc.errorText || 'unknown',
+        ...(childSnapshot ? {childSnapshot} : {}),
+      });
+    } else {
+      pendingTools.push({
+        toolName: tc.toolName,
+        input: tc.input,
+        ...(childSnapshot ? {childSnapshot} : {}),
+      });
+    }
   }
 
+  return {
+    agentName,
+    completedTools,
+    failedTools,
+    pendingTools,
+    partialText: finalText,
+  };
+}
+
+/**
+ * Format an `AgentProgressSnapshot` into a human-readable string
+ * that can be embedded in error text for LLM visibility.
+ * Recurses into `childSnapshot` to render arbitrarily deep nesting.
+ */
+export function formatAbortSnapshot(
+  snapshot: AgentProgressSnapshot,
+  indent: string = '',
+): string {
+  const lines: string[] = [];
+
+  for (const t of snapshot.completedTools) {
+    const inputStr = t.input != null ? JSON.stringify(t.input) : '';
+    const outputStr =
+      t.output != null
+        ? ` -> ${typeof t.output === 'string' ? t.output : JSON.stringify(t.output)}`
+        : '';
+    lines.push(`${indent}- Completed: ${t.toolName}(${inputStr})${outputStr}`);
+    if (t.childSnapshot) {
+      lines.push(formatAbortSnapshot(t.childSnapshot, indent + '  '));
+    }
+  }
+  for (const t of snapshot.failedTools) {
+    lines.push(`${indent}- Failed: ${t.toolName} (${t.errorText})`);
+    if (t.childSnapshot) {
+      lines.push(formatAbortSnapshot(t.childSnapshot, indent + '  '));
+    }
+  }
+  for (const t of snapshot.pendingTools) {
+    const inputStr = t.input != null ? JSON.stringify(t.input) : '';
+    lines.push(`${indent}- Pending: ${t.toolName}(${inputStr})`);
+    if (t.childSnapshot) {
+      lines.push(formatAbortSnapshot(t.childSnapshot, indent + '  '));
+    }
+  }
+
+  if (snapshot.partialText) {
+    const truncated =
+      snapshot.partialText.length > 200
+        ? snapshot.partialText.slice(0, 200) + '...'
+        : snapshot.partialText;
+    lines.push(`${indent}- Partial response: ${truncated}`);
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Streams a sub-agent with the given prompt, collecting tool call progress for
+ * live UI rendering via the store, and returns the final text output along with
+ * the collected tool calls.
+ *
+ * When a tool with `needsApproval` is encountered, the stream pauses, surfaces
+ * an approval request through the store, waits for the user's response, then
+ * restarts the stream with the approval response so the agent loop can continue.
+ *
+ * @param agent - The ToolLoopAgent to run
+ * @param prompt - The prompt string to send to the agent
+ * @param store - Store providing updateAgentProgress / clearAgentProgress / approval methods
+ * @param parentToolCallId - The parent tool call ID for progress tracking
+ * @param abortSignal - Optional abort signal for cancellation
+ * @param options - Optional overrides. `formatError` replaces the redacted
+ *   {@link SUB_AGENT_ERROR_MESSAGE} thrown on a stream failure; pass
+ *   {@link getSubAgentErrorMessage} when the parent and child are known to
+ *   share a trust boundary. The raw error always reaches the console.
+ * @returns The final text and collected tool calls from the agent
+ */
+export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
+  agent: ToolLoopAgent<never, TOOLS, any>,
+  prompt: string,
+  store: AgentStreamStore,
+  parentToolCallId: string,
+  abortSignal?: AbortSignal,
+  options?: {formatError?: (error: unknown) => string},
+): Promise<AgentStreamOutput> {
+  const getAbortMessage = () =>
+    abortSignal?.reason instanceof ChatTimeoutError
+      ? abortSignal.reason.message
+      : TOOL_CALL_CANCELLED;
   const throwIfAborted = () => {
     if (abortSignal?.aborted) {
-      throw new ToolAbortError(TOOL_CALL_CANCELLED);
+      throw new ToolAbortError(getAbortMessage());
     }
   };
 
-  const agentToolCalls: AgentToolCall[] = [];
+  let finalText = '';
+  const toolCallMap = new Map<string, AgentToolCall>();
 
-  // Keep track of tool calls by ID for updating state
-  const toolCallMap = new Map<string, number>();
-
-  try {
-    for await (const chunk of agentResult.toUIMessageStream()) {
-      throwIfAborted();
-      // Capture tool input (when agent starts calling a tool)
-      if (
-        chunk.type === 'tool-input-available' &&
-        chunk.toolCallId &&
-        chunk.toolName
-      ) {
-        const index = agentToolCalls.length;
-        toolCallMap.set(chunk.toolCallId, index);
-        agentToolCalls.push({
-          toolCallId: chunk.toolCallId,
-          toolName: chunk.toolName,
-          state: 'pending',
-        });
-
-        updateAgentToolCallData({
-          store,
-          parentToolCallId,
-          agentToolCalls,
-          sessionId,
-        });
-      }
-
-      // Forward text deltas to writer stream
-      if (chunk.type === 'tool-output-available' && chunk.toolCallId) {
-        // Update the tool call with success state
-        const index = toolCallMap.get(chunk.toolCallId);
-        if (index !== undefined) {
-          const toolCall = agentToolCalls[index];
-          if (toolCall) {
-            agentToolCalls[index] = {
-              toolCallId: toolCall.toolCallId,
-              toolName: toolCall.toolName,
-              output: chunk.output,
-              state: 'success',
-            };
-
-            updateAgentToolCallData({
-              store,
-              parentToolCallId,
-              agentToolCalls,
-              sessionId,
-            });
-          }
-        }
-      } else if (chunk.type === 'tool-output-error' && chunk.toolCallId) {
-        // Update the tool call with error state
-        const index = toolCallMap.get(chunk.toolCallId);
-        if (index !== undefined) {
-          const toolCall = agentToolCalls[index];
-          if (toolCall) {
-            agentToolCalls[index] = {
-              toolCallId: toolCall.toolCallId,
-              toolName: toolCall.toolName,
-              errorText: chunk.errorText,
-              state: 'error',
-            };
-
-            updateAgentToolCallData({
-              store,
-              parentToolCallId,
-              agentToolCalls,
-              sessionId,
-            });
-          }
-        }
-      }
-    }
-  } catch (err) {
-    // If we were cancelled, normalize to ToolAbortError so upstream shows "cancelled by user"
-    throwIfAborted();
-    throw err;
+  const devtools = store.getState().ai.devtools;
+  if (devtools?.shouldCaptureAgentSnapshots?.()) {
+    devtools.writeAgentSnapshot?.(parentToolCallId, {
+      agentName: parentToolCallId,
+      parentToolCallId,
+      availableTools: getAgentAvailableTools(agent),
+      startedAt: Date.now(),
+    });
   }
 
-  throwIfAborted();
-  // Await the text promise (this also consumes the stream)
-  const resultText = await agentResult.text;
+  const pushProgress = () => {
+    store.getState().ai.updateAgentProgress(
+      parentToolCallId,
+      Array.from(toolCallMap.values()).map((tc) => ({...tc})),
+    );
+  };
 
-  // Store final additional data with all tool calls
-  updateAgentToolCallData({
-    store,
-    parentToolCallId,
-    agentToolCalls,
-    sessionId,
-    finalOutput: resultText,
-  });
+  /**
+   * The parent model sees this text; the console keeps the original. Callers
+   * serialize it into a tool result, and the child may run on a different
+   * provider than the parent.
+   */
+  const toModelFacingMessage = (error: unknown) => {
+    console.error('Sub-agent stream error:', error);
+    return options?.formatError
+      ? options.formatError(error)
+      : SUB_AGENT_ERROR_MESSAGE;
+  };
 
-  return resultText;
+  /** Ends the run, converting an abort into a snapshot and anything else into
+   * a redacted throw. */
+  const failStream: (err: unknown) => never = (err) => {
+    const abortMessage = getAbortMessage();
+    markPendingToolCallsAsCancelled(toolCallMap, abortMessage);
+    pushProgress();
+
+    if (abortSignal?.aborted) {
+      const snapshot = buildAbortSnapshot(
+        parentToolCallId,
+        toolCallMap,
+        finalText,
+        store,
+      );
+      store.getState().ai.writeAbortSnapshot?.(parentToolCallId, snapshot);
+      throw new ToolAbortError(abortMessage, snapshot);
+    }
+    if (
+      err instanceof ToolAbortError ||
+      err instanceof ChatTimeoutError ||
+      err instanceof FormattedStreamError
+    ) {
+      throw err;
+    }
+    throw new Error(toModelFacingMessage(err));
+  };
+
+  // Build the initial uiMessages for the agent stream
+  let uiMessages: Array<{
+    id: string;
+    role: 'user' | 'assistant';
+    parts: Array<Record<string, unknown>>;
+  }> = [
+    {
+      id: crypto.randomUUID(),
+      role: 'user',
+      parts: [{type: 'text', text: prompt}],
+    },
+  ];
+
+  // Approval retry loop: re-create the stream after each approval response
+  while (true) {
+    throwIfAborted();
+
+    let pendingApproval: {
+      approvalId: string;
+      toolCallId: string;
+    } | null = null;
+
+    let stream;
+    try {
+      stream = await createAgentUIStream({
+        agent,
+        uiMessages,
+        abortSignal,
+        onError: toModelFacingMessage,
+      });
+    } catch (err) {
+      // Creating the stream can reject before `onError` is ever wired up, and
+      // that rejection reaches the parent model the same way a stream error
+      // does.
+      failStream(err);
+    }
+
+    // Accumulated assistant tool parts for the current stream iteration,
+    // keyed by toolCallId. If the stream ends with a pending approval we
+    // reconstruct the conversation from these so the next iteration sees
+    // the approval response in context.
+    const assistantToolParts = new Map<
+      string,
+      {toolCallId: string; toolName: string; input: unknown; output?: unknown}
+    >();
+
+    try {
+      for await (const chunk of stream) {
+        throwIfAborted();
+
+        // A stream-level error (e.g. an API 401 / provider failure) is delivered
+        // as an `error` chunk rather than a thrown exception, because the AI SDK
+        // routes it through `streamText`'s `onError`. Surface it as a thrown
+        // error so callers can react (revert, show a retry) instead of silently
+        // treating the run as a successful no-op.
+        if (chunk.type === 'error') {
+          throw new FormattedStreamError(
+            chunk.errorText || 'The AI request failed.',
+          );
+        }
+
+        if (chunk.type === 'text-delta') {
+          finalText += chunk.delta;
+        }
+
+        // Handle tool-approval-request chunks from the AI SDK
+        if (
+          chunk.type === 'tool-approval-request' &&
+          'approvalId' in chunk &&
+          'toolCallId' in chunk
+        ) {
+          const approvalChunk = chunk as {
+            type: 'tool-approval-request';
+            approvalId: string;
+            toolCallId: string;
+          };
+          pendingApproval = {
+            approvalId: approvalChunk.approvalId,
+            toolCallId: approvalChunk.toolCallId,
+          };
+
+          // Update the tool call entry to show approval-requested state
+          const entry = toolCallMap.get(approvalChunk.toolCallId);
+          if (entry) {
+            toolCallMap.set(approvalChunk.toolCallId, {
+              ...entry,
+              state: 'approval-requested',
+              approvalId: approvalChunk.approvalId,
+            });
+            pushProgress();
+          }
+          continue;
+        }
+
+        // Track assistant tool parts for conversation reconstruction
+        if (chunk.type === 'tool-input-available') {
+          assistantToolParts.set((chunk as any).toolCallId, {
+            toolCallId: (chunk as any).toolCallId,
+            toolName: (chunk as any).toolName,
+            input: (chunk as any).input,
+          });
+        }
+
+        if (!('toolCallId' in chunk) || !chunk.toolCallId) continue;
+
+        const id = chunk.toolCallId;
+        let changed = false;
+
+        if (!toolCallMap.has(id) && 'toolName' in chunk && chunk.toolName) {
+          toolCallMap.set(id, {
+            toolCallId: id,
+            toolName: chunk.toolName,
+            state: 'pending',
+            startedAt: Date.now(),
+          });
+          changed = true;
+        }
+
+        const entry = toolCallMap.get(id);
+        if (!entry) continue;
+
+        if (chunk.type === 'tool-input-available') {
+          toolCallMap.set(id, {...entry, input: chunk.input});
+          changed = true;
+        } else if (chunk.type === 'tool-output-available') {
+          const nestedCalls = extractNestedAgentToolCalls(chunk.output);
+          toolCallMap.set(id, {
+            ...entry,
+            output: chunk.output,
+            state: 'success',
+            completedAt: Date.now(),
+            ...(nestedCalls ? {agentToolCalls: nestedCalls} : {}),
+          });
+          changed = true;
+
+          // Merge output into the tool part for conversation reconstruction
+          const tp = assistantToolParts.get(id);
+          if (tp) {
+            tp.output = chunk.output;
+          }
+        } else if (
+          chunk.type === 'tool-output-error' ||
+          chunk.type === 'tool-input-error'
+        ) {
+          toolCallMap.set(id, {
+            ...entry,
+            errorText: chunk.errorText,
+            state: 'error',
+            completedAt: Date.now(),
+          });
+          changed = true;
+        } else if (chunk.type === 'tool-output-denied') {
+          toolCallMap.set(id, {
+            ...entry,
+            state: 'error',
+            errorText: 'Denied by user',
+            completedAt: Date.now(),
+          });
+          changed = true;
+        }
+
+        if (changed) {
+          pushProgress();
+        }
+      }
+    } catch (err) {
+      failStream(err);
+    }
+
+    // If no approval was requested, we're done
+    if (!pendingApproval) {
+      break;
+    }
+
+    // Surface the approval request to the UI and wait for the user's response
+    const approvedEntry = toolCallMap.get(pendingApproval.toolCallId);
+    if (!approvedEntry || !store.getState().ai.requestSubAgentApproval) {
+      break;
+    }
+
+    const approved = await new Promise<boolean>((resolve) => {
+      throwIfAborted();
+      store.getState().ai.requestSubAgentApproval!({
+        toolCallId: pendingApproval!.toolCallId,
+        approvalId: pendingApproval!.approvalId,
+        toolName: approvedEntry.toolName,
+        input: approvedEntry.input,
+        resolve,
+      });
+    });
+
+    throwIfAborted();
+
+    // Clean up the pending approval from the store
+    store.getState().ai.clearSubAgentApproval?.(pendingApproval.approvalId);
+
+    // Update tool call state based on user's response
+    if (approved) {
+      toolCallMap.set(pendingApproval.toolCallId, {
+        ...approvedEntry,
+        state: 'pending',
+        approvalId: undefined,
+      });
+    } else {
+      toolCallMap.set(pendingApproval.toolCallId, {
+        ...approvedEntry,
+        state: 'error',
+        errorText: 'Denied by user',
+        approvalId: undefined,
+      });
+    }
+    pushProgress();
+
+    // Reconstruct the messages for the next stream iteration.
+    // Each tool part becomes a single `tool-<name>` part. Completed tools
+    // get `output-available` state; the approval target gets the approval
+    // response so the agent loop can continue from where it left off.
+    const assistantMessage = {
+      id: crypto.randomUUID(),
+      role: 'assistant' as const,
+      parts: Array.from(assistantToolParts.values()).map((tp) => {
+        const isApprovalTarget = tp.toolCallId === pendingApproval!.toolCallId;
+
+        if (isApprovalTarget) {
+          return {
+            type: `tool-${tp.toolName}` as string,
+            toolCallId: tp.toolCallId,
+            toolName: tp.toolName,
+            input: tp.input,
+            state: approved ? 'approval-responded' : 'output-denied',
+            approval: {
+              id: pendingApproval!.approvalId,
+              approved,
+            },
+          };
+        }
+
+        return {
+          type: `tool-${tp.toolName}` as string,
+          toolCallId: tp.toolCallId,
+          toolName: tp.toolName,
+          input: tp.input,
+          output: tp.output,
+          state: 'output-available' as const,
+        };
+      }),
+    };
+
+    uiMessages = [...uiMessages, assistantMessage];
+  }
+
+  // Push final completed state so the UI can render after the tool finishes.
+  // We intentionally do NOT clear agentProgress here — the data persists so
+  // AgentProgressSection can render nested tool calls from the store instead
+  // of relying on agentToolCalls embedded in the tool output (which would
+  // bloat the main orchestrator's message context).
+  if (abortSignal?.aborted) {
+    markPendingToolCallsAsCancelled(toolCallMap, getAbortMessage());
+  }
+
+  pushProgress();
+
+  if (abortSignal?.aborted) {
+    const snapshot = buildAbortSnapshot(
+      parentToolCallId,
+      toolCallMap,
+      finalText,
+      store,
+    );
+    store.getState().ai.writeAbortSnapshot?.(parentToolCallId, snapshot);
+    throw new ToolAbortError(getAbortMessage(), snapshot);
+  }
+
+  return {
+    finalOutput: finalText,
+    agentToolCalls: Array.from(toolCallMap.values()),
+  };
 }

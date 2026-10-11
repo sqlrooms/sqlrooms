@@ -3,7 +3,13 @@
  * @packageDocumentation
  */
 
-export {RoomShell} from './RoomShell';
+export {RoomShell, type RoomShellBaseState} from './RoomShell';
+export {RoomDndProvider} from '@sqlrooms/layout';
+export {RoomShellCommandPalette} from './RoomShellCommandPalette';
+export type {
+  RoomShellCommandPaletteButtonProps,
+  RoomShellCommandPaletteProps,
+} from './RoomShellCommandPalette';
 
 export {FileDataSourceCard} from './data-sources/FileDataSourceCard';
 export {FileDataSourcesPanel} from './data-sources/FileDataSourcesPanel';
@@ -16,9 +22,11 @@ export {RoomPanel} from './panels/RoomPanel';
 export {RoomPanelHeader} from './panels/RoomPanelHeader';
 
 export {
+  AreaPanelButtons,
   RoomShellSidebarButton,
   RoomShellSidebarButtons,
   SidebarButton,
+  TabButtons,
 } from './RoomShellSidebarButtons';
 
 export {createRoomShellSlice, useBaseRoomShellStore} from './RoomShellSlice';
@@ -29,62 +37,146 @@ export type {StateCreator, StoreApi} from 'zustand';
 export {DataSourceStatus} from './types';
 export type {DataSourceState, RoomFileInfo, RoomFileState} from './types';
 
-export type {RoomPanelInfo} from '@sqlrooms/layout';
+export {LayoutRenderer} from '@sqlrooms/layout';
+export type {
+  LayoutPath,
+  LayoutRendererProps,
+  RoomPanelInfo,
+  RoomPanelComponent,
+} from '@sqlrooms/layout';
 
 // Re-export from @sqlrooms/room-store
 export {
-  RoomStateContext,
-  RoomStateProvider,
-  useBaseRoomStore,
   createBaseRoomSlice,
   createBaseSlice,
-  createSlice,
+  createCommandCliAdapter,
+  createCommandMcpAdapter,
+  createCommandSlice,
+  createPersistHelpers,
+  createPersistenceController,
+  createRoomStorePersistence,
+  createRoomCommandExecutionContext,
   createRoomSlice,
   createRoomStore,
   createRoomStoreCreator,
+  createSlice,
+  doesCommandRequireInput,
+  exportCommandInputSchema,
+  getCommandInputComponent,
+  getCommandKeystrokes,
+  getCommandShortcut,
+  hasCommandSliceState,
+  invokeCommandWithPolicy,
+  invokeCommandFromStore,
   isRoomSliceWithDestroy,
   isRoomSliceWithInitialize,
-  createPersistHelpers,
+  listCommandsFromStore,
   persistSliceConfigs,
+  registerCommandsForOwner,
+  resolveCommandPolicyMetadata,
+  RoomStateContext,
+  RoomStateProvider,
+  unregisterCommandsForOwner,
+  useBaseRoomStore,
+  useRoomStoreApi,
+  validateCommandInput,
 } from '@sqlrooms/room-store';
 export type {
-  RoomStateProviderProps,
-  BaseRoomStoreState,
-  CreateBaseRoomSliceProps,
   BaseRoomStore,
+  BaseRoomStoreState,
+  CommandCliAdapter,
+  CommandCliAdapterOptions,
+  CommandInvocationPolicyOptions,
+  CommandMcpAdapter,
+  CommandMcpAdapterOptions,
+  CommandMcpToolDescriptor,
+  GuardedCommandInvocationOptions,
+  CommandSliceState,
+  CreateBaseRoomSliceProps,
+  CreateCommandSliceProps,
+  CreatePersistenceControllerOptions,
+  CreateRoomStorePersistenceOptions,
+  PersistenceAdapter,
+  PersistenceController,
+  PersistenceControllerListener,
+  PersistenceControllerState,
+  PersistenceSaveMetadata,
+  PersistenceSaveReason,
+  RegisteredRoomCommand,
+  RoomStorePersistence,
+  RoomStorePersistenceChangePredicate,
+  RoomStorePersistenceSnapshotEquivalence,
+  RoomStorePersistenceSnapshotCodec,
+  RoomCommand,
+  RoomCommandDescriptor,
+  RoomCommandExecuteOutput,
+  RoomCommandExecutionContext,
+  RoomCommandInputComponent,
+  RoomCommandInputComponentProps,
+  RoomCommandInvocation,
+  RoomCommandInvocationOptions,
+  RoomCommandInvokeErrorEvent,
+  RoomCommandInvokeFailureEvent,
+  RoomCommandInvokeStartEvent,
+  RoomCommandInvokeSuccessEvent,
+  RoomCommandKeystrokes,
+  RoomCommandListOptions,
+  RoomCommandMiddleware,
+  RoomCommandMiddlewareNext,
+  RoomCommandPolicyMetadata,
+  RoomCommandPortableSchema,
+  RoomCommandPredicate,
+  RoomCommandResult,
+  RoomCommandRiskLevel,
+  RoomCommandSurface,
+  RoomCommandUiMetadata,
+  RoomStateProviderProps,
+  UseRoomStore,
 } from '@sqlrooms/room-store';
 
-// Re-export from @sqlrooms/room-config (via room-store)
-// Values also export their corresponding types automatically (Zod pattern)
+export {useShallow} from 'zustand/react/shallow';
+
+// Re-export from @sqlrooms/db
+export {createDbSlice} from '@sqlrooms/db';
+export type {DbSliceState} from '@sqlrooms/db';
+
+// Re-export from @sqlrooms/room-store — room-config types
 export {
-  BaseRoomConfig,
-  DEFAULT_ROOM_TITLE,
-  createDefaultBaseRoomConfig,
-  DataSourceTypes,
   BaseDataSource,
-  FileDataSource,
-  UrlDataSource,
-  SqlQueryDataSource,
+  BaseRoomConfig,
   DataSource,
-  isFileDataSource,
-  isUrlDataSource,
-  isSqlQueryDataSource,
+  DataSourceTypes,
+  DEFAULT_ROOM_TITLE,
+  FileDataSource,
   LoadFile,
-  StandardLoadOptions,
-  SpatialLoadOptions,
-  SpatialLoadFileOptions,
-  isSpatialLoadFileOptions,
-  StandardLoadFileOptions,
   LoadFileOptions,
   MAIN_VIEW,
-  LayoutTypes,
-  DEFAULT_MOSAIC_LAYOUT,
-  createDefaultMosaicLayout,
-  MosaicLayoutDirection,
-  MosaicLayoutParent,
-  isMosaicLayoutParent,
-  MosaicLayoutNodeKey,
-  MosaicLayoutNode,
-  MosaicLayoutConfig,
+  SpatialLoadFileOptions,
+  SpatialLoadOptions,
+  SqlQueryDataSource,
+  StandardLoadFileOptions,
+  StandardLoadOptions,
+  UrlDataSource,
+  createDefaultBaseRoomConfig,
+  isFileDataSource,
+  isSpatialLoadFileOptions,
+  isSqlQueryDataSource,
+  isUrlDataSource,
+  LayoutNodeKey,
+  LayoutPanelNode,
+  LayoutSplitNode,
+  LayoutTabsNode,
+  LayoutNode,
   LayoutConfig,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
+  createDefaultLayout,
 } from '@sqlrooms/room-store';
+
+export type {LayoutDirection} from '@sqlrooms/room-store';
+
+export {
+  createDuckDbPersistStorage,
+  type DuckDbPersistStorage,
+} from './createDuckDbPersistStorage';

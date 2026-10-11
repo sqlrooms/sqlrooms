@@ -1,7 +1,7 @@
-import {Alert, AlertDescription, AlertTitle} from './alert';
 import {RotateCcwIcon, TriangleAlertIcon} from 'lucide-react';
 import * as React from 'react';
 import {cn} from '../lib/utils';
+import {Alert, AlertDescription, AlertTitle} from './alert';
 import {Button} from './button';
 
 interface ErrorPaneProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -31,7 +31,7 @@ const ErrorPane = React.forwardRef<HTMLDivElement, ErrorPaneProps>(
     return (
       <div
         ref={ref}
-        className={cn('flex justify-center', className)}
+        className={cn('flex w-full justify-center', className)}
         {...props}
       >
         <Alert
@@ -50,7 +50,7 @@ const ErrorPane = React.forwardRef<HTMLDivElement, ErrorPaneProps>(
           <AlertDescription className="text-foreground mt-3 max-w-sm px-2">
             <p className="mb-5 text-left">{text}</p>
             {actions && (
-              <div className="mb-3 mt-6">
+              <div className="mt-6 mb-3">
                 <div className="flex justify-center gap-2">
                   {onRetry && (
                     <Button

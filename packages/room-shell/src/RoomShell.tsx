@@ -1,5 +1,15 @@
-import {MosaicLayout} from '@sqlrooms/layout';
-import {RoomStateProvider} from '@sqlrooms/room-store';
+import {
+  LayoutRenderer,
+  RoomDndProvider,
+  useStoreWithLayout,
+} from '@sqlrooms/layout';
+import type {LayoutNode} from '@sqlrooms/layout-config';
+import {
+  RoomStateProvider,
+  useBaseRoomStore,
+  type BaseRoomStoreState,
+  type StoreApi,
+} from '@sqlrooms/room-store';
 import {
   cn,
   ErrorBoundary,
@@ -9,102 +19,164 @@ import {
   TooltipProvider,
 } from '@sqlrooms/ui';
 import {FC, PropsWithChildren, Suspense, useCallback} from 'react';
-import {MosaicNode} from 'react-mosaic-component';
+import {RoomShellCommandPalette} from './RoomShellCommandPalette';
 import {
+  AreaPanelButtons,
+  TabButtons,
   RoomShellSidebarButtons,
   SidebarButton,
 } from './RoomShellSidebarButtons';
-import {RoomShellStore, useBaseRoomShellStore} from './RoomShellSlice';
 
-export function RoomShellBase({
+/** Minimal room state required by the Room Shell container. */
+export type RoomShellBaseState = BaseRoomStoreState & {
+  room: BaseRoomStoreState['room'] & {
+    CustomErrorBoundary?: React.ComponentType<{
+      onRetry?: () => void;
+      children?: React.ReactNode;
+    }>;
+  };
+};
+
+type RoomShellLoadingProgress = {
+  message: string;
+  error?: string;
+  errorDetails?: string;
+};
+
+type RoomShellLoadingState = {
+  room: {
+    getLoadingProgress?: () => RoomShellLoadingProgress | undefined;
+  };
+};
+
+export function RoomShellBase<RS extends RoomShellBaseState>({
   className,
   children,
   roomStore,
 }: React.PropsWithChildren<{
   className?: string;
-  roomStore?: RoomShellStore;
+  roomStore?: StoreApi<RS>;
 }>) {
+  const CustomErrorBoundary =
+    roomStore?.getState().room.CustomErrorBoundary ?? ErrorBoundary;
   return (
     <RoomStateProvider roomStore={roomStore}>
       <div className={cn('flex h-full w-full', className)}>
-        <ErrorBoundary>
+        <CustomErrorBoundary>
           <Suspense fallback={<SpinnerPane h="100%" />}>
             <TooltipProvider>{children}</TooltipProvider>
             <Toaster />
           </Suspense>
-        </ErrorBoundary>
+        </CustomErrorBoundary>
       </div>
     </RoomStateProvider>
   );
 }
 
-export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
+export const SidebarContainer: FC<PropsWithChildren<{className?: string}>> = ({
   className,
   children,
 }) => {
   return (
     <div
       className={cn(
-        'bg-muted/70 flex h-full w-12 flex-col items-center px-1 py-4',
+        'bg-muted/70 flex h-full w-12 flex-col items-center gap-2 px-1 py-4',
         className,
       )}
     >
-      <RoomShellSidebarButtons />
       {children}
     </div>
   );
 };
 
+/**
+ * @deprecated Use SidebarContainer instead
+ */
+export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
+  className,
+  children,
+}) => {
+  return (
+    <SidebarContainer className={className}>
+      <RoomShellSidebarButtons /> {children}
+    </SidebarContainer>
+  );
+};
+
 export const LayoutComposer: FC<{
   className?: string;
-  tileClassName?: string;
-}> = ({className, tileClassName}) => {
-  const layout = useBaseRoomShellStore((state) => state.layout.config);
-  const setLayout = useBaseRoomShellStore((state) => state.layout.setLayout);
-  const panels = useBaseRoomShellStore((state) => state.layout.panels);
-  const ErrorBoundary = useBaseRoomShellStore(
-    (state) => state.room.CustomErrorBoundary,
-  );
+  onTabCreate?: (tabsId: string) => void;
+}> = ({className, onTabCreate}) => {
+  const rootLayout = useStoreWithLayout((state) => state.layout.config);
+  const setLayout = useStoreWithLayout((state) => state.layout.setConfig);
+
+  const setActiveTab = useStoreWithLayout((state) => state.layout.setActiveTab);
+  const removeTab = useStoreWithLayout((state) => state.layout.removeTab);
+  const reorderTabs = useStoreWithLayout((state) => state.layout.reorderTabs);
+  const setCollapsed = useStoreWithLayout((state) => state.layout.setCollapsed);
 
   const handleLayoutChange = useCallback(
-    (nodes: MosaicNode<string> | null) => {
-      // Keep layout properties, e.g. 'pinned' and 'fixed'
-      setLayout({...layout, nodes});
+    (newLayout: LayoutNode | null) => {
+      setLayout(newLayout);
     },
-    [setLayout, layout],
+    [setLayout],
   );
 
-  // const visibleRoomPanels = useMemo(
-  //   () => getVisibleMosaicLayoutPanels(layout?.nodes),
-  //   [layout],
-  // );
+  const handleTabSelect = useCallback(
+    (tabsId: string, tabId: string) => {
+      setActiveTab(tabsId, tabId);
+    },
+    [setActiveTab],
+  );
 
-  const renderTile = (panelId: string) => {
-    // const panelId = visibleRoomPanels.find((p) => p === id);
-    const PanelComp = panelId && panels[panelId]?.component;
-    if (!PanelComp) {
-      return <></>;
-    }
-    return (
-      <ErrorBoundary key={panelId}>
-        <PanelComp />
-      </ErrorBoundary>
-    );
-  };
+  const handleTabClose = useCallback(
+    (tabsId: string, tabId: string) => {
+      removeTab(tabsId, tabId);
+    },
+    [removeTab],
+  );
+
+  const handleTabReorder = useCallback(
+    (tabsId: string, tabIds: string[]) => {
+      reorderTabs(tabsId, tabIds);
+    },
+    [reorderTabs],
+  );
+
+  const handleCollapse = useCallback(
+    (id: string) => {
+      setCollapsed(id, true);
+    },
+    [setCollapsed],
+  );
+
+  const handleExpand = useCallback(
+    (id: string, tabId?: string) => {
+      setCollapsed(id, false);
+      if (tabId) {
+        setActiveTab(id, tabId);
+      }
+    },
+    [setCollapsed, setActiveTab],
+  );
 
   return (
     <div
       className={cn(
-        'flex h-full w-full flex-grow flex-col items-stretch',
+        'flex h-full min-w-0 grow flex-col items-stretch',
         className,
       )}
     >
-      {layout ? (
-        <MosaicLayout
-          renderTile={renderTile}
-          value={layout.nodes}
-          onChange={handleLayoutChange}
-          tileClassName={tileClassName}
+      {rootLayout ? (
+        <LayoutRenderer
+          rootLayout={rootLayout}
+          onLayoutChange={handleLayoutChange}
+          onTabSelect={handleTabSelect}
+          onTabClose={handleTabClose}
+          onTabReorder={handleTabReorder}
+          onTabCreate={onTabCreate}
+          onCollapse={handleCollapse}
+          onExpand={handleExpand}
         />
       ) : null}
     </div>
@@ -112,25 +184,36 @@ export const LayoutComposer: FC<{
 };
 
 export const LoadingProgress: FC<{className?: string}> = ({className}) => {
-  const loadingProgress = useBaseRoomShellStore((state) =>
-    state.room.getLoadingProgress(),
-  );
+  const loadingProgress = useBaseRoomStore<
+    RoomShellLoadingState,
+    RoomShellLoadingProgress | undefined
+  >((state) => state.room.getLoadingProgress?.());
   return (
     <ProgressModal
       className={className}
       isOpen={loadingProgress !== undefined}
-      title="Loading"
+      title={loadingProgress?.error ? 'Unable to start SQLRooms' : 'Loading'}
       loadingStage={loadingProgress?.message}
+      error={loadingProgress?.error}
+      errorDetails={loadingProgress?.errorDetails}
       indeterminate={true}
-      // progress={loadingProgress?.progress}
     />
   );
 };
 
 export const RoomShell = Object.assign(RoomShellBase, {
+  DndProvider: RoomDndProvider,
+  /**
+   * @deprecated Use SidebarContainer instead
+   */
   Sidebar: RoomSidebar,
+  SidebarContainer: SidebarContainer,
   SidebarButton: SidebarButton,
   SidebarButtons: RoomShellSidebarButtons,
+  TabButtons: TabButtons,
+  /** @deprecated Use TabButtons instead */
+  AreaPanelButtons: AreaPanelButtons,
   LayoutComposer: LayoutComposer,
   LoadingProgress: LoadingProgress,
+  CommandPalette: RoomShellCommandPalette,
 });

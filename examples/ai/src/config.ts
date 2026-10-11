@@ -15,16 +15,7 @@ export const PROVIDER_DEFAULT_BASE_URLS = {
 export const LLM_MODELS = [
   {
     name: 'openai',
-    models: [
-      'gpt-5.2',
-      'gpt-5',
-      'gpt-4.1-mini',
-      'gpt-4.1-nano',
-      'gpt-4.1',
-      'gpt-4o',
-      'gpt-4o-mini',
-      'gpt-4',
-    ],
+    models: ['gpt-5.2', 'gpt-5'],
   },
   {
     name: 'anthropic',

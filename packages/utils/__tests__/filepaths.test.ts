@@ -1,4 +1,5 @@
 import {
+  convertToUniqueColumnOrTableName,
   generateUniqueName,
   generateUniquePath,
   convertToUniqueS3ObjectName,
@@ -15,6 +16,24 @@ test('generateUniqueName generates unique table names', () => {
   expect(generateUniqueName('')).toBe('');
   expect(generateUniqueName('', [''])).toBe('_1');
   expect(generateUniqueName('_', ['_'])).toBe('__1');
+});
+
+test('generateUniqueName with space separator', () => {
+  expect(generateUniqueName('Notebook 1', [], ' ')).toBe('Notebook 1');
+  expect(generateUniqueName('Notebook 1', ['Notebook 1'], ' ')).toBe(
+    'Notebook 2',
+  );
+  expect(generateUniqueName('Untitled 1', ['Untitled 1'], ' ')).toBe(
+    'Untitled 2',
+  );
+  expect(
+    generateUniqueName('Untitled 1', ['Untitled 1', 'Untitled 2'], ' '),
+  ).toBe('Untitled 3');
+});
+
+test('convertToUniqueColumnOrTableName creates stable launch fixture table names', () => {
+  expect(convertToUniqueColumnOrTableName('cars.csv', [])).toBe('cars');
+  expect(convertToUniqueColumnOrTableName('cars.csv', ['cars'])).toBe('cars_1');
 });
 
 test('generateUniquePath generates unique paths', () => {

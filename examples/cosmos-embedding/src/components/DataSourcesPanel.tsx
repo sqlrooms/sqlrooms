@@ -13,9 +13,9 @@ import {
 } from '@sqlrooms/ui';
 import {FileTextIcon, FolderIcon, TableIcon} from 'lucide-react';
 import {FC, useMemo} from 'react';
-import {RoomPanelTypes, useRoomStore} from '../store';
+import {useRoomStore} from '../store';
 
-const DataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
+export const DataSourcesPanel: FC = () => {
   const roomFiles = useRoomStore((state) => state.room.roomFiles);
   const dataSources = useRoomStore((state) => state.room.config.dataSources);
   const queryDataSources = useMemo(
@@ -26,7 +26,7 @@ const DataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
   const isRoomEmpty = !roomFiles?.length;
 
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
+    <RoomPanel>
       {isRoomEmpty ? (
         <></>
       ) : (
@@ -43,12 +43,12 @@ const DataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
                     <h3 className="ml-1 text-xs uppercase">Files</h3>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="px-[5px] pb-5 pt-1">
+                <AccordionContent className="px-1.25 pt-1 pb-5">
                   <FileDataSourcesPanel />
                 </AccordionContent>
               </AccordionItem>
 
-              {!isReadOnly || queryDataSources.length > 0 ? (
+              {queryDataSources.length > 0 ? (
                 <AccordionItem value="sql">
                   <AccordionTrigger className="gap-1 px-0">
                     <div className="text-muted-foreground flex items-center">
@@ -56,7 +56,7 @@ const DataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
                       <h3 className="ml-1 text-xs uppercase">SQL Queries</h3>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="px-[5px] pb-5 pt-1">
+                  <AccordionContent className="px-1.25 pt-1 pb-5">
                     <SqlQueryDataSourcesPanel
                       queryDataSources={queryDataSources}
                     />
@@ -71,7 +71,7 @@ const DataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
                     <h3 className="ml-1 text-xs uppercase">Tables</h3>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="px-[5px] pb-5 pt-1">
+                <AccordionContent className="px-1.25 pt-1 pb-5">
                   <TablesListPanel />
                 </AccordionContent>
               </AccordionItem>
@@ -86,5 +86,3 @@ const DataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
     </RoomPanel>
   );
 };
-
-export default DataSourcesPanel;

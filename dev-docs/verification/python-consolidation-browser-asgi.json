@@ -1,0 +1,39 @@
+{
+  "client": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36",
+  "compression": "Browser offers deflate; runtime chooses; see paired server settings",
+  "runs": [
+    {
+      "cold_ms": 3.7950000762939453,
+      "warm_median_ms": 1.815000057220459,
+      "burst8_ms": 12.085000038146973,
+      "large_ms": 231.42999982833862,
+      "arrow_bytes": 44000441,
+      "upload_ms": 300.8149995803833,
+      "cancel_ms": 0.809999942779541,
+      "slow_three_ms": 710.2400002479553,
+      "health_max_ms": 9.425000190734863
+    },
+    {
+      "cold_ms": 2.75,
+      "warm_median_ms": 1.760000228881836,
+      "burst8_ms": 10.934999942779541,
+      "large_ms": 169.89000034332275,
+      "arrow_bytes": 44000441,
+      "upload_ms": 10.699999809265137,
+      "cancel_ms": 0.690000057220459,
+      "slow_three_ms": 706.295000076294,
+      "health_max_ms": 9.019999980926514
+    },
+    {
+      "cold_ms": 2.364999771118164,
+      "warm_median_ms": 1.6649999618530273,
+      "burst8_ms": 10.920000076293945,
+      "large_ms": 174.07499980926514,
+      "arrow_bytes": 44000441,
+      "upload_ms": 13.09499979019165,
+      "cancel_ms": 0.4500002861022949,
+      "slow_three_ms": 708.4449996948242,
+      "health_max_ms": 18.25
+    }
+  ]
+}

@@ -283,6 +283,8 @@ const results = await searchDocsClientSide('window functions');
 ### 1. Documentation Search Widget
 
 ```typescript
+import {Button} from '@sqlrooms/ui';
+
 function DocSearch() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -296,7 +298,7 @@ function DocSearch() {
   return (
     <div>
       <input value={query} onChange={e => setQuery(e.target.value)} />
-      <button onClick={search}>Search</button>
+      <Button onClick={search}>Search</Button>
       {results.map(r => (
         <div key={r.nodeId}>
           <strong>Score: {r.score.toFixed(2)}</strong>

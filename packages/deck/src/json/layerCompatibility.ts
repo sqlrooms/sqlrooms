@@ -1,0 +1,214 @@
+import type {LayerConfigColumnKey} from './layerConfig';
+
+type GeoJsonCompatibility = {
+  representation: 'geojson';
+  vectorAccessorProps: string[];
+};
+
+type GeoArrowBinding = {
+  prop: string;
+  kind: 'geometry' | 'column';
+  configKey: LayerConfigColumnKey;
+  required?: boolean;
+};
+
+type GeoArrowCompatibility = {
+  representation: 'geoarrow';
+  bindings: GeoArrowBinding[];
+  vectorAccessorProps: string[];
+  allowGeoArrowPromotion?: boolean;
+};
+
+type LayerCompatibility = GeoJsonCompatibility | GeoArrowCompatibility;
+
+const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
+  GeoJsonLayer: {
+    representation: 'geojson',
+    vectorAccessorProps: [],
+  },
+  GeoArrowScatterplotLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getPosition',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+    ],
+    vectorAccessorProps: [
+      'getPosition',
+      'getRadius',
+      'getFillColor',
+      'getLineColor',
+      'getLineWidth',
+    ],
+    allowGeoArrowPromotion: true,
+  },
+  GeoArrowHeatmapLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getPosition',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+    ],
+    vectorAccessorProps: ['getPosition', 'getWeight'],
+    allowGeoArrowPromotion: true,
+  },
+  GeoArrowColumnLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getPosition',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+    ],
+    vectorAccessorProps: [
+      'getPosition',
+      'getFillColor',
+      'getLineColor',
+      'getLineWidth',
+      'getElevation',
+    ],
+    allowGeoArrowPromotion: true,
+  },
+  GeoArrowPathLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getPath',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+    ],
+    vectorAccessorProps: ['getPath', 'getColor', 'getWidth'],
+    allowGeoArrowPromotion: true,
+  },
+  GeoArrowTripsLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getPath',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+      {
+        prop: 'getTimestamps',
+        kind: 'column',
+        configKey: 'timestampColumn',
+        required: true,
+      },
+    ],
+    vectorAccessorProps: ['getPath', 'getTimestamps', 'getColor', 'getWidth'],
+    allowGeoArrowPromotion: true,
+  },
+  GeoArrowPolygonLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getPolygon',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+    ],
+    vectorAccessorProps: [
+      'getPolygon',
+      'getFillColor',
+      'getLineColor',
+      'getLineWidth',
+      'getElevation',
+    ],
+    allowGeoArrowPromotion: true,
+  },
+  GeoArrowSolidPolygonLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getPolygon',
+        kind: 'geometry',
+        configKey: 'geometryColumn',
+      },
+    ],
+    vectorAccessorProps: [
+      'getPolygon',
+      'getElevation',
+      'getFillColor',
+      'getLineColor',
+    ],
+    allowGeoArrowPromotion: true,
+  },
+  GeoArrowArcLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getSourcePosition',
+        kind: 'geometry',
+        configKey: 'sourceGeometryColumn',
+        required: true,
+      },
+      {
+        prop: 'getTargetPosition',
+        kind: 'geometry',
+        configKey: 'targetGeometryColumn',
+        required: true,
+      },
+    ],
+    vectorAccessorProps: [
+      'getSourcePosition',
+      'getTargetPosition',
+      'getSourceColor',
+      'getTargetColor',
+      'getWidth',
+      'getHeight',
+      'getTilt',
+    ],
+    allowGeoArrowPromotion: true,
+  },
+  GeoArrowH3HexagonLayer: {
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getHexagon',
+        kind: 'column',
+        configKey: 'hexagonColumn',
+        required: true,
+      },
+    ],
+    vectorAccessorProps: [
+      'getHexagon',
+      'getFillColor',
+      'getElevation',
+      'getLineColor',
+      'getLineWidth',
+    ],
+  },
+};
+
+export function getLayerCompatibility(layerName: string) {
+  return LAYER_COMPATIBILITY[layerName];
+}
+
+const GEOMETRY_BINDINGS = Object.values(LAYER_COMPATIBILITY).flatMap(
+  (compatibility) =>
+    compatibility.representation === 'geoarrow'
+      ? compatibility.bindings.filter((binding) => binding.kind === 'geometry')
+      : [],
+);
+
+/**
+ * Every deck prop through which a layer can name a geometry column directly,
+ * as a simple `@@=column` accessor.
+ *
+ * Derived from the compatibility table so config repair that must drop
+ * references to a removed column cannot fall behind a newly declared binding.
+ */
+export const DECK_MAP_GEOMETRY_ACCESSOR_PROPS: readonly string[] = [
+  ...new Set(GEOMETRY_BINDINGS.map((binding) => binding.prop)),
+];
+
+/** Every `_sqlroomsBinding` key that names a geometry column. */
+export const DECK_MAP_GEOMETRY_CONFIG_KEYS: readonly LayerConfigColumnKey[] = [
+  ...new Set(GEOMETRY_BINDINGS.map((binding) => binding.configKey)),
+];

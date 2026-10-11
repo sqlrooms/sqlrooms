@@ -1,81 +1,80 @@
 import React from 'react';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {useStoreWithAi} from '../AiSlice';
+import type {AgentToolCall} from '../types';
 import {isDynamicToolPart, isToolPart} from '../utils';
+import {FlatAgentRenderer} from './FlatAgentRenderer';
 import {ToolResult} from './tools/ToolResult';
 import {ToolCallInfo} from './ToolCallInfo';
 
 /**
- * Component that renders agent tool execution progress
+ * Decides whether to show live agent progress or the final tool result.
+ * Uses FlatAgentRenderer for a flat, user-friendly timeline. Falls back to agentToolCalls in the
+ * tool output for backward compatibility with older persisted messages.
  */
-const AgentProgressRenderer: React.FC<{
-  agentToolCalls: Array<{
-    toolCallId: string;
-    toolName: string;
-    output?: unknown;
-    errorText?: string;
-    state: 'pending' | 'success' | 'error';
-  }>;
-  finalOutput?: string;
-  reasoning?: string;
-}> = ({agentToolCalls, finalOutput, reasoning}) => {
-  const findToolComponent = useStoreWithAi((s) => s.ai.findToolComponent);
+const AgentProgressSection: React.FC<{
+  toolCallId: string;
+  toolName: string;
+  output: unknown;
+  input: unknown;
+  state:
+    | 'input-streaming'
+    | 'input-available'
+    | 'output-available'
+    | 'output-error'
+    | 'approval-requested'
+    | 'approval-responded'
+    | 'output-denied';
+  errorText?: string;
+  hideParentSummary?: boolean;
+}> = ({
+  toolCallId,
+  toolName,
+  output,
+  input,
+  state,
+  errorText,
+  hideParentSummary,
+}) => {
+  const storeProgress = useStoreWithAi((s) => s.ai.agentProgress[toolCallId]);
+
+  const agentOutput = output as {
+    agentToolCalls?: AgentToolCall[];
+    finalOutput?: string;
+  };
+
+  const finalOutput = agentOutput?.finalOutput;
+
+  const displayCalls =
+    storeProgress ??
+    (agentOutput?.agentToolCalls?.length ? agentOutput.agentToolCalls : null);
+
+  if (displayCalls && displayCalls.length > 0) {
+    const isComplete =
+      state === 'output-available' ||
+      state === 'output-error' ||
+      state === 'output-denied';
+    return (
+      <FlatAgentRenderer
+        toolCallId={toolCallId}
+        agentToolCalls={displayCalls}
+        finalOutput={state === 'output-available' ? finalOutput : undefined}
+        isComplete={isComplete}
+        parentToolName={hideParentSummary ? undefined : toolName}
+        parentInput={hideParentSummary ? undefined : input}
+      />
+    );
+  }
 
   return (
-    <div className="mt-2 px-5 text-[0.9em]">
-      {reasoning ? (
-        <div className="mb-2 text-sm text-gray-500">{reasoning}</div>
-      ) : null}
-      <div className="ml-3">
-        {agentToolCalls.map((toolCall) => {
-          const ToolComponent = findToolComponent(toolCall.toolName);
-          const isSuccess = toolCall.state === 'success';
-          const isError = toolCall.state === 'error';
-          const hasComponent =
-            ToolComponent && typeof ToolComponent === 'function';
-          const hasObjectOutput =
-            toolCall.output &&
-            typeof toolCall.output === 'object' &&
-            toolCall.output !== null;
-
-          return (
-            <div
-              key={toolCall.toolCallId}
-              className={`mb-2 ${isError ? 'text-red-700' : 'text-gray-600'}`}
-            >
-              <div className="mb-1 flex items-start">
-                <span className="mr-2 min-w-[16px]">
-                  {isSuccess && '✓'}
-                  {isError && '✗'}
-                  {toolCall.state === 'pending' && '○'}
-                </span>
-                <div className="flex-1">
-                  <span className="font-medium">{toolCall.toolName}</span>
-                  {isError && toolCall.errorText && (
-                    <div className="mt-0.5 text-[0.9em] text-red-700">
-                      Error: {toolCall.errorText}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {isSuccess && hasComponent && hasObjectOutput ? (
-                <div className="ml-6 mt-1">
-                  <ToolComponent
-                    {...(toolCall.output as Record<string, unknown>)}
-                  />
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-      {finalOutput && (
-        <div className="mt-3 pt-2">
-          <div className="text-gray-600">{finalOutput}</div>
-        </div>
-      )}
-    </div>
+    <ToolResult
+      toolCallId={toolCallId}
+      toolName="agent"
+      output={output}
+      input={input}
+      state={state}
+      errorText={state === 'output-error' ? errorText : undefined}
+    />
   );
 };
 
@@ -91,98 +90,125 @@ const AgentProgressRenderer: React.FC<{
 export const ToolPartRenderer = ({
   part,
   toolCallId,
-  toolAdditionalData = {},
+  hideToolCallInfo,
+  hideAgentSummary,
 }: {
   part: UIMessagePart;
   toolCallId: string;
-  toolAdditionalData?: Record<string, unknown>;
+  hideToolCallInfo?: boolean;
+  /** Omits the parent agent row when a presentation slot renders it. */
+  hideAgentSummary?: boolean;
 }) => {
   const tools = useStoreWithAi((s) => s.ai.tools);
+  const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
+  const storeProgress = useStoreWithAi((s) => s.ai.agentProgress[toolCallId]);
 
   if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
 
   const {type, state, input} = part;
-  const toolName =
-    type === 'dynamic-tool'
-      ? part.toolName || 'unknown'
-      : type.replace(/^tool-/, '') || 'unknown';
+  const toolName = isDynamicToolPart(part)
+    ? part.toolName
+    : type.replace(/^tool-/, '') || 'unknown';
 
   const output = state === 'output-available' ? part.output : undefined;
   const errorText = state === 'output-error' ? part.errorText : undefined;
-  const isCompleted = state === 'output-available' || state === 'output-error';
-  const additionalData = toolAdditionalData[toolCallId];
+  const isApprovalState =
+    state === 'approval-requested' ||
+    state === 'approval-responded' ||
+    state === 'output-denied';
+  const approvalId =
+    isApprovalState && 'approval' in part ? part.approval?.id : undefined;
 
+  const hasExecute = !!tools[toolName]?.execute;
+  // Look up directly from the registry object (stable reference) to avoid
+  // the react-hooks/static-components lint rule flagging a function call.
+  const ToolComponent = toolRenderers[toolName];
+
+  if (isApprovalState && !ToolComponent) {
+    console.error(
+      `Tool "${toolName}" is requesting approval but has no renderer configured.`,
+    );
+    return (
+      <div className="rounded border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
+        <strong>Approval required:</strong> Tool &ldquo;{toolName}&rdquo; is
+        requesting approval but has no renderer configured.
+      </div>
+    );
+  }
+
+  // Render the ToolComponent directly for:
+  // - Tools without execute (legacy no-execute pattern)
+  // - Tools in approval states (needsApproval pattern)
   if (
-    !tools[toolName]?.execute &&
-    (state === 'input-streaming' ||
-      state === 'input-available' ||
-      state === 'output-available')
+    (!hasExecute &&
+      (state === 'input-streaming' ||
+        state === 'input-available' ||
+        state === 'output-available')) ||
+    (isApprovalState && ToolComponent)
   ) {
-    const ToolComponent = tools[toolName]?.component as React.ComponentType;
-    const props = {
-      ...(input as Record<string, unknown>),
-      ...({toolCallId, toolName, isCompleted} as Record<string, unknown>),
-    };
     return (
       <div>
-        {ToolComponent && typeof ToolComponent === 'function' && (
-          <ToolComponent {...props} />
+        {ToolComponent && (
+          <ToolComponent
+            output={output}
+            input={input}
+            toolCallId={toolCallId}
+            state={state}
+            errorText={errorText}
+            approvalId={approvalId}
+          />
         )}
       </div>
     );
   }
 
   // Otherwise, render <ToolResult>
-  if (tools[toolName]?.execute) {
-    const isAgentTool = toolName.startsWith('agent-');
-    const agentData = additionalData as {
-      agentToolCalls?: Array<{
-        toolCallId: string;
-        toolName: string;
-        output?: unknown;
-        errorText?: string;
-        state: 'pending' | 'success' | 'error';
-      }>;
-      finalOutput?: string;
-    };
-    const hasAgentProgress =
-      isAgentTool &&
-      agentData?.agentToolCalls &&
-      agentData.agentToolCalls.length > 0;
-    const reasoning =
-      input instanceof Object && 'reasoning' in input
-        ? (input.reasoning as string)
-        : undefined;
+  if (hasExecute) {
+    const agentOutput = output as {agentToolCalls?: unknown[]} | undefined;
+    const isAgentTool =
+      toolName.startsWith('agent-') ||
+      (storeProgress?.length ?? 0) > 0 ||
+      (agentOutput?.agentToolCalls?.length ?? 0) > 0;
 
     return (
       <div>
-        <ToolCallInfo
-          toolName={toolName}
-          input={input}
-          isCompleted={isCompleted}
-          state={state}
-        />
+        {!isAgentTool && !hideToolCallInfo && (
+          <ToolCallInfo
+            toolName={toolName}
+            input={input}
+            state={state}
+            stableKey={toolCallId}
+          />
+        )}
         <div data-tool-call-id={toolCallId}>
-          {hasAgentProgress ? (
-            <AgentProgressRenderer
-              agentToolCalls={agentData.agentToolCalls!}
-              finalOutput={agentData.finalOutput}
-              reasoning={reasoning}
+          {isAgentTool ? (
+            <AgentProgressSection
+              toolCallId={toolCallId}
+              toolName={toolName}
+              output={output}
+              input={input}
+              state={state}
+              errorText={errorText}
+              hideParentSummary={hideAgentSummary}
             />
+          ) : hideToolCallInfo ? (
+            ToolComponent && state === 'output-available' ? (
+              <ToolComponent
+                output={output}
+                input={input}
+                toolCallId={toolCallId}
+                state={state}
+                errorText={errorText}
+              />
+            ) : null
           ) : (
             <ToolResult
               toolCallId={toolCallId}
-              toolData={{
-                toolCallId,
-                name: toolName,
-                state: state,
-                args: input,
-                result: output,
-                errorText,
-              }}
-              additionalData={additionalData}
-              isCompleted={isCompleted}
-              errorMessage={state === 'output-error' ? errorText : undefined}
+              toolName={toolName}
+              output={output}
+              input={input}
+              state={state}
+              errorText={state === 'output-error' ? errorText : undefined}
             />
           )}
         </div>

@@ -1,11 +1,3 @@
-/**
- * Shared AI defaults used across ai-core.
- * Set to 1.0 to allow for more creative and exploratory responses
- * NOTE: For GPT models, when reasoningEffort is set you should manually set the temperature to 1.0; this is not enforced automatically.
- * Set to 0.0 to allow for more precise and deterministic responses
- */
-export const AI_DEFAULT_TEMPERATURE = 0.0;
-
 export const TOOL_CALL_CANCELLED = 'Tool call cancelled by user';
 
 export const ABORT_EVENT = 'abort';
@@ -14,4 +6,11 @@ export const SESSION_DELETED = 'Analysis cancelled - session was deleted';
 
 export const ANALYSIS_CANCELLED = 'Analysis cancelled';
 
-export const ANALYSIS_PENDING_ID = '__pending__';
+/**
+ * What `ai.sendPrompt` resolves with when the underlying model call fails. It
+ * reports failure by value rather than by throwing, which is why `sendPrompt`
+ * also takes an `onError` callback: callers should detect failure through that
+ * rather than by comparing against this text, which is internal to the package
+ * and free to change.
+ */
+export const AI_GENERATION_FAILED_TEXT = 'error: can not generate response';

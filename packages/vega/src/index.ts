@@ -10,19 +10,33 @@ import {VegaChartDisplay} from './editor/VegaChartDisplay';
 import {VegaSpecEditorPanel} from './editor/VegaSpecEditorPanel';
 import {VegaSqlEditorPanel} from './editor/VegaSqlEditorPanel';
 import {VegaChartEditorActions} from './editor/VegaChartEditorActions';
-
 export {VegaChartToolResult as VegaChartToolResult} from './VegaChartToolResult';
+export type {VegaChartToolResultProps} from './VegaChartToolResult';
+export {getCategoryAwareVegaChartHeight} from './chartSizing';
+export type {
+  VegaChartHeight,
+  VegaChartHeightResolver,
+  VegaChartSizingContext,
+} from './chartSizing';
 export type {VisualizationSpec} from 'vega-embed';
+export type {SignalListenerHandler, SignalValue} from 'vega';
+
 export {
   createVegaChartTool,
+  createSqlValidator,
   VegaChartToolParameters,
   DEFAULT_VEGA_CHART_DESCRIPTION,
 } from './VegaChartTool';
 
+export type {VegaChartToolOptions, VegaChartToolOutput} from './VegaChartTool';
+export {
+  createChartImageForMarkdownTool,
+  ChartImageForMarkdownToolParameters,
+} from './ChartImageForMarkdownTool';
 export type {
-  VegaChartToolParameters as VegaChartToolParametersType,
-  VegaChartToolOptions,
-} from './VegaChartTool';
+  ChartImageForMarkdownToolOutput,
+  ChartImageForMarkdownToolParameters as ChartImageForMarkdownToolParametersType,
+} from './ChartImageForMarkdownTool';
 
 /**
  * Composable Vega-Lite chart component with editing capabilities.
@@ -59,7 +73,9 @@ export const VegaLiteChart = Object.assign(VegaLiteSqlChart, {
 });
 
 // Export editor components and hooks for advanced use
+/** @deprecated Use VegaCodeMirrorEditor instead */
 export {VegaMonacoEditor} from './editor/VegaMonacoEditor';
+export {VegaCodeMirrorEditor} from './editor/VegaCodeMirrorEditor';
 export {useVegaChartEditor} from './editor/useVegaChartEditor';
 export {useVegaEditorContext} from './editor/VegaEditorContext';
 
