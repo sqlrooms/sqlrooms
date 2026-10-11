@@ -73,7 +73,8 @@ For datasets with millions of flows, the server uses **Hilbert range filtering**
 3. **Fast Pre-filtering**: Query uses `WHERE flow_h BETWEEN min AND max` before joining with clusters
 4. **Index Utilization**: The `(z, flow_h)` index enables efficient range scans
 
-**Performance**: 
+**Performance**:
+
 - Scans only 1 column (`flow_h`) instead of 4 (coordinates)
 - Leverages sorted Parquet file structure
 - Joins only the filtered subset (typically 0.1-1% of total flows per tile)
@@ -91,10 +92,12 @@ Uses DuckDB's `ST_AsMVT` and `ST_AsMVTGeom` functions to generate Mapbox Vector 
 MapLibre GL JS styles vary based on data properties:
 
 **Points (clusters)**:
+
 - Circle radius: 3-15px based on weight
 - Color: Blue with white stroke
 
 **Lines (flows)**:
+
 - Width: 1-4px based on count
 - Color: Heat map from light orange to dark red based on count
 - Opacity: 0.6 for better layering
@@ -119,4 +122,3 @@ You can customize the styling in the HTML by modifying the MapLibre GL style lay
     }
 }
 ```
-

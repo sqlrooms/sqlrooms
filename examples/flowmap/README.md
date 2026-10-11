@@ -18,6 +18,9 @@ npx degit sqlrooms/examples/flowmap my-new-app/
 
 #### Running Locally
 
+From the SQLRooms monorepo, build the workspace packages with `pnpm build`, then
+start this example with `pnpm dev flowmap-example`.
+
 ```sh
 npm install
 npm run dev
