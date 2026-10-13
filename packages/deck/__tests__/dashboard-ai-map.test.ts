@@ -635,6 +635,9 @@ describe('createDeckMapDashboardTool', () => {
     expect(shared).toContain(
       'When the user did name a column, skip this check',
     );
+    // A flat candidate means pick a different column, not drop to flat fill.
+    expect(shared).toContain('switch to another varying column');
+    expect(shared).toContain('Only when no column in the table varies');
 
     const surfaceOnly = getDashboardWithDeckMapAiInstructions().replace(
       shared,
@@ -653,7 +656,8 @@ describe('createDeckMapDashboardTool', () => {
       createDeckMapDashboardTool({dashboardAdapter, databaseAdapter})
         .description,
     ]) {
-      expect(description).toContain('first confirm it varies');
+      expect(description).toContain('pick one that actually varies');
+      expect(description).toContain('switch to another varying column');
       expect(description).toContain('when the user did name a column, skip');
     }
   });
