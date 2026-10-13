@@ -31,7 +31,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Slider,
+  SliderInput,
   ScrollArea,
   SettingsPanelHeader,
   Switch,
@@ -349,13 +349,14 @@ const AppearanceOpacitySlider: FC<{
   disabled?: boolean;
 }> = ({valuePercent, onChange, disabled}) => (
   <SettingsSliderField label={`Opacity: ${valuePercent}%`}>
-    <Slider
+    <SliderInput
       min={0}
       max={100}
       step={1}
-      value={[valuePercent]}
+      value={valuePercent}
       disabled={disabled}
-      onValueChange={(values) => onChange(values[0] ?? valuePercent)}
+      onValueChange={onChange}
+      aria-label="Opacity"
     />
   </SettingsSliderField>
 );
@@ -513,12 +514,13 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
         <SettingsSliderField
           label={`${widthLabel}: ${Number(widthPixels.toFixed(1))}px`}
         >
-          <Slider
+          <SliderInput
             min={0.1}
             max={20}
             step={0.1}
-            value={[widthPixels]}
-            onValueChange={(values) => onWidthChange(values[0] ?? 1)}
+            value={widthPixels}
+            onValueChange={onWidthChange}
+            aria-label={widthLabel}
           />
         </SettingsSliderField>
       ) : null}
@@ -529,12 +531,13 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
             radiusStep < 1 ? Number(radiusValue.toFixed(1)) : radiusValue
           }${radiusUnit}`}
         >
-          <Slider
+          <SliderInput
             min={radiusMin}
             max={radiusMax}
             step={radiusStep}
-            value={[radiusValue]}
-            onValueChange={(values) => onRadiusChange(values[0] ?? radiusValue)}
+            value={radiusValue}
+            onValueChange={onRadiusChange}
+            aria-label={radiusLabel}
           />
         </SettingsSliderField>
       ) : null}
@@ -1037,13 +1040,13 @@ const AppearanceExtrusionPanel: FC<{
         <SettingsSliderField
           label={`Elevation scale: ${(layer?.elevationScale as number | undefined) ?? 1}x`}
         >
-          <Slider
+          <SliderInput
             min={0.01}
             max={1000}
             step={0.01}
-            value={[(layer?.elevationScale as number | undefined) ?? 1]}
-            onValueChange={(values) => {
-              const value = values[0] ?? 1;
+            value={(layer?.elevationScale as number | undefined) ?? 1}
+            aria-label="Elevation scale"
+            onValueChange={(value) => {
               applyConfig(
                 updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => ({
                   ...nextLayer,
@@ -1909,17 +1912,17 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                           <SettingsSliderField
                             label={`Radius: ${(activeLayer?.radiusPixels as number | undefined) ?? 30}px`}
                           >
-                            <Slider
+                            <SliderInput
                               min={1}
                               max={100}
                               step={1}
-                              value={[
+                              value={
                                 (activeLayer?.radiusPixels as
                                   | number
-                                  | undefined) ?? 30,
-                              ]}
-                              onValueChange={(values) => {
-                                const value = values[0] ?? 30;
+                                  | undefined) ?? 30
+                              }
+                              aria-label="Radius"
+                              onValueChange={(value) => {
                                 applyConfig(
                                   updateDeckMapLayer(
                                     mapConfig,
@@ -1990,13 +1993,16 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                                 showTripsSettings ? 'Trip width' : 'Line width'
                               }: ${lineWidthPixels}px`}
                             >
-                              <Slider
+                              <SliderInput
                                 min={1}
                                 max={20}
                                 step={1}
-                                value={[lineWidthPixels]}
-                                onValueChange={(values) =>
-                                  setLineWidth(values[0] ?? lineWidthPixels)
+                                value={lineWidthPixels}
+                                onValueChange={setLineWidth}
+                                aria-label={
+                                  showTripsSettings
+                                    ? 'Trip width'
+                                    : 'Line width'
                                 }
                               />
                             </SettingsSliderField>
@@ -2029,19 +2035,18 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                             <SettingsSliderField
                               label={`Trail length: ${Math.round(((activeLayer?._trailLengthFactor as number | undefined) ?? 0.4) * 100)}%`}
                             >
-                              <Slider
+                              <SliderInput
                                 min={5}
                                 max={100}
                                 step={5}
-                                value={[
-                                  Math.round(
-                                    ((activeLayer?._trailLengthFactor as
-                                      | number
-                                      | undefined) ?? 0.4) * 100,
-                                  ),
-                                ]}
-                                onValueChange={(values) => {
-                                  const value = (values[0] ?? 40) / 100;
+                                value={Math.round(
+                                  ((activeLayer?._trailLengthFactor as
+                                    | number
+                                    | undefined) ?? 0.4) * 100,
+                                )}
+                                aria-label="Trail length"
+                                onValueChange={(percent) => {
+                                  const value = percent / 100;
                                   applyConfig(
                                     updateDeckMapLayer(
                                       mapConfig,

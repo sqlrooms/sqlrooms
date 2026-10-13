@@ -294,6 +294,8 @@ export {Skeleton} from './components/skeleton';
 
 export {Slider} from './components/slider';
 
+export {SliderInput, type SliderInputProps} from './components/slider-input';
+
 export {SpinnerPane} from './components/spinner-pane';
 
 export {Spinner} from './components/spinner';

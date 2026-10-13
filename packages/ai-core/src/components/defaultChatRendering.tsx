@@ -45,7 +45,10 @@ import {
   OrchestratorToolLogLine,
 } from './FlatAgentRenderer';
 import {MessageContent} from './MessageContent';
-import {RenderNestedHoistedOutputsProvider} from './NestedHoistedOutputsContext';
+import {
+  InsideHoistedOutputProvider,
+  RenderNestedHoistedOutputsProvider,
+} from './NestedHoistedOutputsContext';
 import {ToolPartRenderer} from './ToolPartRenderer';
 import {
   getToolName,
@@ -427,6 +430,7 @@ export function createChatTurnPresentation({
             part={item.part}
             toolCallId={item.part.toolCallId}
             hideAgentSummary
+            ownOutputHoisted={item.isHoisted}
           />
         ) : !item.isHoisted ? (
           <ToolPartRenderer
@@ -490,8 +494,13 @@ export function createChatTurnPresentation({
   );
 
   const outputItems: ChatOutputItem[] = model.hoisted.map((item) => {
+    // The slot shows the result only. An agent tree its renderer embeds is
+    // drawn by the turn already: its steps in the activity, its outputs
+    // hoisted alongside.
     const Content = bindContent(`output:${item.toolCallId}`, () => (
-      <HoistedOutput item={item} />
+      <InsideHoistedOutputProvider value>
+        <HoistedOutput item={item} />
+      </InsideHoistedOutputProvider>
     ));
     return {
       id: item.toolCallId,
@@ -501,6 +510,19 @@ export function createChatTurnPresentation({
     };
   });
   const outputById = new Map(outputItems.map((item) => [item.id, item]));
+  const renderHoistedOutput = (toolCallId: string) => {
+    const Output = outputById.get(toolCallId)?.Content;
+    return Output ? (
+      <div
+        key={`hoisted-${toolCallId}`}
+        className="empty:hidden"
+        data-testid="chat-turn-hoisted"
+        data-tool-call-id={toolCallId}
+      >
+        <Output />
+      </div>
+    ) : null;
+  };
 
   const TimelineContent = bindContent('timeline', () => (
     <>
@@ -559,21 +581,9 @@ export function createChatTurnPresentation({
                   })}
                 </Activity>
               </div>
-              {segment.parts.map(({part}) => {
-                const item = outputById.get(part.toolCallId);
-                if (!item) return null;
-                const Content = item.Content;
-                return (
-                  <div
-                    key={`hoisted-${part.toolCallId}`}
-                    className="empty:hidden"
-                    data-testid="chat-turn-hoisted"
-                    data-tool-call-id={part.toolCallId}
-                  >
-                    <Content />
-                  </div>
-                );
-              })}
+              {segment.parts.map(({part}) =>
+                renderHoistedOutput(part.toolCallId),
+              )}
             </React.Fragment>
           );
         }
@@ -581,7 +591,15 @@ export function createChatTurnPresentation({
         if (segment.kind === 'agent-tool') {
           const Content = timelineAgentContentByIndex.get(segment.index);
           if (!Content) return null;
-          return <Content key={`tool-${segment.part.toolCallId}`} />;
+          // The agent's own hoisted result, if its renderer opted in, comes
+          // ahead of its activity, which carries its nested outputs: the same
+          // order as `model.hoisted`.
+          return (
+            <React.Fragment key={`tool-${segment.part.toolCallId}`}>
+              {renderHoistedOutput(segment.part.toolCallId)}
+              <Content />
+            </React.Fragment>
+          );
         }
 
         const {part, index} = segment;

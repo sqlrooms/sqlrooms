@@ -14,3 +14,17 @@ export const RenderNestedHoistedOutputsProvider =
 export function useRenderNestedHoistedOutputs(): boolean {
   return useContext(RenderNestedHoistedOutputsContext);
 }
+
+const InsideHoistedOutputContext = createContext(false);
+
+/**
+ * Marks a hoisted output. A hoisted slot shows the call's result only: the
+ * turn draws every sub-agent's steps in its activity and hoists their outputs
+ * alongside, so an agent tree that a hoisted renderer embeds draws nothing.
+ */
+export const InsideHoistedOutputProvider = InsideHoistedOutputContext.Provider;
+
+/** Whether the current subtree is a hoisted output. */
+export function useIsInsideHoistedOutput(): boolean {
+  return useContext(InsideHoistedOutputContext);
+}
