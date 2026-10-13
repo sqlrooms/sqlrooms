@@ -632,9 +632,9 @@ function resolveDeckMapDatasetRename(
  * Only the transform's own inputs and outputs go: its coordinate columns and
  * the geometry columns it produced. `h3Column` and any unrelated geometry
  * column stay, because the transform never produced them and a source-backed
- * H3 fit remains valid. `resolveDeckMapFitToData` cannot re-infer them from a
- * spec stored as a string, so deleting them here would leave fitting to fall
- * back to conventional `Longitude`/`Latitude` names and fail.
+ * H3 fit remains valid. `resolveDeckMapFitToData` only re-infers what a layer
+ * binding names, so deleting a column the spec states nowhere else would leave
+ * fitting to fall back to conventional `Longitude`/`Latitude` names and fail.
  */
 function clearDeckMapGeneratedFit(
   fitToData: DeckMapFitToDataConfig | undefined,

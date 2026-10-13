@@ -49,6 +49,23 @@ function columnAliasProducedByStAsWkb(
   return false;
 }
 
+/** Reads a spec as an object, parsing the string form custom maps persist. */
+function readDeckMapSpecRecord(
+  spec: unknown,
+): Record<string, unknown> | undefined {
+  let value = spec;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value) as unknown;
+    } catch {
+      return undefined;
+    }
+  }
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
 /**
  * Resolves the effective fit-to-data configuration for a Deck map.
  *
@@ -70,10 +87,7 @@ export function resolveDeckMapFitToData(
     return fitToData;
   }
 
-  const spec =
-    typeof config.spec === 'string'
-      ? undefined
-      : (config.spec as Record<string, unknown>);
+  const spec = readDeckMapSpecRecord(config.spec);
   const layers = Array.isArray(spec?.layers) ? spec.layers : [];
 
   for (const layer of layers) {

@@ -252,6 +252,26 @@ describe('Deck map fit core', () => {
     ).toEqual({dataset: 'buildings', geometryColumn: 'geom'});
   });
 
+  test('resolves layer bindings from a spec stored as a string', () => {
+    expect(
+      resolveDeckMapFitToData({
+        configMode: 'custom',
+        spec: JSON.stringify({
+          layers: [
+            {
+              '@@type': 'GeoArrowPolygonLayer',
+              _sqlroomsBinding: {dataset: 'buildings', geometryColumn: 'geom'},
+            },
+          ],
+        }),
+        datasets: {
+          buildings: {source: {tableName: 'buildings_australia'}},
+        },
+        fitToData: {dataset: 'buildings'},
+      }),
+    ).toEqual({dataset: 'buildings', geometryColumn: 'geom'});
+  });
+
   test('ignores a hidden layer geometry binding when resolving fit columns', () => {
     expect(
       resolveDeckMapFitToData({
