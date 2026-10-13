@@ -630,7 +630,11 @@ describe('createDeckMapDashboardTool', () => {
     // check covers both and neither surface layer may restate it.
     expect(shared).toContain('VISUAL FIELD VARIANCE');
     expect(shared).toContain('omit getElevation and extruded');
-    expect(shared).toContain('Skip this check when the user named the column');
+    // The check is scoped to agent-chosen columns, not user-named ones.
+    expect(shared).toContain('without naming which column to visualize');
+    expect(shared).toContain(
+      'When the user did name a column, skip this check',
+    );
 
     const surfaceOnly = getDashboardWithDeckMapAiInstructions().replace(
       shared,
@@ -650,7 +654,7 @@ describe('createDeckMapDashboardTool', () => {
         .description,
     ]) {
       expect(description).toContain('first confirm it varies');
-      expect(description).toContain('skip that check when the user named');
+      expect(description).toContain('when the user did name a column, skip');
     }
   });
 
