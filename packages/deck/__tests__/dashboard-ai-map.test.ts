@@ -579,7 +579,7 @@ describe('createDeckMapDashboardTool', () => {
     expect(instructions).toContain('Shared Deck map authoring rules');
     expect(instructions).toContain('Never set mapStyle to a mapbox://');
     expect(instructions).toContain('omit getWeight');
-    expect(instructions).toContain('COLOR SCALE FIELD VARIANCE');
+    expect(instructions).toContain('VISUAL FIELD VARIANCE');
     expect(instructions).toContain('min < max');
     expect(instructions).toContain('3D CAMERA');
     expect(instructions).toContain('pitch 45–60');
@@ -621,6 +621,37 @@ describe('createDeckMapDashboardTool', () => {
     // The lon/lat point recipe is needed wherever pointBinding is unavailable.
     expect(shared).toContain('ST_AsWKB(ST_Point(');
     expect(shared).toContain('__sqlrooms_geom');
+  });
+
+  it('keeps the field variance rule in the shared contract only', () => {
+    const shared = getDeckMapSharedAiContractRules();
+
+    // A flat column is useless for elevation as well as for color, so the
+    // check covers both and neither surface layer may restate it.
+    expect(shared).toContain('VISUAL FIELD VARIANCE');
+    expect(shared).toContain('omit getElevation and extruded');
+    expect(shared).toContain('Skip this check when the user named the column');
+
+    const surfaceOnly = getDashboardWithDeckMapAiInstructions().replace(
+      shared,
+      '',
+    );
+    expect(surfaceOnly).not.toContain('min < max');
+  });
+
+  it('gives both map tool descriptions the variance fallback', () => {
+    const {dashboardAdapter, databaseAdapter} = createTestAdapters();
+
+    // Hosts may register either tool without the full instructions, so the
+    // shared authoring summary has to carry the check on its own.
+    for (const description of [
+      createDeckMapConfigTool().description,
+      createDeckMapDashboardTool({dashboardAdapter, databaseAdapter})
+        .description,
+    ]) {
+      expect(description).toContain('first confirm it varies');
+      expect(description).toContain('skip that check when the user named');
+    }
   });
 
   it('provides default dashboard slice options with the deck map panel action', () => {

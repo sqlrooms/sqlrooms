@@ -35,7 +35,7 @@ export {getFirstDatasetSourceTableName, hasSqlOnlyDatasetSource};
  * Authoring summary shared by both map tool descriptions, so hosts that
  * register a map tool without the full instructions still get the contract.
  */
-const DECK_MAP_TOOL_AUTHORING_SUMMARY = `Author the map using native Deck JSON: put layer classes in spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName, tableName+transformSql, or sqlQuery sources in config.datasets. For data-driven colors, use color accessors such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor with {"@@function":"colorScale", "field":"...", "type":"...", "scheme":"...", "domain":"auto"}. For categorical fields use a scheme such as Tableau10, Set2, or Category10. For numeric fields use a sequential scheme such as Viridis.`;
+const DECK_MAP_TOOL_AUTHORING_SUMMARY = `Author the map using native Deck JSON: put layer classes in spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName, tableName+transformSql, or sqlQuery sources in config.datasets. For data-driven colors, use color accessors such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor with {"@@function":"colorScale", "field":"...", "type":"...", "scheme":"...", "domain":"auto"}. For categorical fields use a scheme such as Tableau10, Set2, or Category10. For numeric fields use a sequential scheme such as Viridis. When you pick the color or elevation column yourself, first confirm it varies (SUMMARIZE the table, or min/max the candidate) and use a flat color instead when every value is the same; skip that check when the user named the column.`;
 
 export const DECK_MAP_AI_INSTRUCTIONS = `
 Deck map tools:
@@ -403,7 +403,7 @@ export function createDeckMapDashboardTool({
   return tool({
     description: `Deck map panel: creates or updates an interactive geospatial map panel in a Mosaic dashboard from a native Deck JSON config.
 
-Use when: the user asks for a map in a dashboard. If you are choosing the color or elevation column, call the query tool with SELECT min(column), max(column), count(DISTINCT column) first. If the user asked to visualize a specific column, use that column and skip the check. ${DECK_MAP_TOOL_AUTHORING_SUMMARY}`,
+Use when: the user asks for a map in a dashboard. ${DECK_MAP_TOOL_AUTHORING_SUMMARY}`,
     inputSchema: DeckMapDashboardToolParameters,
     execute: async (params) => {
       try {
