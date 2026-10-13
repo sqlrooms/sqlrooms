@@ -22,6 +22,10 @@ Object.assign(globalThis, {
 
 const {ChatRendering} = await import('../src/components/ChatRenderingContext');
 const {FlatAgentRenderer} = await import('../src/components/FlatAgentRenderer');
+const {HoistedRenderersProvider} =
+  await import('../src/components/HoistedRenderersContext');
+const {RenderNestedHoistedOutputsProvider} =
+  await import('../src/components/NestedHoistedOutputsContext');
 
 describe('FlatAgentRenderer chat rendering slots', () => {
   it('routes nested activity boxes and tool rows through the configured slots', () => {
@@ -177,5 +181,93 @@ describe('FlatAgentRenderer chat rendering slots', () => {
     });
 
     act(() => root.unmount());
+  });
+
+  describe('a listed agent nested inside another agent', () => {
+    const nestedAgent: AgentToolCall = {
+      toolCallId: 'build-1',
+      toolName: 'buildMap',
+      input: {reasoning: 'Building the map'},
+      state: 'success',
+      output: {success: true},
+      agentToolCalls: [
+        {
+          toolCallId: 'query-1',
+          toolName: 'query',
+          input: {reasoning: 'Running a query'},
+          state: 'success',
+        },
+      ],
+    };
+
+    /** Renders the tree; returns hoisted outputs and tool rows in DOM order. */
+    function renderOrder(renderNestedHoistedOutputs: boolean): string[] {
+      const store = createStore<AiSliceState>(() => ({
+        ai: {
+          tools: {},
+          toolRenderers: {buildMap: () => null},
+          agentProgress: {},
+          toolTimings: {},
+          setToolTiming: jest.fn(),
+        } as unknown as AiSliceState['ai'],
+      }));
+      const container = document.createElement('div');
+      const root = createRoot(container);
+
+      act(() => {
+        root.render(
+          <RoomStateProvider roomStore={store}>
+            <HoistedRenderersProvider value={['buildMap']}>
+              <RenderNestedHoistedOutputsProvider
+                value={renderNestedHoistedOutputs}
+              >
+                <ChatRendering
+                  components={{
+                    // Pass-through, so nested rows are in the DOM.
+                    Activity: ({children}) => <>{children}</>,
+                    ToolActivity: ({toolCall, isHoisted}) => (
+                      <div
+                        data-order={`row:${toolCall.toolName}:${String(isHoisted)}`}
+                      />
+                    ),
+                    HoistedOutput: ({item}) => (
+                      <div data-order={`hoisted:${item.toolCallId}`} />
+                    ),
+                  }}
+                >
+                  <FlatAgentRenderer
+                    toolCallId="root-agent"
+                    agentToolCalls={[nestedAgent]}
+                    isComplete
+                  />
+                </ChatRendering>
+              </RenderNestedHoistedOutputsProvider>
+            </HoistedRenderersProvider>
+          </RoomStateProvider>,
+        );
+      });
+
+      const order = Array.from(
+        container.querySelectorAll('[data-order]'),
+        (node) => node.getAttribute('data-order') ?? '',
+      );
+      act(() => root.unmount());
+      return order;
+    }
+
+    it('draws its own output ahead of its activity and marks the row hoisted', () => {
+      expect(renderOrder(true)).toEqual([
+        'hoisted:build-1',
+        'row:buildMap:true',
+        'row:query:false',
+      ]);
+    });
+
+    it('leaves its output to the turn when nested outputs are drawn there', () => {
+      expect(renderOrder(false)).toEqual([
+        'row:buildMap:true',
+        'row:query:false',
+      ]);
+    });
   });
 });

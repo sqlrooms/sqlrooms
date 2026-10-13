@@ -5,8 +5,12 @@ jest.unstable_mockModule('../browserAuth', () => ({
   authorizedFetch: (...args: Parameters<typeof fetch>) =>
     globalThis.fetch(...args),
 }));
-const {createDuckDbPersistStorage, fetchMcpStatus, resolveLocalFile} =
-  await import('../serverApi');
+const {
+  createDuckDbPersistStorage,
+  fetchMcpStatus,
+  resolveLocalFile,
+  uploadFileToServer,
+} = await import('../serverApi');
 
 const originalFetch = globalThis.fetch;
 
@@ -175,6 +179,44 @@ describe('fetchMcpStatus', () => {
 
     await rejection;
     expect(signal?.aborted).toBe(true);
+  });
+});
+
+describe('uploadFileToServer', () => {
+  const config = {apiBaseUrl: 'http://127.0.0.1:4173'};
+
+  function mockUpload(path: string) {
+    globalThis.fetch = jest.fn(async () => {
+      return new Response(JSON.stringify({path}), {status: 200});
+    }) as typeof fetch;
+  }
+
+  test('accepts an uploaded path whose filename contains spaces', async () => {
+    const path = '/private/tmp/sqlrooms_uploads/buildings australia.geojson';
+    mockUpload(path);
+
+    await expect(
+      uploadFileToServer(
+        new File(['{}'], 'buildings australia.geojson'),
+        config,
+      ),
+    ).resolves.toBe(path);
+  });
+
+  test('rejects an uploaded path that can break out of a SQL string', async () => {
+    mockUpload("/tmp/sqlrooms_uploads/buildings'.geojson");
+
+    await expect(
+      uploadFileToServer(new File(['{}'], 'buildings.geojson'), config),
+    ).rejects.toThrow('disallowed characters');
+  });
+
+  test('rejects an uploaded path with directory traversal', async () => {
+    mockUpload('/tmp/sqlrooms_uploads/../../etc/passwd');
+
+    await expect(
+      uploadFileToServer(new File(['{}'], 'passwd'), config),
+    ).rejects.toThrow('directory traversal');
   });
 });
 

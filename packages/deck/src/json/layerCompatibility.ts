@@ -189,3 +189,26 @@ const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
 export function getLayerCompatibility(layerName: string) {
   return LAYER_COMPATIBILITY[layerName];
 }
+
+const GEOMETRY_BINDINGS = Object.values(LAYER_COMPATIBILITY).flatMap(
+  (compatibility) =>
+    compatibility.representation === 'geoarrow'
+      ? compatibility.bindings.filter((binding) => binding.kind === 'geometry')
+      : [],
+);
+
+/**
+ * Every deck prop through which a layer can name a geometry column directly,
+ * as a simple `@@=column` accessor.
+ *
+ * Derived from the compatibility table so config repair that must drop
+ * references to a removed column cannot fall behind a newly declared binding.
+ */
+export const DECK_MAP_GEOMETRY_ACCESSOR_PROPS: readonly string[] = [
+  ...new Set(GEOMETRY_BINDINGS.map((binding) => binding.prop)),
+];
+
+/** Every `_sqlroomsBinding` key that names a geometry column. */
+export const DECK_MAP_GEOMETRY_CONFIG_KEYS: readonly LayerConfigColumnKey[] = [
+  ...new Set(GEOMETRY_BINDINGS.map((binding) => binding.configKey)),
+];

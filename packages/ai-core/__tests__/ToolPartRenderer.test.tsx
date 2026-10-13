@@ -59,4 +59,76 @@ describe('ToolPartRenderer', () => {
 
     act(() => root.unmount());
   });
+
+  describe('an agent whose own output is hoisted', () => {
+    const Card = ({state}: ToolRendererProps) => (
+      <div data-testid="agent-card" data-state={state} />
+    );
+    // Renderer-only registration: the client has no `execute` for the tool.
+    const store = createStore<AiSliceState>(() => ({
+      ai: {
+        tools: {},
+        toolRenderers: {'agent-build': Card},
+        agentProgress: {},
+        toolTimings: {},
+        setToolTiming: jest.fn(),
+      } as unknown as AiSliceState['ai'],
+    }));
+
+    /** Whether the row draws the tool's own component. */
+    function drawsOwnComponent(
+      part: UIMessagePart,
+      ownOutputHoisted: boolean,
+    ): boolean {
+      const container = document.createElement('div');
+      const root = createRoot(container);
+      act(() => {
+        root.render(
+          <RoomStateProvider roomStore={store}>
+            <ToolPartRenderer
+              part={part}
+              toolCallId="build-1"
+              hideAgentSummary
+              ownOutputHoisted={ownOutputHoisted}
+            />
+          </RoomStateProvider>,
+        );
+      });
+      const drawn =
+        container.querySelector('[data-testid="agent-card"]') !== null;
+      act(() => root.unmount());
+      return drawn;
+    }
+
+    it('does not draw its result a second time in the activity row', () => {
+      const part = {
+        type: 'tool-agent-build',
+        toolCallId: 'build-1',
+        state: 'output-available',
+        input: {},
+        output: {
+          success: true,
+          agentToolCalls: [
+            {toolCallId: 'query-1', toolName: 'query', state: 'success'},
+          ],
+        },
+      } as UIMessagePart;
+
+      expect(drawsOwnComponent(part, false)).toBe(true);
+      expect(drawsOwnComponent(part, true)).toBe(false);
+    });
+
+    it('does not draw its approval request a second time either', () => {
+      const part = {
+        type: 'tool-agent-build',
+        toolCallId: 'build-1',
+        state: 'approval-requested',
+        input: {},
+        approval: {id: 'approval-1'},
+      } as UIMessagePart;
+
+      expect(drawsOwnComponent(part, false)).toBe(true);
+      expect(drawsOwnComponent(part, true)).toBe(false);
+    });
+  });
 });

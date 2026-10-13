@@ -91,7 +91,7 @@ function MyComponent() {
 ## Available Components
 
 - **Layout**: Card, Resizable, SettingsPanelHeader, Tabs
-- **Forms**: Button, Checkbox, Combobox, Input, Select, Slider, Switch, Textarea
+- **Forms**: Button, Checkbox, Combobox, Input, Select, Slider, SliderInput, Switch, Textarea
 - **Feedback**: Alert, Progress, Spinner, Toast
 - **Navigation**: Accordion, Breadcrumb, Dropdown Menu, TabStrip
 - **Overlay**: Dialog, ModifierScrollOverlay, Popover, Tooltip
@@ -148,6 +148,38 @@ Pass `disabled` to the root `Combobox` to disable opening the dropdown and
 selecting items.
 
 For advanced composition, the lower-level `useCombobox` hook is also exported.
+
+## Slider with manual value entry
+
+`Slider` is the plain Radix slider. When a range is wide enough that dragging
+cannot land on an exact value, use `SliderInput` instead: it renders the same
+slider plus a toggle that appears on hover or keyboard focus and swaps the
+track for a numeric input.
+
+```tsx
+import {SliderInput} from '@sqlrooms/ui';
+
+function ElevationScaleControl() {
+  const [elevationScale, setElevationScale] = useState(1);
+
+  return (
+    <SliderInput
+      min={0.01}
+      max={1000}
+      step={0.01}
+      value={elevationScale}
+      onValueChange={setElevationScale}
+      aria-label="Elevation scale"
+    />
+  );
+}
+```
+
+Unlike `Slider`, it takes and returns a single `number` rather than an array.
+Typed values are clamped to `[min, max]` and snapped to the grid that starts at
+`min`, so the input cannot produce a value the slider is unable to represent.
+`Enter` or blur commits, `Escape` discards. On devices without hover the toggle
+is always visible, since there is no other way to discover manual entry.
 
 ## Settings Panel Header
 
