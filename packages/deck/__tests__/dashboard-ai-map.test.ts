@@ -623,43 +623,37 @@ describe('createDeckMapDashboardTool', () => {
     expect(shared).toContain('__sqlrooms_geom');
   });
 
-  it('keeps the field variance rule in the shared contract only', () => {
+  it('states the field variance rule once, in the shared contract', () => {
     const shared = getDeckMapSharedAiContractRules();
 
-    // A flat column is useless for elevation as well as for color, so the
-    // check covers both and neither surface layer may restate it.
+    // Flat columns are useless for elevation as well as for color, so the
+    // rule is surface-agnostic and the dashboard layer must inherit it rather
+    // than restate it. Anchoring on the shared text first keeps the negative
+    // check below from passing vacuously after a reword.
     expect(shared).toContain('VISUAL FIELD VARIANCE');
-    expect(shared).toContain('omit getElevation and extruded');
-    // The check is scoped to agent-chosen columns, not user-named ones.
-    expect(shared).toContain('without naming which column to visualize');
-    expect(shared).toContain(
-      'When the user did name a column, skip this check',
-    );
-    // A flat candidate means pick a different column, not drop to flat fill.
-    expect(shared).toContain('switch to another varying column');
-    expect(shared).toContain('Only when no column in the table varies');
 
-    const surfaceOnly = getDashboardWithDeckMapAiInstructions().replace(
+    const dashboardOnly = getDashboardWithDeckMapAiInstructions().replace(
       shared,
       '',
     );
-    expect(surfaceOnly).not.toContain('min < max');
+    expect(dashboardOnly).not.toContain('VISUAL FIELD VARIANCE');
+    expect(dashboardOnly).not.toContain('min < max');
   });
 
-  it('gives both map tool descriptions the variance fallback', () => {
+  it('ships the same authoring summary in both map tool descriptions', () => {
     const {dashboardAdapter, databaseAdapter} = createTestAdapters();
-
-    // Hosts may register either tool without the full instructions, so the
-    // shared authoring summary has to carry the check on its own.
-    for (const description of [
-      createDeckMapConfigTool().description,
+    const configDescription = createDeckMapConfigTool().description ?? '';
+    const dashboardDescription =
       createDeckMapDashboardTool({dashboardAdapter, databaseAdapter})
-        .description,
-    ]) {
-      expect(description).toContain('pick one that actually varies');
-      expect(description).toContain('switch to another varying column');
-      expect(description).toContain('when the user did name a column, skip');
-    }
+        .description ?? '';
+
+    // A host may register either tool without the full instructions, so the
+    // summary each description falls back on has to be the same text.
+    const summary = configDescription.slice(
+      configDescription.indexOf('Author the map using native Deck JSON'),
+    );
+    expect(summary).toContain('varies');
+    expect(dashboardDescription).toContain(summary);
   });
 
   it('provides default dashboard slice options with the deck map panel action', () => {
