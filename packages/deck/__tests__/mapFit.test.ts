@@ -233,6 +233,49 @@ describe('Deck map fit core', () => {
     });
   });
 
+  test('resolves a layer-bound geometry column when the dataset omits it', () => {
+    expect(
+      resolveDeckMapFitToData({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowPolygonLayer',
+              _sqlroomsBinding: {dataset: 'buildings', geometryColumn: 'geom'},
+            },
+          ],
+        },
+        datasets: {
+          buildings: {source: {tableName: 'buildings_australia'}},
+        },
+        fitToData: {dataset: 'buildings'},
+      }),
+    ).toEqual({dataset: 'buildings', geometryColumn: 'geom'});
+  });
+
+  test('ignores a hidden layer geometry binding when resolving fit columns', () => {
+    expect(
+      resolveDeckMapFitToData({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowPolygonLayer',
+              visible: false,
+              _sqlroomsBinding: {dataset: 'parcels', geometryColumn: 'stale'},
+            },
+            {
+              '@@type': 'GeoArrowPathLayer',
+              _sqlroomsBinding: {dataset: 'parcels', geometryColumn: 'geom'},
+            },
+          ],
+        },
+        datasets: {
+          parcels: {source: {tableName: 'parcels'}},
+        },
+        fitToData: {dataset: 'parcels'},
+      }),
+    ).toEqual({dataset: 'parcels', geometryColumn: 'geom'});
+  });
+
   test('resolves H3 hexagonColumn from layer binding for fit-to-bounds', () => {
     expect(
       resolveDeckMapFitToData({

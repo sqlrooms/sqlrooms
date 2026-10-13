@@ -835,7 +835,7 @@ describe('Deck map resource authoring contract', () => {
     });
   });
 
-  test('still accepts a polygon map when fitToData omits the geometry column', () => {
+  test('rejects a polygon map that names the geometry column nowhere', () => {
     const config = {
       configMode: 'basic' as const,
       spec: {
@@ -855,13 +855,20 @@ describe('Deck map resource authoring contract', () => {
       },
       fitToData: {dataset: 'buildings'},
     };
+    // The layer still renders, so this is a fit-only, authoring-time issue.
     expect(getDeckMapResourceConfigIssues(config)).toEqual([]);
     expect(() => assertDeckMapResourceConfig(config)).toThrow(
-      /fitToData\.geometryColumn: GeoArrowPolygonLayer fit-to-bounds requires fitToData\.geometryColumn/,
+      /fitToData\.geometryColumn: GeoArrowPolygonLayer fit-to-bounds needs the geometry column/,
     );
+    expect(() =>
+      assertDeckMapResourceConfig({
+        ...config,
+        fitToData: {dataset: 'buildings', geometryColumn: '  '},
+      }),
+    ).toThrow(/fitToData\.geometryColumn/);
   });
 
-  test('accepts polygon fitToData that names the geometry column', () => {
+  test('accepts polygon fit geometry named on fitToData, dataset, or binding', () => {
     const config = {
       configMode: 'basic' as const,
       spec: {
@@ -882,6 +889,32 @@ describe('Deck map resource authoring contract', () => {
     };
     expect(getDeckMapResourceConfigIssues(config)).toEqual([]);
     expect(() => assertDeckMapResourceConfig(config)).not.toThrow();
+
+    expect(() =>
+      assertDeckMapResourceConfig({
+        ...config,
+        datasets: {
+          buildings: {...config.datasets.buildings, geometryColumn: 'geom'},
+        },
+        fitToData: {dataset: 'buildings'},
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      assertDeckMapResourceConfig({
+        ...config,
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowPolygonLayer',
+              id: 'buildings-flood',
+              _sqlroomsBinding: {dataset: 'buildings', geometryColumn: 'geom'},
+            },
+          ],
+        },
+        fitToData: {dataset: 'buildings'},
+      }),
+    ).not.toThrow();
   });
 
   test('does not require geometryColumn for an H3 fit', () => {

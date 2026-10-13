@@ -111,6 +111,26 @@ export function resolveDeckMapFitToData(
   const geometryColumn = dataset?.geometryColumn;
   if (geometryColumn) return {...fitToData, geometryColumn};
 
+  // A layer-bound geometry column also wins over inferred H3, and keeps
+  // polygon/path/trips/GeoJSON maps from falling back to Longitude/Latitude.
+  for (const layer of layers) {
+    if (!layer || typeof layer !== 'object') continue;
+    const layerRecord = layer as Record<string, unknown>;
+    if (layerRecord.visible === false) continue;
+    const binding = layerRecord._sqlroomsBinding as
+      | Record<string, unknown>
+      | undefined;
+    if (binding?.dataset !== fitToData.dataset) continue;
+
+    const boundGeometryColumn =
+      typeof binding.geometryColumn === 'string'
+        ? binding.geometryColumn.trim()
+        : '';
+    if (boundGeometryColumn) {
+      return {...fitToData, geometryColumn: boundGeometryColumn};
+    }
+  }
+
   for (const layer of layers) {
     if (!layer || typeof layer !== 'object') continue;
     const layerRecord = layer as Record<string, unknown>;

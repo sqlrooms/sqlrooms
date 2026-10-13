@@ -11,11 +11,15 @@ import {
   isDeckMapTableDatasetSource,
   type DeckMapConfig,
   type DeckMapDatasetSource,
+  type DeckMapFitToDataConfig,
 } from './mapConfig';
 import {resolveDeckMapFitToData} from './mapFit';
 import {hasSelectStarAsWkbCollision} from './selectStarAsWkbCollision';
 import {getDeckMapSharedAiContractRules} from './mapAiSharedInstructions';
-import {DECK_MAP_LAYER_TYPE_OPTIONS} from './mapLayerConfigUtils';
+import {
+  DECK_MAP_LAYER_TYPE_OPTIONS,
+  usesGeometryColumnSetting,
+} from './mapLayerConfigUtils';
 
 export type DeckMapResourceConfigIssue = {
   path: string;
@@ -383,14 +387,6 @@ const DECK_MAP_LAYER_CLASS_ALIASES: Record<string, string> = {
 const DECK_MAP_SUPPORTED_LAYER_TYPES = new Set<string>(
   DECK_MAP_LAYER_TYPE_OPTIONS.map((option) => option.value),
 );
-
-/** Layers that fit from a geometry column. Lon/lat, arc, and H3 fits are separate. */
-const FIT_GEOMETRY_LAYER_TYPES = new Set([
-  'GeoArrowPolygonLayer',
-  'GeoArrowPathLayer',
-  'GeoArrowTripsLayer',
-  'GeoJsonLayer',
-]);
 
 const COLOR_SCALE_ACCESSOR_PROPS = [
   'getFillColor',
@@ -843,49 +839,42 @@ export function getDeckMapResourceConfigIssues(
   return issues;
 }
 
+function hasFitColumns(fitToData: DeckMapFitToDataConfig): boolean {
+  return Boolean(
+    fitToData.geometryColumn?.trim() ||
+    fitToData.geometryColumns?.some((column) => column.trim()) ||
+    fitToData.h3Column?.trim() ||
+    (fitToData.longitudeColumn?.trim() && fitToData.latitudeColumn?.trim()),
+  );
+}
+
 /**
- * Authoring-only fit check. The map surface still draws a config that omits
- * `geometryColumn`; the assistant write is rejected so it can retry.
+ * Authoring-only fit check for geometry layers whose fit columns resolve to
+ * nothing. Such a map still draws — the renderer detects geometry from the
+ * data — but fitting falls back to conventional `Longitude`/`Latitude` names
+ * and leaves the view unframed, so the write is rejected for a retry.
  */
-export function getDeckMapAuthoringFitIssues(
+function getDeckMapFitGeometryIssues(
   config: DeckMapConfig,
 ): DeckMapResourceConfigIssue[] {
   const resolved = resolveDeckMapFitToData(config);
-  if (!resolved?.dataset) return [];
-  if (
-    resolved.geometryColumn ||
-    (resolved.geometryColumns && resolved.geometryColumns.length > 0) ||
-    resolved.h3Column ||
-    (resolved.longitudeColumn && resolved.latitudeColumn)
-  ) {
-    return [];
-  }
+  if (!resolved?.dataset || hasFitColumns(resolved)) return [];
 
   const {layers} = parseSpec(config);
   const geometryLayer = layers.find((layer) => {
     if (layer.visible === false) return false;
-    const layerType = layer['@@type'];
-    if (
-      typeof layerType !== 'string' ||
-      !FIT_GEOMETRY_LAYER_TYPES.has(layerType)
-    ) {
-      return false;
-    }
+    if (!usesGeometryColumnSetting(layer['@@type'])) return false;
     const binding = isPlainObject(layer._sqlroomsBinding)
       ? layer._sqlroomsBinding
       : undefined;
-    if (typeof binding?.dataset === 'string') {
-      return binding.dataset === resolved.dataset;
-    }
-    const datasetIds = Object.keys(config.datasets);
-    return datasetIds.length === 1 && datasetIds[0] === resolved.dataset;
+    return binding?.dataset === resolved.dataset;
   });
   if (!geometryLayer) return [];
 
   return [
     {
       path: 'fitToData.geometryColumn',
-      message: `${String(geometryLayer['@@type'])} fit-to-bounds requires fitToData.geometryColumn. Without it the layer still draws, but the view is not framed: the bounds query looks for Longitude and Latitude. For a GeoJSON table loaded with ST_Read set fitToData to {"dataset":"${resolved.dataset}","geometryColumn":"geom"} and datasets.${resolved.dataset}.geometryColumn to "geom".`,
+      message: `${String(geometryLayer['@@type'])} fit-to-bounds needs the geometry column: set fitToData.geometryColumn, datasets.${resolved.dataset}.geometryColumn, or the layer's _sqlroomsBinding.geometryColumn. Without one the layer still draws, but the bounds query looks for Longitude and Latitude and the view is not framed. For a GeoJSON table loaded with ST_Read that column is "geom".`,
     },
   ];
 }
@@ -894,7 +883,7 @@ export function getDeckMapAuthoringFitIssues(
 export function assertDeckMapResourceConfig(config: DeckMapConfig): void {
   const issues = [
     ...getDeckMapResourceConfigIssues(config),
-    ...getDeckMapAuthoringFitIssues(config),
+    ...getDeckMapFitGeometryIssues(config),
   ];
   if (issues.length > 0) throw new DeckMapResourceConfigError(issues);
 }
