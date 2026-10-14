@@ -863,7 +863,7 @@ function getDeckMapFitGeometryIssues(
   return [
     {
       path: 'fitToData.geometryColumn',
-      message: `${String(geometryLayer['@@type'])} fit-to-bounds needs the geometry column: set fitToData.geometryColumn, datasets.${resolved.dataset}.geometryColumn, or the layer's _sqlroomsBinding.geometryColumn. Without one the layer still draws, but the bounds query looks for Longitude and Latitude and the view is not framed. For a GeoJSON table loaded with ST_Read that column is "geom".`,
+      message: `${String(geometryLayer['@@type'])} fit-to-bounds needs the geometry column: set fitToData.geometryColumn, datasets.${resolved.dataset}.geometryColumn, or the layer's _sqlroomsBinding.geometryColumn. For a GeoJSON table loaded with ST_Read that column is "geom". Without one the layer still draws, but the bounds query falls back to Longitude and Latitude columns — name those on fitToData.longitudeColumn and fitToData.latitudeColumn when the dataset really has them.`,
     },
   ];
 }
