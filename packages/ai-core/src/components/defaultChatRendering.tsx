@@ -506,6 +506,7 @@ export function createChatTurnPresentation({
       id: item.toolCallId,
       toolName: item.toolName,
       state: item.state,
+      call: item,
       Content,
     };
   });
