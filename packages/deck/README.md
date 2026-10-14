@@ -316,12 +316,8 @@ back from dataset-level source, to panel source, to the dashboard selected
 table. When `fitToData` is provided, the renderer asks DuckDB Spatial for the
 dataset extent and fits the initial map view once, instead of inferring bounds
 from the loaded Arrow payload in React. The extent query uses the columns named
-on `fitToData`, falling back to the dataset's `geometryColumn`, a bound layer's
-`_sqlroomsBinding.geometryColumn` or `hexagonColumn`, and finally to
-conventional `Longitude`/`Latitude` columns. Geometry-backed maps (polygon,
-path, trips, GeoJSON) must name their geometry column in one of those places,
-otherwise a durable map write is rejected because the fit would silently miss
-the data.
+on `fitToData`, falling back to the dataset's `geometryColumn` and then to a
+bound layer's `_sqlroomsBinding.geometryColumn` or `hexagonColumn`.
 
 Use `createDeckMapPanelFromNativeConfig(...)` when a host surface already has a
 native Deck map config, for example from AI tooling, and needs the same

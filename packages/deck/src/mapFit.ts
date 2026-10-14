@@ -125,11 +125,8 @@ export function resolveDeckMapFitToData(
   const geometryColumn = dataset?.geometryColumn;
   if (geometryColumn) return {...fitToData, geometryColumn};
 
-  // Layer-bound geometry also wins over inferred H3, and keeps
+  // A layer-bound geometry column also wins over inferred H3, and keeps
   // polygon/path/trips/GeoJSON maps from falling back to Longitude/Latitude.
-  // Every visible binding counts, so overlays on different geometry columns of
-  // one dataset all fit inside the view.
-  const boundGeometryColumns = new Set<string>();
   for (const layer of layers) {
     if (!layer || typeof layer !== 'object') continue;
     const layerRecord = layer as Record<string, unknown>;
@@ -143,13 +140,9 @@ export function resolveDeckMapFitToData(
       typeof binding.geometryColumn === 'string'
         ? binding.geometryColumn.trim()
         : '';
-    if (boundGeometryColumn) boundGeometryColumns.add(boundGeometryColumn);
-  }
-  if (boundGeometryColumns.size === 1) {
-    return {...fitToData, geometryColumn: [...boundGeometryColumns][0]};
-  }
-  if (boundGeometryColumns.size > 1) {
-    return {...fitToData, geometryColumns: [...boundGeometryColumns]};
+    if (boundGeometryColumn) {
+      return {...fitToData, geometryColumn: boundGeometryColumn};
+    }
   }
 
   for (const layer of layers) {

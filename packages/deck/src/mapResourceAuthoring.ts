@@ -5,20 +5,16 @@ import {
   continuousSequentialSchemes,
 } from '@sqlrooms/color-scales/colorSchemeNames';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
+import type {DeckMapConfig, DeckMapDatasetSource} from './mapConfig';
 import {
   isDeckMapSqlDatasetSource,
   isDeckMapTableDatasetSource,
-  type DeckMapConfig,
-  type DeckMapDatasetSource,
-  type DeckMapFitToDataConfig,
 } from './mapConfig';
-import {resolveDeckMapFitToData} from './mapFit';
 import {hasSelectStarAsWkbCollision} from './selectStarAsWkbCollision';
 import {getDeckMapSharedAiContractRules} from './mapAiSharedInstructions';
 import {
   DECK_MAP_LAYER_CLASS_ALIASES,
   DECK_MAP_LAYER_TYPE_OPTIONS,
-  usesGeometryColumnSetting,
 } from './mapLayerConfigUtils';
 
 export type DeckMapResourceConfigIssue = {
@@ -828,52 +824,9 @@ export function getDeckMapResourceConfigIssues(
   return issues;
 }
 
-function hasFitColumns(fitToData: DeckMapFitToDataConfig): boolean {
-  return Boolean(
-    fitToData.geometryColumn?.trim() ||
-    fitToData.geometryColumns?.some((column) => column.trim()) ||
-    fitToData.h3Column?.trim() ||
-    (fitToData.longitudeColumn?.trim() && fitToData.latitudeColumn?.trim()),
-  );
-}
-
-/**
- * Authoring-only fit check for geometry layers whose fit columns resolve to
- * nothing. Such a map still draws — the renderer detects geometry from the
- * data — but fitting falls back to conventional `Longitude`/`Latitude` names
- * and leaves the view unframed, so the write is rejected for a retry.
- */
-function getDeckMapFitGeometryIssues(
-  config: DeckMapConfig,
-): DeckMapResourceConfigIssue[] {
-  const resolved = resolveDeckMapFitToData(config);
-  if (!resolved?.dataset || hasFitColumns(resolved)) return [];
-
-  const {layers} = parseSpec(config);
-  const geometryLayer = layers.find((layer) => {
-    if (layer.visible === false) return false;
-    if (!usesGeometryColumnSetting(layer['@@type'])) return false;
-    const binding = isPlainObject(layer._sqlroomsBinding)
-      ? layer._sqlroomsBinding
-      : undefined;
-    return binding?.dataset === resolved.dataset;
-  });
-  if (!geometryLayer) return [];
-
-  return [
-    {
-      path: 'fitToData.geometryColumn',
-      message: `${String(geometryLayer['@@type'])} fit-to-bounds needs the geometry column: set fitToData.geometryColumn, datasets.${resolved.dataset}.geometryColumn, or the layer's _sqlroomsBinding.geometryColumn. For a GeoJSON table loaded with ST_Read that column is "geom". Without one the layer still draws, but the bounds query falls back to Longitude and Latitude columns — name those on fitToData.longitudeColumn and fitToData.latitudeColumn when the dataset really has them.`,
-    },
-  ];
-}
-
 /** Rejects invalid durable map writes after sparse patches have been merged. */
 export function assertDeckMapResourceConfig(config: DeckMapConfig): void {
-  const issues = [
-    ...getDeckMapResourceConfigIssues(config),
-    ...getDeckMapFitGeometryIssues(config),
-  ];
+  const issues = getDeckMapResourceConfigIssues(config);
   if (issues.length > 0) throw new DeckMapResourceConfigError(issues);
 }
 

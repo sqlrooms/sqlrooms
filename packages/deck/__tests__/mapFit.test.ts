@@ -272,32 +272,6 @@ describe('Deck map fit core', () => {
     ).toEqual({dataset: 'buildings', geometryColumn: 'geom'});
   });
 
-  test('combines geometry columns bound by several visible layers', () => {
-    expect(
-      resolveDeckMapFitToData({
-        spec: {
-          layers: [
-            {
-              '@@type': 'GeoArrowPolygonLayer',
-              _sqlroomsBinding: {dataset: 'sites', geometryColumn: 'area_geom'},
-            },
-            {
-              '@@type': 'GeoArrowScatterplotLayer',
-              _sqlroomsBinding: {
-                dataset: 'sites',
-                geometryColumn: 'point_geom',
-              },
-            },
-          ],
-        },
-        datasets: {
-          sites: {source: {tableName: 'sites'}},
-        },
-        fitToData: {dataset: 'sites'},
-      }),
-    ).toEqual({dataset: 'sites', geometryColumns: ['area_geom', 'point_geom']});
-  });
-
   test('ignores a hidden layer geometry binding when resolving fit columns', () => {
     expect(
       resolveDeckMapFitToData({
