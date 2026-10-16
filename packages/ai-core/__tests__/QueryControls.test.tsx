@@ -613,7 +613,7 @@ describe('QueryControls — unified across runtime modes', () => {
     const {container, root} = await renderTree(
       <TooltipProvider>
         <RoomStateProvider roomStore={store}>
-          <QueryControls />
+          <QueryControls usageDetails={<span>Spend $1.00 of $10.00</span>} />
         </RoomStateProvider>
       </TooltipProvider>,
     );
@@ -624,6 +624,14 @@ describe('QueryControls — unified across runtime modes', () => {
       (btn) => btn.getAttribute('aria-label')?.includes('context used'),
     );
     expect(indicator).toBeDefined();
+
+    // Host details are tooltip content, so they arrive with the tooltip — not
+    // in the trigger's own label.
+    expect(document.body.textContent).not.toContain('Spend $1.00 of $10.00');
+    await act(async () => {
+      indicator!.focus();
+    });
+    expect(document.body.textContent).toContain('Spend $1.00 of $10.00');
 
     await cleanup(container, root);
   });

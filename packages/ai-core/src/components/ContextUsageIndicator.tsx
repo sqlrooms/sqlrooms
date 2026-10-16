@@ -1,7 +1,7 @@
 import {type BaseRoomStoreState, useRoomStoreApi} from '@sqlrooms/room-store';
 import {Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import type {FileUIPart, UIMessage} from 'ai';
-import {useCallback, useMemo, useRef} from 'react';
+import {type ReactNode, useCallback, useMemo, useRef} from 'react';
 import {type AiSliceState, useStoreWithAi} from '../AiSlice';
 import {textAttachmentToModelText} from '../chatAttachments';
 import type {AssistantMessageMetadata} from '../types';
@@ -125,6 +125,14 @@ type ContextUsageIndicatorProps = {
   contextWindow?: number;
   modelProvider?: string;
   modelName?: string;
+  /**
+   * Host-rendered content for the usage tooltip, below the token counts — for
+   * hosts that meter the conversation themselves, e.g. account spend. Rendered
+   * as-is, so the host owns its own spacing and divider: the indicator cannot
+   * know whether a host that renders nothing on some turns still wants a
+   * separator left behind. Nothing renders when the host passes nothing.
+   */
+  usageDetails?: ReactNode;
 };
 
 /** Summary prompt and visual evidence used to seed a continuation session. */
@@ -148,6 +156,7 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
   contextWindow = DEFAULT_CONTEXT_WINDOW,
   modelProvider,
   modelName,
+  usageDetails,
 }) => {
   const uiMessages = useStoreWithAi((s) => {
     const {currentSessionId, sessions} = s.ai.config;
@@ -289,6 +298,7 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
       </TooltipTrigger>
       <TooltipContent className="whitespace-pre-line">
         {fullTooltip}
+        {usageDetails}
       </TooltipContent>
     </Tooltip>
   );

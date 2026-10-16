@@ -23,6 +23,12 @@ type QueryControlsProps = PropsWithChildren<{
   onCancel?: () => void;
   /** Accepts in-app context items dropped onto the composer. Both modes. */
   contextDropTarget?: ContextDropTargetConfig;
+  /**
+   * Extra content for the context-usage tooltip, below the token counts — for
+   * hosts that meter usage themselves, e.g. account spend. Session mode only:
+   * local-agent mode renders no usage indicator.
+   */
+  usageDetails?: ReactNode;
 }>;
 
 /**
@@ -64,6 +70,7 @@ const SessionQueryControls: FC<QueryControlsProps> = ({
   onRun,
   onCancel,
   contextDropTarget,
+  usageDetails,
 }) => {
   const composer = useChatComposer();
   // The AI slice owns send readiness; `useChatComposer()`'s `canSend` consumes
@@ -108,7 +115,7 @@ const SessionQueryControls: FC<QueryControlsProps> = ({
       topRow={topRow}
       overlay={isSummarizing ? <SummarizingOverlay /> : null}
       footerStart={otherChildren}
-      footerEnd={<ContextUsageIndicator />}
+      footerEnd={<ContextUsageIndicator usageDetails={usageDetails} />}
       onRun={onRun}
       onCancel={onCancel}
     />
