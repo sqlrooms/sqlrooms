@@ -296,7 +296,9 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
           </svg>
         </button>
       </TooltipTrigger>
-      <TooltipContent className="whitespace-pre-line">
+      {/* A string label keeps Radix from mounting host content again in its
+          visually hidden tooltip tree. */}
+      <TooltipContent aria-label={fullTooltip} className="whitespace-pre-line">
         {fullTooltip}
         {usageDetails}
       </TooltipContent>
