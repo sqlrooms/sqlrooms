@@ -7,6 +7,7 @@ import {
   asDeckJsonMapConfig,
   resolveDeckMapDashboardDatasetSource,
 } from './dashboardConfig';
+import type {DeckMapGroundBounds} from './extrusionScale';
 import {resolveDeckMapFitToData, useDeckMapFitController} from './mapFit';
 import type {DeckJsonMapHandle} from './types';
 
@@ -80,7 +81,7 @@ export function useDeckMapFitToBounds(options: {
       );
   }, [panelId]);
 
-  useDeckMapFitController({
+  const {fittedBounds} = useDeckMapFitController({
     scopeId: panelId,
     fitToData,
     source,
@@ -90,5 +91,5 @@ export function useDeckMapFitToBounds(options: {
     autoFit: true,
   });
 
-  return {fitToData};
+  return {fitToData, fittedBounds};
 }
