@@ -850,8 +850,9 @@ surface-specific layer, so the two surfaces cannot teach different contracts:
 
 - `getDeckMapSharedAiContractRules()` (internal) holds the surface-agnostic
   core: dataset and SQL rules, layer classes and geometry recipes, sizes,
-  elevation and camera, color scales, view fitting, basemap, config mode, and
-  the per-page WebGL context budget.
+  elevation and camera, color scales, the field variance check that keeps flat
+  columns out of color and elevation accessors, view fitting, basemap, config
+  mode, and the per-page WebGL context budget.
 - `DECK_MAP_AI_INSTRUCTIONS` (via `@sqlrooms/deck/mosaic`) adds only dashboard
   mechanics: tool names, selected-table semantics, full-config panel updates,
   and the `list_dashboard_panels` render check.

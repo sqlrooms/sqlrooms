@@ -579,7 +579,7 @@ describe('createDeckMapDashboardTool', () => {
     expect(instructions).toContain('Shared Deck map authoring rules');
     expect(instructions).toContain('Never set mapStyle to a mapbox://');
     expect(instructions).toContain('omit getWeight');
-    expect(instructions).toContain('COLOR SCALE FIELD VARIANCE');
+    expect(instructions).toContain('VISUAL FIELD VARIANCE');
     expect(instructions).toContain('min < max');
     expect(instructions).toContain('3D CAMERA');
     expect(instructions).toContain('pitch 45–60');
@@ -621,6 +621,39 @@ describe('createDeckMapDashboardTool', () => {
     // The lon/lat point recipe is needed wherever pointBinding is unavailable.
     expect(shared).toContain('ST_AsWKB(ST_Point(');
     expect(shared).toContain('__sqlrooms_geom');
+  });
+
+  it('states the field variance rule once, in the shared contract', () => {
+    const shared = getDeckMapSharedAiContractRules();
+
+    // Flat columns are useless for elevation as well as for color, so the
+    // rule is surface-agnostic and the dashboard layer must inherit it rather
+    // than restate it. Anchoring on the shared text first keeps the negative
+    // check below from passing vacuously after a reword.
+    expect(shared).toContain('VISUAL FIELD VARIANCE');
+
+    const dashboardOnly = getDashboardWithDeckMapAiInstructions().replace(
+      shared,
+      '',
+    );
+    expect(dashboardOnly).not.toContain('VISUAL FIELD VARIANCE');
+    expect(dashboardOnly).not.toContain('min < max');
+  });
+
+  it('ships the same authoring summary in both map tool descriptions', () => {
+    const {dashboardAdapter, databaseAdapter} = createTestAdapters();
+    const configDescription = createDeckMapConfigTool().description ?? '';
+    const dashboardDescription =
+      createDeckMapDashboardTool({dashboardAdapter, databaseAdapter})
+        .description ?? '';
+
+    // A host may register either tool without the full instructions, so the
+    // summary each description falls back on has to be the same text.
+    const summary = configDescription.slice(
+      configDescription.indexOf('Author the map using native Deck JSON'),
+    );
+    expect(summary).toContain('varies');
+    expect(dashboardDescription).toContain(summary);
   });
 
   it('provides default dashboard slice options with the deck map panel action', () => {
