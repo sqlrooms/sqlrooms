@@ -1177,7 +1177,6 @@ export function applyDeckMapPointBinding<
       dataset: datasetId,
       geometryColumn,
       padding: 40,
-      maxZoom: 12,
     };
   }
   const interaction =
@@ -1328,7 +1327,6 @@ export function normalizeDeckMapPointConfig<
             dataset: datasetId,
             geometryColumn,
             padding: 40,
-            maxZoom: 12,
           });
 
     changed = true;
@@ -1483,7 +1481,6 @@ export function createDeckMapConfigForTable(options: {
             longitudeColumn: coordinates.longitudeColumn,
             latitudeColumn: coordinates.latitudeColumn,
             padding: 40,
-            maxZoom: 12,
           },
         }
       : detectedGeometryColumn
@@ -1492,7 +1489,6 @@ export function createDeckMapConfigForTable(options: {
               dataset: datasetId,
               geometryColumn: detectedGeometryColumn.geometryColumn,
               padding: 40,
-              maxZoom: 12,
             },
           }
         : {}),
