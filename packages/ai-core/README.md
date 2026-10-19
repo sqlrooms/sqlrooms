@@ -111,6 +111,15 @@ and the first `ai.createSession()` transfers it to the new session.
 Use `Chat.Composer`'s `topActions` slot for compact controls that should sit in
 the prompt's top row, right-aligned beside context selectors.
 
+`Chat.Composer`'s `usageDetails` prop renders host content in the context-usage
+tooltip, under the token counts. Use it when the host meters the conversation
+itself and wants that next to the context fill — for example an account's spend
+against its budget in a session-mode composer. The content is rendered as-is, so
+the host brings its own spacing and divider, and a host that has nothing to
+report on some turns can render nothing without leaving an empty separator
+behind. Local-agent mode renders no usage indicator, so the prop is ignored
+there.
+
 Attachments are opt-in. Add `<Chat.Composer.Attachments />` as a composer child
 to accept images and plain-text or Markdown files. Its paperclip menu shows the
 supported categories and opens a type-specific file picker for each one.

@@ -549,10 +549,17 @@ describe('QueryControls — unified across runtime modes', () => {
 
   it('session-only chrome is absent in local-agent mode and nothing throws', async () => {
     setMockRuntime();
+    const mountDetails = jest.fn();
+    function UsageDetails() {
+      React.useEffect(() => {
+        mountDetails();
+      }, []);
+      return <span>Local usage details</span>;
+    }
 
     const {container, root} = await renderTree(
       <LocalAgentChatComposerProvider>
-        <QueryControls>
+        <QueryControls usageDetails={<UsageDetails />}>
           <span data-testid="footer-chip">a footer chip</span>
         </QueryControls>
       </LocalAgentChatComposerProvider>,
@@ -574,59 +581,105 @@ describe('QueryControls — unified across runtime modes', () => {
       container.querySelector('[data-testid="footer-chip"]'),
     ).not.toBeNull();
     expect(textarea(container)).not.toBeNull();
+    expect(mountDetails).not.toHaveBeenCalled();
+    expect(document.body.textContent).not.toContain('Local usage details');
 
     await cleanup(container, root);
   });
 
-  it('session mode still renders the context-usage indicator (frozen recipe)', async () => {
-    const store = createSessionTestStore();
-    stubAnalysisActions(store);
-    const sessionId = store.getState().ai.createSession('S');
-    store.setState((s) => ({
-      ai: {
-        ...s.ai,
-        config: {
-          ...s.ai.config,
-          sessions: s.ai.config.sessions.map((session) =>
-            session.id === sessionId
-              ? {
-                  ...session,
-                  uiMessages: [
-                    {
-                      id: 'm1',
-                      role: 'user',
-                      parts: [
-                        {
-                          type: 'text',
-                          text: 'a long enough message to register non-zero estimated token usage for the context indicator',
-                        },
-                      ],
-                    },
-                  ] as any,
-                }
-              : session,
-          ),
+  it.each(['component', 'zero', 'omitted'] as const)(
+    'session mode preserves the context-usage indicator with %s details',
+    async (detailsKind) => {
+      const mountDetails = jest.fn();
+      function UsageDetails() {
+        React.useEffect(() => {
+          mountDetails();
+        }, []);
+        return <span data-testid="usage-details">Spend $1.00 of $10.00</span>;
+      }
+      const usageDetails =
+        detailsKind === 'component' ? (
+          <UsageDetails />
+        ) : detailsKind === 'zero' ? (
+          0
+        ) : undefined;
+      const store = createSessionTestStore();
+      stubAnalysisActions(store);
+      const sessionId = store.getState().ai.createSession('S');
+      store.setState((s) => ({
+        ai: {
+          ...s.ai,
+          config: {
+            ...s.ai.config,
+            sessions: s.ai.config.sessions.map((session) =>
+              session.id === sessionId
+                ? {
+                    ...session,
+                    uiMessages: [
+                      {
+                        id: 'm1',
+                        role: 'user',
+                        parts: [
+                          {
+                            type: 'text',
+                            text: 'a long enough message to register non-zero estimated token usage for the context indicator',
+                          },
+                        ],
+                      },
+                    ] as any,
+                  }
+                : session,
+            ),
+          },
         },
-      },
-    }));
+      }));
 
-    const {container, root} = await renderTree(
-      <TooltipProvider>
-        <RoomStateProvider roomStore={store}>
-          <QueryControls />
-        </RoomStateProvider>
-      </TooltipProvider>,
-    );
+      const {container, root} = await renderTree(
+        <TooltipProvider>
+          <RoomStateProvider roomStore={store}>
+            <QueryControls usageDetails={usageDetails} />
+          </RoomStateProvider>
+        </TooltipProvider>,
+      );
 
-    // The context-usage indicator renders as a button with a percentage/
-    // token-count aria-label once there is any estimated usage.
-    const indicator = Array.from(container.querySelectorAll('button')).find(
-      (btn) => btn.getAttribute('aria-label')?.includes('context used'),
-    );
-    expect(indicator).toBeDefined();
+      // The context-usage indicator renders as a button with a percentage/
+      // token-count aria-label once there is any estimated usage.
+      const indicator = Array.from(container.querySelectorAll('button')).find(
+        (btn) => btn.getAttribute('aria-label')?.includes('context used'),
+      );
+      expect(indicator).toBeDefined();
 
-    await cleanup(container, root);
-  });
+      // Host details are tooltip content, so they arrive with the tooltip — not
+      // in the trigger's own label.
+      expect(document.body.textContent).not.toContain('Spend $1.00 of $10.00');
+      await act(async () => {
+        indicator!.focus();
+      });
+      const accessibleTooltip = document.body.querySelector('[role="tooltip"]');
+      expect(accessibleTooltip?.textContent).toBe(
+        indicator!.getAttribute('aria-label'),
+      );
+      const visibleTooltip = accessibleTooltip!.parentElement!;
+      if (detailsKind === 'component') {
+        expect(mountDetails).toHaveBeenCalledTimes(1);
+        expect(
+          document.body.querySelectorAll('[data-testid="usage-details"]'),
+        ).toHaveLength(1);
+        expect(indicator!.getAttribute('aria-label')).not.toContain('Spend');
+      } else {
+        // Check a text node, so zero cannot be confused with token counts.
+        expect(
+          Array.from(visibleTooltip.childNodes).some(
+            (node) =>
+              node.nodeType === Node.TEXT_NODE && node.textContent === '0',
+          ),
+        ).toBe(detailsKind === 'zero');
+        expect(mountDetails).not.toHaveBeenCalled();
+      }
+
+      await cleanup(container, root);
+    },
+  );
 
   it('session mode still performs the inline API-key mode swap (frozen recipe)', async () => {
     const store = createSessionTestStore();
