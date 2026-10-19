@@ -33,6 +33,7 @@ import {
   stripLayerExtensionProps,
 } from './layerConfig';
 import {rewriteGeoArrowAccessors} from './rewriteGeoArrowAccessors';
+import {summarizeTripTimestamps} from './tripTimestamps';
 import {isBindableGeoArrowFieldIdentifier} from './compileGeoArrowAccessor';
 import {
   compileLinearScaleAccessor,
@@ -548,39 +549,22 @@ export function createDeckJsonConfiguration(
           };
         }
 
-        // For TripsLayer: compute max timestamp for animation and set defaults
+        // For TripsLayer: compute max timestamp for animation and set defaults.
+        // Epoch columns are rebased here and again when the GPU buffer is
+        // filled, using the same rule, so the playhead and the vertices match.
         if (layerName === 'GeoArrowTripsLayer' || layerName === 'TripsLayer') {
           const tsVector = boundProps.getTimestamps as arrow.Vector | undefined;
-          if (tsVector) {
-            let maxTs = 0;
-            for (let i = 0; i < tsVector.length; i++) {
-              const listItem = tsVector.get(i);
-              if (
-                listItem &&
-                typeof listItem === 'object' &&
-                'length' in listItem
-              ) {
-                const list = listItem as {
-                  length: number;
-                  get: (i: number) => unknown;
-                };
-                for (let j = 0; j < list.length; j++) {
-                  const v = Number(list.get(j)) || 0;
-                  if (v > maxTs) maxTs = v;
-                }
-              }
+          const summary = tsVector ? summarizeTripTimestamps(tsVector) : null;
+          if (summary && summary.max > 0) {
+            rewritten._tripsMaxTimestamp = summary.max;
+            if (!rewritten.trailLength) {
+              rewritten.trailLength = summary.max;
             }
-            if (maxTs > 0) {
-              rewritten._tripsMaxTimestamp = maxTs;
-              if (!rewritten.trailLength) {
-                rewritten.trailLength = maxTs;
-              }
-              if (
-                rewritten.currentTime === undefined ||
-                rewritten.currentTime === 0
-              ) {
-                rewritten.currentTime = maxTs;
-              }
+            if (
+              rewritten.currentTime === undefined ||
+              rewritten.currentTime === 0
+            ) {
+              rewritten.currentTime = summary.max;
             }
           }
         }
