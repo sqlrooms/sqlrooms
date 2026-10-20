@@ -49,6 +49,23 @@ function columnAliasProducedByStAsWkb(
   return false;
 }
 
+/** Reads a spec as an object, parsing the string form custom maps persist. */
+function readDeckMapSpecRecord(
+  spec: unknown,
+): Record<string, unknown> | undefined {
+  let value = spec;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value) as unknown;
+    } catch {
+      return undefined;
+    }
+  }
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
 /**
  * Resolves the effective fit-to-data configuration for a Deck map.
  *
@@ -70,10 +87,7 @@ export function resolveDeckMapFitToData(
     return fitToData;
   }
 
-  const spec =
-    typeof config.spec === 'string'
-      ? undefined
-      : (config.spec as Record<string, unknown>);
+  const spec = readDeckMapSpecRecord(config.spec);
   const layers = Array.isArray(spec?.layers) ? spec.layers : [];
 
   for (const layer of layers) {
@@ -110,6 +124,26 @@ export function resolveDeckMapFitToData(
   const dataset = config.datasets[fitToData.dataset];
   const geometryColumn = dataset?.geometryColumn;
   if (geometryColumn) return {...fitToData, geometryColumn};
+
+  // A layer-bound geometry column also wins over inferred H3, and keeps
+  // polygon/path/trips/GeoJSON maps from falling back to Longitude/Latitude.
+  for (const layer of layers) {
+    if (!layer || typeof layer !== 'object') continue;
+    const layerRecord = layer as Record<string, unknown>;
+    if (layerRecord.visible === false) continue;
+    const binding = layerRecord._sqlroomsBinding as
+      | Record<string, unknown>
+      | undefined;
+    if (binding?.dataset !== fitToData.dataset) continue;
+
+    const boundGeometryColumn =
+      typeof binding.geometryColumn === 'string'
+        ? binding.geometryColumn.trim()
+        : '';
+    if (boundGeometryColumn) {
+      return {...fitToData, geometryColumn: boundGeometryColumn};
+    }
+  }
 
   for (const layer of layers) {
     if (!layer || typeof layer !== 'object') continue;
