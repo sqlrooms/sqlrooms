@@ -24,6 +24,46 @@ describe('scaleFunction', () => {
     });
   });
 
+  test('matches a column whose case differs from the config', () => {
+    // DuckDB resolves identifiers case-insensitively, so SQL written against
+    // "height" yields an Arrow schema that may still carry "HEIGHT".
+    const table = new Table(new Schema([new Field('HEIGHT', new Float64())]), {
+      HEIGHT: vectorFromArray([0, 50, 100], new Float64()),
+    });
+    const scale = {field: 'height', domain: 'auto', range: [0, 200]} as const;
+
+    expect(compileLinearScaleExpression(table, scale)).toContain('HEIGHT');
+    expect(
+      compileLinearScaleAccessor(
+        table,
+        scale,
+      )?.({
+        index: 2,
+        data: {data: table.batches[0]!},
+      }),
+    ).toBe(200);
+  });
+
+  test('renders a constant column at the top of the range, not at zero', () => {
+    const table = new Table(new Schema([new Field('count', new Float64())]), {
+      count: vectorFromArray([7, 7, 7], new Float64()),
+    });
+    const scale = {field: 'count', domain: 'auto', range: [0, 200]} as const;
+
+    // A zero-span domain has no differences to show. Mapping it to range[0]
+    // would flatten an extrusion to height 0.
+    expect(compileLinearScaleExpression(table, scale)).toBe('@@=200');
+    expect(
+      compileLinearScaleAccessor(
+        table,
+        scale,
+      )?.({
+        index: 0,
+        data: {data: table.batches[0]!},
+      }),
+    ).toBe(200);
+  });
+
   test('maps domain to range for elevation', () => {
     const table = new Table(
       new Schema([new Field('Longitude', new Float64())]),

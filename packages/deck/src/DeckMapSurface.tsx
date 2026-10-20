@@ -15,6 +15,7 @@ import {
   isDeckMapTableDatasetSource,
 } from './mapConfig';
 import {getDeckMapDataPolicy, type DeckMapDataPolicy} from './mapDataPolicy';
+import {sizeDeckMapExtrusionToExtent} from './extrusionScale';
 import {getDeckMapResourceConfigIssues} from './mapResourceAuthoring';
 import {
   getDeckMapDatasetSource,
@@ -213,7 +214,7 @@ export function DeckMapSurface({
     () => onClearIssue('fit-error'),
     [onClearIssue],
   );
-  useDeckMapFitController({
+  const {fittedBounds} = useDeckMapFitController({
     scopeId: mapId,
     fitToData,
     source: fitSource,
@@ -224,6 +225,15 @@ export function DeckMapSurface({
     onSuccess: handleFitSuccess,
     onError: handleFitError,
   });
+  const sizedSpec = useMemo(
+    () =>
+      sizeDeckMapExtrusionToExtent(
+        map.config.spec,
+        fittedBounds,
+        fitToData?.dataset,
+      ),
+    [fitToData?.dataset, fittedBounds, map.config.spec],
+  );
 
   if (configIssues.length > 0) {
     return (
@@ -243,7 +253,7 @@ export function DeckMapSurface({
     <div ref={setContainer} className="h-full min-h-[320px]">
       <DeckJsonMap
         ref={deckMapRef}
-        spec={map.config.spec}
+        spec={sizedSpec}
         datasets={datasets}
         mapStyle={map.config.mapStyle}
         mapProps={map.config.mapProps}

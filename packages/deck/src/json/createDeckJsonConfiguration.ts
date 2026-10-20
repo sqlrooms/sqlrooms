@@ -39,6 +39,7 @@ import {
   compileLinearScaleExpression,
   createScaleMarker,
   isScaleMarker,
+  resolveScaleFieldName,
 } from './scaleFunction';
 
 type CreateDeckJsonConfigurationOptions = {
@@ -163,15 +164,20 @@ function compileGetElevation(options: {
         nextProps.getElevation = accessor;
       } else {
         const field = typeof rawElev.field === 'string' ? rawElev.field : '';
+        // A resolvable column means the scale failed on its values, not its
+        // name — usually an empty result or no numeric values to scale.
         throw new Error(
-          `Layer "${layerName}" getElevation scale field "${field || '(missing)'}" was not found in dataset "${datasetId}".`,
+          field && resolveScaleFieldName(table, field)
+            ? `Layer "${layerName}" getElevation scale field "${field}" in dataset "${datasetId}" has no numeric values to scale.`
+            : `Layer "${layerName}" getElevation scale field "${field || '(missing)'}" was not found in dataset "${datasetId}".`,
         );
       }
     }
   } else if (typeof rawElev === 'string' && rawElev.startsWith('@@=')) {
-    const elevField = rawElev.slice(3).trim();
-    const elevVector = table.getChild(elevField);
-    if (elevVector) {
+    const requestedField = rawElev.slice(3).trim();
+    const elevField = resolveScaleFieldName(table, requestedField);
+    const elevVector = elevField ? table.getChild(elevField) : undefined;
+    if (elevField && elevVector) {
       let min = Infinity;
       for (let i = 0; i < elevVector.length; i++) {
         if (
@@ -192,6 +198,8 @@ function compileGetElevation(options: {
         ) {
           if (min !== 0) {
             nextProps.getElevation = `@@=Math.max(0, ${elevField} - ${min})`;
+          } else if (elevField !== requestedField) {
+            nextProps.getElevation = `@@=${elevField}`;
           }
         } else {
           const accessor = compileLinearScaleAccessor(table, {

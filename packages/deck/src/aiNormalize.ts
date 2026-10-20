@@ -1,4 +1,5 @@
 import {allKnownColorSchemeNames} from '@sqlrooms/color-scales/colorSchemeNames';
+import {relaxStackedElevationScale} from './extrusionScale';
 import {
   deckMapColumnLayerHasRadiusConflicts,
   stripDeckMapColumnLayerRadiusConflicts,
@@ -168,6 +169,16 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
           ...l,
           getElevation: {...(value as object), '@@function': 'scale'},
         };
+        layerChanged = true;
+      }
+    }
+
+    // A scale range is already meters. Drop a second elevationScale of 10+
+    // (the usual 100x). A raw @@=column plus that multiplier becomes a scale.
+    {
+      const relaxed = relaxStackedElevationScale(l);
+      if (relaxed !== l) {
+        l = relaxed;
         layerChanged = true;
       }
     }
