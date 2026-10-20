@@ -205,7 +205,7 @@ For incremental edits to an existing document app, such as changing title, label
 
 ### Direct Requests
 When user asks for specific charts (e.g., "create histogram of depth and magnitude"):
-1. DO NOT run exploratory queries - go straight to creating charts
+1. DO NOT run exploratory queries - go straight to creating charts. The only exception is the map tools' field variance check, which applies when a map was requested without naming the column to color or extrude.
 2. Call ${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}* for each chart mentioned
 3. Add text blocks only for brief context or summaries, if needed
 4. Done after ALL requested charts are created
