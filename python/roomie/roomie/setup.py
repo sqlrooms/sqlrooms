@@ -1,7 +1,9 @@
 """Previewable host configuration, scoped to the roomie registration key."""
 
 import os
+import json
 from pathlib import Path
+import shlex
 import shutil
 import sys
 import tempfile
@@ -10,6 +12,61 @@ import tomlkit
 from sqlrooms.agent.permissions import read_object, write_client_json
 from sqlrooms.agent.storage import WorkspaceError, atomic_json, lock
 from .settings import settings
+
+
+def print_manual_setup():
+    """Print portable stdio settings and guidance without modifying host files."""
+    print("\nOther MCP clients (manual setup)")
+    print("Add an MCP server named roomie using the stdio transport:")
+    print(
+        json.dumps(
+            {"command": sys.executable, "args": ["-m", "roomie", "agent", "connect"]},
+            indent=2,
+        )
+    )
+    print("The enclosing configuration format depends on your client.")
+    print("\nOptional Roomie skill:")
+    print(Path(__file__).parent / "claude_plugin/skills/roomie/SKILL.md")
+    print("Copy this file into your client's skill directory as roomie/SKILL.md,")
+    print("or add its contents to the agent's instructions if skills are unsupported.")
+    print("\nRestart your assistant, then ask it to use Roomie to open your database.")
+    print("Keep the Roomie browser tab open while the assistant works.")
+
+
+def setup_interactively():
+    """Choose a host, preview its changes, and apply only after confirmation."""
+    print("Connect Roomie to an AI assistant\n")
+    print("1. Claude Code\n2. Codex\n3. Other MCP client — manual setup")
+    while True:
+        choice = input("Choose [1-3] (Enter to cancel): ").strip()
+        if not choice:
+            print("Setup cancelled.")
+            return
+        if choice in {"1", "2", "3"}:
+            break
+        print("Enter 1, 2, or 3.")
+    if choice == "3":
+        print_manual_setup()
+        return
+    client = "claude-code" if choice == "1" else "codex"
+    plan = configure(client)
+    print("\nProposed configuration (not yet applied):")
+    print(json.dumps(plan, indent=2))
+    if client == "codex":
+        print("This adds Roomie's MCP entry and installs its skill at guidancePath.")
+    else:
+        print(
+            "This adds Roomie's MCP entry. The launch command loads the bundled skill."
+        )
+    if input("Apply these changes? [y/N]: ").strip().lower() not in {"y", "yes"}:
+        print("No changes made.")
+        return
+    result = configure(client, apply=True)
+    print(result["message"])
+    print("\nLaunch command:\n" + shlex.join(result["launch"]))
+    print(
+        "Ask your assistant to use Roomie to open your database. Keep its browser tab open."
+    )
 
 
 def configure(client: str, *, apply=False):

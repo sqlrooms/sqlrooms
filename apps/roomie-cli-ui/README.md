@@ -9,6 +9,11 @@ host's local-read admission policy before reaching the shared query executor. Da
 and table explorers. Backing state is document-owned and is not exposed as extra
 artifacts. No assistant, provider configuration, profiles or CRDT slice is loaded.
 
+The **External AI** status opens connection instructions, led by the interactive
+`roomie agent setup` command, with Claude Code, Codex, and manual MCP/skill setup
+details. The status describes browser bridge readiness, not client connectivity
+or installed skills.
+
 Run `pnpm dev roomie [database.duckdb]` from the repository root. It builds shared
 packages, installs the paired Python stack, starts API port 4274 and Vite port
 3200, waits for readiness, verifies the backend process and binding, and opens a
