@@ -305,7 +305,6 @@ const mapPanel = createDeckMapDashboardPanelConfig({
     longitudeColumn: 'Longitude',
     latitudeColumn: 'Latitude',
     padding: 40,
-    maxZoom: 12,
   },
 });
 ```

@@ -962,6 +962,7 @@ describe('createDeckMapDashboardTool', () => {
         latitudeColumn: 'latitude',
       },
     });
+    expect(panel.config.fitToData).not.toHaveProperty('maxZoom');
     expect(panel.config.datasets.earthquakes.source).toEqual({
       tableName: 'earthquakes',
       transformSql:
@@ -1048,8 +1049,8 @@ describe('createDeckMapDashboardTool', () => {
         dataset: 'stores',
         geometryColumn: 'geometry',
         padding: 40,
-        maxZoom: 12,
       },
     });
+    expect(panel.config.fitToData).not.toHaveProperty('maxZoom');
   });
 });

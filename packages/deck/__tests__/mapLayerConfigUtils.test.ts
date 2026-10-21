@@ -252,6 +252,7 @@ describe('mapLayerConfigUtils', () => {
       latitudeColumn: 'latitude',
     });
     expect(nextConfig.fitToData).not.toHaveProperty('longitudeColumn');
+    expect(nextConfig.fitToData).not.toHaveProperty('maxZoom');
     expect(nextConfig.datasets.places.geometryColumn).toBe('geom');
     expect(nextConfig.datasets.places.source).toEqual({tableName: 'places'});
     expect(
@@ -370,6 +371,7 @@ describe('mapLayerConfigUtils', () => {
       dataset: 'earthquakes',
       longitudeColumn: 'Magnitude',
       latitudeColumn: 'Latitude',
+      maxZoom: 12,
     });
 
     const nextLatitude = setDeckMapLayerCoordinateColumns(
@@ -1179,6 +1181,7 @@ describe('arc geometry vs lon/lat bindings', () => {
     expect(nextConfig.fitToData).toMatchObject({
       dataset: 'trips',
       geometryColumns: ['source_geom', 'target_geom'],
+      maxZoom: 12,
     });
     expect(nextConfig.datasets.trips.geometryEncodingHint).toBe('wkb');
   });
@@ -1304,6 +1307,7 @@ describe('arc geometry vs lon/lat bindings', () => {
     );
 
     expect(nextConfig.datasets.trips.geometryEncodingHint).toBeUndefined();
+    expect(nextConfig.fitToData).not.toHaveProperty('maxZoom');
   });
 
   it('reapplies arc lon/lat after switching back from source geometry columns', () => {

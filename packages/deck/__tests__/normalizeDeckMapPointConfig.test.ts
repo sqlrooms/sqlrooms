@@ -1262,7 +1262,6 @@ describe('applyDeckMapTableSelection', () => {
     expect(next.fitToData).toEqual({
       dataset: 'h3_cells',
       padding: 40,
-      maxZoom: 12,
     });
   });
 
