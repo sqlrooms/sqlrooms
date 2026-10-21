@@ -74,6 +74,7 @@ it('previews a chosen file, keeps pagination separate from confirmation, then im
   }
 });
 
+/** Activate a Radix tab through its mouse handler and verify selection. */
 async function selectTab(name: string) {
   const tab = Array.from(
     document.querySelectorAll<HTMLElement>('[role="tab"]'),
@@ -84,6 +85,7 @@ async function selectTab(name: string) {
   expect(tab.getAttribute('aria-selected')).toBe('true');
 }
 
+/** Dispatch a native input edit so React updates the controlled field. */
 async function fill(id: string, value: string) {
   const input = document.querySelector<HTMLInputElement>(`#${id}`)!;
   await act(async () => {

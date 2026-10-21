@@ -40,6 +40,7 @@ afterEach(async () => {
   await act(async () => root.unmount());
   host.remove();
 });
+/** Dispatch a browser-style file drop to the sidebar import target. */
 async function drop(files: File[]) {
   const event = new Event('drop', {bubbles: true, cancelable: true});
   Object.defineProperty(event, 'dataTransfer', {value: {files}});

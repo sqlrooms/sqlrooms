@@ -6,6 +6,7 @@ export type UploadFetcher = (
   init?: RequestInit,
 ) => Promise<Response>;
 
+/** Normalize the upload response path and reject missing or parent-traversal paths. */
 function validateServerPath(value: unknown): string {
   if (typeof value !== 'string' || !value)
     throw new Error('Upload returned an invalid server path.');
