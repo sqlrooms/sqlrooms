@@ -32,6 +32,10 @@
       "persistent": true
     },
     "test": {},
+    "@sqlrooms/mcp#test": {
+      "env": ["DUCKDB_TEST_PYTHON"],
+      "cache": false
+    },
     "test:watch": {
       "cache": false,
       "persistent": true,

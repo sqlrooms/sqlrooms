@@ -24,6 +24,12 @@ A powerful wrapper around DuckDB-WASM that provides React hooks and utilities fo
 
 ### SQL Statement Utilities
 
+`isReadOnlySqlSelect(parsed)` is re-exported from `@sqlrooms/duckdb-core`. It
+validates the complete `json_serialize_sql` result, including nested CTEs, before
+read-only consumers execute SQL. It does not authorize functions or external
+sources. `createTableFromQuery` also requires its final query to pass this guard;
+preceding statements remain available through `allowMultipleStatements`.
+
 `splitSqlStatements` splits DuckDB SQL without treating semicolons inside quoted
 strings, dollar-quoted strings, or comments as statement boundaries. Comments are
 removed safely by default; preserve them when the original SQL will be rewritten

@@ -536,7 +536,7 @@ See `examples/prepare_with_openai.py` for detailed examples and cost estimates.
 
 ## Requirements
 
-- Python >=3.10
+- Python >=3.11 (DuckDB 2.0)
 - 2-4GB RAM (depending on model and document size)
 - ~500MB-2GB disk space for models and generated database
 

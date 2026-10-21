@@ -102,6 +102,8 @@ fails, retain the browser, resolve the database error, then retry Save or manage
 close. A failed checkpoint keeps admission stopped and can be retried. A manual
 terminal process is never closed by the managed connector.
 
-The initial test platform is macOS arm64, Python 3.12. Python >=3.10 and POSIX are
+The initial test platform is macOS arm64, Python 3.12. Python >=3.11 and POSIX are
 the declared support range; other Python/OS combinations still need release CI.
 The implementation and verification record is [VERIFICATION.md](VERIFICATION.md).
+The shared runtime uses DuckDB 2.0.x; see the
+[file compatibility, VARIANT display and rollback policy](../sqlrooms/DUCKDB_COMPATIBILITY.md).

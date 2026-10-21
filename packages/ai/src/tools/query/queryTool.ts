@@ -5,6 +5,7 @@ import {
   DuckDbConnector,
   DuckDbSliceState,
   splitSqlStatements,
+  isReadOnlySqlSelect,
 } from '@sqlrooms/duckdb';
 import type {StoreApi} from '@sqlrooms/room-shell';
 import {z} from 'zod';
@@ -81,10 +82,7 @@ export function createQueryTool(
               `Query is not a valid SELECT statement: ${parsedQuery.error_message}`,
             );
           }
-          if (
-            parsedQuery.statements.length !== 1 || // only one statement allowed
-            parsedQuery.statements[0]?.node.type !== 'SELECT_NODE' // only SELECT statements allowed
-          ) {
+          if (!isReadOnlySqlSelect(parsedQuery)) {
             throw new Error('Query is not a valid SELECT statement');
           }
         }

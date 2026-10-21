@@ -2,6 +2,7 @@ import type {
   StatefulBlockDefinition,
   StatefulBlockRenderProps,
 } from '@sqlrooms/blocks';
+import {isReadOnlySqlSelect} from '@sqlrooms/duckdb-core';
 import {
   createSlice,
   useBaseRoomStore,
@@ -207,7 +208,10 @@ export type HtmlAppRuntimeSliceState = {
 
 export type HtmlAppRuntimeQueryState = {
   db?: {
-    sqlSelectToJson?: (sql: string) => Promise<{error: boolean}>;
+    /** Return the full json_serialize_sql result for read-only AST validation. */
+    sqlSelectToJson?: (
+      sql: string,
+    ) => Promise<{error: boolean; statements?: unknown[]}>;
     connectors?: {
       runQuery?: (request: {
         sql: string;
@@ -1040,7 +1044,7 @@ export async function executeReadonlyQuery({
     throw new Error('Only a single read-only SELECT statement is allowed.');
   }
   const parsed = await state.db.sqlSelectToJson(request.sql);
-  if (parsed.error) {
+  if (!isReadOnlySqlSelect(parsed)) {
     throw new Error('Only read-only SELECT statements are allowed.');
   }
   await authorizeQuery?.(request);

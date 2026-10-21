@@ -92,6 +92,7 @@ export {
 export {type TableColumn, type DataTable} from './types';
 
 export {getFunctionSuggestions} from './get-function-suggestions';
+export {isReadOnlySqlSelect} from './sqlSelect';
 export {getFunctionDocumentation} from './get-function-documentation';
 export {
   type FunctionSuggestion,

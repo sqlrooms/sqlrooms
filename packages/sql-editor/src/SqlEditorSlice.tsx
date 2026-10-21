@@ -1,5 +1,6 @@
 import {createId} from '@paralleldrive/cuid2';
 import type {DbSliceState} from '@sqlrooms/db';
+import {isReadOnlySqlSelect} from '@sqlrooms/duckdb';
 import {
   getSqlErrorWithPointer,
   joinStatements,
@@ -696,7 +697,7 @@ export function createSqlEditorSlice({
               throw new Error('Query aborted');
             }
 
-            const isValidSelectQuery = !parsedLastStatement.error;
+            const isValidSelectQuery = isReadOnlySqlSelect(parsedLastStatement);
 
             // Stamp read/write onto the loading result now that we've parsed the
             // statement. abortQueryById reads this to decide whether cancelling
