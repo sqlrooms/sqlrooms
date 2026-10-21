@@ -5,7 +5,7 @@
 ## Setup
 
 - Package manager: `uv`
-- Python `>=3.10`
+- Python `>=3.11` (required by DuckDB 2.0)
 - Workspace root: `python/`
 
 ```bash

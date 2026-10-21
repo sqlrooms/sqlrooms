@@ -4,14 +4,13 @@ dynamic = ["version"]
 description = "Local-first SQLRooms project launcher for DuckDB documents and Mosaic dashboards."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
   { name = "SQLRooms Contributors" }
 ]
 classifiers = [
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
 ]
@@ -19,7 +18,7 @@ dependencies = [
   "anyio>=4.0",
   "click>=8.4.2",
   "cryptography>=46.0.5",
-  "duckdb>=1.5.3,<1.6.0",
+  "duckdb>=2.0.0,<2.1.0",
   "fastapi>=0.115.0",
   "idna>=3.15",
   "httpx>=0.28",
@@ -72,7 +71,7 @@ packages = ["sqlrooms"]
 artifacts = ["sqlrooms/web/static/**", "sqlrooms/claude_plugin/**"]
 
 [tool.hatch.build.targets.sdist]
-include = ["README.md", "LICENSE", "package.json", "pyproject.toml", "AUTHENTICATION.md", "AGENT_WORKSPACES.md", "MIGRATION.md", "sqlrooms"]
+include = ["README.md", "LICENSE", "package.json", "pyproject.toml", "AUTHENTICATION.md", "AGENT_WORKSPACES.md", "MIGRATION.md", "DUCKDB_COMPATIBILITY.md", "sqlrooms"]
 
 [tool.hatch.version]
 path = "package.json"

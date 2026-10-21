@@ -1430,6 +1430,10 @@ class SqlroomsHttpServer:
             )
 
             def _run(cur):
+                # WITH can contain writes in DuckDB 2.0 despite a SELECT result.
+                from ..server.query import assert_select_only
+
+                assert_select_only(cur, sql)
                 cur.execute(sql)
                 columns = [d[0] for d in (cur.description or [])]
                 fetched = cur.fetchmany(5001)

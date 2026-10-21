@@ -4,7 +4,7 @@ dynamic = ["version"]
 description = "Local DuckDB documents with external AI through MCP"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [{name = "SQLRooms Contributors"}]
 dependencies = ["sqlrooms>=0.1.6,<0.2"]
 classifiers = ["Programming Language :: Python :: 3", "Operating System :: POSIX"]

@@ -8,6 +8,7 @@ import {
   getRawSqlTableReference,
   getTableIdentity,
   isQualifiedTableName,
+  isReadOnlySqlSelect,
   joinStatements,
   makeQualifiedTableName,
   parseQualifiedSqlIdentifier,
@@ -604,7 +605,7 @@ export function createDuckDbSlice({
 
             // The last statement must be a SELECT
             const parsedQuery = await get().db.sqlSelectToJson(lastStatement);
-            if (parsedQuery.error) {
+            if (!isReadOnlySqlSelect(parsedQuery)) {
               throw new Error(
                 'Final statement must be a valid SELECT statement',
               );

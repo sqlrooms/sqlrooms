@@ -12,4 +12,4 @@ def test_python_version():
 
     version_info = sys.version_info
     assert version_info.major == 3
-    assert version_info.minor >= 10
+    assert version_info.minor >= 11

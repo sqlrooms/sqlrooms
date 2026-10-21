@@ -1,5 +1,9 @@
 SQL editor UI and state slice for SQLRooms apps.
 
+DuckDB 2.0 data-modifying CTEs are classified as writes, including their
+cancellation warning behavior. They execute through the normal write path
+instead of being wrapped as a limited read query.
+
 This package provides:
 
 - `createSqlEditorSlice()` for query tabs, execution, and results state

@@ -139,6 +139,35 @@ describe('html-app helpers', () => {
     );
   });
 
+  it('rejects data-modifying CTEs before host admission or execution', async () => {
+    const getState = createQueryState();
+    getState().db.sqlSelectToJson.mockResolvedValue({
+      error: false,
+      statements: [
+        {
+          node: {
+            type: 'SELECT_NODE',
+            cte_map: {query_node: {type: 'DELETE_QUERY_NODE'}},
+          },
+        },
+      ],
+    });
+    const authorizeQuery = jest.fn();
+    await expect(
+      executeReadonlyQuery({
+        request: {
+          sql: 'WITH changed AS (DELETE FROM sales RETURNING *) SELECT 1',
+        },
+        getState,
+        timeoutMs: 100,
+        maxRows: 10,
+        authorizeQuery,
+      }),
+    ).rejects.toThrow('read-only');
+    expect(authorizeQuery).not.toHaveBeenCalled();
+    expect(getState().db.connectors.runQuery).not.toHaveBeenCalled();
+  });
+
   it('rejects a host-denied SELECT before executing or reading its source', async () => {
     const getState = createQueryState();
     const request = {sql: "select * from read_csv('/private/data.csv')"};
@@ -479,7 +508,10 @@ function createQueryState({
       getApp: jest.fn(),
     },
     db: {
-      sqlSelectToJson: jest.fn(async () => ({error: false})),
+      sqlSelectToJson: jest.fn(async () => ({
+        error: false,
+        statements: [{node: {type: 'SELECT_NODE'}}],
+      })),
       connectors: {
         runQuery: jest.fn(async () => ({jsonData: rows})),
       },
