@@ -1,4 +1,3 @@
-import type {DuckDbConnector} from '@sqlrooms/duckdb';
 import {authorizedFetch} from './auth';
 
 /** Authenticated fetch shape used by the browser upload flow. */
@@ -16,17 +15,16 @@ function validateServerPath(value: unknown): string {
   return normalized;
 }
 
-/** Upload browser bytes before asking the remote DuckDB connector to import them. */
-export async function uploadBrowserFile(
+/** Upload browser bytes for preview and import without creating a database table. */
+export async function stageBrowserFile(
   file: File,
-  tableName: string,
-  connector: Pick<DuckDbConnector, 'loadFile'>,
   fetcher: UploadFetcher = authorizedFetch,
-): Promise<void> {
+  signal?: AbortSignal,
+): Promise<string> {
   const body = new FormData();
   body.append('file', file, file.name);
-  const response = await fetcher('/api/upload', {method: 'POST', body});
+  const response = await fetcher('/api/upload', {method: 'POST', body, signal});
   const result = (await response.json().catch(() => ({}))) as {path?: unknown};
   if (!response.ok) throw new Error(`Upload failed: ${response.statusText}`);
-  await connector.loadFile(validateServerPath(result.path), tableName);
+  return validateServerPath(result.path);
 }

@@ -1,17 +1,21 @@
 import {ROOMIE_CAPABILITIES} from './capabilities';
 import {useEffect, useState} from 'react';
 import {getTableIdentity} from '@sqlrooms/duckdb';
+import {TableSchemaTree} from '@sqlrooms/schema-tree';
 import {Document, documentBlocks} from './Document';
 import {Bridge} from './bridge';
 import {config} from './config';
-import {connector, roomStore, storage, useRoomStore} from './store';
+import {roomStore, storage, useRoomStore} from './store';
 import {CommandDialog} from './CommandDialog';
-import {uploadBrowserFile} from './upload';
+import {AddDataDialog} from './AddDataDialog';
+import {QuickAddData} from './QuickAddData';
 
 /** Document-only Roomie shell with workspace utilities and visible save status. */
 export function App() {
   const artifacts = useRoomStore((s) => s.artifacts.config);
   const tables = useRoomStore((s) => s.db.tables);
+  const schemaTrees = useRoomStore((s) => s.db.schemaTrees);
+  const [addingData, setAddingData] = useState(false);
   const currentId = artifacts.currentArtifactId;
   const [dialog, setDialog] = useState<{
     title: string;
@@ -125,58 +129,13 @@ export function App() {
               ▤ {artifacts.artifactsById[id]?.title}
             </button>
           ))}
-          <h2>Data</h2>
-          <button
-            onClick={() =>
-              setDialog({
-                title: 'Import local file',
-                command: 'db.import-file',
-                input: {path: '', tableName: 'imported_data'},
-              })
-            }
-          >
-            ＋ Import data
-          </button>
-          <label className="block cursor-pointer px-2 py-2 text-xs">
-            Upload file
-            <input
-              type="file"
-              className="hidden"
-              accept=".csv,.parquet,.json,.jsonl"
-              onChange={async (event) => {
-                const file = event.target.files?.[0];
-                if (!file) return;
-                try {
-                  await uploadBrowserFile(
-                    file,
-                    file.name
-                      .replace(/\.[^.]+$/, '')
-                      .replace(/[^A-Za-z0-9_]/g, '_'),
-                    connector,
-                  );
-                  await roomStore.getState().db.refreshTableSchemas();
-                } catch (e) {
-                  setError(String(e));
-                }
-              }}
-            />
-          </label>
-          {tables.map((table) => (
-            <button
-              key={getTableIdentity(table.table)}
-              onClick={() =>
-                setDialog({
-                  title: `Inspect ${table.table.table}`,
-                  input: {
-                    columns: table.columns,
-                    query: `SELECT * FROM ${table.table.toFullString()} LIMIT 100`,
-                  },
-                })
-              }
-            >
-              {table.table.table}
-            </button>
-          ))}
+          <div className="roomie-data-header">
+            <h2>Data</h2>
+            <TableSchemaTree.RefreshButton />
+          </div>
+          <button onClick={() => setAddingData(true)}>＋ Add data</button>
+          <QuickAddData />
+          <TableSchemaTree schemaTrees={schemaTrees} className="h-auto" />
           <h2>Workspace</h2>
           <button
             onClick={() =>
@@ -239,6 +198,7 @@ export function App() {
         </main>
       </div>
       {dialog && <CommandDialog {...dialog} onClose={() => setDialog(null)} />}
+      {addingData && <AddDataDialog onClose={() => setAddingData(false)} />}
     </div>
   );
 }

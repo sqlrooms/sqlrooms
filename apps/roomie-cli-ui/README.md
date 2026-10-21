@@ -25,6 +25,23 @@ predicates, validated as ordinary local SELECT expressions before agent changes
 or hydration. Restored filters appear as a saved baseline; Reset clears them
 before choosing a replacement. Column selection, sorting and page size are
 editable through Edit blocks → data-table settings.
+Use **Add data** in the sidebar to choose or drop a CSV, Parquet, JSON, or JSONL
+file. Roomie fills an available table name from the filename and automatically
+shows up to 100 rows using `@sqlrooms/data-table`. Edit the name if needed, then
+confirm to import all rows. Previewing does not create a workspace table.
+The **File**, **Web URL**, and **File path** tabs keep their inputs when switching;
+switching clears the preview and cancels any pending inspection.
+Choose **Web URL** for a public HTTP(S) file link, or **File path** for a path on
+the machine running Roomie, then click **Preview data**. URL formats are inferred
+from the path (ignoring query parameters); choose the format for extensionless
+links. DuckDB reads URLs on the Roomie host, so browser CORS does not apply.
+Remote data is read again when importing and may have changed since preview.
+Local uploads and paths use `db.import-file`; URLs use
+`db.create-table-from-query`. Existing tables are never replaced.
+For quick imports, drop one or more files on **Drop files to add immediately**
+in the sidebar. This skips preview, uses automatic available names, and reports
+successes and errors. The schema tree refreshes after each import; expand it to
+inspect columns or use a table's menu to view data and copy names or SQL.
 Saved references to dropped or renamed tables open with an inline block error so
 documents remain editable. Existing disallowed sources still fail validation,
 including views and attached tables hidden from selectors.
