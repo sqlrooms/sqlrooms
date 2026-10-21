@@ -27,6 +27,87 @@ function workspaceFacts(workspace: JsonValue | undefined) {
 }
 
 describe('createCliEvalTarget', () => {
+  it('creates a document from JSON-encoded command input while retaining validation', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [
+        {
+          content: [
+            {
+              type: 'tool-call',
+              toolName: 'execute_command',
+              input: {
+                commandId: 'block-document.create',
+                input: JSON.stringify({title: 123}),
+              },
+            },
+          ],
+        },
+        {
+          content: [
+            {
+              type: 'tool-call',
+              toolName: 'execute_command',
+              input: {
+                commandId: 'block-document.create',
+                input: JSON.stringify({title: 'Event analysis', select: true}),
+              },
+            },
+          ],
+        },
+        {content: [{type: 'text', text: 'Created Event analysis.'}]},
+      ],
+    });
+    const target = createCliEvalTarget({model: scripted.model});
+
+    try {
+      const evidence = await target.run({
+        scenario: defineScenario({
+          id: 'cli.encoded-command-input',
+          version: 1,
+          title: 'Create a document with encoded command input',
+          compatibleProfiles: ['document-charts-maps'],
+          fixture: {workspace: 'empty'},
+          turns: [
+            {id: 'create', input: 'Create a Document named Event analysis.'},
+          ],
+          expectations: [
+            {checkId: 'no-errors', description: 'The run completes.'},
+          ],
+        }),
+        checks: [
+          createErrorCheck({
+            id: 'no-errors',
+            evaluate: (errors) => ({
+              pass: errors.length === 0,
+              reason: 'The chat completed without target or provider errors.',
+            }),
+          }),
+        ],
+      });
+
+      expect(evidence.status).toBe('passed');
+      expect(
+        evidence.events
+          .filter((event) => event.name === 'execute_command')
+          .map((event) => event.data?.output),
+      ).toMatchObject([
+        {success: false, errorMessage: expect.stringContaining('title:')},
+        {success: true},
+      ]);
+      expect(
+        Object.values(target.store.getState().artifacts.config.artifactsById),
+      ).toEqual([
+        expect.objectContaining({
+          type: 'block-document',
+          title: 'Event analysis',
+        }),
+      ]);
+      scripted.assertComplete();
+    } finally {
+      await target.dispose();
+    }
+  }, 30_000);
+
   it('builds artifact capabilities and commands from the selected profile', async () => {
     const scripted = createScriptedLanguageModel({steps: []});
     const target = createCliEvalTarget({model: scripted.model});

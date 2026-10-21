@@ -195,7 +195,7 @@ export const CREATE_DOCUMENT_CHART_MAP_SCENARIO = defineScenario({
     },
     {checkId: 'no-errors', description: 'The target records no errors.'},
   ],
-  metadata: {suite: 'nightly', owner: 'sqlrooms'},
+  metadata: {suite: 'weekly', owner: 'sqlrooms'},
 });
 
 /** Pinned production-model scenario that mutates an existing document. */
@@ -236,7 +236,7 @@ export const MUTATE_DOCUMENT_SCENARIO = defineScenario({
     },
     {checkId: 'no-errors', description: 'The target records no errors.'},
   ],
-  metadata: {suite: 'nightly', owner: 'sqlrooms'},
+  metadata: {suite: 'weekly', owner: 'sqlrooms'},
 });
 
 /** Non-blocking continuity smoke using two turns and one run context. */
@@ -272,7 +272,7 @@ export const MULTI_TURN_DOCUMENT_SCENARIO = defineScenario({
   metadata: {suite: 'smoke', owner: 'sqlrooms'},
 });
 
-/** Stable scenarios run by the nightly production-model canary. */
+/** Stable scenarios run by the weekly production-model canary. */
 export const CLI_BEHAVIORAL_SCENARIOS: readonly ScenarioDefinition[] = [
   CREATE_DOCUMENT_CHART_MAP_SCENARIO,
   MUTATE_DOCUMENT_SCENARIO,

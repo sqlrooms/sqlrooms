@@ -1,8 +1,9 @@
 # Canary calibration
 
-Release thresholds are intentionally absent until the nightly canary has about
-two weeks of retained history. The observatory read model computes pass rate per
-scenario and per check, partitioned by model ID and pinned revision. It does
+Release thresholds are intentionally absent until the weekly canary has sufficient
+retained history to estimate per-scenario variability. Use manual dispatches to
+collect additional runs during calibration. The observatory read model computes
+pass rate per scenario and per check, partitioned by model ID and pinned revision. It does
 not collapse canary and production-model runs into one baseline.
 
 During calibration, classify each failed run as model variability, upstream
@@ -14,4 +15,4 @@ candidates for release criteria.
 For a model upgrade, run old and new pinned revisions concurrently through an
 overlap window. Do not rename the new revision to the old baseline or silently
 merge their histories. Release/manual production-model evidence remains a
-separate cohort from the DeepSeek nightly canary.
+separate cohort from the DeepSeek weekly canary.
