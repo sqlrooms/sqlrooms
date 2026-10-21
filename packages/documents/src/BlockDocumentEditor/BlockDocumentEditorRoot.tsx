@@ -6,7 +6,7 @@ import TableRow from '@tiptap/extension-table-row';
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
 import {Editor, useEditor} from '@tiptap/react';
-import {NodeSelection, TextSelection} from '@tiptap/pm/state';
+import {NodeSelection} from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import {
   type FC,
@@ -19,6 +19,7 @@ import type {BlockDocumentContent} from '../BlockDocumentSliceConfig';
 import type {DocumentAsset} from '../DocumentAsset';
 import {useBlockSettingsStore} from '../block-settings/useBlockSettingsStore';
 import {BLOCK_DOCUMENT_CONTENT_CLASS_NAME} from './blockDocumentLayout';
+import {restoreTextSelection} from './restoreTextSelection';
 import {
   BlockDocumentBlockIdExtension,
   getBlockNodeExtensionNames,
@@ -311,9 +312,7 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
         tr.setSelection(NodeSelection.create(tr.doc, nodePos));
       }
     } else if (editor.isFocused) {
-      const from = Math.min(selection.from, tr.doc.content.size);
-      const to = Math.min(selection.to, tr.doc.content.size);
-      tr.setSelection(TextSelection.create(tr.doc, from, to));
+      tr.setSelection(restoreTextSelection(selection, tr.doc));
     }
 
     editor.view.dispatch(tr);
