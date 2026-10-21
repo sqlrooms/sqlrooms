@@ -3,6 +3,9 @@ import {beforeEach, expect, it, jest} from '@jest/globals';
 import {act, useState} from 'react';
 import {createRoot} from 'react-dom/client';
 
+// Real Radix dialogs exercise focus and layout effects while CI runs many suites.
+jest.setTimeout(30_000);
+
 const commit = jest.fn(async (_source: unknown, _name: string) => {});
 const prepare = jest.fn(async (_source: unknown, _signal?: AbortSignal) => ({
   path: '/tmp/sales.csv',
