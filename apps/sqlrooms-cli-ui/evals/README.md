@@ -1,10 +1,12 @@
 # SQLRooms production-model behavioral evals
 
-The weekly suite runs every Monday at 02:17 UTC and exercises the production
-`document-charts-maps@1` CLI profile through the in-process target. Promptfoo schedules and retains runs; SQLRooms'
-deterministic state and policy checks decide pass/fail. No LLM grader is used,
-so application token usage remains separate from the zero grader usage recorded
-in the evidence envelope.
+The [weekly GitHub Actions workflow](../../../.github/workflows/evals-weekly.yml)
+runs every Monday at 02:17 UTC. It invokes `pnpm evals:weekly`, which builds the
+provider bundle and runs the production `document-charts-maps@1` CLI profile
+through the in-process target with Promptfoo. Promptfoo retains run results;
+SQLRooms' deterministic state and policy checks decide pass/fail. No LLM grader
+is used, so application token usage remains separate from the zero grader usage
+recorded in the evidence envelope.
 
 ## Run locally
 
