@@ -7,7 +7,6 @@ import {
   asDeckJsonMapConfig,
   resolveDeckMapDashboardDatasetSource,
 } from './dashboardConfig';
-import type {DeckMapGroundBounds} from './extrusionScale';
 import {resolveDeckMapFitToData, useDeckMapFitController} from './mapFit';
 import type {DeckJsonMapHandle} from './types';
 

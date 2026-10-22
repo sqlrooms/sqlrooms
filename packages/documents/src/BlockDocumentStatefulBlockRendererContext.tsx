@@ -53,6 +53,12 @@ export type BlockDocumentStatefulBlockType = {
   settings?: BlockSettingsComponent;
   /** True when the renderer places host header actions in its own header. */
   hasOwnHeaderActions?: boolean;
+  /**
+   * Keep the type registered (existing blocks still render and stay editable)
+   * but leave it out of the insert menus, e.g. while a newer block type is
+   * being rolled out and the old one should not be created any more.
+   */
+  hidden?: boolean;
   createNode?: (
     blockId: string,
     options?: BlockDocumentStatefulBlockCreateNodeOptions,

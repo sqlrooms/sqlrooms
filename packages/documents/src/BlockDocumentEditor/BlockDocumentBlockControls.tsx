@@ -561,30 +561,32 @@ function blockMenuItemMatchesQuery(item: BlockMenuItem, query: string) {
 function buildStatefulBlockMenuItems(
   blockTypes: BlockDocumentStatefulBlockType[],
 ): BlockMenuItem[] {
-  return blockTypes.map((blockType) => {
-    const label = blockType.label ?? labelFromBlockType(blockType.blockType);
-    return {
-      label,
-      description: blockType.description ?? `Insert ${label}`,
-      icon: Rows3Icon,
-      selectAfterInsert: true,
-      createNode:
-        blockType.createNode ??
-        ((id: string) => ({
-          type: 'blockDocumentStatefulBlock',
-          attrs: {
-            id,
-            blockType: blockType.blockType,
-            blockInstanceId: id,
-            ownership: 'owned',
-            caption: '',
-            ...(blockType.resizableHeight
-              ? {height: blockType.defaultHeight ?? 560}
-              : {}),
-          },
-        })),
-    };
-  });
+  return blockTypes
+    .filter((blockType) => !blockType.hidden)
+    .map((blockType) => {
+      const label = blockType.label ?? labelFromBlockType(blockType.blockType);
+      return {
+        label,
+        description: blockType.description ?? `Insert ${label}`,
+        icon: Rows3Icon,
+        selectAfterInsert: true,
+        createNode:
+          blockType.createNode ??
+          ((id: string) => ({
+            type: 'blockDocumentStatefulBlock',
+            attrs: {
+              id,
+              blockType: blockType.blockType,
+              blockInstanceId: id,
+              ownership: 'owned',
+              caption: '',
+              ...(blockType.resizableHeight
+                ? {height: blockType.defaultHeight ?? 560}
+                : {}),
+            },
+          })),
+      };
+    });
 }
 
 function buildTextBlockMenuItems(): BlockMenuItem[] {
