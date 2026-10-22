@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Roomie · Node / Quack / Wasm proof of concept</title>
+  </head>
+  <body>
+    <h1>Roomie Quack feasibility experiment</h1>
+    <p>
+      Node-owned native DuckDB → Quack → DuckDB-Wasm → existing Roomie histogram
+      renderer
+    </p>
+    <pre id="status">Starting DuckDB-Wasm…</pre>
+    <div id="chart"></div>
+    <details open>
+      <summary>Queries and evidence</summary>
+      <pre id="queries"></pre>
+    </details>
+    <script type="module" src="/main.tsx"></script>
+  </body>
+</html>
