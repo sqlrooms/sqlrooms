@@ -16,11 +16,17 @@ const log = (value: unknown) => {
 
 try {
   const config = await (await fetch('/config.json')).json();
-  const localControl = new URLSearchParams(location.search).has(
-    'local-control',
-  );
+  const params = new URLSearchParams(location.search);
+  const localControl = params.has('local-control');
+  const ciCompatibility = params.has('ci-compat');
   const prefix = '/vendor/npm/package/dist/';
-  const threaded = new URLSearchParams(location.search).has('threads');
+  const threaded = params.has('threads');
+  const rebuilt = params.has('rebuilt');
+  if (rebuilt && (!threaded || !ciCompatibility || localControl)) {
+    throw new Error(
+      'Rebuilt extensions require threads=1 and ci-compat=1, without local-control.',
+    );
+  }
   const worker = new Worker(
     `${prefix}duckdb-browser-${threaded ? 'threads' : 'base'}.worker.js`,
   );
@@ -29,34 +35,39 @@ try {
     `${prefix}duckdb-${threaded ? 'threads' : 'base'}.wasm`,
     threaded ? `${prefix}duckdb-browser-threads.pthread.worker.js` : undefined,
   );
-  const ciCompatibility = new URLSearchParams(location.search).has('ci-compat');
   await db.open({
     allowUnsignedExtensions: ciCompatibility,
-    maximumThreads: threaded ? 2 : 1,
+    // Keep the threaded runtime for Quack heartbeats, but avoid the observed
+    // dynamic-loader hang when more than one query thread is configured.
+    maximumThreads: threaded && !rebuilt ? 2 : 1,
   });
   const connection = await db.connect();
   const wasmVersion = (
     await connection.query('SELECT version() AS version')
   ).toArray()[0].version;
   status.textContent = `Native ${config.nativeVersion}; Wasm ${wasmVersion}. Loading Quack…`;
-  log({nativeVersion: config.nativeVersion, wasmVersion});
+  log({nativeVersion: config.nativeVersion, wasmVersion, rebuilt, threaded});
   log((await connection.query('PRAGMA platform')).toArray());
   // CI built the exact v2.0.0 source commit before release tagging, so its
   // extension ABI identifier is d54cbbe3df rather than v2.0.0. POC only.
   if (ciCompatibility && !localControl) {
     await connection.query('SET allow_extensions_metadata_mismatch=true');
     log({
-      warning:
-        'POC ONLY: signature and version checks relaxed for the checksum-pinned official extension built from the identical v2.0.0 source commit.',
+      warning: rebuilt
+        ? 'POC ONLY: loading locally rebuilt unsigned extensions with metadata checks relaxed.'
+        : 'POC ONLY: signature and version checks relaxed for the checksum-pinned official extension built from the identical v2.0.0 source commit.',
     });
   }
   if (localControl) {
     await connection.query(`CREATE TABLE sales AS SELECT i::INTEGER AS id,
       (20 + (i * 37) % 180)::DOUBLE AS amount FROM range(120) t(i)`);
   } else {
+    let extensionDirectory = 'extensions';
+    if (threaded) extensionDirectory = 'extensions/wasm_threads';
+    if (rebuilt) extensionDirectory = 'rebuilt';
     for (const extension of ['httpfs', 'quack']) {
       await connection.query(
-        `LOAD '${location.origin}/vendor/extensions/${threaded ? 'wasm_threads/' : ''}${extension}.duckdb_extension.wasm'`,
+        `LOAD '${location.origin}/vendor/${extensionDirectory}/${extension}.duckdb_extension.wasm'`,
       );
     }
     await connection.query(

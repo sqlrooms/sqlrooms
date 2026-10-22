@@ -5,7 +5,11 @@ workspace lockfile, or query policies are changed. Synthetic sales data only.
 
 ## Result (2026-10-22)
 
-**Native Node hosting works; the requested remote browser chart is not yet verified.**
+**The remote browser histogram works with rebuilt extensions and one query thread.
+Published extension binaries still fail.**
+
+See [the threaded investigation](THREADED-INVESTIGATION.md) for the working build
+recipe, a minimal reproducer, and upstream issue references.
 
 - Node embeds DuckDB v2.0.0 and successfully starts/stops `quack_serve`.
 - A second native DuckDB instance connects over HTTP Quack, rejects an invalid
@@ -19,15 +23,15 @@ workspace lockfile, or query policies are changed. Synthetic sales data only.
   extensions, then `ATTACH` fails with `thread constructor failed: Not supported`.
   Upstream Quack's `ConnectToServer` calls `StartHeartbeat` unconditionally.
 - The threaded artifact reports `wasm_threads`, but its matching released httpfs
-  extension fails dynamic loading with an empty underlying loader message.
-  The precise threaded dynamic-loader cause is not established.
+  extension fails dynamic loading. Instrumentation reveals a non-shared memory
+  import incompatible with the threaded runtime; the public error omits this detail.
 - The separate browser-local control successfully renders the shared Roomie
   histogram (nine bins) from this v2 Wasm build. Browser evidence shows real Arrow
   results (`Float64` bin bounds, `Int64` counts) feeding the existing renderer.
 
-Do not infer end-to-end Quack browser compatibility or production readiness from
-the successful native test. A compatible published Wasm/extension pair, or a
-coordinated upstream build, is the next requirement.
+The locally rebuilt pair successfully renders nine histogram bins from native
+server-owned data through Quack and Arrow. This establishes feasibility, while a
+compatible signed distribution and full Roomie integration remain outstanding.
 
 ## Published npm package retest (2026-10-22)
 
@@ -45,9 +49,10 @@ artifact. Publication does not change the observed compatibility failures.
 | Browser-local chart control                                     | PASS: nine bins, Arrow `Float64` bounds and `Int64` counts; visually verified            |
 | Default `INSTALL quack; LOAD quack` in a fresh browser database | FAIL: default `d54cbbe3df/wasm_eh/quack.duckdb_extension.wasm` endpoint returns HTTP 404 |
 
-The retest used the existing built workspace packages in the original checkout;
-the changed download script and fixture paths are preserved in this PR. No full
-Roomie application integration or remote browser chart succeeded.
+This table records the published artifacts. The subsequent source rebuild
+succeeded for the remote histogram, as documented in the threaded investigation.
+Browser tests used the existing built workspace packages in the original checkout;
+full Roomie application integration remains untested.
 
 ## Reproduce
 
@@ -83,7 +88,8 @@ Use Ctrl-C to stop the server. Ports are 4317 (Vite), 19494 (Quack), and 19495
 **`ci-compat` relaxes both signature and metadata checks only in the experiment's
 browser-local DuckDB instance.** Upstream's Wasm loader requires both flags for a
 metadata mismatch. This is not a deployment recommendation. It loads only the
-checksum-pinned official extensions here; default mode leaves checks enabled.
+checksum-pinned official extensions unless `rebuilt=1` explicitly selects local
+unsigned builds; default mode leaves checks enabled.
 
 The chart fixture uses Roomie's shared `createHistogramSpec` and `VgPlotChart`
 renderer plus SQLRooms' Arrow-to-Mosaic bridge. It is not a full Roomie document
@@ -125,16 +131,16 @@ stacked worktree. No older engine was substituted for this experiment.
 
 ## Implementation-plan checkpoints
 
-This experiment supports choosing Node as a native Quack host. It does not yet
-support choosing Quack as Roomie’s browser query transport. Before that decision:
+This experiment demonstrates Node hosting and remote browser chart feasibility.
+Before adopting Quack as Roomie’s browser query transport:
 
 - Obtain a compatible v2 Wasm/extension build that loads with normal verification
   enabled and successfully connects to the Node-owned database.
-- Render this histogram from server-owned rows, then test the full Roomie
-  document path, connection initialization, and Mosaic cache schemas.
+- Test the full Roomie document path, connection initialization, and Mosaic cache
+  schemas; the isolated remote histogram is now verified.
 - Verify type fidelity (including empty results), cancellation, reconnects,
   concurrent agent/browser queries, and server-side query restrictions.
 - Measure browser startup and memory costs against the existing WebSocket path.
 
 Keep this fixture independent of production connector selection and headless
-workspace implementation. Native hosting success does not resolve those tasks.
+workspace implementation. The chart proof does not resolve those tasks.
