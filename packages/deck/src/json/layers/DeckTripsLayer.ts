@@ -1,6 +1,10 @@
 import {CompositeLayer, type Layer, type LayersList} from '@deck.gl/core';
 import {TripsLayer} from '@deck.gl/geo-layers';
 import * as arrow from 'apache-arrow';
+import {
+  normalizeTripTimestampRange,
+  summarizeTripTimestamps,
+} from '../tripTimestamps';
 
 type TypedArray =
   | Uint8Array
@@ -50,6 +54,9 @@ function expandToCoords<T extends TypedArray>(
  * This wrapper extracts the binary data from Arrow vectors and passes it to the
  * native TripsLayer in a compatible format, properly resolving accessor props
  * (Arrow Vectors → binary attributes, functions → wrapped with batch context).
+ * Epoch timestamps are rebased to a short relative range: TripsLayer stores
+ * them as Float32, which cannot distinguish vertices of an absolute microsecond
+ * timestamp, and the animation clock starts at 0.
  */
 export class DeckTripsLayer extends CompositeLayer<{
   data: arrow.Table;
@@ -82,6 +89,11 @@ export class DeckTripsLayer extends CompositeLayer<{
 
     if (!getPath || !getTimestamps) return null;
 
+    const timestampPlan = summarizeTripTimestamps(getTimestamps) ?? {
+      origin: 0,
+      divisor: 1,
+      max: 0,
+    };
     const layers: TripsLayer[] = [];
     const numChunks = getPath.data.length;
 
@@ -119,30 +131,17 @@ export class DeckTripsLayer extends CompositeLayer<{
       const tsChild = tsData.children[0];
       if (!tsChild) continue;
 
-      // Slice timestamps to this chunk's range (same shared-buffer issue)
-      const tsBaseOffset = tsData.valueOffsets[0] ?? 0;
-      const tsRawValues = tsChild.values;
-      const tsStart = tsBaseOffset;
-      const tsEnd = tsStart + numVertices;
-
+      // Slice timestamps to this chunk's range (same shared-buffer issue).
       // TripsLayer's timestamps attribute does NOT have doublePrecision, so
-      // luma.gl's type resolver rejects Float64Array. Timestamps MUST be Float32.
-      let tsValues: Float32Array;
-      if (tsRawValues instanceof Float32Array) {
-        tsValues = tsRawValues.slice(tsStart, tsEnd);
-      } else {
-        tsValues = new Float32Array(numVertices);
-        const src = tsRawValues;
-        if (src instanceof BigInt64Array || src instanceof BigUint64Array) {
-          for (let i = 0; i < numVertices; i++) {
-            tsValues[i] = Number(src[tsStart + i]);
-          }
-        } else {
-          for (let i = 0; i < numVertices; i++) {
-            tsValues[i] = Number(src[tsStart + i]) || 0;
-          }
-        }
-      }
+      // luma.gl's type resolver rejects Float64Array. Timestamps MUST be Float32,
+      // and epoch values must be rebased or every vertex collapses to one float.
+      const tsStart = Number(tsData.valueOffsets[0] ?? 0);
+      const tsValues = normalizeTripTimestampRange(
+        tsChild,
+        tsStart,
+        numVertices,
+        timestampPlan,
+      );
 
       const {_tripsMaxTimestamp: _unused, ...restProps} = otherProps;
       void _unused;

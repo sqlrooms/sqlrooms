@@ -762,7 +762,10 @@ It then produces canonical deck-facing geometry outputs for:
 Specialized layers such as `GeoArrowArcLayer`, `GeoArrowTripsLayer`, and
 `GeoArrowH3HexagonLayer` reuse the prepared table but bind additional
 configured columns on top for source/target geometry,
-timestamps, or index cells.
+timestamps, or index cells. Trip timestamps may be a short relative series or
+an absolute DuckDB `TIMESTAMP` (epoch microseconds). Absolute values are
+rebased to a relative range before animation, because the playhead starts at 0
+and TripsLayer stores timestamps as Float32.
 
 This work is cached internally in a module-global prepared dataset store. That
 cache is separate from any upstream query cache:
