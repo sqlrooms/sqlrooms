@@ -11,7 +11,7 @@ workspace lockfile, or query policies are changed. Synthetic sales data only.
 - A second native DuckDB instance connects over HTTP Quack, rejects an invalid
   token, and queries the server-owned table: 120 rows, total 12960. This is an
   actual remote connection, not a query on the server's local connection.
-- The upstream unpublished v2 Wasm artifact executes SQL in the browser, but is
+- The published `@duckdb/duckdb-wasm@1.33.1-dev110.0` executes SQL in the browser, but is
   stamped `v2.0.0-dev88614` / extension ABI `d54cbbe3df`. Its source commit is
   exactly the official v2.0.0 tag. Strict extension loading rejects released
   v2.0.0 extensions because of that metadata mismatch.
@@ -24,11 +24,30 @@ workspace lockfile, or query policies are changed. Synthetic sales data only.
 - The separate browser-local control successfully renders the shared Roomie
   histogram (nine bins) from this v2 Wasm build. Browser evidence shows real Arrow
   results (`Float64` bin bounds, `Int64` counts) feeding the existing renderer.
-  Screenshot: `.runtime/local-control.png` (generated, not committed).
 
 Do not infer end-to-end Quack browser compatibility or production readiness from
 the successful native test. A compatible published Wasm/extension pair, or a
 coordinated upstream build, is the next requirement.
+
+## Published npm package retest (2026-10-22)
+
+Downloaded the package directly from npm and reran the browser fixture in a fresh
+Chrome context with COOP/COEP enabled. Its base/threaded Wasm binaries, browser
+wrapper, and worker scripts are byte-for-byte identical to the original CI
+artifact. Publication does not change the observed compatibility failures.
+
+| Test                                                            | Result                                                                                   |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Native smoke                                                    | PASS: server-owned 120 rows, total 12960; invalid token rejected                         |
+| Strict single-thread remote                                     | FAIL: released extension requires `v2.0.0`, browser ABI is `d54cbbe3df`                  |
+| Single-thread `ci-compat`                                       | FAIL at `ATTACH`: `thread constructor failed: Not supported`                             |
+| Threaded `ci-compat`                                            | FAIL loading released `wasm_threads/httpfs`; underlying error detail empty               |
+| Browser-local chart control                                     | PASS: nine bins, Arrow `Float64` bounds and `Int64` counts; visually verified            |
+| Default `INSTALL quack; LOAD quack` in a fresh browser database | FAIL: default `d54cbbe3df/wasm_eh/quack.duckdb_extension.wasm` endpoint returns HTTP 404 |
+
+The retest used the existing built workspace packages in the original checkout;
+the changed download script and fixture paths are preserved in this PR. No full
+Roomie application integration or remote browser chart succeeded.
 
 ## Reproduce
 
@@ -42,11 +61,10 @@ node experiments/quack-node-wasm/native-smoke.mjs
 node experiments/quack-node-wasm/server.mjs
 ```
 
-The download script requires `gh` authentication, `curl`, `unzip`, and `shasum`.
-It verifies SHA-256 checksums before extracting the upstream CI artifact. GitHub
-CI artifacts eventually expire; this fixture deliberately fails rather than
-silently replacing the tested build. Dependencies/artifacts stay inside this
-directory; generated files are ignored by Git.
+The download script requires `curl`, `tar`, and `shasum`. It downloads the exact
+published npm tarball and verifies SHA-256 checksums before extraction. No GitHub
+authentication or expiring CI artifact is required. Dependencies/artifacts stay
+inside this directory; generated files are ignored by Git.
 
 Browser modes:
 
@@ -74,20 +92,21 @@ so `CONNECT remote_db` applies to every chart query.
 
 ## Exact versions and sources
 
-| Component                           | Tested identity                                                            |
-| ----------------------------------- | -------------------------------------------------------------------------- |
-| Host                                | macOS arm64, Node v24.18.0                                                 |
-| Node binding                        | `@duckdb/node-api` and bindings `2.0.0-r.1` (isolated npm lockfile)        |
-| Native engine                       | `SELECT version()` → `v2.0.0`                                              |
-| Native Quack / httpfs               | `f96420ed46` / `77392a7207`                                                |
-| Wasm wrapper                        | `1.33.1-dev110.0`                                                          |
-| Wasm engine                         | `SELECT version()` → `v2.0.0-dev88614`                                     |
-| Wasm source commit                  | `5beed055bc9fe21eba58207794e0bd271e100ade`                                 |
-| Embedded engine commit / v2.0.0 tag | `d54cbbe3df17e8e5ce68312f483b4155836112aa`                                 |
-| Artifact                            | `duckdb-wasm-packages-loadable`, run `39574076930`, artifact `12334523013` |
-| Browser Arrow                       | Apache Arrow 17 via Wasm; existing SQLRooms bridge for Mosaic              |
+| Component                           | Tested identity                                                     |
+| ----------------------------------- | ------------------------------------------------------------------- |
+| Host                                | macOS arm64, Node v24.18.0                                          |
+| Node binding                        | `@duckdb/node-api` and bindings `2.0.0-r.1` (isolated npm lockfile) |
+| Native engine                       | `SELECT version()` → `v2.0.0`                                       |
+| Native Quack / httpfs               | `f96420ed46` / `77392a7207`                                         |
+| Wasm wrapper                        | `1.33.1-dev110.0`                                                   |
+| Wasm engine                         | `SELECT version()` → `v2.0.0-dev88614`                              |
+| Wasm source commit                  | `5beed055bc9fe21eba58207794e0bd271e100ade`                          |
+| Embedded engine commit / v2.0.0 tag | `d54cbbe3df17e8e5ce68312f483b4155836112aa`                          |
+| Package                             | `@duckdb/duckdb-wasm@1.33.1-dev110.0` from npm                      |
+| Browser Arrow                       | Apache Arrow 17 via Wasm; existing SQLRooms bridge for Mosaic       |
 
-Sources: [Wasm CI run](https://github.com/duckdb/duckdb-wasm/actions/runs/39574076930),
+Sources: [published package](https://www.npmjs.com/package/@duckdb/duckdb-wasm/v/1.33.1-dev110.0),
+[original Wasm CI run](https://github.com/duckdb/duckdb-wasm/actions/runs/39574076930),
 [v2.0.0 source](https://github.com/duckdb/duckdb/tree/v2.0.0),
 [Wasm extension loader](https://github.com/duckdb/duckdb-wasm/blob/5beed055bc9fe21eba58207794e0bd271e100ade/lib/src/extension_provider.cc),
 [Quack client heartbeat](https://github.com/duckdb/duckdb-quack/blob/f96420ed46aee9c42064bdb99ddfd1230d6c0086/src/quack_client.cpp).

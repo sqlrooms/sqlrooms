@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")"
-mkdir -p vendor/wasm vendor/extensions/wasm_threads
-if [ ! -f vendor/wasm/duckdb-wasm-packages.zip ]; then
-  gh run download 39574076930 --repo duckdb/duckdb-wasm \
-    --name duckdb-wasm-packages-loadable --dir vendor/wasm
+mkdir -p vendor/npm vendor/extensions/wasm_threads
+archive="vendor/npm/duckdb-wasm-1.33.1-dev110.0.tgz"
+if [ ! -f "$archive" ]; then
+  curl --fail --location \
+    'https://registry.npmjs.org/@duckdb/duckdb-wasm/-/duckdb-wasm-1.33.1-dev110.0.tgz' \
+    -o "$archive"
 fi
 for platform in wasm_eh wasm_threads; do
   for extension in quack httpfs; do
@@ -18,5 +20,4 @@ for platform in wasm_eh wasm_threads; do
   done
 done
 shasum -a 256 -c vendor-checksums.txt
-unzip -qo vendor/wasm/duckdb-wasm-packages.zip \
-  'packages/duckdb-wasm/dist/*' 'packages/duckdb-wasm/package.json' -d vendor/wasm
+tar -xzf "$archive" -C vendor/npm

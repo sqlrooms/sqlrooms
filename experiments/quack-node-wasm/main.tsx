@@ -1,6 +1,6 @@
 import React from 'react';
 import {createRoot} from 'react-dom/client';
-import * as duckdb from './vendor/wasm/packages/duckdb-wasm/dist/duckdb-browser.mjs';
+import * as duckdb from './vendor/npm/package/dist/duckdb-browser.mjs';
 import {coordinator} from '@uwdata/mosaic-core';
 import {VgPlotChart} from '../../packages/mosaic/dist/VgPlotChart';
 import {createHistogramSpec} from '../../packages/mosaic/dist/charts/chart-types/histogram/spec';
@@ -19,7 +19,7 @@ try {
   const localControl = new URLSearchParams(location.search).has(
     'local-control',
   );
-  const prefix = '/vendor/wasm/packages/duckdb-wasm/dist/';
+  const prefix = '/vendor/npm/package/dist/';
   const threaded = new URLSearchParams(location.search).has('threads');
   const worker = new Worker(
     `${prefix}duckdb-browser-${threaded ? 'threads' : 'base'}.worker.js`,
