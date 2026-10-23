@@ -4,11 +4,17 @@ import tempfile
 import threading
 from collections import OrderedDict
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 from typing import Any, Iterator
 
 
 DEFAULT_MAXSIZE = 1024
-DEFAULT_STRIPE_COUNT = 64
+
+
+@dataclass
+class _QueryLock:
+    lock: threading.RLock = field(default_factory=threading.RLock)
+    users: int = 0
 
 
 class QueryCache:
@@ -18,18 +24,14 @@ class QueryCache:
         self,
         *,
         maxsize: int = DEFAULT_MAXSIZE,
-        stripe_count: int = DEFAULT_STRIPE_COUNT,
     ) -> None:
         if maxsize < 1:
             raise ValueError("maxsize must be at least 1")
-        if stripe_count < 1:
-            raise ValueError("stripe_count must be at least 1")
 
         self.directory = f"{tempfile.gettempdir()}/sqlrooms-memory-cache"
         self.maxsize = maxsize
-        self.stripe_count = stripe_count
         self._values: OrderedDict[str, Any] = OrderedDict()
-        self._lock_stripes = tuple(threading.RLock() for _ in range(stripe_count))
+        self._locks: dict[str, _QueryLock] = {}
         self._guard = threading.RLock()
 
     def get(self, key: str) -> Any:
@@ -50,6 +52,19 @@ class QueryCache:
 
     @contextmanager
     def lock(self, name: str) -> Iterator[None]:
-        lock = self._lock_stripes[hash(name) % self.stripe_count]
-        with lock:
-            yield
+        # Count waiters before acquisition so a departing holder cannot remove
+        # their lock. Idle keys are removed; memory tracks active operations,
+        # whose admission is bounded by DuckDBRuntime.
+        with self._guard:
+            entry = self._locks.get(name)
+            if entry is None:
+                entry = self._locks[name] = _QueryLock()
+            entry.users += 1
+        try:
+            with entry.lock:
+                yield
+        finally:
+            with self._guard:
+                entry.users -= 1
+                if entry.users == 0:
+                    del self._locks[name]

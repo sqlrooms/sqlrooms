@@ -58,6 +58,13 @@
       "entry": ["src/main.{ts,tsx}"]
     },
     "apps/*": {},
+    "experiments/quack-node-wasm": {
+      "entry": [
+        "{server,native-smoke,diagnose-loader,loader-probe}.mjs",
+        "main.tsx"
+      ],
+      "ignoreDependencies": ["@uwdata/mosaic-core", "vite"]
+    },
     "apps/roomie-cli-ui": {
       "ignoreDependencies": ["jest-environment-jsdom", "jsdom"]
     },

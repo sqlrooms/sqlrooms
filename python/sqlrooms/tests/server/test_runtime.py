@@ -15,6 +15,8 @@ from starlette.websockets import WebSocketDisconnect
 from sqlrooms.server.access import LocalAccess
 from sqlrooms.server.app import create_app, UVICORN_OPTIONS
 from sqlrooms.server.runtime import DuckDBRuntime
+from sqlrooms.server.query import get_key
+from sqlrooms.server import query as query_module
 from sqlrooms.server.security import TransportSecurity
 
 
@@ -222,8 +224,27 @@ async def test_cancelled_startup_is_not_ready_and_shutdown_waits_for_initializer
     assert runtime.closed and runtime.connection is None
 
 
-def test_two_callers_cannot_cancel_each_others_same_query_id(tmp_path):
+def test_two_callers_cannot_cancel_each_others_same_query_id(tmp_path, monkeypatch):
     app, access = alternate_app(tmp_path)
+    long_sql = "SELECT sum(i) FROM range(100000000000) t(i)"
+    # Force the collision that used to serialize these unrelated queries on
+    # one of QueryCache's 64 stripes, delaying cancellation until completion.
+    stripe = hash(f"lock:{get_key(long_sql, 'json')}") % 64
+    for index in range(10000):
+        short_sql = f"SELECT 42 AS value -- {index}"
+        if hash(f"lock:{get_key(short_sql, 'json')}") % 64 == stripe:
+            break
+    else:
+        pytest.fail("Could not construct the historical cache-lock collision")
+    started = threading.Event()
+    get_json = query_module.get_json
+
+    def observe_query(con, sql):
+        if sql == long_sql:
+            started.set()
+        return get_json(con, sql)
+
+    monkeypatch.setattr(query_module, "get_json", observe_query)
     with TestClient(app) as client:
         with (
             client.websocket_connect("/ws/duckdb") as first,
@@ -235,23 +256,25 @@ def test_two_callers_cannot_cancel_each_others_same_query_id(tmp_path):
             first.send_json(
                 {
                     "type": "json",
-                    "sql": "SELECT sum(i) FROM range(100000000000) t(i)",
+                    "sql": long_sql,
                     "queryId": "same",
                 }
             )
+            assert started.wait(5), "First query did not acquire its cache lock"
             second.send_json({"type": "cancel", "queryId": "same"})
             assert second.receive_json() == {
                 "type": "cancelAck",
                 "queryId": "same",
                 "cancelled": False,
             }
-            second.send_json(
-                {"type": "json", "sql": "SELECT 42 AS value", "queryId": "same"}
-            )
+            second.send_json({"type": "json", "sql": short_sql, "queryId": "same"})
             assert json.loads(second.receive_json()["data"]) == [{"value": 42}]
             first.send_json({"type": "cancel", "queryId": "same"})
             outcomes = [first.receive_json(), first.receive_json()]
             assert {item["type"] for item in outcomes} == {"cancelAck", "error"}
+            assert next(item for item in outcomes if item["type"] == "cancelAck")[
+                "cancelled"
+            ]
             assert client.get("/healthz").status_code == 200
 
 

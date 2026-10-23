@@ -58,6 +58,10 @@ full Roomie application integration remains untested.
 
 From the repository root, with its normal dependencies installed:
 
+The root Knip configuration lists this standalone experiment's browser and Node
+entry points. Its Mosaic and Vite imports intentionally use the repository's
+existing dependencies; its native DuckDB dependency is installed separately below.
+
 ```sh
 pnpm build
 npm ci --prefix experiments/quack-node-wasm --workspaces=false --ignore-scripts
