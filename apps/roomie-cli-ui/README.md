@@ -25,11 +25,21 @@ conflicts. Use the packaged CLI for an automatically assigned port.
 the persisted schema. Commands
 in `src/commands.ts` compose the package APIs used by both manual UI actions and
 MCP. `src/store.ts` wires only needed slices and validates persisted data before
-enabling writes to `__roomie.ui_state`. Table filters are saved as Mosaic-generated
+enabling writes to the version-2 content-only `__roomie.ui_state` envelope.
+Legacy version-1 content is validated and migrated on save; its selection and
+table preferences are discarded. Current/pinned documents and table settings
+now live in browser IndexedDB, keyed by database path within the current origin.
+Hydration loads content first and prunes stale preference references. Tabs retain
+independent in-memory views; the last saved view wins on reopen. Save status and
+retry cover both content and preferences. Clearing browser data resets these
+preferences without deleting documents. Table filters are saved as Mosaic-generated
 predicates, validated as ordinary local SELECT expressions before agent changes
 or hydration. Restored filters appear as a saved baseline; Reset clears them
 before choosing a replacement. Column selection, sorting and page size are
 editable through Edit blocks → data-table settings.
+Shared domain composition and content commands also power the separate
+[Node workspace foundation](../roomie-node/README.md); its authenticated browser
+transport is not implemented yet.
 Use **Add data** in the sidebar to choose or drop a CSV, Parquet, JSON, or JSONL
 file. Roomie fills an available table name from the filename and automatically
 shows up to 100 rows using `@sqlrooms/data-table`. Edit the name if needed, then

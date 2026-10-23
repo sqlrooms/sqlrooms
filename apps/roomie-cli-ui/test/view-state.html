@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <title>Roomie IndexedDB view-state verification</title>
+  <body>
+    <pre id="result">Running IndexedDB verification…</pre>
+    <script type="module">
+      import {createRoomStore} from '@sqlrooms/room-store';
+      import {initializeBrowserViewState} from '../src/browserViewState.ts';
+      const result = document.querySelector('#result');
+      const workspaceId = `view-test-${crypto.randomUUID()}`;
+      const makeStore = () =>
+        createRoomStore(() => ({
+          room: {initialize: async () => {}, captureException: console.error},
+          artifacts: {
+            config: {
+              artifactsById: {
+                a: {id: 'a', type: 'block-document', title: 'Host A'},
+                b: {id: 'b', type: 'block-document', title: 'Host B'},
+              },
+              artifactOrder: ['a', 'b'],
+              pinnedArtifactIds: [],
+            },
+          },
+          blockDocuments: {config: {artifacts: {a: {id: 'a'}, b: {id: 'b'}}}},
+          mosaicDashboard: {config: {dashboardsById: {}}},
+          htmlApps: {config: {appsById: {}}},
+          tableExplorers: {config: {byId: {}}},
+        })).roomStore;
+      const assert = (condition, message) => {
+        if (!condition) throw new Error(message);
+      };
+      const select = (store, id) =>
+        store.setState((state) => ({
+          artifacts: {
+            ...state.artifacts,
+            config: {...state.artifacts.config, currentArtifactId: id},
+          },
+        }));
+      let first, second, reopened;
+      try {
+        const a = makeStore(),
+          b = makeStore();
+        first = await initializeBrowserViewState(a, workspaceId);
+        second = await initializeBrowserViewState(b, workspaceId);
+        assert(
+          a.getState().artifacts.config.currentArtifactId === 'a',
+          'Content-first default selection',
+        );
+        select(a, 'b');
+        await first.flush();
+        assert(
+          b.getState().artifacts.config.currentArtifactId === 'a',
+          'Tabs keep independent memory state',
+        );
+        select(b, 'b');
+        select(b, 'a');
+        b.setState((state) => ({
+          artifacts: {
+            ...state.artifacts,
+            config: {...state.artifacts.config, pinnedArtifactIds: ['a']},
+          },
+        }));
+        await second.flush();
+        const fresh = makeStore();
+        reopened = await initializeBrowserViewState(fresh, workspaceId);
+        assert(
+          fresh.getState().artifacts.config.currentArtifactId === 'a',
+          'Last writer wins on reopen',
+        );
+        assert(
+          fresh.getState().artifacts.config.pinnedArtifactIds[0] === 'a',
+          'Preferences survive reopen',
+        );
+        assert(
+          fresh.getState().artifacts.config.artifactsById.a.title === 'Host A',
+          'Content remains host-owned',
+        );
+        result.textContent =
+          'PASS: IndexedDB save/reopen, independent tabs, last writer wins, content ownership.';
+      } catch (error) {
+        result.textContent = `FAIL: ${error.stack}`;
+      } finally {
+        await first?.dispose();
+        await second?.dispose();
+        await reopened?.dispose();
+        const db = await new Promise((resolve, reject) => {
+          const req = indexedDB.open('roomie-view-state', 1);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        const tx = db.transaction('workspaces', 'readwrite');
+        tx.objectStore('workspaces').delete(workspaceId);
+        tx.oncomplete = () => db.close();
+      }
+    </script>
+  </body>
+</html>

@@ -60,7 +60,11 @@ and [skills](https://learn.chatgpt.com/docs/build-skills) document these mechani
 
 Roomie's catalog, logs, and managed workspaces live under `ROOMIE_HOME` (default
 `~/.roomie`); `ROOMIE_WORKSPACES_DIR` overrides the managed folder. Its database
-metadata lives in `__roomie.ui_state` with application `roomie`, schema version 1.
+document content lives in `__roomie.ui_state` with application `roomie`, schema
+version 2. The browser accepts version-1 content and migrates it on save; view
+preferences from that envelope are discarded. Current/pinned documents and table
+settings now persist separately in browser IndexedDB, keyed by database path
+within the current origin. Clearing browser data resets those preferences.
 Ordinary DuckDB files and SQLRooms metadata can coexist. Unsupported Roomie
 metadata disables startup/saving instead of overwriting it. Full SQLRooms project
 conversion is outside this product.
