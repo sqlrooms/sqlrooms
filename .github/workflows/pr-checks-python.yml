@@ -95,6 +95,7 @@ jobs:
       - name: Verify DuckDB file and SQL inspection compatibility
         run: |
           uv venv /tmp/sqlrooms-duckdb-reader --python 3.12
-          uv pip install --python /tmp/sqlrooms-duckdb-reader/bin/python 'duckdb==1.4.4'
+          # Do not apply the workspace's DuckDB 2.0 override to the older reader.
+          uv pip install --no-config --python /tmp/sqlrooms-duckdb-reader/bin/python 'duckdb==1.4.4'
           DUCKDB_COMPAT_PYTHON=/tmp/sqlrooms-duckdb-reader/bin/python uv run --no-sync pytest sqlrooms/tests/server/test_duckdb_compatibility.py
           DUCKDB_TEST_PYTHON="$PWD/.venv/bin/python" NODE_OPTIONS='--experimental-vm-modules --no-warnings' pnpm --filter @sqlrooms/mcp test --runInBand localSqlPolicy.duckdb
