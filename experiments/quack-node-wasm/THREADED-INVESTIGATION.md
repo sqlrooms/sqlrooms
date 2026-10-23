@@ -136,4 +136,4 @@ Source references:
 [thread dispatch](https://github.com/duckdb/duckdb-wasm/blob/5beed055bc9fe21eba58207794e0bd271e100ade/lib/src/main_thread.cc),
 [matching compiler version](https://github.com/duckdb/duckdb-wasm/blob/5beed055bc9fe21eba58207794e0bd271e100ade/.github/workflows/main.yml).
 
-No upstream issue or comment was posted by this experiment.
+Upstream reports: [v2 artifact reproduction on extension-ci-tools #391](https://github.com/duckdb/extension-ci-tools/issues/391#issuecomment-6360323939) and [DuckDB-Wasm #2288: hidden loader errors and loading hang](https://github.com/duckdb/duckdb-wasm/issues/2288).
