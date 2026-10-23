@@ -1,0 +1,42 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #15243a;
+  background: #f4f6fa;
+  --color-chart-overlay: #dbe5f4;
+}
+body {
+  max-width: 1000px;
+  margin: 32px auto;
+  padding: 0 24px;
+}
+h1 {
+  margin-bottom: 8px;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+#status {
+  padding: 16px;
+  background: #e6edf9;
+  border-radius: 8px;
+}
+#chart {
+  height: 420px;
+  padding: 24px;
+  background: white;
+  border: 1px solid #d6dce5;
+  border-radius: 12px;
+  margin: 20px 0;
+}
+#chart > div,
+#chart > div > div {
+  height: 100%;
+  width: 100%;
+}
+details {
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+}

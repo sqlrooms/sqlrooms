@@ -1,0 +1,11 @@
+{
+  "name": "roomie-quack-node-wasm-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@duckdb/node-api": "2.0.0-r.1"
+  }
+}
