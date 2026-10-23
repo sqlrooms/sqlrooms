@@ -8,14 +8,16 @@
   "license": "MIT",
   "author": "SQLRooms Contributors",
   "sideEffects": [
-    "*.css"
+    "*.css",
+    "**/*.css"
   ],
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "tailwind.css"
   ],
   "scripts": {
     "build": "tsc",

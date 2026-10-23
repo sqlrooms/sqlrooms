@@ -77,3 +77,16 @@ creation, rename, and delete behavior to `createPivotSlice`.
 
 See [Blocks and Block Documents](https://sqlrooms.org/blocks-and-documents) for
 embedding pivots in rich documents and choosing an ownership mode.
+
+## Tailwind CSS
+
+Import this package’s source entry in your app’s main CSS, alongside the SQLRooms
+theme preset. It includes sources from transitive SQLRooms dependencies under pnpm.
+
+```css
+@import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/pivot/tailwind.css';
+```
+
+See the [Tailwind setup guide](https://sqlrooms.org/getting-started#configure-tailwind-css)
+for package selection, workspace development, and migration details.

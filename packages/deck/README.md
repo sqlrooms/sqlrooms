@@ -885,3 +885,16 @@ generation while still supporting interactive React behavior at runtime.
 - [Deck.gl + Mosaic example source](https://github.com/sqlrooms/examples/tree/main/deckgl-mosaic)
 - [Blocks and Block Documents](https://sqlrooms.org/blocks-and-documents.html)
 - [Commands](https://sqlrooms.org/commands.html)
+
+## Tailwind CSS
+
+Import this package’s source entry in your app’s main CSS, alongside the SQLRooms
+theme preset. It includes sources from transitive SQLRooms dependencies under pnpm.
+
+```css
+@import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/deck/tailwind.css';
+```
+
+See the [Tailwind setup guide](https://sqlrooms.org/getting-started#configure-tailwind-css)
+for package selection, workspace development, and migration details.

@@ -88,11 +88,36 @@ yarn add -D tailwindcss@4
 
 :::
 
-SQLRooms provides a Tailwind preset that includes all the necessary styles. Make sure to import the preset Tailwind styles in your main CSS file:
+SQLRooms provides a theme preset and per-package Tailwind source entries. Import
+the preset once, then the source entry for each public UI package your app uses
+directly (for example, `room-shell` and `sql-editor`):
 
 ```css
 @import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/room-shell/tailwind.css';
+@import '@sqlrooms/sql-editor/tailwind.css';
 ```
+
+Keep these imports together before other CSS rules. Each package entry registers
+its own sources and imports entries from its SQLRooms dependencies. For example,
+`sql-editor/tailwind.css` includes `schema-tree` automatically. Do not add
+transitive packages as direct dependencies just for CSS, scan pnpm’s internal
+store, or safelist individual utilities. Scanning only `node_modules/@sqlrooms`
+misses packages that pnpm links only inside another package.
+
+The preset already includes `ui/tailwind.css`. If you supply your own Tailwind 4
+theme instead of the preset, import `ui/tailwind.css` explicitly and define the
+SQLRooms theme tokens your components use. Package entries contain source
+registrations only: they do not duplicate Tailwind, preflight, or the theme.
+Keep your theme overrides after the preset as before.
+
+The entries support Tailwind **4.1.18 or later**, both published packages (`dist`)
+and live workspace packages (`src`). Build workspace packages before running an
+app, as usual. Import only entries for features you use: utility generation is
+limited to their source/dependency graph and your app’s sources. Tailwind scans
+whole packages, so CSS is pruned at package granularity, not at individual React
+export granularity. JavaScript tree shaking is unchanged, and CSS stays in your
+app stylesheet rather than being imported by JavaScript, including during SSR.
 
 ### Setting Up the Room Store
 
