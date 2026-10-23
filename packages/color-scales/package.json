@@ -7,7 +7,9 @@
   },
   "license": "MIT",
   "author": "SQLRooms Contributors",
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -17,13 +19,15 @@
     "./colorSchemeNames": {
       "types": "./dist/colorSchemeNames.d.ts",
       "import": "./dist/colorSchemeNames.js"
-    }
+    },
+    "./tailwind.css": "./tailwind.css"
   },
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "tailwind.css"
   ],
   "scripts": {
     "build": "tsc",

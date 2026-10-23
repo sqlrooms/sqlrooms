@@ -49,3 +49,24 @@ git lfs pull
 ```
 
 Then add media files normally — LFS handles them automatically.
+
+## Tailwind source entries
+
+Run `pnpm generate:tailwind-sources` when adding a component package or changing
+SQLRooms dependencies. Commit the generated `tailwind.css` files and package
+metadata. Each entry registers local `src` and `dist` files and imports entries
+from styled dependencies; never reference a package manager’s internal layout.
+The generator includes packages with TSX and packages composing them through
+runtime dependencies. Optional/peer UI integrations should be imported explicitly
+by their consuming app, since they may not be installed.
+
+`pnpm check:tailwind-sources` verifies the entries, published file lists, exports
+(where an export map exists), and CSS side effects. Keep JavaScript entry points
+free of Tailwind CSS imports so SSR and JavaScript tree shaking remain unchanged.
+Document a new CSS entry in the package README.
+
+After `pnpm build sql-editor`, run `pnpm test:tailwind-consumer` to pack the SQL
+editor graph, install an isolated pnpm consumer, and check production CSS and
+Chromium layout against published files and workspace sources. Install the test
+browser with `pnpm dlx playwright@1.62.1 install chromium` first. Set
+`KEEP_TAILWIND_CONSUMER=1` to retain the temporary consumer for inspection.

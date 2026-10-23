@@ -22,3 +22,7 @@ npm run dev
 npm install
 npm run dev
 ```
+
+The main stylesheet imports `@sqlrooms/room-shell/tailwind.css` to discover
+styles from its SQLRooms dependencies in both workspace and published installs.
+No broad `@source` scan of SQLRooms package directories is needed.

@@ -20,13 +20,15 @@
     "./mosaic": {
       "types": "./dist/mosaic.d.ts",
       "import": "./dist/mosaic.js"
-    }
+    },
+    "./tailwind.css": "./tailwind.css"
   },
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "tailwind.css"
   ],
   "scripts": {
     "build": "tsc",
