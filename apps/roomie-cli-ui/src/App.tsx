@@ -23,8 +23,8 @@ export function App() {
     input?: unknown;
   } | null>(null);
   const [error, setError] = useState('');
-  const [saved, setSaved] = useState(storage.controller.getState());
-  useEffect(() => storage.controller.subscribe(setSaved), []);
+  const [saved, setSaved] = useState(storage.saveStatus.getState());
+  useEffect(() => storage.saveStatus.subscribe(setSaved), []);
   const invoke = async (command: string, input?: unknown) => {
     const result = await roomStore
       .getState()
@@ -100,7 +100,7 @@ export function App() {
           onClick={async () => {
             try {
               await storage.flush();
-              if (!storage.controller.getState().error) location.reload();
+              if (!storage.saveStatus.getState().error) location.reload();
             } catch (e) {
               setError(String(e));
             }

@@ -40,7 +40,7 @@ export function Bridge() {
         document.getElementById('workspace')!.inert = true;
         await runtime.drain();
         await storage.flush();
-        const state = storage.controller.getState();
+        const state = storage.saveStatus.getState();
         if (state.error || state.dirty || state.saving)
           throw new Error('Changes could not be saved.');
         return {ok: true, lastSavedAt: state.lastSavedAt};

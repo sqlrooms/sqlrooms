@@ -1,6 +1,5 @@
 import {
   createRoomStore,
-  createPersistHelpers,
   persistSliceConfigs,
   registerCommandsForOwner,
 } from '@sqlrooms/room-store';
@@ -8,22 +7,22 @@ import {
   createRoomShellSlice,
   createDuckDbPersistStorage,
 } from '@sqlrooms/room-shell';
-import {createArtifactsSlice} from '@sqlrooms/artifacts';
-import {createBlockDocumentsSlice} from '@sqlrooms/documents';
-import {createHtmlAppRuntimeSlice} from '@sqlrooms/app-runtime';
 import {
   createMosaicSlice,
-  createDashboardFeatureSlices,
   createDefaultChartTypes,
   createDefaultMosaicDashboardPanelRenderers,
   defaultAddPanelActions,
 } from '@sqlrooms/mosaic';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import type {RoomState} from './RoomState';
+import {createRoomieDomainSlice} from './createRoomieDomainSlice';
 import {pageCredential, authorizedFetch} from './auth';
 import {config} from './config';
-import {sliceSchemas, Workspace, TableSettings} from './model';
-import {createRoomieCommands, ensureBlock} from './commands';
+import {contentSchemas, selectRoomieContent} from './stateOwnership';
+import {mergeRoomieContent, parseContentWorkspace} from './contentPersistence';
+import {initializeBrowserViewState} from './browserViewState';
+import {createRoomieSaveStatus} from './saveStatus';
+import {createRoomieCommands} from './commands';
 import {validateTableFilters} from './tableSelection';
 import {
   isRoomieRenderTable,
@@ -36,15 +35,25 @@ export const connector = createWebSocketDuckDbConnector({
   initializationQuery:
     "ATTACH IF NOT EXISTS ':memory:' AS __roomie_cache; CREATE SCHEMA IF NOT EXISTS __roomie_cache.mosaic;",
 });
-const helpers = createPersistHelpers(sliceSchemas);
 const partialize = (state: RoomState) => ({
   application: 'roomie' as const,
-  schemaVersion: 1 as const,
-  ...helpers.partialize(state),
+  schemaVersion: 2 as const,
+  ...selectRoomieContent(state),
 });
-export const storage = createDuckDbPersistStorage<
+let viewStorage:
+  | Awaited<ReturnType<typeof initializeBrowserViewState>>
+  | undefined;
+const contentStorage = createDuckDbPersistStorage<
   ReturnType<typeof partialize>
 >(connector, {namespace: '__roomie'});
+export const storage = {
+  ...contentStorage,
+  saveStatus: createRoomieSaveStatus(contentStorage.controller),
+  async flush() {
+    await contentStorage.flush();
+    await viewStorage?.flush();
+  },
+};
 let resolveHydration: () => void;
 let rejectHydration: (error: unknown) => void;
 const hydration = new Promise<void>((resolve, reject) => {
@@ -55,13 +64,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs(
     {
       name: 'roomie-workspace',
-      sliceConfigSchemas: sliceSchemas,
+      sliceConfigSchemas: contentSchemas,
       storage,
       partialize,
       merge: (persisted, current) =>
         persisted == null
           ? current
-          : helpers.merge(Workspace.parse(persisted), current),
+          : mergeRoomieContent(current, parseContentWorkspace(persisted)),
       onRehydrateStorage: () => (_state, error) =>
         error ? rejectHydration(error) : resolveHydration(),
     },
@@ -82,74 +91,40 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         },
       })(set, get, api),
-      ...createArtifactsSlice<RoomState>({
-        artifactTypes: {
-          'block-document': {
-            label: 'Document',
-            defaultTitle: 'Untitled document',
-            onCreate: ({artifactId}) =>
-              get().blockDocuments.ensureBlockDocument(artifactId),
-            onDelete: ({artifactId}) =>
-              get().blockDocuments.removeBlockDocument(artifactId),
-          },
-        },
-      })(set, get, api),
-      ...createBlockDocumentsSlice<RoomState>({
-        onCreateOwnedStatefulBlock: ({blockType, blockInstanceId}) =>
-          ensureBlock(get(), blockType, blockInstanceId),
-        onDeleteOwnedStatefulBlock: ({blockType, blockInstanceId}) => {
-          if (blockType === 'dashboard')
-            get().mosaicDashboard.removeDashboard(blockInstanceId);
-          if (blockType === 'html-app')
-            get().htmlApps.removeApp(blockInstanceId);
-          if (blockType === 'data-table')
-            set((state) => {
-              const byId = {...state.tableExplorers.config.byId};
-              delete byId[blockInstanceId];
-              return {
-                tableExplorers: {...state.tableExplorers, config: {byId}},
-              };
-            });
-        },
-      })(set, get, api),
-      ...createHtmlAppRuntimeSlice()(set, get, api),
       ...createMosaicSlice({preagg: {schema: '__roomie_cache.mosaic'}})(
         set,
         get,
         api,
       ),
-      ...createDashboardFeatureSlices({
+      ...createRoomieDomainSlice({
         chartTypes: createDefaultChartTypes({includeCustomSpec: false}),
         addPanelActions: defaultAddPanelActions,
         panelRenderers: createDefaultMosaicDashboardPanelRenderers(),
       })(set, get, api),
-      tableExplorers: {
-        config: {byId: {}},
-        update: (id, settings) =>
-          set((state) => ({
-            tableExplorers: {
-              ...state.tableExplorers,
-              config: {
-                byId: {
-                  ...state.tableExplorers.config.byId,
-                  [id]: TableSettings.parse(settings),
-                },
-              },
-            },
-          })),
-      },
     }),
   ),
 );
 
 /** Complete initialization and validated hydration before enabling edits and saves. */
-export async function initializeRoomie() {
+let initialization: Promise<void> | undefined;
+export function initializeRoomie() {
+  return (initialization ??= initializeRoomieOnce());
+}
+
+async function initializeRoomieOnce() {
   await hydration;
   await roomStore.getState().room.initialize();
   await roomStore.getState().db.refreshTableSchemas();
   const state = roomStore.getState();
   await validateWorkspaceRenderSources(state);
-  for (const settings of Object.values(state.tableExplorers.config.byId))
+  viewStorage = await initializeBrowserViewState(
+    roomStore,
+    config.databasePath,
+  );
+  storage.saveStatus.setView(viewStorage.controller);
+  for (const settings of Object.values(
+    roomStore.getState().tableExplorers.config.byId,
+  ))
     await validateTableFilters(state.db, settings.filters);
   roomStore.getState().commands.unregisterCommands('@sqlrooms/room-shell');
   roomStore.getState().commands.unregisterCommands('@sqlrooms/layout/panels');

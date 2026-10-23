@@ -1,0 +1,32 @@
+{
+  "name": "roomie-node",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "test": "node --test --test-timeout=30000 test/*.test.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@duckdb/node-api": "2.0.0-r.1",
+    "@sqlrooms/documents": "workspace:*",
+    "@sqlrooms/duckdb-node": "workspace:*",
+    "@sqlrooms/mosaic": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
+    "loro-crdt": "^1.10.3",
+    "loro-mirror": "^1.1.2",
+    "react": "^19.2.0",
+    "zod": "^4.1.13",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "5.9.3",
+    "vite": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=24.9 <25"
+  }
+}
