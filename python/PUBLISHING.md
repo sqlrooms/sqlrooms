@@ -6,7 +6,7 @@ the independently maintained `sqlrooms-rag` package or the npm packages.
 
 ## Prerequisites
 
-- Node 24, pnpm 11, uv, and Python >=3.10 available as `python`.
+- Node 24.22.1+ (24.x), pnpm 11, uv, and Python >=3.10 available as `python`.
 - PyPI permission to publish each target package. Verify ownership of the
   `roomie` name separately; an available-looking name does not establish rights
   to publish it.

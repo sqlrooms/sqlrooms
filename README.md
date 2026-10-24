@@ -128,7 +128,7 @@ Your application should have the following dependencies:
 
 - [React 18+](https://react.dev/) (React 19 is supported)
 - [Tailwind CSS](https://tailwindcss.com/)
-- [Node.js](https://nodejs.org/) >= 22
+- [Node.js](https://nodejs.org/) 22.23.4+, 24.22.1+, or 26.12.1+ within a supported release line (see the [October 2026 security advisory](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases))
 
 SQLRooms uses [Zustand](https://zustand.docs.pmnd.rs) for state management and [Zod](https://zod.dev) for schema validation internally, but you don't need to install them separately
 
@@ -395,9 +395,11 @@ The `useSql` hook automatically re-runs queries when the database state changes 
 
 ## Develop locally
 
-Repository development and testing require Node.js `>=24.9`. This tooling
-requirement does not change the Node.js versions supported by published
-packages.
+Repository development and testing require Node.js `^24.22.1 || >=26.12.1`.
+CI uses Node.js `24.22.1`, which includes the
+[October 2026 security fixes](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases).
+This tooling requirement does not change the Node.js versions supported by
+published packages.
 
 ```bash
 pnpm install
