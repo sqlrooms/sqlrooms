@@ -44,7 +44,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '24.22.1'
+          node-version: '24'
+          check-latest: true
 
       - name: Install jq
         run: sudo apt-get install -y jq

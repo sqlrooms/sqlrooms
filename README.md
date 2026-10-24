@@ -396,7 +396,8 @@ The `useSql` hook automatically re-runs queries when the database state changes 
 ## Develop locally
 
 Repository development and testing require Node.js `^24.22.1 || >=26.12.1`.
-CI uses Node.js `24.22.1`, which includes the
+CI uses the latest Node.js 24 release with `check-latest: true` to pick up security
+updates. The minimum versions above include the
 [October 2026 security fixes](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases).
 This tooling requirement does not change the Node.js versions supported by
 published packages.
