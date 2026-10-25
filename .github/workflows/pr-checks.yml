@@ -66,6 +66,12 @@ jobs:
       - name: Typecheck examples
         run: pnpm typecheck:examples
 
+      - name: Build isolated harness acceptance image
+        run: |
+          docker build -t roomie-harness-m4:local apps/roomie-node/container
+          docker build -f apps/roomie-node/container/Dockerfile.test -t roomie-harness-m4-test:local apps/roomie-node
+          echo "ROOMIE_ISOLATION_IMAGE=$(docker image inspect --format '{{.Id}}' roomie-harness-m4-test:local)" >> "$GITHUB_ENV"
+
       - name: Test
         run: pnpm test --filter='!./python/*'
 

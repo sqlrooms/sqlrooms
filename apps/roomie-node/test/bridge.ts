@@ -98,3 +98,8 @@ export function legacyDocumentSnapshot(
     doc.free();
   }
 }
+
+export {
+  prepareIsolatedHarness,
+  recoverIsolatedHarnesses,
+} from '../src/harnessIsolation';

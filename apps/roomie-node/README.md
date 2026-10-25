@@ -1,6 +1,6 @@
 # Roomie Node workspace host
 
-This is the **M1a + M1b + M2 draft** of the Roomie Node Workspace and Cloud
+This is the **M1–M3 and initial M4 draft** of the Roomie Node Workspace and Cloud
 Agents plan, stacked on PR #960 (`eed050a6`) and #959 (`8eb7a853`). It is an
 in-process host API and authenticated loopback MCP server, with real native
 databases and shared Roomie commands.
@@ -90,9 +90,8 @@ the same extracted `createRoomieDomainSlice` and command definitions.
   An uncertain commit is resolved from a fresh SQLite reader. Unreadable
   receipts or failed reconstruction stop subsequent reads and writes.
 
-No transaction spans both databases. This API deliberately exposes no arbitrary
-SQL, file import or shell effect inside the content commit gate. Those operations
-need separate intent/reconciliation records in later milestones.
+No transaction spans both databases. Analytical uploads have separate intent and
+reconciliation records; shell effects never enter the content commit gate.
 
 ## Quack and platform verification
 
@@ -109,10 +108,10 @@ transaction rollback, tentative reads/publication, nested content, slow
 preparation, uncertain responses, failed-closed recovery, owner exclusion and
 real process crashes before/after commit.
 
-**This is trusted local development mode.** The authenticated MCP endpoint is
-loopback-only. There is no sandboxed harness or locked hosted DuckDB configuration yet.
-Quack clients deliberately receive broad analytical authority. Do not deploy
-this foundation as the hosted security boundary.
+The authenticated MCP endpoint stays loopback-only. The analytical instance is
+locked before exposure, and container-isolated harness mode is available below.
+Quack clients deliberately receive broad analytical authority. Hosted lifecycle,
+external watchdog and unattended release acceptance remain unfinished.
 
 ## Remaining plan work
 
@@ -123,14 +122,14 @@ only in Loro. The explicit `stateOwnership.ts` schemas and single-owner field
 test reject newly persisted fields until classified. The Node viewer now uses authenticated host subscriptions and the shared chat runtime;
 the existing Python/browser launcher remains separate.
 
-M2 provides harness supervision, browser SQL/Arrow and committed-content subscriptions,
-and conversations/approvals. M3/M4 retain revision-checked browser editing,
-migration/bundles, platform distribution and hosted isolation. Loro snapshot compaction and bounded history retention also
-remain to be added; this draft replays the committed update log in order.
+M2 provides harness supervision, browser SQL/Arrow and committed-content subscriptions.
+M3 adds revision-checked editing, query/upload parity, migration and consistent
+bundles. M4 adds the second live harness and the isolation boundary described
+below; distribution and hosted lifecycle/soak acceptance remain unfinished.
+Loro snapshot compaction and bounded history retention also remain to be added.
 
-Do not copy an active workspace directory as a portable bundle. Stop the host
-before copying until consistent two-database export is implemented. Artifact
-and block IDs are already preserved by durable content recovery.
+Do not copy an active workspace directory as a portable bundle. Use
+`exportBundle` for a consistent two-database snapshot with stable IDs.
 
 ## Authenticated MCP (M1b)
 
@@ -271,10 +270,89 @@ Claude reports usage; both adapters currently report no live input, native-sessi
 continuation, approval recovery, reasoning summaries or plan updates. New runs
 persist their harness identifier, while older records remain compatible. A fresh
 turn does not imply native context continuation. Cancellation/restart invalidates
-pending native approvals. This is still trusted-local development mode: enforced
-OS isolation, locked analytical database configuration, Sprite leases and external
-watchdog acceptance remain unfinished M4 work. See
+pending native approvals. Choose trusted-local or isolated mode explicitly.
+Sprite leases, external watchdog and deployed soak acceptance remain unfinished. See
 [M4 verification](../../dev-docs/verification/roomie-m4.md).
+
+## Enforced harness isolation and locked analytics (M4)
+
+Build the reviewed image locally; runtime accepts its immutable image ID and
+never pulls an image or falls back to trusted-local execution:
+
+```sh
+docker build -t roomie-harness-m4:local apps/roomie-node/container
+docker image inspect --format '{{.Id}}' roomie-harness-m4:local
+```
+
+```ts
+await startWorkspaceServer({
+  workspace,
+  harness: {
+    adapter: 'codex', // or 'claude'
+    isolation: {
+      image: 'sha256:<the-64-character-local-image-id>',
+      modelEnvironment: {OPENAI_API_KEY: process.env.OPENAI_API_KEY},
+    },
+  },
+});
+```
+
+Use exactly one of `isolation` or `trustedLocal: true`. Run the host as a nonroot
+OS user with access to its Docker daemon. Linux uses the host network to reach
+the loopback API; macOS Docker Desktop uses `host.docker.internal` with the
+original Host header. **This is filesystem/process isolation, not network egress
+isolation.** Other services still require their own authentication. Neither
+owner nor Quack credentials are delegated. The run token grants MCP only, is
+revoked on completion/cancellation, and does not grant browser tickets or approval
+resolution. The host owns the Docker daemon; it is never mounted into the run.
+
+The container runs nonroot with all capabilities dropped, no-new-privileges,
+private PID/mount namespaces, read-only root, 1 GiB memory, 2 CPUs and 128 PIDs.
+Only per-run input files are mounted read-only. The writable working directory
+is a 256 MiB tmpfs; temporary home/files use a separate 512 MiB tmpfs. Files,
+metadata, WALs, bundles, backups, host home and other workspaces are not mounted.
+Shell subprocesses inherit this boundary. Run files are disposable; commands and
+SQLite events remain the durable state. No native continuation is advertised.
+
+Only explicitly supplied `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` values enter the
+container. Codex's supported API-key login command writes the delegated key into
+the disposable home. Host account/configuration files are never copied. Known
+delegated keys are redacted from events/blobs. The host environment is not passed
+through. `ROOMIE_ISOLATION_IMAGE` selects this mode in `test/live-m2.mjs`; otherwise
+that development driver retains explicit trusted-local mode.
+
+Cancellation removes the container before terminal publication. Startup failures
+and immediate cancellation do not fall back to the host process. Reopening the
+isolated host removes containers labeled for that workspace before admitting
+runs. A container-local timer also exits ordinary abandoned work, but is not an
+external watchdog or protection against a harness stopping its own timer process.
+Codex's nested shell sandbox currently refuses namespace creation under this
+container profile; this mode deliberately does not loosen Docker restrictions
+for shell execution. Workspace work uses shared MCP commands.
+
+Every workspace now preloads required signed extensions, disables persistent
+secrets and automatic extension installation/loading, disables external access,
+and locks all configuration before exposing any connection. Quack additionally
+preloads `httpfs` for crypto. Upload bytes enter one host-created disposable
+exchange directory; no broad home/temp/workspace allowlist is added. DuckDB itself
+adds its own analytical database/WAL/spill paths when locking. Metadata, owner
+credentials and backups remain outside that allowance. The same locked instance
+serves Arrow, imports, Mosaic sessions and Quack, including stop/restart for
+consistent bundle export. Renderer SQL policy remains an additional boundary.
+
+For reproducible real-process and Quack bypass acceptance:
+
+```sh
+docker build -f apps/roomie-node/container/Dockerfile.test \
+  -t roomie-harness-m4-test:local apps/roomie-node
+ROOMIE_ISOLATION_IMAGE=$(docker image inspect --format '{{.Id}}' roomie-harness-m4-test:local) \
+  pnpm --filter roomie-node test
+```
+
+Container tests are opt-in locally and required in Linux JavaScript CI. They use
+synthetic canaries and a native protocol fixture, and verify the installed real
+Codex/Claude versions. See [isolation verification](../../dev-docs/verification/roomie-m4-isolation.md)
+for evidence and limits; this does not complete the hosted M4 release gate.
 
 ## Browserless Codex slice (M2)
 
@@ -298,8 +376,8 @@ skill in an isolated discovery directory, and issues a revocable MCP-only run
 token. The canonical skill bytes are content-addressed; the harness gets a copy.
 Configured user MCP servers and plugins are disabled for this adapter. This is
 configuration hygiene, not a security sandbox: the process uses the owner's local
-Codex authentication. Enforced filesystem/network isolation, a parent-independent
-watchdog, and hosted deployment remain M4. No hosted isolation is claimed.
+Codex authentication. The isolated mode below is the enforced alternative;
+a parent-independent watchdog and hosted deployment remain M4.
 
 One run is active at a time. Runs, completed message batches, tool activity,
 unknown-event diagnostics, and approvals use the same SQLite WAL/FULL writer as

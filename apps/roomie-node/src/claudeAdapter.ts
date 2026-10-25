@@ -25,50 +25,53 @@ export function startClaude(options: HarnessAdapterOptions): HarnessAdapter {
       roomie: {
         type: 'http',
         url: options.mcpUrl,
-        headers: {Authorization: 'Bearer ${ROOMIE_RUN_TOKEN}'},
+        headers: {
+          Authorization: 'Bearer ${ROOMIE_RUN_TOKEN}',
+          ...(options.process ? {Host: options.process.mcpHost} : {}),
+        },
       },
     },
   });
-  const child = spawn(
-    options.executable ?? 'claude',
-    [
-      '-p',
-      '--input-format',
-      'stream-json',
-      '--output-format',
-      'stream-json',
-      '--verbose',
-      '--no-session-persistence',
-      '--restricted',
-      '--setting-sources',
-      '',
-      '--settings',
-      '{"disableAllHooks":true,"disableBundledSkills":true}',
-      '--tools',
-      'Skill',
-      '--plugin-dir',
-      join(options.cwd, '.claude'),
-      '--no-chrome',
-      '--strict-mcp-config',
-      '--mcp-config',
-      config,
-      '--permission-mode',
-      'manual',
-      '--permission-prompt-tool',
-      'stdio',
-      '--max-turns',
-      '48',
-      '--append-system-prompt',
-      'Use the roomie skill and Roomie MCP commands for all workspace work. Await owner approvals. Never inspect host data or credentials.',
-      ...(options.model ? ['--model', options.model] : []),
-    ],
-    {
-      cwd: options.cwd,
-      env: {...process.env, ROOMIE_RUN_TOKEN: options.token},
-      detached: true,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    },
-  );
+  const launch =
+    options.process?.spawn ??
+    ((command: string, args: string[]) =>
+      spawn(command, args, {
+        cwd: options.cwd,
+        env: {...process.env, ROOMIE_RUN_TOKEN: options.token},
+        detached: true,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }));
+  const child = launch(options.executable ?? 'claude', [
+    '-p',
+    '--input-format',
+    'stream-json',
+    '--output-format',
+    'stream-json',
+    '--verbose',
+    '--no-session-persistence',
+    '--restricted',
+    '--setting-sources',
+    '',
+    '--settings',
+    '{"disableAllHooks":true,"disableBundledSkills":true}',
+    '--tools',
+    'Skill',
+    '--plugin-dir',
+    join(options.cwd, '.claude'),
+    '--no-chrome',
+    '--strict-mcp-config',
+    '--mcp-config',
+    config,
+    '--permission-mode',
+    'manual',
+    '--permission-prompt-tool',
+    'stdio',
+    '--max-turns',
+    '48',
+    '--append-system-prompt',
+    'Use the roomie skill and Roomie MCP commands for all workspace work. Await owner approvals. Never inspect host data or credentials.',
+    ...(options.model ? ['--model', options.model] : []),
+  ]);
   let killed = false;
   let configured = false;
   let stopping = false,
@@ -87,10 +90,14 @@ export function startClaude(options: HarnessAdapterOptions): HarnessAdapter {
   >();
   const denied = new Set<string>();
   const seen = new Set<string>();
-  const done = new Promise<void>((resolve) =>
-    child.once('close', () => resolve()),
-  );
+  const done = options.process
+    ? options.process.done(child)
+    : new Promise<void>((resolve) => child.once('close', () => resolve()));
   function kill() {
+    if (options.process) {
+      options.process.kill();
+      return;
+    }
     if (!child.pid || killed) return;
     try {
       process.kill(-child.pid, 'SIGKILL');

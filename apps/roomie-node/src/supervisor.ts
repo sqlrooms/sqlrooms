@@ -8,6 +8,11 @@ import {startCodexHarness} from './codexHarness';
 import {startClaude} from './claudeAdapter';
 import type {HarnessAdapter} from './harnessAdapter';
 import {runError} from './runLog';
+import {
+  prepareIsolatedHarness,
+  type HarnessIsolation,
+  type IsolatedHarnessProcess,
+} from './harnessIsolation';
 import skill from '../skills/roomie/SKILL.md?raw';
 
 /** Capabilities supported by the initial fresh-turn Codex adapter. */
@@ -30,6 +35,7 @@ export function createSupervisor(options: {
   adapter?: 'codex' | 'claude';
   executable?: string;
   model?: string;
+  isolation?: HarnessIsolation;
 }) {
   const log = options.workspace.runs;
   const deadlineMs = z
@@ -48,6 +54,7 @@ export function createSupervisor(options: {
         token: string;
         timer: ReturnType<typeof setTimeout>;
         adapter?: HarnessAdapter;
+        boundary?: IsolatedHarnessProcess;
         stopping: boolean;
       }
     | undefined;
@@ -75,6 +82,11 @@ export function createSupervisor(options: {
     stopping = (async () => {
       try {
         await active.adapter?.stop();
+        // Startup may be creating a container. Do not publish terminal/admit a
+        // new run until that boundary has been removed too.
+        await starting;
+        await active.adapter?.stop();
+        await active.boundary?.dispose();
         await options.drain?.();
         await options.workspace.flush();
         flush();
@@ -101,7 +113,10 @@ export function createSupervisor(options: {
       );
       if (!result.created) return result.run;
       const token = options.credentials.issue();
-      log.setSecrets([token]);
+      log.setSecrets([
+        token,
+        ...Object.values(options.isolation?.modelEnvironment ?? {}),
+      ]);
       const active = {
         id: result.run.runId,
         token,
@@ -111,6 +126,7 @@ export function createSupervisor(options: {
         ),
         stopping: false,
         adapter: undefined as HarnessAdapter | undefined,
+        boundary: undefined as IsolatedHarnessProcess | undefined,
       };
       current = active;
       starting = (async () => {
@@ -145,11 +161,27 @@ export function createSupervisor(options: {
           );
         }
         if (active.stopping) return;
+        const process = options.isolation
+          ? await prepareIsolatedHarness({
+              isolation: options.isolation,
+              cwd,
+              mcpUrl: options.mcpUrl,
+              token,
+              workspaceDirectory: options.workspace.directory,
+              deadlineMs,
+            })
+          : undefined;
+        active.boundary = process;
+        if (active.stopping) {
+          await process?.dispose();
+          return;
+        }
         active.adapter = (
           options.adapter === 'claude' ? startClaude : startCodexHarness
         )({
-          cwd,
-          mcpUrl: options.mcpUrl,
+          cwd: process?.cwd ?? cwd,
+          mcpUrl: process?.mcpUrl ?? options.mcpUrl,
+          process,
           token,
           executable: options.executable,
           model: options.model,

@@ -1,4 +1,5 @@
 import {spawn} from 'node:child_process';
+import type {IsolatedHarnessProcess} from './harnessIsolation';
 import {readFileSync} from 'node:fs';
 import {homedir} from 'node:os';
 import {join} from 'node:path';
@@ -18,6 +19,7 @@ export type CodexMessage = z.infer<typeof Message>;
 /** Bounded stdio adapter for Codex app-server 0.163.0. Owner approvals never auto-resolve. */
 export function startCodex(options: {
   cwd: string;
+  process?: IsolatedHarnessProcess;
   mcpUrl: string;
   token: string;
   executable?: string;
@@ -34,15 +36,17 @@ export function startCodex(options: {
     'features.plugins=false',
   ];
   try {
-    const config = parse(
-      readFileSync(
-        join(
-          process.env.CODEX_HOME ?? join(homedir(), '.codex'),
-          'config.toml',
-        ),
-        'utf8',
-      ),
-    );
+    const config = options.process
+      ? {}
+      : parse(
+          readFileSync(
+            join(
+              process.env.CODEX_HOME ?? join(homedir(), '.codex'),
+              'config.toml',
+            ),
+            'utf8',
+          ),
+        );
     const servers = config.mcp_servers;
     if (servers && typeof servers === 'object' && !Array.isArray(servers)) {
       for (const name of Object.keys(servers))
@@ -55,25 +59,25 @@ export function startCodex(options: {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
-  const child = spawn(
-    options.executable ?? 'codex',
-    [
-      'app-server',
-      '--listen',
-      'stdio://',
-      '-c',
-      `mcp_servers={roomie={url=${JSON.stringify(options.mcpUrl)},bearer_token_env_var="ROOMIE_RUN_TOKEN",required=true,startup_timeout_sec=20,tool_timeout_sec=60}}`,
-      '-c',
-      'mcp_servers.roomie.default_tools_approval_mode="approve"',
-      ...overrides,
-    ],
-    {
-      cwd: options.cwd,
-      env: {...process.env, ROOMIE_RUN_TOKEN: options.token},
-      detached: true,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    },
-  );
+  const launch =
+    options.process?.spawn ??
+    ((command: string, args: string[]) =>
+      spawn(command, args, {
+        cwd: options.cwd,
+        env: {...process.env, ROOMIE_RUN_TOKEN: options.token},
+        detached: true,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }));
+  const child = launch(options.executable ?? 'codex', [
+    'app-server',
+    '--listen',
+    'stdio://',
+    '-c',
+    `mcp_servers={roomie={url=${JSON.stringify(options.mcpUrl)},${options.process ? `http_headers={Host=${JSON.stringify(options.process.mcpHost)}},` : ''}bearer_token_env_var="ROOMIE_RUN_TOKEN",required=true,startup_timeout_sec=20,tool_timeout_sec=60}}`,
+    '-c',
+    'mcp_servers.roomie.default_tools_approval_mode="approve"',
+    ...overrides,
+  ]);
   let nextId = 0,
     buffered = '',
     bytes = 0,
@@ -83,14 +87,18 @@ export function startCodex(options: {
     number,
     {resolve: (value: unknown) => void; reject: (error: Error) => void}
   >();
-  const done = new Promise<void>((resolve) =>
-    child.once('close', () => resolve()),
-  );
+  const done = options.process
+    ? options.process.done(child)
+    : new Promise<void>((resolve) => child.once('close', () => resolve()));
   const write = (value: unknown) => {
     if (stopping || child.stdin.destroyed) throw new Error('Harness stopped.');
     child.stdin.write(JSON.stringify(value) + '\n');
   };
   function kill(signal: NodeJS.Signals) {
+    if (options.process) {
+      options.process.kill();
+      return;
+    }
     if (!child.pid) return;
     try {
       process.kill(-child.pid, signal);

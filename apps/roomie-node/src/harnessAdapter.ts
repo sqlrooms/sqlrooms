@@ -1,6 +1,8 @@
+import type {IsolatedHarnessProcess} from './harnessIsolation';
 /** Host-owned lifecycle callbacks shared by native harness adapters. */
 export type HarnessAdapterOptions = {
   cwd: string;
+  process?: IsolatedHarnessProcess;
   mcpUrl: string;
   token: string;
   executable?: string;

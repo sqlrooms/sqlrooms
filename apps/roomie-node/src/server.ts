@@ -8,6 +8,10 @@ import {readFile} from 'node:fs/promises';
 import {resolve, extname, sep} from 'node:path';
 import {HarnessStartTurn, HarnessApprovalDecision} from '@sqlrooms/ai-config';
 import {createSupervisor} from './supervisor';
+import {
+  recoverIsolatedHarnesses,
+  type HarnessIsolation,
+} from './harnessIsolation';
 import {attachWorkspaceSockets} from './sockets';
 import {Server} from '@modelcontextprotocol/sdk/server/index.js';
 import {StreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -27,9 +31,11 @@ export async function startWorkspaceServer(options: {
   port?: number;
   /** Built Roomie UI directory; root serves the document-read-only node.html entry. */
   uiDirectory?: string;
-  /** Explicit trusted local harness mode; no hosted isolation claim. */
+  /** Explicit trusted-local mode or an enforced container boundary. */
   harness?: {
-    trustedLocal: true;
+    trustedLocal?: true;
+    /** Required for enforced isolation; never falls back to trusted-local execution. */
+    isolation?: HarnessIsolation;
     /** Native harness used for new turns; defaults to Codex. */
     adapter?: 'codex' | 'claude';
     executable?: string;
@@ -39,8 +45,15 @@ export async function startWorkspaceServer(options: {
   /** Additional host policy can deny calls; it cannot grant missing credentials. */
   policy?: RoomCapabilityPolicy;
 }) {
-  if (options.harness && options.harness.trustedLocal !== true)
-    throw new Error('Harness execution requires explicit trustedLocal: true.');
+  if (
+    options.harness &&
+    Boolean(options.harness.trustedLocal) === Boolean(options.harness.isolation)
+  )
+    throw new Error(
+      'Choose exactly one harness mode: trustedLocal or isolation.',
+    );
+  if (options.harness?.isolation)
+    await recoverIsolatedHarnesses(options.workspace.directory);
   const access = createWorkspaceAccess();
   const runtime = createWorkspaceMcpRuntime(options.workspace, options.policy);
   let origin = '';

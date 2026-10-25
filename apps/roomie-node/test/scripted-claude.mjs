@@ -8,7 +8,15 @@ function complete(error = false) {
     uuid: 'answer',
     message: {
       content: [
-        {type: 'text', text: process.env.ROOMIE_RUN_TOKEN + ' Claude hello'},
+        {
+          type: 'text',
+          text:
+            process.env.ROOMIE_RUN_TOKEN +
+            (prompt.includes('key echo')
+              ? ' ' + process.env.OPENAI_API_KEY
+              : '') +
+            ' Claude hello',
+        },
       ],
     },
   });
@@ -47,6 +55,84 @@ for await (const line of createInterface({input: process.stdin})) {
         ? ['Bash']
         : ['Skill', 'mcp__roomie__search_commands'],
     });
+    if (prompt.includes('bypass suite:')) {
+      const {request} = await import('node:http');
+      const cfg = JSON.parse(
+        process.argv[process.argv.indexOf('--mcp-config') + 1],
+      ).mcpServers.roomie;
+      const probe = JSON.parse(prompt.split('bypass suite:')[1]);
+      const sendHttp = (url, body, authority = cfg.headers.Host) =>
+        new Promise((resolve, reject) => {
+          const r = request(
+            url,
+            {
+              method: 'POST',
+              headers: {
+                Host: authority ?? new URL(url).host,
+                Authorization: 'Bearer ' + process.env.ROOMIE_RUN_TOKEN,
+                'Content-Type': 'application/json',
+                Accept: 'application/json, text/event-stream',
+              },
+            },
+            (res) => {
+              let raw = '';
+              res.on('data', (x) => (raw += x));
+              res.on('end', () =>
+                resolve({status: res.statusCode, body: JSON.parse(raw)}),
+              );
+            },
+          );
+          r.on('error', reject);
+          r.end(JSON.stringify(body));
+        });
+      const origin = new URL(cfg.url).origin;
+      const ticket = await sendHttp(origin + '/api/auth/ticket', {});
+      const approval = await sendHttp(origin + '/api/approvals/resolve', {
+        approvalId: 'fake',
+        decision: 'approve',
+      });
+      const other = await sendHttp(
+        probe.other,
+        {jsonrpc: '2.0', id: 1, method: 'tools/list'},
+        probe.otherHost,
+      );
+      const query = await sendHttp(cfg.url, {
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/call',
+        params: {
+          name: 'query',
+          arguments: {sql: `SELECT * FROM read_blob('${probe.metadata}')`},
+        },
+      });
+      const create = await sendHttp(cfg.url, {
+        jsonrpc: '2.0',
+        id: 3,
+        method: 'tools/call',
+        params: {
+          name: 'execute_command',
+          arguments: {
+            commandId: 'block-document.create',
+            input: {title: 'Isolated shared command'},
+            commit: {operationId: 'isolated-create'},
+          },
+        },
+      });
+      send({
+        type: 'assistant',
+        uuid: 'bypass-result',
+        message: {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ticket, approval, other, query, create}),
+            },
+          ],
+        },
+      });
+      send({type: 'result', subtype: 'success', is_error: false});
+      continue;
+    }
     if (prompt.includes('wait forever')) continue;
     if (prompt.includes('approval')) {
       send({

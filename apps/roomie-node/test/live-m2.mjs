@@ -46,7 +46,17 @@ const server = await startWorkspaceServer({
   port: Number(process.env.ROOMIE_M2_PORT ?? 0),
   uiDirectory: resolve('../roomie-cli-ui/dist'),
   harness: {
-    trustedLocal: true,
+    ...(process.env.ROOMIE_ISOLATION_IMAGE
+      ? {
+          isolation: {
+            image: process.env.ROOMIE_ISOLATION_IMAGE,
+            modelEnvironment: {
+              OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+              ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+            },
+          },
+        }
+      : {trustedLocal: true}),
     adapter,
     executable: process.env.ROOMIE_HARNESS_EXECUTABLE,
     deadlineMs: 300000,
