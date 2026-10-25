@@ -125,6 +125,7 @@ export function createNodeDuckDbConnector(
         }
         connection = null;
       }
+      instance?.closeSync();
       instance = null;
       // Give native module time to clean up resources
       await new Promise((resolve) => setTimeout(resolve, 0));

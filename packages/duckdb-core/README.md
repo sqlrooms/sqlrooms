@@ -452,3 +452,6 @@ function AdvancedOperations() {
 ```
 
 For more information, visit the SQLRooms documentation.
+
+`arrowTableToJson` preserves DECIMAL values as exact scaled strings (for example
+`"12.34"`), including negative values and nulls, instead of unscaled coefficients.

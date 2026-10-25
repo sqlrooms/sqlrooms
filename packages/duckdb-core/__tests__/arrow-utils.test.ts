@@ -5,6 +5,21 @@ import {arrowTableToJson} from '../src/arrow-utils';
 
 describe('arrow-utils', () => {
   describe('arrowTableToJson', () => {
+    it('preserves exact decimal units including null and negative values', () => {
+      const amounts = arrow.vectorFromArray(
+        [
+          new Uint32Array([1234, 0, 0, 0]),
+          null,
+          new Uint32Array([4294966062, 4294967295, 4294967295, 4294967295]),
+        ],
+        new arrow.Decimal(2, 10, 128),
+      );
+      expect(arrowTableToJson(new arrow.Table({amount: amounts}))).toEqual([
+        {amount: '12.34'},
+        {amount: null},
+        {amount: '-12.34'},
+      ]);
+    });
     it('should convert Arrow table to JSON array', () => {
       // Create a simple Arrow table
       const data: Array<{id: bigint; name: string; score: number}> = [
