@@ -358,3 +358,181 @@ test(
     await assert.rejects(readFile(join(cwd, '.codex', 'auth.json')));
   },
 );
+
+test(
+  'real isolated Codex app-server commits through shared MCP with a credential-free scripted model',
+  enabled,
+  async (t) => {
+    const {createServer} = await import('node:http');
+    const {mkdirSync, writeFileSync} = await import('node:fs');
+    const {root} = await fixture(t);
+    let requests = 0,
+      seenTools = [],
+      received = [];
+    const model = createServer(async (request, response) => {
+      let raw = '';
+      for await (const chunk of request) raw += chunk;
+      const body = JSON.parse(raw);
+      received.push(body.input);
+      requests++;
+      const tools = (body.tools ?? []).flatMap((tool) =>
+        tool.type === 'namespace'
+          ? (tool.tools ?? []).map((child) => ({
+              ...child,
+              name: child.name,
+              namespace: tool.name,
+            }))
+          : [tool],
+      );
+      seenTools = tools.map((tool) => tool.name);
+      const command = tools.find(
+        (tool) =>
+          tool.namespace?.includes('roomie') &&
+          tool.name === (requests === 1 ? 'query' : 'execute_command'),
+      );
+      const item =
+        requests <= 2 && command
+          ? {
+              id: 'fc' + requests,
+              type: 'function_call',
+              call_id: 'call' + requests,
+              name: command.name,
+              namespace: command.namespace,
+              arguments: JSON.stringify(
+                requests === 1
+                  ? {
+                      sql: `SELECT * FROM read_blob('${join(root, 'workspace', 'meta.sqlite')}')`,
+                    }
+                  : {
+                      commandId: 'block-document.create',
+                      input: {title: 'Real isolated Codex'},
+                      commit: {operationId: 'real-isolated-codex'},
+                    },
+              ),
+              status: 'completed',
+            }
+          : {
+              id: 'msg1',
+              type: 'message',
+              role: 'assistant',
+              status: 'completed',
+              content: [
+                {type: 'output_text', text: 'Shared command completed.'},
+              ],
+            };
+      response.writeHead(200, {'content-type': 'text/event-stream'});
+      const emit = (type, data) =>
+        response.write(
+          `event: ${type}\ndata: ${JSON.stringify({type, ...data})}\n\n`,
+        );
+      emit('response.created', {
+        response: {
+          id: 'response' + requests,
+          status: 'in_progress',
+          output: [],
+        },
+      });
+      emit('response.output_item.added', {output_index: 0, item});
+      emit('response.output_item.done', {output_index: 0, item});
+      emit('response.completed', {
+        response: {
+          id: 'response' + requests,
+          status: 'completed',
+          output: [item],
+          usage: {input_tokens: 1, output_tokens: 1, total_tokens: 2},
+        },
+      });
+      response.end();
+    });
+    await new Promise((resolve) => model.listen(0, '127.0.0.1', resolve));
+    t.after(() => {
+      model.closeAllConnections();
+      model.close();
+    });
+    const url = `http://${process.platform === 'darwin' ? 'host.docker.internal' : '127.0.0.1'}:${model.address().port}/v1`;
+    const workspace = await openWorkspace({directory: join(root, 'workspace')});
+    const original = workspace.runs.start;
+    workspace.runs.start = (...args) => {
+      const result = original(...args);
+      if (result.created) {
+        const cwd = join(workspace.directory, 'sessions', result.run.runId);
+        mkdirSync(cwd, {recursive: true});
+        writeFileSync(join(cwd, 'provider.json'), JSON.stringify({url}));
+      }
+      return result;
+    };
+    const server = await startWorkspaceServer({
+      workspace,
+      harness: {
+        adapter: 'codex',
+        isolation: {image},
+        executable: '/opt/roomie/test-codex.mjs',
+        model: 'fixture-model',
+        deadlineMs: 20000,
+      },
+    });
+    t.after(async () => {
+      await server.dispose();
+      await workspace.dispose();
+    });
+    const {token} = JSON.parse(await readFile(server.credentialPath, 'utf8'));
+    const response = await fetch(server.url + '/api/runs/start', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        idempotencyKey: 'native-codex',
+        text: 'Use the shared command to create the report.',
+      }),
+    });
+    assert.equal(response.status, 200);
+    const run = await response.json();
+    await wait(() =>
+      ['succeeded', 'failed', 'interrupted'].includes(
+        workspace.runs.get(run.runId).status,
+      ),
+    );
+    assert.equal(
+      workspace.runs.get(run.runId).status,
+      'succeeded',
+      JSON.stringify(workspace.runs.events(0)),
+    );
+    assert.ok(
+      workspace.runs
+        .events(0)
+        .some(
+          (e) =>
+            e.kind === 'tool.completed' &&
+            e.payload.name === 'query' &&
+            e.payload.status === 'failed',
+        ),
+    );
+    const event = workspace.runs
+      .events(0)
+      .find(
+        (e) =>
+          e.kind === 'tool.completed' &&
+          e.payload.operationId === 'real-isolated-codex',
+      );
+    assert.ok(
+      event,
+      JSON.stringify({
+        seenTools,
+        received: received
+          .flat()
+          .filter((item) => item.type === 'function_call_output'),
+        events: workspace.runs
+          .events(0)
+          .filter((event) => event.kind.startsWith('tool.')),
+      }),
+    );
+    assert.equal(
+      (await workspace.snapshot()).revisions[
+        event.payload.artifactRefs[0].artifactId
+      ],
+      1,
+    );
+  },
+);

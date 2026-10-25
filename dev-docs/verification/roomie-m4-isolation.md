@@ -56,6 +56,10 @@ revision/receipt behavior are unchanged.
   startup cancellation, descendant termination, workspace container recovery,
   missing-image refusal and a daemon-created container followed by a simulated
   lost client response were tested.
+- The real Codex 0.163.0 app-server, production adapter and MCP client also run
+  against a credential-free scripted model. Codex receives a failed tool result
+  for metadata SQL, then creates a document with a durable revision-1 receipt.
+  The native sandbox and container profile remain enabled.
 - Real Codex 0.163.0 and Claude 2.1.310 binaries execute in the image. A separate
   credential-free Codex probe used a local scripted model and its normal
   workspace-write sandbox: Codex attempted the requested shell tool, but its
@@ -70,7 +74,7 @@ used no provider credentials and did not disable Codex's sandbox.
 
 ## Verification and remaining gates
 
-All 80 native tests pass locally, including six real container regressions; all
+All 81 native tests pass locally, including seven real container regressions; all
 65 shared Node/Python conformance tests pass. Seven focused container/Quack tests
 passed again after adding shell and exchange symlink/traversal probes. Host build
 and typecheck, formatting, Knip and circular-dependency checks pass. Independent

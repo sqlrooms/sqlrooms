@@ -350,8 +350,9 @@ ROOMIE_ISOLATION_IMAGE=$(docker image inspect --format '{{.Id}}' roomie-harness-
 ```
 
 Container tests are opt-in locally and required in Linux JavaScript CI. They use
-synthetic canaries and a native protocol fixture, and verify the installed real
-Codex/Claude versions. See [isolation verification](../../dev-docs/verification/roomie-m4-isolation.md)
+synthetic canaries, a native protocol fixture and the real Codex app-server with
+a credential-free scripted model. They verify the installed Codex/Claude versions
+and actual MCP denial/commit outcomes. See [isolation verification](../../dev-docs/verification/roomie-m4-isolation.md)
 for evidence and limits; this does not complete the hosted M4 release gate.
 
 ## Browserless Codex slice (M2)
