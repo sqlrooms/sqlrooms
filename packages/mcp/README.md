@@ -81,3 +81,7 @@ The `@sqlrooms/mcp/room` entry composes the capability runtime with a room store
 
 These adapters are shared by both local applications. The room entry depends on
 room-shell; room-shell does not depend on this experimental private package.
+
+`searchRoomCommands(descriptors, query, limit)` applies the shared intent ranking
+and bounded search-result projection to detached command descriptors. Hosts can
+use it behind their own persistence/read boundary without exposing a live store.

@@ -1,3 +1,4 @@
+import {searchRoomCommands} from './searchRoomCommands';
 import {
   LOCAL_MCP_TOOLS,
   DEFAULT_QUERY_ROWS,
@@ -289,30 +290,11 @@ export function createLocalRoomCapabilities({
       ...LOCAL_MCP_TOOLS.search_commands,
       execute: (rawInput, context) => {
         const input = rawInput as {query?: string; limit?: number};
-        const query = input.query?.trim().toLowerCase() ?? '';
-        const limit = Math.min(50, Math.max(1, input.limit ?? 10));
-        const commands = listMcpCommands(context)
-          .map((descriptor) => ({
-            descriptor,
-            score: scoreCommand(descriptor, query),
-          }))
-          .filter((entry) => !query || entry.score > 0)
-          .sort(
-            (first, second) =>
-              second.score - first.score ||
-              first.descriptor.id.localeCompare(second.descriptor.id),
-          )
-          .slice(0, limit)
-          .map(({descriptor, score}) => ({
-            id: descriptor.id,
-            name: descriptor.name,
-            description: descriptor.description,
-            group: descriptor.group,
-            enabled: descriptor.enabled,
-            riskLevel: descriptor.riskLevel,
-            requiresConfirmation: descriptor.requiresConfirmation,
-            score,
-          }));
+        const commands = searchRoomCommands(
+          listMcpCommands(context),
+          input.query,
+          input.limit,
+        );
         return {ok: true, data: {commands}};
       },
     };
@@ -472,23 +454,6 @@ export function createLocalRoomCapabilities({
           (commandFilter?.(command) ?? true),
       )
       .map((command) => describeCommand?.(command) ?? command);
-  }
-
-  function scoreCommand(command: RoomCommandDescriptor, query: string) {
-    if (!query) return 1;
-    const terms = query.split(/\s+/).filter(Boolean);
-    const id = command.id.toLowerCase();
-    const name = command.name.toLowerCase();
-    const description = command.description?.toLowerCase() ?? '';
-    const keywords = command.keywords?.join(' ').toLowerCase() ?? '';
-    return terms.reduce((score, term) => {
-      if (id === term) return score + 20;
-      if (id.includes(term)) return score + 10;
-      if (name.includes(term)) return score + 6;
-      if (keywords.includes(term)) return score + 4;
-      if (description.includes(term)) return score + 2;
-      return score;
-    }, 0);
   }
 
   function cancelledCommandResult(commandId: string): RoomCommandResult {
