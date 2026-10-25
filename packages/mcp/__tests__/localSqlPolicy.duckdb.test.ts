@@ -11,6 +11,14 @@ import {
 // under classification is bound or executed, including file scans and DML CTEs.
 const python = process.env.DUCKDB_TEST_PYTHON;
 const cases = {
+  cteUnicode: 'WITH "K" AS (SELECT 1 AS n) SELECT * FROM k',
+
+  cte: 'WITH counts AS (SELECT value, count(*) AS n FROM workspace.main.sales GROUP BY value) SELECT value, sum(n) FROM counts GROUP BY value',
+  cteExternal:
+    "WITH counts AS (SELECT * FROM read_csv('/must-not-be-read')) SELECT * FROM counts",
+  cteScope:
+    'SELECT * FROM hidden WHERE EXISTS (WITH hidden AS (SELECT 1) SELECT * FROM hidden)',
+
   histogram:
     'SELECT floor(value / 100) * 100, count(*) FROM workspace.main.sales WHERE isfinite(value) GROUP BY 1',
   temporal:
@@ -119,6 +127,22 @@ with duckdb.connect() as con:
       return {db, query, getConnector};
     }
 
+    it('admits checked nonrecursive CTEs without granting their aliases to other scopes', async () => {
+      for (const [name, expected] of [
+        ['cte', false],
+        ['cteExternal', true],
+        ['cteScope', true],
+        ['cteUnicode', true],
+      ] as const) {
+        const {db} = database(name);
+        const statements = await inspectLocalSelect(
+          db,
+          cases[name],
+          '__sqlrooms',
+        );
+        expect(await needsLocalReadApproval(db, statements)).toBe(expected);
+      }
+    });
     it('permits verified nested scalar and window expressions', async () => {
       const {db} = database('ordinary');
       const statements = await inspectLocalSelect(

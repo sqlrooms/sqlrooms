@@ -50,9 +50,7 @@ export async function inspectLocalSelect(
     }
     if (
       typeof node.function_name === 'string' &&
-      ['query', 'query_table'].includes(
-        String(node.function_name).toLowerCase(),
-      )
+      ['query', 'query_table'].includes(foldIdentifier(node.function_name))
     ) {
       throw new LocalSqlError(
         'query_dynamic_table_reference',
@@ -73,14 +71,14 @@ export async function inspectLocalSelect(
       references.some((reference) =>
         relations.some(
           (relation) =>
-            String(reference.table_name).toLowerCase() ===
-              String(relation.table_name).toLowerCase() &&
+            foldIdentifier(reference.table_name) ===
+              foldIdentifier(relation.table_name) &&
             (!reference.schema_name ||
-              String(reference.schema_name).toLowerCase() ===
-                String(relation.schema_name).toLowerCase()) &&
+              foldIdentifier(reference.schema_name) ===
+                foldIdentifier(relation.schema_name)) &&
             (!reference.catalog_name ||
-              String(reference.catalog_name).toLowerCase() ===
-                String(relation.database_name).toLowerCase()) &&
+              foldIdentifier(reference.catalog_name) ===
+                foldIdentifier(relation.database_name)) &&
             [
               relation.database_name,
               relation.schema_name,
@@ -123,11 +121,17 @@ export function assertLocalDestination(
   return table;
 }
 
+// DuckDB identifier equality folds ASCII only. Unicode lowercasing can conflate
+// distinct aliases (for example Kelvin sign and k) and hide a protected view.
+function foldIdentifier(value: unknown): string {
+  return String(value).replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+}
+
 function isInternal(value: unknown, namespace: string) {
   return (
     typeof value === 'string' &&
-    (value.toLowerCase() === namespace.toLowerCase() ||
-      value.toLowerCase().startsWith('__sqlrooms'))
+    (foldIdentifier(value) === foldIdentifier(namespace) ||
+      foldIdentifier(value).startsWith('__sqlrooms'))
   );
 }
 
@@ -168,10 +172,10 @@ export async function needsLocalReadApproval(
   const functions = new Set<string>();
   let uncertain = false;
   visitSql(statements, (node) => {
-    if (node.type === 'BASE_TABLE') tables.push(node);
+    if (node.type === 'RECURSIVE_CTE_NODE') uncertain = true;
     if (node.type === 'TABLE_FUNCTION') uncertain = true;
     if (node.class === 'FUNCTION' || node.class === 'WINDOW') {
-      const name = String(node.function_name).toLowerCase();
+      const name = foldIdentifier(node.function_name);
       if (
         !ORDINARY_FUNCTIONS.has(name) ||
         node.schema ||
@@ -182,6 +186,50 @@ export async function needsLocalReadApproval(
       functions.add(name);
     }
   });
+  // Resolve only lexical, nonrecursive CTE aliases. Each definition is checked
+  // in its own scope; aliases never hide sources in siblings or outer queries.
+  const sources = (value: unknown, inherited = new Set<string>()) => {
+    if (!value || typeof value !== 'object') return;
+    if (Array.isArray(value)) {
+      for (const child of value) sources(child, inherited);
+      return;
+    }
+    const node = value as Record<string, unknown>;
+    const scope = new Set(inherited);
+    const entries = (
+      node.cte_map as
+        | {
+            map?: {
+              key?: unknown;
+              value?: {query_node?: unknown; query?: {node?: unknown}};
+            }[];
+          }
+        | undefined
+    )?.map;
+    if (entries)
+      for (const entry of entries) {
+        const query = entry.value?.query_node ?? entry.value?.query?.node;
+        if (typeof entry.key !== 'string' || !query) {
+          uncertain = true;
+          continue;
+        }
+        sources(query, scope);
+        scope.add(foldIdentifier(entry.key));
+      }
+    if (
+      node.type === 'BASE_TABLE' &&
+      !(
+        !node.schema_name &&
+        !node.catalog_name &&
+        qualifiedPath(node).length <= 1 &&
+        scope.has(foldIdentifier(node.table_name))
+      )
+    )
+      tables.push(node);
+    for (const [key, child] of Object.entries(node))
+      if (key !== 'cte_map') sources(child, scope);
+  };
+  sources(statements);
   if (uncertain) return true;
   if (!tables.length && !functions.size) return false;
   const connector = await db.getConnector();
@@ -192,12 +240,12 @@ export async function needsLocalReadApproval(
       ),
     ) as Record<string, unknown>[];
     for (const table of tables) {
-      // Unresolved names (including CTE aliases) are conservative: ask rather
+      // Unresolved physical names are conservative: ask rather
       // than guessing DuckDB's scope/search-path resolution or expanding views.
       const matches = physical.filter(
         (entry) =>
-          String(entry.table_name).toLowerCase() ===
-            String(table.table_name).toLowerCase() &&
+          foldIdentifier(entry.table_name) ===
+            foldIdentifier(table.table_name) &&
           (!table.schema_name || entry.schema_name === table.schema_name) &&
           (!table.catalog_name || entry.database_name === table.catalog_name),
       );
@@ -219,8 +267,8 @@ export async function needsLocalReadApproval(
       tables.some((table) =>
         views.some(
           (view) =>
-            String(view.view_name).toLowerCase() ===
-              String(table.table_name).toLowerCase() &&
+            foldIdentifier(view.view_name) ===
+              foldIdentifier(table.table_name) &&
             (!table.schema_name || table.schema_name === view.schema_name) &&
             (!table.catalog_name || table.catalog_name === view.database_name),
         ),
@@ -235,7 +283,9 @@ export async function needsLocalReadApproval(
       ),
     ) as Record<string, unknown>[];
     for (const name of functions) {
-      const matches = catalog.filter((entry) => entry.function_name === name);
+      const matches = catalog.filter(
+        (entry) => foldIdentifier(entry.function_name) === name,
+      );
       if (
         !matches.length ||
         matches.some(

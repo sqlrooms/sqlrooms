@@ -22,7 +22,7 @@ import {resolveMosaicTableReference} from '../../mosaicTableReference';
 const EMPTY_DASHBOARD_PANELS: MosaicDashboardPanelConfig[] = [];
 
 export const MosaicDashboardPanels: React.FC = () => {
-  const {dashboardId} = useMosaicDashboardContext();
+  const {dashboardId, readOnly} = useMosaicDashboardContext();
   const registerPanel = useStoreWithMosaicDashboard(
     (state) => state.layout.registerPanel,
   );
@@ -59,9 +59,10 @@ export const MosaicDashboardPanels: React.FC = () => {
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
-      setSelectedTable(dashboardId, getTableIdentity(table.table));
+      if (!readOnly)
+        setSelectedTable(dashboardId, getTableIdentity(table.table));
     },
-    [dashboardId, setSelectedTable],
+    [dashboardId, readOnly, setSelectedTable],
   );
 
   useEffect(() => {
@@ -94,14 +95,15 @@ export const MosaicDashboardPanels: React.FC = () => {
         nextLayout && isLayoutDockNode(nextLayout)
           ? nextLayout.root
           : nextLayout;
-      setLayout(dashboardId, innerLayout);
+      if (!readOnly) setLayout(dashboardId, innerLayout);
     },
-    [dashboardId, setLayout],
+    [dashboardId, readOnly, setLayout],
   );
 
   if (!selectedDataTable) {
     return (
       <DataTableSelectorEmptyState
+        disabled={readOnly}
         onChange={handleTableChange}
         tables={tables}
       />

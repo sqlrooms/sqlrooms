@@ -231,7 +231,7 @@ export const MosaicDashboardPanelHeader: FC<
           <TooltipProvider delayDuration={300}>
             <div className="flex shrink-0 items-center gap-0.5">
               {HeaderActions ? <HeaderActions {...rendererProps} /> : null}
-              {renderer?.settings ? (
+              {!readOnly && renderer?.settings ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -256,7 +256,7 @@ export const MosaicDashboardPanelHeader: FC<
                   </TooltipContent>
                 </Tooltip>
               ) : null}
-              {canExpandGridPanel ? (
+              {!readOnly && canExpandGridPanel ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button

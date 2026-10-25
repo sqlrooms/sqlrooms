@@ -1,3 +1,4 @@
+import {useMosaicDashboardContext} from '../MosaicDashboardContext';
 import {FC, useCallback, useMemo} from 'react';
 import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 import {DataTableSelector} from '../../components/DataTableSelector';
@@ -12,6 +13,7 @@ interface MosaicDashboardDataTableSelectorProps {
 export const MosaicDashboardDataTableSelector: FC<
   MosaicDashboardDataTableSelectorProps
 > = ({dashboardId}) => {
+  const {readOnly} = useMosaicDashboardContext();
   const tables = useTablesWithColumns();
   const dashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],
@@ -29,13 +31,15 @@ export const MosaicDashboardDataTableSelector: FC<
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
-      setSelectedTable(dashboardId, getTableIdentity(table.table));
+      if (!readOnly)
+        setSelectedTable(dashboardId, getTableIdentity(table.table));
     },
-    [dashboardId, setSelectedTable],
+    [dashboardId, readOnly, setSelectedTable],
   );
 
   return (
     <DataTableSelector
+      disabled={readOnly}
       onChange={handleTableChange}
       tables={tables}
       value={selectedTable}

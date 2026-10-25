@@ -93,3 +93,7 @@ scans, and unverified functions still require approval.
 Ordinary local reads include arithmetic operators and `isfinite` used by Mosaic
 histograms. These names still require live catalog verification: shadowing macros,
 external readers, dynamic queries and internal namespaces are not admitted.
+
+Verified nonrecursive CTEs use lexical alias resolution; every definition retains
+the same physical-source and function checks. Recursive, unresolved, external and
+shadowed sources remain subject to approval.
