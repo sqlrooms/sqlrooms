@@ -39,7 +39,8 @@
     },
     "roomie-node#test": {
       "dependsOn": ["build"],
-      "cache": false
+      "cache": false,
+      "env": ["ROOMIE_ISOLATION_IMAGE"]
     },
     "@sqlrooms/mcp#test": {
       "env": ["DUCKDB_TEST_PYTHON"],

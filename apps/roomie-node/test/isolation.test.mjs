@@ -18,6 +18,10 @@ import {
 } from '../dist-test/bridge.mjs';
 import {openWorkspace, startWorkspaceServer} from '../dist/index.mjs';
 const image = process.env.ROOMIE_ISOLATION_IMAGE;
+if (process.env.CI && !image)
+  throw new Error(
+    'CI requires ROOMIE_ISOLATION_IMAGE; isolation tests must not be skipped.',
+  );
 const enabled = {skip: !image, timeout: 120000};
 async function fixture(t) {
   const root = await mkdtemp(join(tmpdir(), 'roomie-isolation-'));
