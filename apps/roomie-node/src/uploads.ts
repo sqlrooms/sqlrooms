@@ -1,7 +1,6 @@
 import {createHash} from 'node:crypto';
 import {mkdtemp, writeFile, rm} from 'node:fs/promises';
 import {join} from 'node:path';
-import {tmpdir} from 'node:os';
 import {z} from 'zod';
 import {escapeVal} from '@sqlrooms/duckdb-core';
 import type {NodeDuckDbConnector} from '@sqlrooms/duckdb-node';
@@ -19,6 +18,7 @@ export function createUploads(
   connector: NodeDuckDbConnector,
   metadata: MetadataStore,
   refresh: () => Promise<unknown>,
+  exchangeDirectory: string,
 ) {
   let queue = Promise.resolve();
   let pending = 0;
@@ -55,7 +55,7 @@ export function createUploads(
       let directory = '';
       const deadline = setTimeout(() => connection.interrupt(), 30000);
       try {
-        directory = await mkdtemp(join(tmpdir(), 'roomie-upload-'));
+        directory = await mkdtemp(join(exchangeDirectory, 'upload-'));
         const prior = (
           await connection.runAndReadAll(
             `SELECT request_hash, table_name FROM __roomie.data_operations WHERE operation_id=${escapeVal(input.operationId)}`,

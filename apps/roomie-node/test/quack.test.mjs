@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
-import {mkdtemp, rm} from 'node:fs/promises';
+import {mkdtemp, rm, symlink} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {join, relative} from 'node:path';
 import {createServer} from 'node:net';
 import {test} from 'node:test';
 import {DuckDBInstance} from '@duckdb/node-api';
@@ -51,6 +51,65 @@ test('opt-in native Quack authenticates clients and shares the native analytics 
       await connection.runAndReadAll('SELECT version() AS version')
     ).getRowObjectsJson();
     assert.equal(version[0].version, 'v2.0.0');
+    // CONNECT sends these statements to the real server instance, bypassing
+    // browser/MCP parsing. Metadata/file safety must hold in DuckDB itself.
+    const settings = Object.fromEntries(
+      (
+        await connection.runAndReadAll(
+          "SELECT name, value FROM duckdb_settings() WHERE name IN ('lock_configuration','enable_external_access','allowed_paths','allowed_directories','allow_persistent_secrets','autoload_known_extensions','autoinstall_known_extensions')",
+        )
+      )
+        .getRowObjectsJson()
+        .map(({name, value}) => [name, value]),
+    );
+    assert.equal(settings.lock_configuration, 'true');
+    assert.equal(settings.enable_external_access, 'false');
+    // DuckDB automatically permits only its own database/WAL paths on lock.
+    assert.ok(!settings.allowed_paths.includes('meta.sqlite'));
+    assert.ok(
+      settings.allowed_paths
+        .split(',')
+        .every((path) => path.includes('/data.duckdb')),
+    );
+    assert.equal(settings.allow_persistent_secrets, 'false');
+    assert.equal(settings.autoload_known_extensions, 'false');
+    assert.equal(settings.autoinstall_known_extensions, 'false');
+    const exchange = settings.allowed_directories
+      .slice(1, -1)
+      .split(', ')
+      .find((path) => path.includes('/roomie-exchange-'));
+    assert.ok(exchange);
+    await symlink(join(directory, 'meta.sqlite'), join(exchange, 'escape'));
+    const traversal =
+      exchange + '/' + relative(exchange, join(directory, 'meta.sqlite'));
+    const privatePath = join(directory, 'meta.sqlite').replaceAll("'", "''");
+    for (const sql of [
+      `SELECT * FROM read_blob('${exchange}/escape')`,
+      `SELECT * FROM read_blob('${traversal}')`,
+      'SET enable_external_access=true',
+      'SET lock_configuration=false',
+      "SET allowed_directories=['/']",
+      `SET allowed_paths=['${privatePath}']`,
+      "SET allowed_configs=['enable_external_access']",
+      'RESET enable_external_access',
+      'INSTALL sqlite',
+      'LOAD sqlite',
+      `ATTACH '${privatePath}' AS stolen (TYPE SQLITE)`,
+      `ATTACH '${privatePath}' AS stolen`,
+      `SELECT * FROM read_blob('${privatePath}')`,
+      `SELECT * FROM read_text('${privatePath}-wal')`,
+      `SELECT * FROM read_csv('${privatePath}')`,
+      `COPY (SELECT 'overwrite') TO '${privatePath}'`,
+      `CREATE VIEW hidden AS SELECT * FROM read_blob('${privatePath}')`,
+      `SELECT 1; SELECT * FROM read_blob('${privatePath}')`,
+      `SELECT * FROM read_text('http://127.0.0.1:1/private')`,
+    ]) {
+      await assert.rejects(
+        connection.run(sql),
+        /disabled|locked|access|permission/i,
+        sql,
+      );
+    }
     const receipt = await host.mutate({
       commandId: 'block-document.create',
       operationId: 'create',

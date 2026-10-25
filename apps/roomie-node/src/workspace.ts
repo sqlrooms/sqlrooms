@@ -25,6 +25,7 @@ import {
 } from '../../roomie-cli-ui/src/contentPersistence';
 import type {RoomState} from '../../roomie-cli-ui/src/RoomState';
 import {createQueryService} from './query';
+import {lockAnalyticalDatabase} from './databaseSecurity';
 import {createUploads, type WorkspaceUpload} from './uploads';
 import {createContent} from './content';
 import {assertCommandTarget, createHostCommands} from './commands';
@@ -70,12 +71,24 @@ export async function openWorkspace(options: {
   if (activeDirectories.has(directory))
     throw new Error('Workspace already has an active host.');
   activeDirectories.add(directory);
+  // Only host-created import bytes enter this disposable exchange directory.
+  let exchange: string;
+  try {
+    exchange = await mkdtemp(join(tmpdir(), 'roomie-exchange-'));
+  } catch (error) {
+    activeDirectories.delete(directory);
+    throw error;
+  }
   const connector = createNodeDuckDbConnector({
     dbPath: join(directory, 'data.duckdb'),
     config: {
       storage_compatibility_version: 'v1.4.0',
       memory_limit: '512MB',
       threads: '4',
+      allow_persistent_secrets: 'false',
+      allow_unsigned_extensions: 'false',
+      allow_extensions_metadata_mismatch: 'false',
+      allow_unredacted_secrets: 'false',
     },
   });
   // DB services live independently of the disposable content projection. Their
@@ -165,11 +178,15 @@ export async function openWorkspace(options: {
       throw new Error(
         'Roomie Node requires native DuckDB v2.0.0; refusing silent downgrade.',
       );
+    await lockAnalyticalDatabase(connector, exchange, Boolean(options.quack));
     metadata = (options.openMetadata ?? openMetadata)(
       join(directory, 'meta.sqlite'),
     );
-    uploads = createUploads(connector, metadata, () =>
-      databaseStore.getState().db.refreshTableSchemas(),
+    uploads = createUploads(
+      connector,
+      metadata,
+      () => databaseStore.getState().db.refreshTableSchemas(),
+      exchange,
     );
     await uploads.initialize();
     rebuild();
@@ -200,7 +217,6 @@ export async function openWorkspace(options: {
         throw new Error(
           'Quack requires a loopback URI and a token of at least 32 safe characters.',
         );
-      await connector.execute('INSTALL quack; LOAD quack');
       await connector.execute(`CALL quack_serve('${uri}', token='${token}')`);
       quackStarted = true;
     }
@@ -208,8 +224,15 @@ export async function openWorkspace(options: {
     unsubscribeDatabase();
     content?.dispose();
     metadata?.close();
-    await connector.destroy();
-    activeDirectories.delete(directory);
+    try {
+      await connector.destroy();
+    } finally {
+      try {
+        await rm(exchange, {recursive: true, force: true});
+      } finally {
+        activeDirectories.delete(directory);
+      }
+    }
     throw error;
   }
   const optionsQuackUri = () => options.quack!.uri;
@@ -436,7 +459,11 @@ export async function openWorkspace(options: {
             try {
               await connector.destroy();
             } finally {
-              activeDirectories.delete(directory);
+              try {
+                await rm(exchange, {recursive: true, force: true});
+              } finally {
+                activeDirectories.delete(directory);
+              }
             }
           }
         }

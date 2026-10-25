@@ -405,3 +405,18 @@ for (const boundary of ['before', 'after']) {
     }
   });
 }
+
+test('exchange allocation failure releases the workspace registration for retry', async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), 'roomie-exchange-retry-'));
+  t.after(() => rm(directory, {recursive: true, force: true}));
+  const prior = process.env.TMPDIR;
+  try {
+    process.env.TMPDIR = join(directory, 'missing-parent', 'tmp');
+    await assert.rejects(openWorkspace({directory}), /ENOENT/);
+  } finally {
+    if (prior === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = prior;
+  }
+  const workspace = await openWorkspace({directory});
+  await workspace.dispose();
+});
