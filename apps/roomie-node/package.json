@@ -4,10 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node copy-ui.mjs",
     "test": "vite build --config test/vite.config.ts && node --test --test-concurrency=1 --test-timeout=30000 test/*.test.mjs",
     "typecheck": "tsc --noEmit",
-    "test:conformance": "vite build --config test/vite.config.ts && node --test --test-timeout=30000 test/conformance.mjs"
+    "test:conformance": "vite build --config test/vite.config.ts && node --test --test-timeout=30000 test/conformance.mjs",
+    "pack:local": "node package-distribution.mjs",
+    "test:distribution": "node test/distribution.mjs"
   },
   "dependencies": {
     "@duckdb/node-api": "2.0.0-r.1",

@@ -6,7 +6,101 @@ in-process host API and authenticated loopback MCP server, with real native
 databases and shared Roomie commands.
 The Python launcher and browser remain available while the replacement is built.
 
-## Run
+## Local launcher and draft distribution
+
+The Node launcher is separate from the existing Python `roomie` command. It
+requires **Node 24.9–24.x**, npm, and macOS or Linux; Python, pnpm and a repository
+checkout are unnecessary after installation. SQLite ships with Node. Native
+DuckDB is installed for the target platform by npm; this is not a bundled Node
+runtime or an offline installer. First startup needs access to download the
+signed DuckDB extensions unless they are already cached.
+
+Build a local tarball from this checkout (the package is private and not published
+to npm):
+
+```sh
+pnpm install --frozen-lockfile
+pnpm exec turbo build --filter=roomie-node
+pnpm --filter roomie-node pack:local
+```
+
+The result is `apps/roomie-node/release/sqlrooms-roomie-node-0.0.0-m4.0.tgz`.
+It contains the Node bundle, the built browser UI, a `roomie-node` executable,
+container build files and license notices. Runtime dependencies are pinned to
+installed versions when packed; there are no `workspace:*` references. npm still
+resolves transitive dependencies when installing. Keep the resulting install's
+`package-lock.json` for repeatable updates. The tarball is platform independent;
+its installed native modules are not. Install separately on each machine rather
+than copying `node_modules` between platforms.
+
+Install into a directory of your choice, then launch from any working directory:
+
+```sh
+npm install --prefix "$HOME/.local/share/roomie-node" --ignore-scripts --no-audit --no-fund \
+  /absolute/path/sqlrooms-roomie-node-0.0.0-m4.0.tgz
+"$HOME/.local/share/roomie-node/node_modules/.bin/roomie-node" \
+  "$HOME/Roomie/my-workspace" --open
+```
+
+The workspace argument is a directory, not an existing legacy `.duckdb` file or
+bundle. Existing native workspaces reopen in place. Legacy migration and bundle
+import remain explicit operations through the APIs documented below; the launcher
+never silently converts or downgrades files. Installation/update does not modify
+workspace directories. To update this draft, stop the host, install the new
+local tarball into the chosen installation directory, and reopen the same
+workspace. Keep backups/bundles before changing versions.
+
+By default the host serves documents and queries without an agent. Quack stays
+disabled. Enable a harness deliberately:
+
+```sh
+roomie-node ./my-workspace --harness codex --trusted-local
+roomie-node ./my-workspace --harness claude --trusted-local
+roomie-node ./my-workspace --harness codex --isolation-image sha256:<local-image-id>
+```
+
+Use the installed executable's full path if it is not on your `PATH`.
+Trusted-local mode uses the separately installed Codex **0.163.0** or Claude Code
+**2.1.310** and that tool's existing authentication. Its shell has your OS
+permissions. Container mode requires Docker and the immutable image described
+below, and delegates only explicit `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`
+environment values. It never imports personal login files or falls back to a
+trusted-local harness. Network egress is not restricted by this container profile.
+`--deadline-ms` bounds runs (default five minutes; maximum one hour).
+
+The process stays in the foreground until Ctrl-C or SIGTERM. Closing the browser
+does not stop it. Shutdown stops admission, cancels/drains harness work, flushes
+committed state, and removes the private credential handoff. Restart reconciles
+unfinished runs using existing recovery semantics; it does not resume arbitrary
+model requests. A crash can leave an owner-only temporary credential file, but
+its token is invalid on the next host. A second process opening the same workspace
+or an occupied `--port` fails explicitly. Port zero (the default) selects an
+available loopback port; no public listener option is exposed.
+
+Every start prints a fresh two-minute, single-use browser sign-in link and the
+path of a private native credential handoff, never the owner token. `--open` sends
+that link to the OS browser opener without a shell. Failure to open a browser
+leaves the host available with the printed link. After redemption, normal page
+credential renewal applies. If an unused link expires, restart the launcher for
+a new one, or use the authenticated `/api/auth/ticket` API. `--help` lists all
+options. The launcher is a foreground service, not an OS login/background-service
+installer; Sprite service leases, an external watchdog and deployed soak testing
+remain separate M4 work.
+
+Verify the **installed tarball**, independently of repository module links:
+
+```sh
+pnpm --filter roomie-node test:distribution
+```
+
+This packs the built output, installs it into a fresh temporary directory with
+npm (registry access required, install scripts disabled), and tests the executable
+from outside the repository against real databases. CI runs this separately from
+the ordinary native suite. See
+[`roomie-m4-launcher.md`](../../dev-docs/verification/roomie-m4-launcher.md) for
+verification evidence and platform limits.
+
+## Development and host API
 
 Use Node **24.9–24.x** and the repository's pinned pnpm version. Build workspace
 packages before the host:
@@ -14,7 +108,7 @@ packages before the host:
 ```sh
 pnpm install --frozen-lockfile
 pnpm build
-pnpm --filter roomie-node build
+pnpm exec turbo build --filter=roomie-node
 pnpm --filter roomie-node test
 ```
 
@@ -125,7 +219,8 @@ the existing Python/browser launcher remains separate.
 M2 provides harness supervision, browser SQL/Arrow and committed-content subscriptions.
 M3 adds revision-checked editing, query/upload parity, migration and consistent
 bundles. M4 adds the second live harness and the isolation boundary described
-below; distribution and hosted lifecycle/soak acceptance remain unfinished.
+below, plus the local launcher and draft distribution above. Hosted lifecycle
+and soak acceptance remain unfinished.
 Loro snapshot compaction and bounded history retention also remain to be added.
 
 Do not copy an active workspace directory as a portable bundle. Use

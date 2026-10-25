@@ -79,7 +79,7 @@
       "ignoreDependencies": ["@duckdb/node-api"]
     },
     "apps/roomie-node": {
-      "entry": ["src/index.ts", "container/launch.mjs"]
+      "entry": ["src/index.ts", "container/launch.mjs", "bin/roomie-node.mjs"]
     }
   }
 }

@@ -57,3 +57,6 @@ examples/*/CHANGELOG.md
 /python/roomie/roomie/build.json
 /python/roomie/roomie/NOTICE
 /python/roomie/roomie/THIRD_PARTY_NOTICES.txt
+
+# Local Node launcher release artifacts
+/apps/roomie-node/release/

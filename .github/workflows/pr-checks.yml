@@ -63,6 +63,9 @@ jobs:
       - name: Build apps
         run: pnpm build:apps
 
+      - name: Verify installed Roomie distribution
+        run: pnpm --filter roomie-node test:distribution
+
       - name: Typecheck examples
         run: pnpm typecheck:examples
 
