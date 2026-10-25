@@ -322,6 +322,6 @@ physical `recognized_revenue` source and equivalent orders/refunds SQL must agre
 Open a ticketed browser only after the run. Start another turn, close it, reconnect,
 and restart the host without `--seed` to verify history and committed content.
 
-Recorded Codex evidence and recording limitations live in
+Recorded Codex host events, offline Claude contract recordings, and their limits live in
 [`harness-v1`](../../packages/ai-config/fixtures/harness-v1/README.md). Scripted
 native protocol tests are labeled separately from real-model evidence.

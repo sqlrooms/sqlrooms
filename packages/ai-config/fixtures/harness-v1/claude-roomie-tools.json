@@ -1,0 +1,3231 @@
+[
+  {
+    "schemaVersion": 1,
+    "seq": 1,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:1",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:28.166Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "initialize",
+    "kind": "run.status",
+    "payload": {
+      "status": "queued",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "queued",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 2,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:2",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:28.166Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "initialize",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 3,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:3",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:28.545Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "kind": "turn.started",
+    "payload": {
+      "origin": "user"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 4,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:4",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:28.545Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "kind": "message.user",
+    "payload": {
+      "text": "Create a monthly revenue report in this synthetic Roomie workspace. First discover commands, inspect saved workspace knowledge, and query the data to verify revenue at the correct grain and refund exclusion. Then author one document titled Claude revenue fixture containing the verified monthly values, definition/source SQL, and a real line chart using the approved materialized source. Discover and inspect schemas before use; use durable operation IDs. Use only Roomie MCP. End with the document ID and exact monthly values.",
+      "attachments": []
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 5,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:5",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:28.558Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "72edad93-9f73-43a7-83f5-0975627a922e",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "command_lifecycle",
+      "summary": "Native lifecycle notification; configuration and raw payload omitted."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 6,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:6",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:28.570Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "ef122455-733c-42e2-a645-98e8903a1c67",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "command_lifecycle",
+      "summary": "Native lifecycle notification; configuration and raw payload omitted."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 7,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:7",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:28.589Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "527af729-88f5-4dab-8695-342fa42c0683",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "system.init",
+      "summary": "Native lifecycle notification; configuration and raw payload omitted."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 8,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:8",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:30.640Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "045d0d52-14ac-4c0f-a134-9785a1157277",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_01QSNmagdQfUQFqqhEjmSBR5",
+      "name": "mcp__roomie__search_commands",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 9,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:9",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:30.652Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "36459e47-70c6-43b4-ba78-5492e9cc1cbc",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "36459e47-70c6-43b4-ba78-5492e9cc1cbc",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01QSNmagdQfUQFqqhEjmSBR5",
+      "summary": "Allow mcp__roomie__search_commands?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 10,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:10",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:30.652Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "36459e47-70c6-43b4-ba78-5492e9cc1cbc",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 11,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:11",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:30.652Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "36459e47-70c6-43b4-ba78-5492e9cc1cbc",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01QSNmagdQfUQFqqhEjmSBR5",
+      "summary": "Allow mcp__roomie__search_commands?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 12,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:12",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:30.652Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 13,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:13",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:30.684Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "8af48d2a-2c62-428e-b73c-e336c115b018",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_01QSNmagdQfUQFqqhEjmSBR5",
+      "name": "mcp__roomie__search_commands",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 14,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:14",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:32.377Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "d3cbea69-8cd6-469d-b034-c6feb2c7a54e",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_017JcWPbnCnHfKXURCMCdLVs",
+      "name": "mcp__roomie__get_command",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 15,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:15",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:32.382Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "98ebd850-8767-410a-816d-0e6cf1dbe4e2",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "98ebd850-8767-410a-816d-0e6cf1dbe4e2",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_017JcWPbnCnHfKXURCMCdLVs",
+      "summary": "Allow mcp__roomie__get_command?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 16,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:16",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:32.382Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "98ebd850-8767-410a-816d-0e6cf1dbe4e2",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 17,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:17",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:32.382Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "98ebd850-8767-410a-816d-0e6cf1dbe4e2",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_017JcWPbnCnHfKXURCMCdLVs",
+      "summary": "Allow mcp__roomie__get_command?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 18,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:18",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:32.382Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 19,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:19",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:32.397Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "b537c548-a3e9-41c7-a30e-da51e10db631",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_017JcWPbnCnHfKXURCMCdLVs",
+      "name": "mcp__roomie__get_command",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 20,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:20",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:32.653Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "f05dc0ed-8849-4e8d-b472-c27015857036",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_012cmy9aaf6pjL8Sz3TEGg6d",
+      "name": "mcp__roomie__get_command",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 21,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:21",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:32.657Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "39a5a5ed-4b6b-4e16-a41b-b8c38b5777fc",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "39a5a5ed-4b6b-4e16-a41b-b8c38b5777fc",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_012cmy9aaf6pjL8Sz3TEGg6d",
+      "summary": "Allow mcp__roomie__get_command?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 22,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:22",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:32.657Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "39a5a5ed-4b6b-4e16-a41b-b8c38b5777fc",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 23,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:23",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:32.657Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "39a5a5ed-4b6b-4e16-a41b-b8c38b5777fc",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_012cmy9aaf6pjL8Sz3TEGg6d",
+      "summary": "Allow mcp__roomie__get_command?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 24,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:24",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:32.657Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 25,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:25",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:32.669Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "b7c4de2c-05c0-4881-a730-ea6ef599d8cf",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_012cmy9aaf6pjL8Sz3TEGg6d",
+      "name": "mcp__roomie__get_command",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 26,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:26",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:34.191Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "06a2e499-296c-4537-abaf-5571f5ea318e",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_01CarZ3fDL1B8JrnMAzWcWqF",
+      "name": "mcp__roomie__execute_command",
+      "toolClass": "roomie-command"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 27,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:27",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:34.195Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "0d58ecf9-6512-4383-a296-cfaee42bab06",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "0d58ecf9-6512-4383-a296-cfaee42bab06",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01CarZ3fDL1B8JrnMAzWcWqF",
+      "summary": "Allow mcp__roomie__execute_command?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 28,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:28",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:34.195Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "0d58ecf9-6512-4383-a296-cfaee42bab06",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 29,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:29",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:34.195Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "0d58ecf9-6512-4383-a296-cfaee42bab06",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01CarZ3fDL1B8JrnMAzWcWqF",
+      "summary": "Allow mcp__roomie__execute_command?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 30,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:30",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:34.195Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 31,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:31",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:34.217Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "78acdb07-9bf1-42b5-b46a-5674a7f683e1",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_01CarZ3fDL1B8JrnMAzWcWqF",
+      "name": "mcp__roomie__execute_command",
+      "toolClass": "roomie-command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 32,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:32",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:36.009Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "2a4c82c4-bf67-4c85-a8f9-2fcd37377679",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_012Fr75ok8eWeXAgHotVbucc",
+      "name": "mcp__roomie__execute_command",
+      "toolClass": "roomie-command"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 33,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:33",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:36.012Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "8ccf4439-52d1-46d6-aafe-8958b186af27",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "8ccf4439-52d1-46d6-aafe-8958b186af27",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_012Fr75ok8eWeXAgHotVbucc",
+      "summary": "Allow mcp__roomie__execute_command?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 34,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:34",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:36.012Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "8ccf4439-52d1-46d6-aafe-8958b186af27",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 35,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:35",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:36.012Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "8ccf4439-52d1-46d6-aafe-8958b186af27",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_012Fr75ok8eWeXAgHotVbucc",
+      "summary": "Allow mcp__roomie__execute_command?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 36,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:36",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:36.012Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 37,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:37",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:36.029Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "260187fe-baa2-4569-aa0a-5f1386e5ecf7",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_012Fr75ok8eWeXAgHotVbucc",
+      "name": "mcp__roomie__execute_command",
+      "toolClass": "roomie-command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 38,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:38",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:37.986Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "80f5b9dd-9c37-4e78-b6f8-f3f0c1e1ee0d",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_01H2RmWAN686SbfXUTWbCttr",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 39,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:39",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:37.989Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "5e39756d-6d5a-45c5-9468-952fa69ae2b4",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "5e39756d-6d5a-45c5-9468-952fa69ae2b4",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01H2RmWAN686SbfXUTWbCttr",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 40,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:40",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:37.989Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "5e39756d-6d5a-45c5-9468-952fa69ae2b4",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 41,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:41",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:37.989Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "5e39756d-6d5a-45c5-9468-952fa69ae2b4",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01H2RmWAN686SbfXUTWbCttr",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 42,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:42",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:37.989Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 43,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:43",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:38.011Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "f6c09182-dba6-4c36-a573-ff70b4eb8cc3",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_01H2RmWAN686SbfXUTWbCttr",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp",
+      "status": "failed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 44,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:44",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:39.927Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "b9552067-cdf9-44ca-bcb7-3850b14790f5",
+    "kind": "message.text",
+    "payload": {
+      "messageId": "b9552067-cdf9-44ca-bcb7-3850b14790f5",
+      "text": "I've read the workspace's revenue definition and am now checking the data in orders, refunds and recognized_revenue."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 45,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:45",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:39.927Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "b9552067-cdf9-44ca-bcb7-3850b14790f5",
+    "kind": "message.completed",
+    "payload": {
+      "messageId": "b9552067-cdf9-44ca-bcb7-3850b14790f5",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 46,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:46",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:40.115Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "9769d86f-b1ea-4286-9ea0-eb83210e53a1",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_01JKeRWEdTyNGBhxs2XhrQW6",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 47,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:47",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:40.120Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "83392f7d-c6ff-4758-bec6-0e1e4f2cb42e",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "83392f7d-c6ff-4758-bec6-0e1e4f2cb42e",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01JKeRWEdTyNGBhxs2XhrQW6",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 48,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:48",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:40.120Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "83392f7d-c6ff-4758-bec6-0e1e4f2cb42e",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 49,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:49",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:40.120Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "83392f7d-c6ff-4758-bec6-0e1e4f2cb42e",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01JKeRWEdTyNGBhxs2XhrQW6",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 50,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:50",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:40.120Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 51,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:51",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:40.139Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "8d89edc6-d7a6-4cc1-b2f5-66e76d515c88",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_01JKeRWEdTyNGBhxs2XhrQW6",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 52,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:52",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:40.565Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "331d4f7a-fa0e-43c5-98ad-26eabe93c7a6",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_01CPZgyJg8eXBhkHRTGRVknP",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 53,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:53",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:40.568Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "51b5a58e-00f4-4c63-bb96-b2b0feddb9b1",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "51b5a58e-00f4-4c63-bb96-b2b0feddb9b1",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01CPZgyJg8eXBhkHRTGRVknP",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 54,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:54",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:40.568Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "51b5a58e-00f4-4c63-bb96-b2b0feddb9b1",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 55,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:55",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:40.568Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "51b5a58e-00f4-4c63-bb96-b2b0feddb9b1",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01CPZgyJg8eXBhkHRTGRVknP",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 56,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:56",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:40.568Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 57,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:57",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:40.581Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "0d92885b-7247-49e1-8652-7453d254c862",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_01CPZgyJg8eXBhkHRTGRVknP",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 58,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:58",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:41.017Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "c486d808-92b0-4626-9eaf-b163482050ea",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_01CQkt3J98XfaiczB1x91dYK",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 59,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:59",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:41.028Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "12924d14-7b5c-487f-a1f0-c0867f7c1d66",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "12924d14-7b5c-487f-a1f0-c0867f7c1d66",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01CQkt3J98XfaiczB1x91dYK",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 60,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:60",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:41.028Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "12924d14-7b5c-487f-a1f0-c0867f7c1d66",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 61,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:61",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:41.028Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "12924d14-7b5c-487f-a1f0-c0867f7c1d66",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01CQkt3J98XfaiczB1x91dYK",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 62,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:62",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:41.028Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 63,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:63",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:41.070Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "4957766d-39de-42d2-a821-b9620fe99f5d",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_01CQkt3J98XfaiczB1x91dYK",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 64,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:64",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:41.300Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "96b204c0-17f0-4ebd-94a5-f1400e77ed19",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_01DRWnGxMG1zVPzxeNhCY6hm",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 65,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:65",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:41.302Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "bb3effa1-b087-4776-9461-5f91d37a0d85",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "bb3effa1-b087-4776-9461-5f91d37a0d85",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01DRWnGxMG1zVPzxeNhCY6hm",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 66,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:66",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:41.302Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "bb3effa1-b087-4776-9461-5f91d37a0d85",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 67,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:67",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:41.302Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "bb3effa1-b087-4776-9461-5f91d37a0d85",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01DRWnGxMG1zVPzxeNhCY6hm",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 68,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:68",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:41.302Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 69,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:69",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:41.318Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "17dc210b-d4d4-471a-ac99-34476ebffec4",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_01DRWnGxMG1zVPzxeNhCY6hm",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 70,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:70",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:43.111Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "a3290a7c-8429-4010-b3e4-b04e209e3f9d",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_015Z6s9sFEutFi8uJ8Q2Huka",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 71,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:71",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:43.118Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "096dc7f6-ce8f-478b-8706-c7f1aeb5fc7c",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "096dc7f6-ce8f-478b-8706-c7f1aeb5fc7c",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_015Z6s9sFEutFi8uJ8Q2Huka",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 72,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:72",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:43.118Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "096dc7f6-ce8f-478b-8706-c7f1aeb5fc7c",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 73,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:73",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:43.118Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "096dc7f6-ce8f-478b-8706-c7f1aeb5fc7c",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_015Z6s9sFEutFi8uJ8Q2Huka",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 74,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:74",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:43.118Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 75,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:75",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:43.133Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "269b55f7-a329-4340-aa6d-e2ecdbc7e14f",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_015Z6s9sFEutFi8uJ8Q2Huka",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 76,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:76",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:43.659Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "5439f93c-f878-4959-9852-36197ae27c7e",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_017eTK6gPpnE2UaZ66KvqtpG",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 77,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:77",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:43.666Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "53ea54bd-bba0-4580-9d42-4a2797a489c8",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "53ea54bd-bba0-4580-9d42-4a2797a489c8",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_017eTK6gPpnE2UaZ66KvqtpG",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 78,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:78",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:43.666Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "53ea54bd-bba0-4580-9d42-4a2797a489c8",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 79,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:79",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:43.666Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "53ea54bd-bba0-4580-9d42-4a2797a489c8",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_017eTK6gPpnE2UaZ66KvqtpG",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 80,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:80",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:43.666Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 81,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:81",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:43.730Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "c6d1dab2-2ffe-4b36-83ff-049ae0c8f0e6",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_017eTK6gPpnE2UaZ66KvqtpG",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 82,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:82",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:44.757Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "a5c1beca-772a-413c-a9bd-77661b0aa5ad",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_01XHBXEnRCXfUtYYLt2h78rz",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 83,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:83",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:44.759Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "532d4768-34d6-4825-ad98-c621fddbf053",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "532d4768-34d6-4825-ad98-c621fddbf053",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01XHBXEnRCXfUtYYLt2h78rz",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 84,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:84",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:44.759Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "532d4768-34d6-4825-ad98-c621fddbf053",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 85,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:85",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:44.759Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "532d4768-34d6-4825-ad98-c621fddbf053",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01XHBXEnRCXfUtYYLt2h78rz",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 86,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:86",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:44.759Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 87,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:87",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:44.803Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "93eb9c21-0c1d-479d-ab38-18f6513e5eb7",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_01XHBXEnRCXfUtYYLt2h78rz",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 88,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:88",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:45.593Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "4867a55a-124c-462c-b9e2-c0e29a4de251",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_01CY9RWhPeUvL9EhmbjujoMF",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 89,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:89",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:45.596Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "5fbdb8c9-92ac-45fd-865b-20965759dfda",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "5fbdb8c9-92ac-45fd-865b-20965759dfda",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01CY9RWhPeUvL9EhmbjujoMF",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 90,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:90",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:45.596Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "5fbdb8c9-92ac-45fd-865b-20965759dfda",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 91,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:91",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:45.596Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "5fbdb8c9-92ac-45fd-865b-20965759dfda",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01CY9RWhPeUvL9EhmbjujoMF",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 92,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:92",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:45.596Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 93,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:93",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:45.674Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "e55469c9-a270-41f3-b719-261a1b99c70e",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_01CY9RWhPeUvL9EhmbjujoMF",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 94,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:94",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:48.532Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "45b7b77f-7d65-410c-8089-77cd1597f163",
+    "kind": "message.text",
+    "payload": {
+      "messageId": "45b7b77f-7d65-410c-8089-77cd1597f163",
+      "text": "Both versions of the definition give the same result: January 2026 is 300.00 and February 2026 is 450.00. I'll check the payments table for any ambiguities."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 95,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:95",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:48.532Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "45b7b77f-7d65-410c-8089-77cd1597f163",
+    "kind": "message.completed",
+    "payload": {
+      "messageId": "45b7b77f-7d65-410c-8089-77cd1597f163",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 96,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:96",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.084Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "918fe4e3-33d5-479e-b201-466076e95327",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_012AV14GZefwTBb8DSJpv9M8",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 97,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:97",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.091Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "39b03c62-2ada-4790-bdb8-1801476d8943",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "39b03c62-2ada-4790-bdb8-1801476d8943",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_012AV14GZefwTBb8DSJpv9M8",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 98,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:98",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.091Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "39b03c62-2ada-4790-bdb8-1801476d8943",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 99,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:99",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.092Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "39b03c62-2ada-4790-bdb8-1801476d8943",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_012AV14GZefwTBb8DSJpv9M8",
+      "summary": "Allow mcp__roomie__query?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 100,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:100",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.092Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 101,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:101",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.111Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "07815d4b-e425-41b8-99aa-946d6eed734e",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_012AV14GZefwTBb8DSJpv9M8",
+      "name": "mcp__roomie__query",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 102,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:102",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.437Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "8e2ca69c-c4a0-4479-a70d-c13ed40c76a4",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_017oyvUJfA5BJypvVco1QmrK",
+      "name": "mcp__roomie__get_command",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 103,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:103",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.441Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "a2064d77-c562-406a-bfa4-dac34ee73440",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "a2064d77-c562-406a-bfa4-dac34ee73440",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_017oyvUJfA5BJypvVco1QmrK",
+      "summary": "Allow mcp__roomie__get_command?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 104,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:104",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.441Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "a2064d77-c562-406a-bfa4-dac34ee73440",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 105,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:105",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.441Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "a2064d77-c562-406a-bfa4-dac34ee73440",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_017oyvUJfA5BJypvVco1QmrK",
+      "summary": "Allow mcp__roomie__get_command?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 106,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:106",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.441Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 107,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:107",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.454Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "65847395-f576-46a2-a1c5-1a19aa9def4c",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_017oyvUJfA5BJypvVco1QmrK",
+      "name": "mcp__roomie__get_command",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 108,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:108",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.715Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "bffa2ecf-5c67-44c0-92e4-d488381a043b",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_01B46mXqA14uCXor956VRmGd",
+      "name": "mcp__roomie__get_command",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 109,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:109",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.722Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "7d453509-a9d6-40e6-9718-9624c4c148f0",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "7d453509-a9d6-40e6-9718-9624c4c148f0",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01B46mXqA14uCXor956VRmGd",
+      "summary": "Allow mcp__roomie__get_command?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 110,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:110",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.722Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "7d453509-a9d6-40e6-9718-9624c4c148f0",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 111,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:111",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.722Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "7d453509-a9d6-40e6-9718-9624c4c148f0",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01B46mXqA14uCXor956VRmGd",
+      "summary": "Allow mcp__roomie__get_command?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 112,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:112",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.722Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 113,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:113",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:49.743Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "41912d27-aea3-49d9-bd73-cd5ed5539e0b",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_01B46mXqA14uCXor956VRmGd",
+      "name": "mcp__roomie__get_command",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 114,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:114",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:52.229Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "cabe6d1b-baba-4cf8-96b5-a8c29f75f775",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_01Bq1Ba8rVUAXxxft6JtatMc",
+      "name": "mcp__roomie__search_commands",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 115,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:115",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:52.234Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "d3255735-8bb5-45e5-a89d-41af00d741c0",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "d3255735-8bb5-45e5-a89d-41af00d741c0",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01Bq1Ba8rVUAXxxft6JtatMc",
+      "summary": "Allow mcp__roomie__search_commands?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 116,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:116",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:52.234Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "d3255735-8bb5-45e5-a89d-41af00d741c0",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 117,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:117",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:52.234Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "d3255735-8bb5-45e5-a89d-41af00d741c0",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_01Bq1Ba8rVUAXxxft6JtatMc",
+      "summary": "Allow mcp__roomie__search_commands?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 118,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:118",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:52.234Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 119,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:119",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:52.247Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "143aba76-cfae-46b4-a598-4ffab3d87b36",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_01Bq1Ba8rVUAXxxft6JtatMc",
+      "name": "mcp__roomie__search_commands",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 120,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:120",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:53.812Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "bb730f0f-d42c-4e67-aa37-1c5e27744c28",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_017fqemVTMmT78NyQejC1aAA",
+      "name": "mcp__roomie__get_command",
+      "toolClass": "mcp"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 121,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:121",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:53.819Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "758c1168-1156-499f-9963-71a65d100141",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "758c1168-1156-499f-9963-71a65d100141",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_017fqemVTMmT78NyQejC1aAA",
+      "summary": "Allow mcp__roomie__get_command?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 122,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:122",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:53.819Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "758c1168-1156-499f-9963-71a65d100141",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 123,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:123",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:53.819Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "758c1168-1156-499f-9963-71a65d100141",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_017fqemVTMmT78NyQejC1aAA",
+      "summary": "Allow mcp__roomie__get_command?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 124,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:124",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:53.819Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 125,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:125",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:53.836Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "8887b632-9ece-49dc-840e-b68ffcc56c38",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_017fqemVTMmT78NyQejC1aAA",
+      "name": "mcp__roomie__get_command",
+      "toolClass": "mcp",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 126,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:126",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:55.855Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "c56d764e-97fd-4b85-8a52-8bf04f5a1eea",
+    "kind": "message.text",
+    "payload": {
+      "messageId": "c56d764e-97fd-4b85-8a52-8bf04f5a1eea",
+      "text": "I found the line-chart config schema. Next I'll create the document with the text, values, SQL and chart."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 127,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:127",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:48:55.855Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "c56d764e-97fd-4b85-8a52-8bf04f5a1eea",
+    "kind": "message.completed",
+    "payload": {
+      "messageId": "c56d764e-97fd-4b85-8a52-8bf04f5a1eea",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 128,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:128",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:49:04.885Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "ddbfc268-7a20-4fce-892a-e77f67f52069",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "toolu_015mWRAaNELiG2KkLyeWLr4k",
+      "name": "mcp__roomie__execute_command",
+      "toolClass": "roomie-command"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 129,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:129",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:49:04.893Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "6bb64e2f-f9fe-4c12-9f12-b98a9e1525e2",
+    "kind": "approval.requested",
+    "payload": {
+      "approvalId": "6bb64e2f-f9fe-4c12-9f12-b98a9e1525e2",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_015mWRAaNELiG2KkLyeWLr4k",
+      "summary": "Allow mcp__roomie__execute_command?",
+      "options": ["approve", "deny"],
+      "decision": null,
+      "resolvedBy": null
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 130,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:130",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:49:04.893Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "6bb64e2f-f9fe-4c12-9f12-b98a9e1525e2",
+    "kind": "run.status",
+    "payload": {
+      "status": "awaiting-approval",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "awaiting-approval",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 131,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:131",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:49:04.893Z",
+    "principalId": "fixture-operator",
+    "kind": "approval.resolved",
+    "payload": {
+      "approvalId": "6bb64e2f-f9fe-4c12-9f12-b98a9e1525e2",
+      "runId": "8b143635-66f0-4465-932b-12570d663e82",
+      "callId": "toolu_015mWRAaNELiG2KkLyeWLr4k",
+      "summary": "Allow mcp__roomie__execute_command?",
+      "options": ["approve", "deny"],
+      "decision": "approve",
+      "resolvedBy": "fixture-operator"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 132,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:132",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:49:04.893Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 133,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:133",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:49:04.938Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "d9236b8b-7303-44c2-bf8f-bb3deaf58deb",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "toolu_015mWRAaNELiG2KkLyeWLr4k",
+      "name": "mcp__roomie__execute_command",
+      "toolClass": "roomie-command",
+      "status": "completed",
+      "operationId": "claude-revenue-fixture-create-v1",
+      "artifactRefs": [
+        {
+          "artifactId": "awmqfvy17nl7xx7osenvlrtf"
+        }
+      ],
+      "result": {
+        "operationId": "claude-revenue-fixture-create-v1",
+        "artifactId": "awmqfvy17nl7xx7osenvlrtf",
+        "revision": 1
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 134,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:134",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:49:13.129Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "8105c9ff-a3da-44a9-8220-b5e7da8bccc5",
+    "kind": "message.text",
+    "payload": {
+      "messageId": "8105c9ff-a3da-44a9-8220-b5e7da8bccc5",
+      "text": "I created **Claude revenue fixture** with the monthly revenue values, the definition, both SQL queries and a line chart. The write succeeded and the document is at revision 1. I haven't seen the chart rendered, since that only happens in the browser viewer.\n\n**Document ID: `awmqfvy17nl7xx7osenvlrtf`**\n\n**Monthly revenue values**\n\n| Month | Revenue | Orders counted |\n|---|---|---|\n| 2026-01 | **300.00** | #1 (100.00), #2 (200.00) |\n| 2026-02 | **450.00** | #4 (400.00), #5 (50.00) |\n\n**How I checked them**\n- **Definition:** I used the existing \"Workspace knowledge — Revenue\" document. Revenue is the sum of paid orders, one row per `order_id`, grouped by the month of `ordered_at`. Refunded orders are dropped completely, cancelled orders don't count, and `payments` is never summed.\n- **Grain:** `orders` has 6 rows and 6 distinct order IDs, so it's one row per order.\n- **Excluded orders:** #3 (50.00) is dropped because it's refunded. #6 (900.00) is dropped because it's cancelled.\n- **Payment retries:** `payments` has 7 rows because orders #1 and #4 each had a failed attempt before a paid one. Summing it would double-count, so I left it out of the calculation.\n- **Two sources agree:** A query on `orders` and `refunds` gave exactly the same monthly totals and order counts as the approved materialized table, `recognized_revenue`.\n\n**What's in the document:** the definition, the values with the reasons for each exclusion, both SQL queries (the check against the base tables and the chart source), the verification notes, and the line chart. The chart reads from `recognized_revenue` and plots the sum of `amount` by month of `ordered_at`. The write used operation ID `claude-revenue-fixture-create-v1`.\n\n**One point for you to confirm:** order #3's refund (50.00) equals its full amount, so it makes no difference here whether a refund removes the whole order or just the refunded amount. With a partial refund, the \"drop the whole order\" rule and a net-of-refund approach would give different totals."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 135,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:135",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:49:13.129Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "8105c9ff-a3da-44a9-8220-b5e7da8bccc5",
+    "kind": "message.completed",
+    "payload": {
+      "messageId": "8105c9ff-a3da-44a9-8220-b5e7da8bccc5",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 136,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:136",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:49:13.150Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "454113bf-f6a7-4986-8291-08834518ff3a",
+    "kind": "usage",
+    "payload": {
+      "usage": {
+        "input_tokens": 24,
+        "output_tokens": 3969,
+        "cache_read_input_tokens": 79300,
+        "cache_creation_input_tokens": 22093
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 137,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:137",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:49:13.153Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "046b1b6d-51cf-4114-8f49-7ffa86224c97",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "command_lifecycle",
+      "summary": "Native lifecycle notification; configuration and raw payload omitted."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 138,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:138",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:49:13.644Z",
+    "principalId": "fixture-operator",
+    "kind": "turn.completed",
+    "payload": {
+      "outcome": "succeeded"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 139,
+    "eventId": "8b143635-66f0-4465-932b-12570d663e82:139",
+    "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+    "runId": "8b143635-66f0-4465-932b-12570d663e82",
+    "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+    "at": "2026-10-25T14:49:13.644Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "succeeded",
+      "run": {
+        "runId": "8b143635-66f0-4465-932b-12570d663e82",
+        "conversationId": "8b143635-66f0-4465-932b-12570d663e82",
+        "turnId": "1ba9dbb2-bf8c-4421-a2d1-fc5da2b66b0a",
+        "principalId": "fixture-operator",
+        "status": "succeeded",
+        "nativeSessionId": "8b143635-66f0-4465-932b-12570d663e82",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:28.166Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  }
+]

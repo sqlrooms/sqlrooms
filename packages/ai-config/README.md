@@ -107,3 +107,7 @@ Unknown event kinds render generically. Large payloads use a host-authorized
 `blobRef`; previews are never replay events. Attachments and live input are not
 supported by the initial adapter. Restarted work is `interrupted`, never inferred
 successful from model output. Approval decisions require an explicit owner.
+
+[Recorded Codex and Claude fixtures](fixtures/harness-v1/README.md) cover short
+answers, multi-tool artifact creation, approvals, cancellation, restart
+interruption, and unknown native events through the shared replay runtime.

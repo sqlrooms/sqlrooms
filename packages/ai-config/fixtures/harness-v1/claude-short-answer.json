@@ -1,0 +1,264 @@
+[
+  {
+    "schemaVersion": 1,
+    "seq": 1,
+    "eventId": "86887b1d-1411-4c61-a9fd-f289164f8c37:1",
+    "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "at": "2026-10-25T14:48:18.423Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "initialize",
+    "kind": "run.status",
+    "payload": {
+      "status": "queued",
+      "run": {
+        "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+        "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+        "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+        "principalId": "fixture-operator",
+        "status": "queued",
+        "nativeSessionId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:18.423Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 2,
+    "eventId": "86887b1d-1411-4c61-a9fd-f289164f8c37:2",
+    "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "at": "2026-10-25T14:48:18.423Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "initialize",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "run": {
+        "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+        "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+        "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+        "principalId": "fixture-operator",
+        "status": "running",
+        "nativeSessionId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:18.423Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 3,
+    "eventId": "86887b1d-1411-4c61-a9fd-f289164f8c37:3",
+    "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "at": "2026-10-25T14:48:19.605Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "kind": "turn.started",
+    "payload": {
+      "origin": "user"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 4,
+    "eventId": "86887b1d-1411-4c61-a9fd-f289164f8c37:4",
+    "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "at": "2026-10-25T14:48:19.605Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "kind": "message.user",
+    "payload": {
+      "text": "Reply exactly with: Roomie fixture recorded.",
+      "attachments": []
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 5,
+    "eventId": "86887b1d-1411-4c61-a9fd-f289164f8c37:5",
+    "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "at": "2026-10-25T14:48:19.618Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "5028f3a9-a2ad-48a4-8b21-422107408c64",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "command_lifecycle",
+      "summary": "Native lifecycle notification; configuration and raw payload omitted."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 6,
+    "eventId": "86887b1d-1411-4c61-a9fd-f289164f8c37:6",
+    "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "at": "2026-10-25T14:48:19.620Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "38cd25f0-5071-490e-afad-cff0813ae7bf",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "command_lifecycle",
+      "summary": "Native lifecycle notification; configuration and raw payload omitted."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 7,
+    "eventId": "86887b1d-1411-4c61-a9fd-f289164f8c37:7",
+    "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "at": "2026-10-25T14:48:19.951Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "7b3894ba-33b5-4ded-9b6f-7e8c0693091c",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "system.init",
+      "summary": "Native lifecycle notification; configuration and raw payload omitted."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 8,
+    "eventId": "86887b1d-1411-4c61-a9fd-f289164f8c37:8",
+    "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "at": "2026-10-25T14:48:21.413Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "b89f334c-5215-4129-b297-74a72b2e513d",
+    "kind": "message.text",
+    "payload": {
+      "messageId": "b89f334c-5215-4129-b297-74a72b2e513d",
+      "text": "Roomie fixture recorded."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 9,
+    "eventId": "86887b1d-1411-4c61-a9fd-f289164f8c37:9",
+    "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "at": "2026-10-25T14:48:21.413Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "b89f334c-5215-4129-b297-74a72b2e513d",
+    "kind": "message.completed",
+    "payload": {
+      "messageId": "b89f334c-5215-4129-b297-74a72b2e513d",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 10,
+    "eventId": "86887b1d-1411-4c61-a9fd-f289164f8c37:10",
+    "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "at": "2026-10-25T14:48:21.435Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "0df08c9c-8141-4717-a1cb-f3e71042b001",
+    "kind": "usage",
+    "payload": {
+      "usage": {
+        "input_tokens": 2,
+        "output_tokens": 13,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 1024
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 11,
+    "eventId": "86887b1d-1411-4c61-a9fd-f289164f8c37:11",
+    "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "at": "2026-10-25T14:48:21.437Z",
+    "principalId": "fixture-operator",
+    "nativeEventId": "25bda0e2-33a0-4060-a361-cdd89beb5c03",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "command_lifecycle",
+      "summary": "Native lifecycle notification; configuration and raw payload omitted."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 12,
+    "eventId": "86887b1d-1411-4c61-a9fd-f289164f8c37:12",
+    "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "at": "2026-10-25T14:48:22.478Z",
+    "principalId": "fixture-operator",
+    "kind": "turn.completed",
+    "payload": {
+      "outcome": "succeeded"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 13,
+    "eventId": "86887b1d-1411-4c61-a9fd-f289164f8c37:13",
+    "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+    "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+    "at": "2026-10-25T14:48:22.478Z",
+    "principalId": "fixture-operator",
+    "kind": "run.status",
+    "payload": {
+      "status": "succeeded",
+      "run": {
+        "runId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+        "conversationId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+        "turnId": "5ea8b703-8f88-4488-a563-195474f77c01",
+        "principalId": "fixture-operator",
+        "status": "succeeded",
+        "nativeSessionId": "86887b1d-1411-4c61-a9fd-f289164f8c37",
+        "skillHash": "offline-recording-system-prompt",
+        "deadlineAt": "2026-10-25T14:52:18.423Z",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": true
+        }
+      }
+    }
+  }
+]

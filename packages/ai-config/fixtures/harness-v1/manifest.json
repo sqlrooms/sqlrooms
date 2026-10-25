@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-25",
+  "recordings": [
+    {
+      "file": "codex-revenue.json",
+      "harness": "Codex",
+      "version": "0.163.0",
+      "origin": "durable-host-events",
+      "status": "succeeded",
+      "textIncludes": ["300.00", "450.00"]
+    },
+    {
+      "file": "codex-interrupted.json",
+      "harness": "Codex",
+      "version": "0.163.0",
+      "origin": "durable-host-events",
+      "status": "interrupted",
+      "textIncludes": ["Host shutting down."]
+    },
+    {
+      "file": "claude-short-answer.json",
+      "harness": "Claude Code",
+      "version": "2.1.310",
+      "model": "claude-opus-5-5",
+      "origin": "offline-native-stdio-normalization",
+      "sourceSha256": "cbca9ad1ce59327b28fc5a01484f34c93dc91ed802e56040431798a5f9296fd0",
+      "status": "succeeded",
+      "textIncludes": ["Roomie fixture recorded."]
+    },
+    {
+      "file": "claude-roomie-tools.json",
+      "harness": "Claude Code",
+      "version": "2.1.310",
+      "model": "claude-opus-5-5",
+      "origin": "offline-native-stdio-normalization",
+      "sourceSha256": "407635ba2b772cc5de58ef606fe2af9d81a0bfd732b7ddf3051a3caf682f8d3b",
+      "status": "succeeded",
+      "textIncludes": ["300.00", "450.00", "recognized_revenue"]
+    },
+    {
+      "file": "claude-approval-denied.json",
+      "harness": "Claude Code",
+      "version": "2.1.310",
+      "model": "claude-opus-5-5",
+      "origin": "offline-native-stdio-normalization",
+      "sourceSha256": "12cb1410e71c2a05d0151f50259a3ac82c836dc8fb4887d097c893742a2299bf",
+      "status": "succeeded",
+      "textIncludes": ["denied"]
+    },
+    {
+      "file": "claude-cancelled.json",
+      "harness": "Claude Code",
+      "version": "2.1.310",
+      "model": "claude-opus-5-5",
+      "origin": "offline-native-stdio-normalization",
+      "sourceSha256": "7edb73dc48f288b2c3836a53dbe28b2be473efad3cfda98e588ce19333b4bba5",
+      "status": "cancelled",
+      "textIncludes": []
+    }
+  ]
+}

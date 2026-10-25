@@ -1,19 +1,27 @@
 /** @jest-environment jsdom */
 import {TransformStream} from 'node:stream/web';
+import {readFileSync} from 'node:fs';
+import {serialize, deserialize} from 'node:v8';
+import {createHarnessReplayClient} from '../src/harnessReplayClient';
 import React, {act} from 'react';
 import {createRoot} from 'react-dom/client';
 import {jest} from '@jest/globals';
-import type {
+import {
   HarnessRun,
-  HarnessRunEvent,
-  HarnessConversationSnapshot,
+  type HarnessRunEvent,
+  type HarnessConversationSnapshot,
 } from '@sqlrooms/ai-config';
 import type {HarnessRunClient, HarnessRunChatRuntime} from '../src/harnessRun';
 jest.unstable_mockModule('../src/components/LocalAgentChatMessages', () => ({
   LocalAgentChatMessages: () => null,
 }));
-Object.assign(globalThis, {TransformStream});
-const {HarnessRunChatRoot} = await import('../src/harnessRun');
+// JSDOM omits structuredClone; the fixture client needs the browser's clone API.
+Object.assign(globalThis, {
+  TransformStream,
+  structuredClone: (value: unknown) => deserialize(serialize(value)),
+});
+const {HarnessRunChatRoot, HarnessRunDetails} =
+  await import('../src/harnessRun');
 const {useChatRuntime} = await import('../src/components/ChatRuntimeContext');
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 const run: HarnessRun = {
@@ -191,5 +199,50 @@ it('approval conflict and stale snapshot cannot resurrect a resolved card', asyn
     expect(f.runtime.error).toContain('approval_conflict');
   } finally {
     await f.close();
+  }
+});
+
+it('opens the real Claude recording artifact through the shared details renderer', async () => {
+  const events: HarnessRunEvent[] = JSON.parse(
+    readFileSync(
+      new URL(
+        '../../ai-config/fixtures/harness-v1/claude-roomie-tools.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
+  const recordedRun = HarnessRun.parse(events.at(-1)!.payload.run);
+  const client = createHarnessReplayClient({
+    conversationId: recordedRun.conversationId,
+    events,
+    runs: [recordedRun],
+    lastSeq: events.at(-1)!.seq,
+    historyAfterSeq: 0,
+    historyHasMore: false,
+    pendingApprovals: [],
+  });
+  const onArtifact = jest.fn();
+  const element = document.createElement('div');
+  const root = createRoot(element);
+  try {
+    await act(async () =>
+      root.render(
+        <HarnessRunChatRoot
+          client={client}
+          conversationId={recordedRun.conversationId}
+        >
+          <HarnessRunDetails onArtifact={onArtifact} />
+        </HarnessRunChatRoot>,
+      ),
+    );
+    const button = [...element.querySelectorAll('button')].find(
+      (value) => value.textContent === 'Open document awmqfvy17nl7xx7osenvlrtf',
+    );
+    expect(button).toBeDefined();
+    await act(async () => button!.click());
+    expect(onArtifact).toHaveBeenCalledWith('awmqfvy17nl7xx7osenvlrtf');
+  } finally {
+    await act(async () => root.unmount());
   }
 });
