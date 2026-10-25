@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit && vite build",
-    "test": "vite build --config test/vite.config.ts && node --test --test-timeout=30000 test/*.test.mjs",
+    "test": "vite build --config test/vite.config.ts && node --test --test-concurrency=1 --test-timeout=30000 test/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "test:conformance": "vite build --config test/vite.config.ts && node --test --test-timeout=30000 test/conformance.mjs"
   },

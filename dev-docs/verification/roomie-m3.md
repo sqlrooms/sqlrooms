@@ -104,3 +104,12 @@ Final local suites: 60 native tests, 65 shared Node/Python conformance tests,
 pass. The full workspace build still encounters the unchanged MapLibre
 style-spec mismatch in packages/deck/src/protomapsStyles.ts:36.
 PR checks and the current plan record CI results on the pushed head.
+
+CI follow-up: the first M3 head passed Python/conformance, documentation,
+formatting, and PR-title checks. JavaScript passed builds but its launch-ticket
+test exceeded the old 15-second child-start budget under full workspace load;
+the other 59 native tests passed. Native test files now run serially to bound
+competing database instances, with a 60-second startup budget for this
+authentication/reopen test and a 150-second test deadline for its two launches.
+All assertions and runtime deadlines remain unchanged. The full 60-test native
+suite passes again locally.
