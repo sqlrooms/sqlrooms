@@ -1,3 +1,4 @@
+import {randomUUID} from 'node:crypto';
 import {DatabaseSync} from 'node:sqlite';
 import {createRunLog, migrateRunLog} from './runLog';
 import type {RoomCommandResult} from '@sqlrooms/room-store';
@@ -39,7 +40,7 @@ export function openMetadata(path: string) {
     const version = Number(
       db.prepare('PRAGMA user_version').get()!.user_version,
     );
-    if (version > 2)
+    if (version > 4)
       throw new Error(`Unsupported Roomie metadata version ${version}`);
     if (version === 0)
       db.exec(`
@@ -63,6 +64,17 @@ export function openMetadata(path: string) {
       COMMIT;
     `);
     if (version < 2) migrateRunLog(db);
+    if (version < 3) {
+      db.exec(
+        'BEGIN IMMEDIATE; CREATE TABLE workspace_identity (id TEXT NOT NULL);',
+      );
+      db.prepare('INSERT INTO workspace_identity VALUES (?)').run(randomUUID());
+      db.exec('PRAGMA user_version=3; COMMIT;');
+    }
+    if (version < 4)
+      db.exec(
+        'BEGIN IMMEDIATE; CREATE TABLE data_effects(operation_id TEXT PRIMARY KEY, request_hash TEXT NOT NULL, status TEXT NOT NULL); PRAGMA user_version=4; COMMIT;',
+      );
   } catch (error) {
     db.close();
     throw error;
@@ -88,6 +100,77 @@ export function openMetadata(path: string) {
   });
   return {
     runs,
+    workspaceId: String(
+      db.prepare('SELECT id FROM workspace_identity').get()!.id,
+    ),
+    /** Initial import is an offline operation, admitted only into empty metadata. */
+    initializeContent(update: Uint8Array, artifactIds: string[]) {
+      assertHealthy();
+      if (db.prepare('SELECT 1 FROM commits LIMIT 1').get())
+        throw new Error('Metadata already contains content.');
+      db.exec('BEGIN IMMEDIATE');
+      try {
+        const receipt = {
+          operationId: 'legacy-import',
+          artifactId: 'workspace',
+          revision: 1,
+          result: {
+            success: true,
+            commandId: 'workspace.import',
+            data: {artifactIds},
+          },
+        };
+        db.prepare(
+          'INSERT INTO commits(operation_id,request_hash,artifact_id,revision,receipt,loro_update) VALUES (?,?,?,?,?,?)',
+        ).run(
+          'legacy-import',
+          'legacy-import',
+          'workspace',
+          1,
+          JSON.stringify(receipt),
+          update,
+        );
+        for (const id of artifactIds)
+          db.prepare('INSERT INTO revisions VALUES (?,1)').run(id);
+        db.exec('COMMIT');
+      } catch (error) {
+        if (db.isTransaction) db.exec('ROLLBACK');
+        throw error;
+      }
+    },
+    dataEffects: {
+      begin(operationId: string, requestHash: string) {
+        assertHealthy();
+        const existing = db
+          .prepare('SELECT request_hash FROM data_effects WHERE operation_id=?')
+          .get(operationId);
+        if (existing && existing.request_hash !== requestHash)
+          throw new Error(
+            'Operation ID was already used with different input.',
+          );
+        db.prepare(
+          "INSERT INTO data_effects VALUES (?, ?, 'pending') ON CONFLICT(operation_id) DO UPDATE SET status='pending'",
+        ).run(operationId, requestHash);
+      },
+      finish(operationId: string, status: 'committed' | 'interrupted') {
+        assertHealthy();
+        db.prepare('UPDATE data_effects SET status=? WHERE operation_id=?').run(
+          status,
+          operationId,
+        );
+      },
+      pending() {
+        return db
+          .prepare(
+            "SELECT operation_id, request_hash FROM data_effects WHERE status='pending'",
+          )
+          .all()
+          .map((row) => ({
+            operationId: String(row.operation_id),
+            requestHash: String(row.request_hash),
+          }));
+      },
+    },
     receipt: (operationId: string, requestHash: string) =>
       receiptFrom(db, operationId, requestHash),
     /** A fresh connection cannot see a writer's uncommitted transaction. */
@@ -105,6 +188,15 @@ export function openMetadata(path: string) {
         db
           .prepare('SELECT revision FROM revisions WHERE artifact_id=?')
           .get(artifactId)?.revision ?? 0,
+      );
+    },
+    /** Monotonic sequence for ordering content snapshots across transports. */
+    sequence() {
+      assertHealthy();
+      return Number(
+        db
+          .prepare('SELECT coalesce(max(sequence),0) AS sequence FROM commits')
+          .get()!.sequence,
       );
     },
     load() {
@@ -164,6 +256,21 @@ export function openMetadata(path: string) {
           }
         }
         throw error;
+      }
+    },
+    /** SQLite's own snapshot operation includes committed WAL contents. */
+    snapshot(destination: string, includeHistory: boolean) {
+      assertHealthy();
+      db.prepare('VACUUM INTO ?').run(destination);
+      if (!includeHistory) {
+        const copy = new DatabaseSync(destination);
+        try {
+          copy.exec(
+            'PRAGMA foreign_keys=ON; BEGIN IMMEDIATE; DELETE FROM approvals; DELETE FROM run_events; DELETE FROM runs; DELETE FROM conversations; DELETE FROM run_blobs; COMMIT; VACUUM;',
+          );
+        } finally {
+          copy.close();
+        }
       }
     },
     close() {

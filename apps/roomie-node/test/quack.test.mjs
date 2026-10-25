@@ -6,7 +6,11 @@ import {join} from 'node:path';
 import {createServer} from 'node:net';
 import {test} from 'node:test';
 import {DuckDBInstance} from '@duckdb/node-api';
-import {openWorkspace, openMetadata} from '../dist/index.mjs';
+import {
+  openWorkspace,
+  openMetadata,
+  importWorkspaceBundle,
+} from '../dist/index.mjs';
 
 test('opt-in native Quack authenticates clients and shares the native analytics owner', async () => {
   const portProbe = createServer();
@@ -80,6 +84,42 @@ test('opt-in native Quack authenticates clients and shares the native analytics 
     });
     assert.equal(chart.revision, 2);
     assert.equal(chart.result.data.blockId, 'chart');
+    // Export stops the real Quack writer before checkpointing the analytical file.
+    let stop = false;
+    let writes = 0;
+    const writing = (async () => {
+      while (!stop) {
+        try {
+          await connection.run('INSERT INTO sales VALUES (2)');
+          writes++;
+        } catch {
+          break;
+        } // quack_stop disconnects the remote session.
+      }
+    })();
+    const bundle = join(directory, 'quack.roomie');
+    try {
+      await host.exportBundle(bundle);
+    } finally {
+      stop = true;
+      await writing;
+    }
+    await importWorkspaceBundle(bundle, join(directory, 'restored'));
+    const restored = await openWorkspace({
+      directory: join(directory, 'restored'),
+    });
+    try {
+      const count = (await restored.query('SELECT count(*) AS n FROM sales'))
+        .getChild('n')
+        .get(0);
+      assert.ok(count >= 1n && count <= BigInt(writes + 1));
+      assert.equal(
+        (await restored.snapshot()).revisions[receipt.artifactId],
+        2,
+      );
+    } finally {
+      await restored.dispose();
+    }
   } finally {
     connection.closeSync();
     client.closeSync();

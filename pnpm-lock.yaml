@@ -304,6 +304,9 @@ importers:
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../../packages/ai-config
+      '@sqlrooms/app-runtime':
+        specifier: workspace:*
+        version: link:../../packages/app-runtime
       '@sqlrooms/documents':
         specifier: workspace:*
         version: link:../../packages/documents

@@ -1,5 +1,6 @@
 import type {Server} from 'node:http';
 import {WebSocketServer, WebSocket} from 'ws';
+import {arrowTableToJson} from '@sqlrooms/duckdb-core';
 import {tableToIPC} from 'apache-arrow';
 import {z} from 'zod';
 import type {openWorkspace} from './workspace';
@@ -15,7 +16,10 @@ export function attachWorkspaceSockets(
   },
 ) {
   const {workspace, access} = options;
-  const wss = new WebSocketServer({noServer: true, maxPayload: 256 * 1024});
+  const wss = new WebSocketServer({
+    noServer: true,
+    maxPayload: 33 * 1024 * 1024,
+  });
   const work = new Set<Promise<void>>();
   let queryCount = 0;
   server.on('upgrade', (request, socket, head) => {
@@ -41,15 +45,17 @@ export function attachWorkspaceSockets(
       disposed = false,
       replayAfter: number | undefined;
     let snapshotQueue = Promise.resolve();
+    let session: ReturnType<typeof workspace.createQuerySession> | undefined;
     const queries = new Map<string, AbortController>();
-    const send = (value: unknown) => {
+    const sendText = (text: string) => {
       if (ws.readyState !== WebSocket.OPEN) return;
       if (ws.bufferedAmount > 8 * 1024 * 1024) {
         ws.close(1013, 'Slow subscriber; reconnect to replay.');
         return;
       }
-      ws.send(JSON.stringify(value));
+      ws.send(text);
     };
+    const send = (value: unknown) => sendText(JSON.stringify(value));
     const authorize = () => access.verify(token, 'view');
     const snapshot = () => {
       snapshotQueue = snapshotQueue
@@ -63,6 +69,7 @@ export function attachWorkspaceSockets(
             type: 'crdt-snapshot',
             roomId: 'workspace',
             data: Buffer.from(state.loro).toString('base64'),
+            sequence: state.sequence,
             content: state.content,
             revisions: state.revisions,
             readOnly: true,
@@ -105,6 +112,11 @@ export function attachWorkspaceSockets(
       unsubscribe();
       unsubscribeRuns();
       for (const controller of queries.values()) controller.abort();
+      if (session) {
+        const task = session.dispose();
+        work.add(task);
+        void task.finally(() => work.delete(task));
+      }
     });
     ws.on('error', () => ws.close());
     ws.on('message', (data, binary) => {
@@ -122,6 +134,46 @@ export function attachWorkspaceSockets(
     async function handle(data: import('ws').RawData, binary: boolean) {
       if (binary) {
         authorize();
+        const bytes = Buffer.isBuffer(data)
+          ? data
+          : Buffer.concat(Array.isArray(data) ? data : [Buffer.from(data)]);
+        const size = bytes.length >= 4 ? bytes.readUInt32BE(0) : 0;
+        if (size > 0 && size <= 4096 && size + 4 < bytes.length) {
+          let header;
+          try {
+            header = JSON.parse(bytes.subarray(4, size + 4).toString());
+          } catch {
+            /* Not an upload frame. */
+          }
+          if (header?.type === 'uploadArrow') {
+            access.verify(token, 'edit');
+            const parsed = z
+              .object({
+                queryId: z.string().min(1).max(200),
+                tableName: z.string().min(1),
+              })
+              .parse(header);
+            try {
+              await workspace.upload(
+                {
+                  operationId: parsed.queryId,
+                  tableName: parsed.tableName,
+                  format: 'arrow',
+                },
+                bytes.subarray(size + 4),
+              );
+              send({type: 'uploadAck', queryId: parsed.queryId});
+            } catch (error) {
+              send({
+                type: 'error',
+                queryId: parsed.queryId,
+                error:
+                  error instanceof Error ? error.message : 'Upload failed.',
+              });
+            }
+            return;
+          }
+        }
         send({
           type: 'error',
           code: 'document_read_only',
@@ -129,6 +181,8 @@ export function attachWorkspaceSockets(
         });
         return;
       }
+      if (data.toString().length > 256 * 1024)
+        throw new Error('Request too large.');
       const frame = z
         .object({type: z.string()})
         .passthrough()
@@ -137,9 +191,18 @@ export function attachWorkspaceSockets(
         if (token) throw new Error('Already authenticated.');
         const value = z.string().parse(frame.token);
         access.verify(value, 'view');
+        session = workspace.createQuerySession();
         token = value;
         clearTimeout(authTimeout);
-        send({type: 'authAck'});
+        send({
+          type: 'authAck',
+          capabilities: {
+            querySession: 'connection',
+            cache: 'mosaic',
+            maxRows: 100000,
+            maxResultBytes: 33554432,
+          },
+        });
         return;
       }
       authorize();
@@ -175,7 +238,7 @@ export function attachWorkspaceSockets(
         queries.get(String(frame.queryId))?.abort();
         return;
       }
-      if (frame.type !== 'arrow') {
+      if (!['arrow', 'json', 'exec'].includes(frame.type)) {
         send({
           type: 'error',
           queryId: frame.queryId,
@@ -200,7 +263,7 @@ export function attachWorkspaceSockets(
         return;
       }
       const request = parsedRequest.data;
-      if (queryCount >= 4 || queries.has(request.queryId)) {
+      if (queryCount >= 64 || queries.has(request.queryId)) {
         send({
           type: 'error',
           queryId: request.queryId,
@@ -212,9 +275,36 @@ export function attachWorkspaceSockets(
       queries.set(request.queryId, controller);
       queryCount++;
       try {
-        const table = await workspace.query(request.sql, controller.signal);
+        const table = await session!.query(request.sql, controller.signal);
         authorize();
         if (controller.signal.aborted) throw new Error('Query cancelled.');
+        if (frame.type === 'json') {
+          const chunks: string[] = [];
+          let size = 0;
+          for (let offset = 0; offset < table.numRows; offset += 128) {
+            for (const row of arrowTableToJson(
+              table.slice(offset, offset + 128),
+            )) {
+              const value = JSON.stringify(row, (_, item) =>
+                typeof item === 'bigint' ? item.toString() : item,
+              );
+              size += Buffer.byteLength(value) + 1;
+              if (size > 32 * 1024 * 1024)
+                throw new Error(
+                  'JSON result exceeds 32 MiB; narrow the query.',
+                );
+              chunks.push(value);
+            }
+          }
+          sendText(
+            `{"type":"json","queryId":${JSON.stringify(request.queryId)},"data":[${chunks.join(',')}]}`,
+          );
+          return;
+        }
+        if (frame.type === 'exec') {
+          send({type: 'ok', queryId: request.queryId});
+          return;
+        }
         const ipc = tableToIPC(table, 'stream');
         if (ipc.length > 32 * 1024 * 1024)
           throw new Error('Result exceeds 32 MiB; narrow the query.');
@@ -223,6 +313,10 @@ export function attachWorkspaceSockets(
         );
         const prefix = Buffer.alloc(4);
         prefix.writeUInt32BE(header.length);
+        if (ws.bufferedAmount > 8 * 1024 * 1024) {
+          ws.close(1013, 'Slow query subscriber.');
+          return;
+        }
         if (ws.readyState === WebSocket.OPEN)
           ws.send(Buffer.concat([prefix, header, ipc]));
       } catch (error) {

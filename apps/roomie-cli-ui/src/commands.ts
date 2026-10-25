@@ -1,5 +1,7 @@
 import {
   createBlockDocumentCommands,
+  BlockDocumentContent,
+  blockDocumentNodeToBlock,
   blockDocumentContentToBlocks,
   type BlockDocumentBlock,
   type BlockDocumentStatefulBlockCommandType,
@@ -90,6 +92,35 @@ export function createRoomieCommands(options: {
                 ),
     }));
   const commands: RoomCommand<RoomState>[] = [
+    {
+      id: 'block-document.set-content',
+      name: 'Save document content',
+      description:
+        'Save exact editor content and title through the shared document command path.',
+      inputSchema: z.object({
+        artifactId: z.string().min(1),
+        content: BlockDocumentContent,
+        title: z.string().optional(),
+      }),
+      metadata: {readOnly: false, idempotent: true, riskLevel: 'medium'},
+      execute: ({getState}, raw) => {
+        const {artifactId, content, title} = raw as {
+          artifactId: string;
+          content: BlockDocumentContent;
+          title?: string;
+        };
+        if (!getState().blockDocuments.config.artifacts[artifactId])
+          throw new Error('Unknown document.');
+        getState().blockDocuments.setContent(artifactId, content);
+        if (title !== undefined)
+          getState().artifacts.renameArtifact(artifactId, title);
+        return {
+          success: true,
+          commandId: 'block-document.set-content',
+          data: {artifactId},
+        };
+      },
+    },
     ...createBlockDocumentCommands<RoomState>({
       defaultTitle: 'Untitled document',
       commandGroup: 'Document',
@@ -160,7 +191,28 @@ export function createRoomieCommands(options: {
       const state = context.getState();
       if (command.id === 'data-table.configure')
         await validateTableFilters(state.db, input.settings.filters);
+      if (command.id === 'block-document.set-content') {
+        const ids = new Set<string>();
+        const inspect = (nodes: BlockDocumentContent['content'], depth = 0) => {
+          for (const node of nodes) {
+            validateDocumentNode(node);
+            if (node.attrs?.id) {
+              const id = String(node.attrs.id);
+              if (ids.has(id))
+                throw new Error('Incoming blocks cannot share an ID.');
+              ids.add(id);
+            }
+            if (depth && node.type.startsWith('blockDocument'))
+              throw new Error('Analytical blocks must be top-level.');
+            inspect(node.content ?? [], depth + 1);
+          }
+        };
+        inspect(input.content.content);
+      }
       const blocks: BlockDocumentBlock[] = [
+        ...(input.content
+          ? input.content.content.map(blockDocumentNodeToBlock).filter(Boolean)
+          : []),
         ...(input.blocks ?? []),
         ...(input.block ? [input.block] : []),
       ];
@@ -242,9 +294,10 @@ export function createRoomieCommands(options: {
                 b.type === 'statefulBlock' &&
                 b.blockInstanceId === block.blockInstanceId &&
                 !(
-                  command.id === 'block-document.update-block' &&
+                  (command.id === 'block-document.update-block' ||
+                    command.id === 'block-document.set-content') &&
                   artifactId === input.artifactId &&
-                  b.id === input.blockId
+                  b.id === (input.blockId ?? block.id)
                 ),
             )
           )

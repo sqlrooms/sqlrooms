@@ -1,12 +1,11 @@
 import {createHash} from 'node:crypto';
-import {mkdir, realpath} from 'node:fs/promises';
+import {mkdir, realpath, mkdtemp, rm, copyFile, cp} from 'node:fs/promises';
 import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {writeBundle} from './bundle';
 import {createStore} from 'zustand/vanilla';
 import {createRoomShellSlice} from '@sqlrooms/room-shell';
-import {
-  createNodeDuckDbConnector,
-  queryToArrowTable,
-} from '@sqlrooms/duckdb-node';
+import {createNodeDuckDbConnector} from '@sqlrooms/duckdb-node';
 import {createMosaicSlice} from '@sqlrooms/mosaic';
 import {
   registerCommandsForOwner,
@@ -14,11 +13,19 @@ import {
   type RoomCommandResult,
 } from '@sqlrooms/room-store';
 import {z} from 'zod';
-import {escapeVal} from '@sqlrooms/duckdb-core';
+
 import {createRoomieDomainSlice} from '../../roomie-cli-ui/src/createRoomieDomainSlice';
-import {selectRoomieContent} from '../../roomie-cli-ui/src/stateOwnership';
+import {
+  selectRoomieContent,
+  type RoomieContent,
+} from '../../roomie-cli-ui/src/stateOwnership';
+import {
+  mergeRoomieContent,
+  parseContentWorkspace,
+} from '../../roomie-cli-ui/src/contentPersistence';
 import type {RoomState} from '../../roomie-cli-ui/src/RoomState';
-import {assertLocalRenderQuery} from '../../roomie-cli-ui/src/renderQueryPolicy';
+import {createQueryService} from './query';
+import {createUploads, type WorkspaceUpload} from './uploads';
 import {createContent} from './content';
 import {assertCommandTarget, createHostCommands} from './commands';
 import {openMetadata, type CommitReceipt, type MetadataStore} from './metadata';
@@ -49,6 +56,8 @@ export type RevisionConflict = {
  */
 export async function openWorkspace(options: {
   directory: string;
+  /** Offline migration only: seed empty metadata after validating legacy content. Never exposed over HTTP. */
+  initialContent?: RoomieContent;
   /** Explicit opt-in. Disabled means native DuckDB 2.0 without Quack. */
   quack?: {uri: string; token: string};
   /** Persistence boundary injection for deterministic storage failure tests. */
@@ -63,7 +72,11 @@ export async function openWorkspace(options: {
   activeDirectories.add(directory);
   const connector = createNodeDuckDbConnector({
     dbPath: join(directory, 'data.duckdb'),
-    config: {storage_compatibility_version: 'v1.4.0'},
+    config: {
+      storage_compatibility_version: 'v1.4.0',
+      memory_limit: '512MB',
+      threads: '4',
+    },
   });
   // DB services live independently of the disposable content projection. Their
   // methods must never close over a Zustand store discarded during recovery.
@@ -75,17 +88,21 @@ export async function openWorkspace(options: {
   );
   let metadata: MetadataStore | undefined;
   let content: ReturnType<typeof createContent> | undefined;
-  let store: ReturnType<typeof createDomain>;
+  let store!: ReturnType<typeof createDomain>;
   let closing = false;
+  let exporting = false;
+  let exportWork: Promise<Awaited<ReturnType<typeof writeBundle>>> | undefined;
   let fault: unknown;
   let queue: Promise<unknown> = Promise.resolve();
-  const queries = new Set<
-    Promise<Awaited<ReturnType<typeof queryToArrowTable>>>
-  >();
+  const queryService = createQueryService(
+    connector,
+    () => databaseStore.getState().db,
+  );
   const mutations = new Set<Promise<CommitReceipt | RevisionConflict>>();
   let disposal: Promise<void> | undefined;
   const listeners = new Set<(receipt: CommitReceipt) => void>();
   let quackStarted = false;
+  let uploads!: ReturnType<typeof createUploads>;
   const unsubscribeDatabase = databaseStore.subscribe((state) => {
     store?.setState({db: state.db});
   });
@@ -151,7 +168,27 @@ export async function openWorkspace(options: {
     metadata = (options.openMetadata ?? openMetadata)(
       join(directory, 'meta.sqlite'),
     );
+    uploads = createUploads(connector, metadata, () =>
+      databaseStore.getState().db.refreshTableSchemas(),
+    );
+    await uploads.initialize();
     rebuild();
+    if (options.initialContent) {
+      const imported = parseContentWorkspace({
+        application: 'roomie',
+        schemaVersion: 2,
+        ...options.initialContent,
+      });
+      if (metadata.load().length)
+        throw new Error('Cannot seed an existing workspace.');
+      store.setState((current) => mergeRoomieContent(current, imported));
+      content!.push();
+      metadata.initializeContent(
+        content!.doc.export({mode: 'snapshot'}),
+        Object.keys(imported.artifacts.artifactsById),
+      );
+      rebuild();
+    }
     metadata.runs.recover();
     await databaseStore.getState().db.refreshTableSchemas();
     if (options.quack) {
@@ -175,14 +212,101 @@ export async function openWorkspace(options: {
     activeDirectories.delete(directory);
     throw error;
   }
+  const optionsQuackUri = () => options.quack!.uri;
+  const optionsQuackToken = () => options.quack!.token;
   const persistence = metadata!;
 
   return {
     directory,
-    runs: persistence.runs,
+    workspaceId: persistence.workspaceId,
+    runs: {
+      ...persistence.runs,
+      start: (...args: Parameters<typeof persistence.runs.start>) => {
+        if (closing || exporting || fault)
+          throw new Error('Workspace unavailable.');
+        return persistence.runs.start(...args);
+      },
+    },
     engine: 'v2.0.0' as const,
     quack: quackStarted ? ('enabled' as const) : ('disabled' as const),
     ready: Promise.resolve(),
+    /** Analytical uploads have their own transaction and retry receipt. */
+    upload(input: WorkspaceUpload, bytes: Uint8Array) {
+      if (closing || fault || exporting)
+        throw new Error('Workspace unavailable.');
+      return uploads.upload(input, bytes);
+    },
+    /** Explicit refresh after native/Quack changes; clients rebuild their cache. */
+    async refresh() {
+      if (closing || fault) throw new Error('Workspace unavailable.');
+      await databaseStore.getState().db.refreshTableSchemas();
+    },
+    /** Freeze content, drain uploads and pause Quack while both database snapshots are captured. */
+    async exportBundle(
+      destination: string,
+      options: {includeHistory?: boolean} = {},
+    ) {
+      if (closing || fault || exporting || persistence.runs.active())
+        throw new Error(
+          'Stop active runs before exporting; workspace must be available.',
+        );
+      exporting = true;
+      exportWork = (async () => {
+        let staging: string | undefined;
+        let pausedQuack = false;
+        try {
+          staging = await mkdtemp(join(tmpdir(), 'roomie-snapshot-'));
+          const snapshotDirectory = staging;
+          await uploads.flush();
+          await gate(async () => {
+            if (persistence.runs.active())
+              throw new Error('Stop active runs before exporting.');
+            if (quackStarted) {
+              await connector.execute(
+                `CALL quack_stop('${optionsQuackUri()}')`,
+              );
+              pausedQuack = true;
+            }
+            await connector.getConnection().run('CHECKPOINT');
+            await copyFile(
+              join(directory, 'data.duckdb'),
+              join(snapshotDirectory, 'data.duckdb'),
+            );
+            persistence.snapshot(
+              join(snapshotDirectory, 'meta.sqlite'),
+              options.includeHistory === true,
+            );
+            await mkdir(join(snapshotDirectory, 'assets'));
+            await cp(
+              join(directory, 'assets'),
+              join(snapshotDirectory, 'assets'),
+              {
+                recursive: true,
+                dereference: false,
+              },
+            ).catch((error) => {
+              if (error.code !== 'ENOENT') throw error;
+            });
+          }, true);
+          return await writeBundle(
+            staging,
+            destination,
+            options.includeHistory === true,
+          );
+        } finally {
+          try {
+            if (pausedQuack)
+              await connector.execute(
+                `CALL quack_serve('${optionsQuackUri()}', token='${optionsQuackToken()}')`,
+              );
+          } finally {
+            exporting = false;
+            if (staging) await rm(staging, {recursive: true, force: true});
+          }
+        }
+      })();
+      return exportWork;
+    },
     /** Host catalog projection for read-only viewers; no arbitrary catalog SQL admission. */
     catalog: () => {
       const {tables, currentDatabase, currentSchema} =
@@ -209,18 +333,19 @@ export async function openWorkspace(options: {
     },
     /** Bounded analytical reads, drained before native instance shutdown. */
     query(sql: string, signal?: AbortSignal) {
-      if (closing || fault || queries.size >= 4)
-        return Promise.reject(
-          new Error('Query service unavailable or at capacity.'),
-        );
-      const task = executeQuery(sql, signal);
-      queries.add(task);
-      void task.finally(() => queries.delete(task)).catch(() => {});
-      return task;
+      if (closing || fault)
+        return Promise.reject(new Error('Workspace unavailable.'));
+      return queryService.query(sql, signal);
+    },
+    /** A connection-local cache lifetime. Reconnect creates a fresh session. */
+    createQuerySession: () => {
+      if (closing || fault) throw new Error('Workspace unavailable.');
+      return queryService.session();
     },
     /** Return committed content and revisions, never the live Zustand object. */
     snapshot: () =>
       gate(() => ({
+        sequence: persistence.sequence(),
         content: selectRoomieContent(store.getState()),
         revisions: Object.fromEntries(
           Object.keys(store.getState().blockDocuments.config.artifacts).map(
@@ -295,7 +420,9 @@ export async function openWorkspace(options: {
       disposal = (async () => {
         await Promise.allSettled([...mutations]);
         await queue;
-        await Promise.allSettled([...queries]);
+        await exportWork?.catch(() => {});
+        await uploads.flush();
+        await queryService.dispose();
         listeners.clear();
         unsubscribeDatabase();
         content?.dispose();
@@ -317,60 +444,6 @@ export async function openWorkspace(options: {
       return disposal;
     },
   };
-
-  async function executeQuery(sql: string, signal?: AbortSignal) {
-    if (signal?.aborted) throw new Error('Query cancelled.');
-    const connection = await connector.getInstance().connect();
-    let expired = false;
-    const abort = () => connection.interrupt();
-    signal?.addEventListener('abort', abort, {once: true});
-    const timer = setTimeout(() => {
-      expired = true;
-      abort();
-    }, 30000);
-    const query = async (text: string) => {
-      if (signal?.aborted || expired)
-        throw new Error('Query cancelled or deadline exceeded.');
-      return queryToArrowTable(connection, text);
-    };
-    // Validation and execution share this request's interruptible connection.
-    const policyConnector = new Proxy(
-      {...connector},
-      {
-        get(target, key) {
-          return key === 'query' ? query : Reflect.get(target, key);
-        },
-      },
-    );
-    try {
-      // Mosaic asks for DESCRIBE metadata. Validate its underlying SELECT before
-      // DuckDB binds it; DESCRIBE must never become a file/table-function bypass.
-      const describe = /^\s*(?:DESCRIBE|DESC)\s+([\s\S]+)$/i.exec(sql);
-      const inspectedSql = describe
-        ? /^\s*(?:SELECT|WITH)\b/i.test(describe[1]!)
-          ? describe[1]!
-          : `SELECT * FROM ${describe[1]}`
-        : sql;
-      await assertLocalRenderQuery(
-        {
-          ...databaseStore.getState().db,
-          getConnector: async () => policyConnector,
-          sqlSelectToJson: async (text) =>
-            JSON.parse(
-              (await query(`SELECT json_serialize_sql(${escapeVal(text)})`))
-                .getChildAt(0)!
-                .get(0),
-            ),
-        },
-        inspectedSql,
-      );
-      return await query(sql);
-    } finally {
-      clearTimeout(timer);
-      signal?.removeEventListener('abort', abort);
-      connection.closeSync();
-    }
-  }
 
   async function executeMutation(
     raw: WorkspaceMutation,

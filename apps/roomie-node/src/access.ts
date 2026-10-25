@@ -1,7 +1,7 @@
 import {randomBytes} from 'node:crypto';
 
 const secret = () => randomBytes(32).toString('base64url');
-type Operation = 'mcp' | 'bootstrap' | 'renew' | 'view' | 'runs';
+type Operation = 'mcp' | 'bootstrap' | 'renew' | 'view' | 'runs' | 'edit';
 type Credential = {
   principalId: string;
   operations: ReadonlySet<Operation>;
@@ -34,7 +34,7 @@ export function createWorkspaceAccess(
       ownerToken,
       {
         principalId: 'owner',
-        operations: new Set(['mcp', 'bootstrap', 'view', 'runs']),
+        operations: new Set(['mcp', 'bootstrap', 'view', 'runs', 'edit']),
       },
     ],
   ]);
@@ -94,7 +94,7 @@ export function createWorkspaceAccess(
       // Browser credentials cannot mint tickets or execute owner MCP tools.
       credentials.set(token, {
         principalId: 'owner',
-        operations: new Set(['renew', 'view', 'runs']),
+        operations: new Set(['renew', 'view', 'runs', 'edit']),
         expiresAt: clock() + pageTtl,
       });
       return describe(token);

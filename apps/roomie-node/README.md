@@ -294,7 +294,7 @@ renderer. Catalog inspection has its own authenticated DTO endpoint. Render SQL
 is limited to verified ordinary local reads; `DESCRIBE` validates the underlying
 SELECT before binding. Each query has its own interruptible connection and a
 30-second deadline, including validation, with at most four queries and 32 MiB
-serialized results. Charts use uncached queries in M2; broader Mosaic parity is M3.
+serialized results. M3 provides bounded connection-local Mosaic preaggregation and explicit cache rebuild on reconnect or refresh.
 Documents are read-only. Editor controls are disabled, and raw Loro writes and
 snapshot seeding are rejected by the host. Only shared commands can commit content.
 
@@ -336,9 +336,7 @@ Native notifications stay in collapsed Diagnostics; one tool disclosure retains
 its lifecycle, input/output and document links. Roomie keeps document selection and
 workspace approval navigation in the app; approvals and host-run admission remain
 host-authoritative. Queued text belongs to the current mounted chat and is lost
-when navigating away or reloading. Documents and their editor controls stay read-only;
-query coverage is unchanged (broader Mosaic queries, including histogram query
-requirements, remain M3).
+when navigating away or reloading. Documents now use local drafts and authenticated revision-checked shared commands. Conflicts retain the draft and expose committed content; uncertain saves retry the original operation ID.
 
 ### Reproduce the synthetic acceptance fixture
 
@@ -361,3 +359,70 @@ and restart the host without `--seed` to verify history and committed content.
 Recorded Codex host events, offline Claude contract recordings, and their limits live in
 [`harness-v1`](../../packages/ai-config/fixtures/harness-v1/README.md). Scripted
 native protocol tests are labeled separately from real-model evidence.
+
+## M3 query, editing, and portability APIs
+
+The authenticated browser renders shared chart, table, dashboard and HTML
+components. `POST /api/commands` uses the same host command registry, policy,
+explicit artifact/revision checks and idempotent receipts as agent commands.
+`block-document.set-content` accepts exact ProseMirror JSON and an optional title;
+it validates nodes, IDs, analytical sources and ownership. Raw CRDT writes and
+snapshot seeding remain disabled. HTML revision restore is read-only in this
+viewer; revision changes go through commands.
+
+`workspace.upload({operationId, tableName, format}, bytes)` accepts CSV, JSON,
+Parquet and Arrow, with a 32 MiB payload and two admitted imports. It creates a
+new physical table, never replaces an existing table, and records a native receipt
+in the table transaction. A SQLite intent tracks recovery across the two databases.
+The browser file picker calls the authenticated upload endpoint; binary
+`uploadArrow` WebSocket frames retain the existing protocol.
+
+Reads support Arrow/JSON/exec responses, SELECT/DESCRIBE, exact Decimal128 and
+64-bit integers, dates, timestamps, binary and nested values. Raw INTERVAL output
+is rejected because Arrow JS 17 misdecodes it; use `CAST(value AS VARCHAR)`.
+Date-bin interval arithmetic is supported. Nonrecursive CTE sources are checked in lexical scope with DuckDB-compatible ASCII identifier folding. Ordinary operators, `isfinite` and
+`to_days` are validated against live native function metadata. External readers,
+views, internal tables, macros and arbitrary writes remain forbidden.
+
+Limits: 512 MiB native memory, four native threads, four active queries, 64 admitted
+requests, 16 sessions, 32 temporary cache tables per session, 30-second execution
+deadlines, 100,000 result rows, and 32 MiB serialized results. Cancellation removes
+queued work without interrupting its predecessor. Only the coordinator's specific
+`mosaic.preagg_<hex>` create/drop operations are admitted; their SELECT source
+passes the same read policy. Caches are connection-local and disposable.
+`workspace.refresh()` / `POST /api/refresh` refresh the catalog after Quack writes;
+the browser reconnects and rebuilds coordinator caches.
+
+`await workspace.exportBundle(path, {includeHistory: false})` creates a version-1
+`.roomie` bundle. Stop active harness runs first. The host blocks new uploads/runs,
+drains accepted uploads, holds the content gate, stops Quack, checkpoints native
+DuckDB and captures SQLite with VACUUM INTO. Export resumes Quack and drains during
+shutdown. The manifest records format/engine/history policy, file sizes and SHA-256.
+Bundles contain data.duckdb, meta.sqlite and assets; never credentials. Maximum
+bundle size is 2 GiB, with a 1 MiB manifest and 10,000 files.
+
+`await importWorkspaceBundle(bundle, newDirectory)` validates paths, sizes,
+checksums, SQLite integrity/version, committed Loro content and native database
+opening before publishing a new workspace. Existing destinations are refused.
+Conversation history is opt-in: exclusion removes conversations, runs, approvals,
+run events and run blobs. Content revisions, command receipts/audit, provenance
+assets and analytical result tables remain, preserving identities and retry safety.
+
+`await migrateLegacyWorkspace({source, destination, contentSource?, roomId?})`
+opens an offline legacy DuckDB read-only, preserves it as the backup, and imports
+into a fresh directory. Version-1/2 Roomie envelopes and content snapshots are
+supported; the shared document mirror accepts block-document snapshots without
+unsupported markdown documents. When both stores exist, select the authoritative
+one explicitly. Declared analytical bindings are rebound to the new catalog.
+Executable legacy HTML apps with a renamed catalog require explicit source
+migration first; the importer refuses to silently rewrite application code.
+Unknown/future formats fail without modifying the source or existing destinations.
+
+See [M3 verification](../../dev-docs/verification/roomie-m3.md) for the supported
+matrix, browser evidence, reproducible latency workload and verification details.
+
+Content snapshots carry a durable monotonic sequence so delayed HTTP delivery
+cannot replace newer WebSocket content. Drafts occupy independently owned local
+storage slots; reconnect/reload retains a pointer and reopened tabs can explicitly
+recover saved copies, including uncertain operations. Saving or discarding one
+tab's copy never implicitly deletes another slot.

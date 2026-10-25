@@ -66,8 +66,47 @@ export async function exerciseWebSocket(t, kind, url, token) {
           assert.equal(table.getChild('n').get(0), 42);
           assert.equal(table.getChild('empty').get(0), null);
         }
-        if (item.name === 'representative native types')
+        if (item.name === 'nested physical data')
+          assert.deepEqual(Array.from(table.getChild('nested').get(0)), [1, 2]);
+        if (item.name === 'representative native types') {
           assert.equal(table.getChild('big').get(0), 9007199254740993n);
+          assert.equal(table.getChild('amount').type.scale, 2);
+          assert.equal(table.getChild('amount').get(0)[0], 1234);
+        }
+        if (item.name === 'precise and temporal types') {
+          assert.equal(
+            table.getChild('unsigned').get(0),
+            18446744073709551615n,
+          );
+          const precise = table.getChild('precise');
+          assert.equal(precise.type.scale, 9);
+          assert.equal(precise.type.precision, 38);
+          const words = precise.get(0);
+          assert.equal(
+            Array.from(words).reduceRight(
+              (n, word) => (n << 32n) + BigInt(word),
+              0n,
+            ),
+            12345678901234567890123456789n,
+          );
+          assert.equal(table.getChild('date').get(0), Date.UTC(2024, 1, 29));
+          assert.equal(
+            table.getChild('nanos').data[0].values[0],
+            1767229323123456789n,
+          );
+          assert.deepEqual(
+            Array.from(table.getChild('bytes').get(0)),
+            [0, 255],
+          );
+          assert.equal(
+            table.getChild('duration').get(0),
+            '2 months 3 days 00:00:00.000004',
+          );
+        }
+        if (item.name === 'date histogram interval') {
+          assert.equal(table.getChild('x1').get(0), Date.UTC(2026, 0, 5));
+          assert.equal(table.getChild('x2').get(0), Date.UTC(2026, 0, 6));
+        }
       });
     await t.test('SQL error preserves request ID', async () => {
       client.send({

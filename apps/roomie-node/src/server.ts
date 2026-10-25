@@ -43,6 +43,7 @@ export async function startWorkspaceServer(options: {
   const runtime = createWorkspaceMcpRuntime(options.workspace, options.policy);
   let origin = '';
   let closing = false;
+  let receivingUploads = 0;
   let disposal: Promise<void> | undefined;
   const active = new Set<Promise<void>>();
   const server = createServer(
@@ -309,6 +310,79 @@ export async function startWorkspaceServer(options: {
         json(response, 400, {error: 'unsupported_run_operation'});
         return;
       }
+      if (path === '/api/refresh' && request.method === 'POST') {
+        access.verify(token, 'edit');
+        await options.workspace.refresh();
+        json(response, 200, {ok: true});
+        return;
+      }
+      if (path?.startsWith('/api/upload?') && request.method === 'POST') {
+        access.verify(token, 'edit');
+        if (receivingUploads >= 2) {
+          response.setHeader('Connection', 'close');
+          json(response, 429, {error: 'upload_capacity'});
+          return;
+        }
+        receivingUploads++;
+        try {
+          const url = new URL(path, origin);
+          const format = z
+            .enum(['csv', 'json', 'parquet', 'arrow'])
+            .parse(url.searchParams.get('format'));
+          let size = 0;
+          const chunks: Buffer[] = [];
+          for await (const chunk of request.iterator({
+            destroyOnReturn: false,
+          })) {
+            size += chunk.length;
+            if (size > 32 * 1024 * 1024) {
+              json(response, 413, {error: 'upload_too_large'});
+              return;
+            }
+            chunks.push(chunk);
+          }
+          const receipt = await options.workspace.upload(
+            {
+              operationId: z
+                .string()
+                .parse(request.headers['x-roomie-operation']),
+              tableName: z.string().parse(url.searchParams.get('table')),
+              format,
+            },
+            Buffer.concat(chunks),
+          );
+          json(response, 200, receipt);
+          return;
+        } finally {
+          receivingUploads--;
+        }
+      }
+      if (path === '/api/commands' && request.method === 'POST') {
+        const caller = access.verify(token, 'edit');
+        const body = z
+          .strictObject({
+            commandId: z.string().min(1),
+            input: z.record(z.string(), z.json()).default({}),
+            commit: z.strictObject({
+              operationId: z.string().min(1).max(200),
+              artifactId: z.string().min(1).optional(),
+              expectedRevision: z.number().int().nonnegative().optional(),
+            }),
+          })
+          .parse(await readJson(request, 256 * 1024));
+        // The same runtime enforces command policy, revision checks and receipts
+        // for browser and harness callers. No browser projection is trusted.
+        const result = await runtime.callTool('execute_command', body, {
+          surface: 'mcp-http',
+          actor: caller.principalId,
+        });
+        json(
+          response,
+          result.ok ? 200 : result.code === 'revision-conflict' ? 409 : 400,
+          result,
+        );
+        return;
+      }
       if (path === '/api/catalog' && request.method === 'GET') {
         access.verify(token, 'view');
         json(response, 200, options.workspace.catalog());
@@ -318,6 +392,8 @@ export async function startWorkspaceServer(options: {
         access.verify(token, 'view');
         const snapshot = await options.workspace.snapshot();
         json(response, 200, {
+          workspaceId: options.workspace.workspaceId,
+          sequence: snapshot.sequence,
           content: snapshot.content,
           revisions: snapshot.revisions,
           readOnly: true,

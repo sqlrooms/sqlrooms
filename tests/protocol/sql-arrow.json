@@ -5,25 +5,36 @@
       "name": "integer and null",
       "sql": "SELECT 42::INTEGER AS n, NULL::VARCHAR AS empty",
       "rows": 1,
-      "columns": ["n", "empty"]
+      "columns": [
+        "n",
+        "empty"
+      ]
     },
     {
       "name": "empty result",
       "sql": "SELECT 1::INTEGER AS n WHERE false",
       "rows": 0,
-      "columns": ["n"]
+      "columns": [
+        "n"
+      ]
     },
     {
       "name": "representative native types",
       "sql": "SELECT 9007199254740993::BIGINT AS big, 12.34::DECIMAL(10,2) AS amount, TIMESTAMP '2026-01-01 01:02:03' AS time",
       "rows": 1,
-      "columns": ["big", "amount", "time"]
+      "columns": [
+        "big",
+        "amount",
+        "time"
+      ]
     },
     {
       "name": "nested physical data",
       "sql": "SELECT nested FROM conformance_types",
       "rows": 1,
-      "columns": ["nested"]
+      "columns": [
+        "nested"
+      ]
     },
     {
       "name": "describe local select",
@@ -36,6 +47,46 @@
         "key",
         "default",
         "extra"
+      ]
+    },
+    {
+      "name": "histogram arithmetic",
+      "sql": "SELECT floor(i / 10) * 10 AS bin, count(*) AS count FROM conformance_numbers WHERE isfinite(i) GROUP BY 1 ORDER BY 1",
+      "rows": 100,
+      "columns": [
+        "bin",
+        "count"
+      ]
+    },
+    {
+      "name": "precise and temporal types",
+      "sql": "SELECT 18446744073709551615::UBIGINT AS unsigned, 12345678901234567890.123456789::DECIMAL(38,9) AS precise, DATE '2024-02-29' AS date, TIMESTAMP_NS '2026-01-01 01:02:03.123456789' AS nanos, CAST(INTERVAL '2 months 3 days 4 microseconds' AS VARCHAR) AS duration, '\\x00\\xff'::BLOB AS bytes",
+      "rows": 1,
+      "columns": [
+        "unsigned",
+        "precise",
+        "date",
+        "nanos",
+        "duration",
+        "bytes"
+      ]
+    },
+    {
+      "name": "date histogram interval",
+      "sql": "SELECT time_bucket(INTERVAL 1 day, DATE '2026-01-05') AS x1, time_bucket(INTERVAL 1 day, DATE '2026-01-05') + INTERVAL 1 day AS x2",
+      "rows": 1,
+      "columns": [
+        "x1",
+        "x2"
+      ]
+    },
+    {
+      "name": "categorical summary CTE",
+      "sql": "WITH counts AS (SELECT i % 10 AS category, count(*) AS n FROM conformance_numbers GROUP BY 1) SELECT category, sum(n) AS total FROM counts GROUP BY category",
+      "rows": 10,
+      "columns": [
+        "category",
+        "total"
       ]
     }
   ],

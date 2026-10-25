@@ -1,3 +1,4 @@
+import {HtmlAppState, HtmlAppRevision} from '@sqlrooms/app-runtime';
 import {LoroDoc} from 'loro-crdt';
 import {Mirror, schema} from 'loro-mirror';
 import {
@@ -38,7 +39,7 @@ export function createContent(
   if (updates.length) {
     // Mirror's view stamps $cid on objects (including record dictionaries).
     // Loro's JSON projection excludes those runtime container annotations.
-    const value = RoomieContent.parse(doc.toJSON());
+    const value = parseStoredContent(doc.toJSON());
     store.setState((state) => ({
       artifacts: {
         ...state.artifacts,
@@ -58,11 +59,44 @@ export function createContent(
     doc,
     hasHistory: updates.length > 0,
     push() {
-      mirror.setState(selectRoomieContent(store.getState()));
+      // Omit undefined object properties before the opaque Loro Any boundary;
+      // otherwise Loro serializes them as null and optional fields fail recovery.
+      mirror.setState(
+        JSON.parse(JSON.stringify(selectRoomieContent(store.getState()))),
+      );
     },
     dispose() {
       mirror.dispose();
       doc.free();
     },
   };
+}
+
+/** Read older Loro HTML records where absent optional fields were encoded as null. */
+export function parseStoredContent(raw: unknown): RoomieContent {
+  const value = structuredClone(raw) as {
+    htmlApps?: {appsById?: Record<string, Record<string, unknown>>};
+  };
+  const normalize = (
+    record: Record<string, unknown>,
+    shape: Record<
+      string,
+      {isOptional(): boolean; safeParse(value: unknown): {success: boolean}}
+    >,
+  ) => {
+    for (const [key, field] of Object.entries(shape))
+      if (
+        record[key] === null &&
+        field.isOptional() &&
+        !field.safeParse(null).success
+      )
+        delete record[key];
+  };
+  for (const app of Object.values(value?.htmlApps?.appsById ?? {})) {
+    normalize(app, HtmlAppState.shape);
+    if (Array.isArray(app.revisions))
+      for (const revision of app.revisions)
+        normalize(revision, HtmlAppRevision.shape);
+  }
+  return RoomieContent.parse(value);
 }
