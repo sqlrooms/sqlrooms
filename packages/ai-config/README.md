@@ -111,3 +111,7 @@ successful from model output. Approval decisions require an explicit owner.
 [Recorded Codex and Claude fixtures](fixtures/harness-v1/README.md) cover short
 answers, multi-tool artifact creation, approvals, cancellation, restart
 interruption, and unknown native events through the shared replay runtime.
+
+Harness run records may include an optional `harness` identifier. Hosts should
+persist the selected adapter for new runs; older v1 records without it remain
+valid. Capability flags describe that adapter's supported operations.

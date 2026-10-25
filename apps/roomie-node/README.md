@@ -253,6 +253,29 @@ Node-specific tests separately cover persistence/reopen, revision conflicts,
 uncertain responses, denied cross-workspace credentials, expiry/revocation,
 late policy decisions, disconnect and shutdown draining.
 
+## Second live harness (M4 starting slice)
+
+Set `harness: {trustedLocal: true, adapter: 'claude'}` in
+`startWorkspaceServer` to use authenticated Claude Code 2.1.310. Omitting
+`adapter` preserves Codex 0.163.0. `executable` and `model` apply to the selected
+adapter. The development driver accepts `ROOMIE_HARNESS=claude`.
+
+Both adapters use the same shared commands, SQLite commit/receipt boundary,
+run-event contract, approvals and chat renderer. Claude discovers the same
+content-addressed Roomie skill through a per-run plugin copy; discovery and the
+effective native tool configuration are checked before work. Approvals never
+default to allow. Result errors, command receipts and artifact references remain
+visible in the shared UI. Known injected credentials are redacted.
+
+Claude reports usage; both adapters currently report no live input, native-session
+continuation, approval recovery, reasoning summaries or plan updates. New runs
+persist their harness identifier, while older records remain compatible. A fresh
+turn does not imply native context continuation. Cancellation/restart invalidates
+pending native approvals. This is still trusted-local development mode: enforced
+OS isolation, locked analytical database configuration, Sprite leases and external
+watchdog acceptance remain unfinished M4 work. See
+[M4 verification](../../dev-docs/verification/roomie-m4.md).
+
 ## Browserless Codex slice (M2)
 
 Requires Node 24 and an authenticated Codex CLI 0.163.0 on PATH. This is explicit

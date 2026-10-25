@@ -123,8 +123,9 @@ export const HarnessApproval = z.object({
   decision: z.enum(['approve', 'deny']).nullable(),
   resolvedBy: z.string().nullable(),
 });
-/** Durable run identity and current state. */
+/** Durable run identity and current state. Older v1 records may omit the harness name. */
 export const HarnessRun = z.object({
+  harness: z.string().min(1).optional(),
   runId: z.string(),
   conversationId: z.string(),
   turnId: z.string(),

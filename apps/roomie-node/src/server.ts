@@ -30,6 +30,8 @@ export async function startWorkspaceServer(options: {
   /** Explicit trusted local harness mode; no hosted isolation claim. */
   harness?: {
     trustedLocal: true;
+    /** Native harness used for new turns; defaults to Codex. */
+    adapter?: 'codex' | 'claude';
     executable?: string;
     model?: string;
     deadlineMs?: number;

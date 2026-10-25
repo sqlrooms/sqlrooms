@@ -4,7 +4,9 @@ import {join} from 'node:path';
 import {z} from 'zod';
 import type {HarnessCapabilities, HarnessStartTurn} from '@sqlrooms/ai-config';
 import type {openWorkspace} from './workspace';
-import {startCodex, type CodexMessage} from './codexAdapter';
+import {startCodexHarness} from './codexHarness';
+import {startClaude} from './claudeAdapter';
+import type {HarnessAdapter} from './harnessAdapter';
 import {runError} from './runLog';
 import skill from '../skills/roomie/SKILL.md?raw';
 
@@ -25,6 +27,7 @@ export function createSupervisor(options: {
   credentials: {issue: () => string; revoke: (token: string) => void};
   drain?: () => Promise<void>;
   deadlineMs?: number;
+  adapter?: 'codex' | 'claude';
   executable?: string;
   model?: string;
 }) {
@@ -44,7 +47,7 @@ export function createSupervisor(options: {
         id: string;
         token: string;
         timer: ReturnType<typeof setTimeout>;
-        adapter?: ReturnType<typeof startCodex>;
+        adapter?: HarnessAdapter;
         stopping: boolean;
       }
     | undefined;
@@ -84,130 +87,6 @@ export function createSupervisor(options: {
       }
     })();
   }
-  function onMessage(message: CodexMessage) {
-    if (!current || current.stopping) return;
-    const params = message.params ?? {};
-    const method = message.method ?? 'unknown';
-    if (message.id !== undefined) {
-      if (
-        method === 'item/commandExecution/requestApproval' ||
-        method === 'item/fileChange/requestApproval'
-      ) {
-        const approval = log.requestApproval(
-          current.id,
-          String(params.itemId ?? message.id),
-          String(
-            params.command ?? params.reason ?? 'Approve harness file changes?',
-          ),
-        );
-        replies.set(approval.approvalId, message.id);
-      } else current.adapter?.reject(message.id);
-      return;
-    }
-    if (method === 'item/agentMessage/delta') {
-      const id = String(params.itemId);
-      chunks.set(id, (chunks.get(id) ?? '') + String(params.delta ?? ''));
-      if ((chunks.get(id)?.length ?? 0) > 512 * 1024)
-        finish('failed', 'Message output limit exceeded.');
-      return;
-    }
-    if (method === 'turn/completed') {
-      flush();
-      const turn = z
-        .object({status: z.string()})
-        .passthrough()
-        .parse(params.turn);
-      finish(
-        turn.status === 'completed'
-          ? 'succeeded'
-          : turn.status === 'interrupted'
-            ? 'interrupted'
-            : 'failed',
-        `Native turn ${turn.status}.`,
-      );
-      return;
-    }
-    if (method === 'item/started' || method === 'item/completed') {
-      const item = z
-        .object({id: z.string(), type: z.string()})
-        .passthrough()
-        .parse(params.item);
-      if (item.type === 'agentMessage') {
-        if (method === 'item/completed') {
-          flush();
-          log.append(current.id, 'message.completed', {
-            messageId: item.id,
-            status: 'completed',
-          });
-        }
-        return;
-      }
-      if (item.type === 'userMessage') return;
-      const toolClass =
-        item.type === 'mcpToolCall'
-          ? item.server === 'roomie'
-            ? 'roomie-command'
-            : 'mcp'
-          : item.type === 'commandExecution'
-            ? 'shell'
-            : item.type === 'fileChange'
-              ? 'file-change'
-              : 'other';
-      const receipt = z
-        .object({
-          structuredContent: z.object({
-            data: z.object({
-              receipt: z.object({
-                operationId: z.string(),
-                artifactId: z.string(),
-              }),
-            }),
-          }),
-        })
-        .safeParse(item.result);
-      const mcpFailure =
-        z.object({isError: z.literal(true)}).safeParse(item.result).success ||
-        z
-          .object({structuredContent: z.object({ok: z.literal(false)})})
-          .safeParse(item.result).success;
-      const references = receipt.success
-        ? {
-            operationId:
-              receipt.data.structuredContent.data.receipt.operationId,
-            artifactRefs: [
-              {
-                artifactId:
-                  receipt.data.structuredContent.data.receipt.artifactId,
-              },
-            ],
-          }
-        : {};
-      log.append(
-        current.id,
-        method === 'item/started' ? 'tool.started' : 'tool.completed',
-        {
-          ...references,
-          callId: item.id,
-          toolClass,
-          name: item.tool ?? item.command ?? item.type,
-          input: item.arguments ?? {},
-          status: mcpFailure ? 'failed' : (item.status ?? 'completed'),
-          result: item.result ?? item.aggregatedOutput ?? null,
-        },
-        item.id,
-      );
-      return;
-    }
-    // Unsupported delta streams are transient: persisting fragments could bypass secret redaction.
-    if (/delta$/i.test(method)) return;
-    // Native duplicates are diagnostic only, not another transcript projection.
-    if (method.startsWith('codex/event/')) return;
-    log.append(current.id, 'native.unknown', {
-      nativeType: method,
-      summary: method,
-      native: params,
-    });
-  }
   return {
     start(input: HarnessStartTurn, principalId: string) {
       if (closed) throw runError('supervisor_closed', 503);
@@ -215,9 +94,10 @@ export function createSupervisor(options: {
       const result = log.start(
         input,
         principalId,
-        codexCapabilities,
+        {...codexCapabilities, usage: options.adapter === 'claude'},
         skillHash,
         deadlineMs,
+        options.adapter ?? 'codex',
       );
       if (!result.created) return result.run;
       const token = options.credentials.issue();
@@ -230,7 +110,7 @@ export function createSupervisor(options: {
           deadlineMs,
         ),
         stopping: false,
-        adapter: undefined as ReturnType<typeof startCodex> | undefined,
+        adapter: undefined as HarnessAdapter | undefined,
       };
       current = active;
       starting = (async () => {
@@ -248,18 +128,53 @@ export function createSupervisor(options: {
         }).catch((error: NodeJS.ErrnoException) => {
           if (error.code !== 'EEXIST') throw error;
         });
-        const discovery = join(cwd, '.agents', 'skills', 'roomie');
+        const discovery = join(
+          cwd,
+          options.adapter === 'claude' ? '.claude' : '.agents',
+          'skills',
+          'roomie',
+        );
         await mkdir(discovery, {recursive: true});
         await writeFile(join(discovery, 'SKILL.md'), skill);
+        if (options.adapter === 'claude') {
+          const manifest = join(cwd, '.claude', '.claude-plugin');
+          await mkdir(manifest, {recursive: true});
+          await writeFile(
+            join(manifest, 'plugin.json'),
+            JSON.stringify({name: 'roomie', version: '1.0.0'}),
+          );
+        }
         if (active.stopping) return;
-        active.adapter = startCodex({
+        active.adapter = (
+          options.adapter === 'claude' ? startClaude : startCodexHarness
+        )({
           cwd,
           mcpUrl: options.mcpUrl,
           token,
           executable: options.executable,
           model: options.model,
-          onMessage: (message) => {
-            if (current === active && !active.stopping) onMessage(message);
+          onEvent: (kind, payload, nativeEventId) => {
+            if (current !== active || active.stopping) return;
+            if (kind === 'message.text') {
+              const id = String(payload.messageId);
+              chunks.set(
+                id,
+                (chunks.get(id) ?? '') + String(payload.text ?? ''),
+              );
+              if ((chunks.get(id)?.length ?? 0) > 512 * 1024)
+                finish('failed', 'Message output limit exceeded.');
+            } else {
+              if (kind === 'message.completed') flush();
+              log.append(active.id, kind, payload, nativeEventId);
+            }
+          },
+          onApproval: (nativeId, callId, summary) => {
+            if (current !== active || active.stopping) return;
+            const approval = log.requestApproval(active.id, callId, summary);
+            replies.set(approval.approvalId, nativeId);
+          },
+          onComplete: (status, reason) => {
+            if (current === active) finish(status, reason);
           },
           onExit: (reason) => {
             if (current === active) finish('failed', reason);
@@ -287,9 +202,7 @@ export function createSupervisor(options: {
         if (id === undefined || !current?.adapter)
           throw runError('approval_stale');
         try {
-          current.adapter.reply(id, {
-            decision: decision === 'approve' ? 'accept' : 'decline',
-          });
+          current.adapter.approve(id, decision);
         } catch {
           finish('interrupted', 'Approval persisted but native reply failed.');
         }

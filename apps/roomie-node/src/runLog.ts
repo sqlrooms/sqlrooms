@@ -232,10 +232,17 @@ export function createRunLog(
       capabilities: HarnessCapabilities,
       skillHash: string,
       deadlineMs: number,
+      harness: 'codex' | 'claude' = 'codex',
     ) {
       const input = HarnessStartTurn.parse(raw);
       const hash = createHash('sha256')
-        .update(JSON.stringify({input, principalId}))
+        .update(
+          JSON.stringify(
+            harness === 'codex'
+              ? {input, principalId}
+              : {input, principalId, harness},
+          ),
+        )
         .digest('hex');
       return transaction(() => {
         const prior = db
@@ -261,6 +268,7 @@ export function createRunLog(
           new Date().toISOString(),
         );
         const run: HarnessRun = {
+          harness,
           runId: randomUUID(),
           conversationId,
           turnId: randomUUID(),

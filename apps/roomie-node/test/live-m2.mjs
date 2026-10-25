@@ -1,4 +1,5 @@
-// Opt-in live acceptance driver; run from apps/roomie-node with authenticated Codex 0.163.0.
+// Opt-in live acceptance driver; run from apps/roomie-node with an authenticated harness.
+// ROOMIE_HARNESS=claude selects Claude Code 2.1.310; Codex 0.163.0 remains the default.
 import {launchTicket} from './launch-ticket.mjs';
 import {mkdir, writeFile} from 'node:fs/promises';
 import {resolve, join} from 'node:path';
@@ -20,6 +21,9 @@ if (process.argv.includes('--seed')) {
   conn.closeSync();
   db.closeSync();
 }
+const adapter = process.env.ROOMIE_HARNESS ?? 'codex';
+if (!['codex', 'claude'].includes(adapter))
+  throw Error('Unknown ROOMIE_HARNESS');
 const workspace = await openWorkspace({directory});
 if (process.argv.includes('--seed'))
   await workspace.mutate({
@@ -41,7 +45,12 @@ const server = await startWorkspaceServer({
   workspace,
   port: Number(process.env.ROOMIE_M2_PORT ?? 0),
   uiDirectory: resolve('../roomie-cli-ui/dist'),
-  harness: {trustedLocal: true, deadlineMs: 300000},
+  harness: {
+    trustedLocal: true,
+    adapter,
+    executable: process.env.ROOMIE_HARNESS_EXECUTABLE,
+    deadlineMs: 300000,
+  },
 });
 await writeFile(
   join(directory, 'control.json'),
