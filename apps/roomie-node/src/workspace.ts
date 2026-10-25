@@ -7,6 +7,7 @@ import {createNodeDuckDbConnector} from '@sqlrooms/duckdb-node';
 import {createMosaicSlice} from '@sqlrooms/mosaic';
 import {
   registerCommandsForOwner,
+  invokeCommandWithPolicy,
   type RoomCommandResult,
 } from '@sqlrooms/room-store';
 import {z} from 'zod';
@@ -183,6 +184,20 @@ export async function openWorkspace(options: {
         ),
         loro: content!.doc.export({mode: 'snapshot'}),
       })),
+    /** Discover detached descriptors at the committed boundary. */
+    listCommands: () =>
+      gate(() =>
+        structuredClone(
+          store
+            .getState()
+            .commands.listCommands({
+              surface: 'mcp',
+              includeInputSchema: true,
+              includeDisabled: true,
+            })
+            .filter((command) => command.owner === 'roomie'),
+        ),
+      ),
     /** Reads use the same registry and gate as content writes. */
     read: (commandId: string, input: Record<string, unknown> = {}) =>
       gate(async () => {
@@ -194,9 +209,15 @@ export async function openWorkspace(options: {
           typeof input.artifactId !== 'string'
         )
           throw new Error('An explicit artifactId is required.');
-        return structuredClone(
-          await store.getState().commands.invokeCommand(commandId, input),
-        );
+        const result = await invokeCommandWithPolicy(store, commandId, input, {
+          surface: 'mcp',
+        });
+        return structuredClone({
+          ...result,
+          ...(typeof input.artifactId === 'string'
+            ? {revision: persistence.revision(input.artifactId)}
+            : {}),
+        });
       }),
     /** Run preparation outside the content gate, then revision-check and commit. */
     mutate(raw: WorkspaceMutation): Promise<CommitReceipt | RevisionConflict> {
@@ -310,10 +331,17 @@ export async function openWorkspace(options: {
         : undefined;
       let receipt: CommitReceipt;
       try {
-        const result: RoomCommandResult = await store
-          .getState()
-          .commands.invokeCommand(request.commandId, request.input);
-        if (!result.success) throw new Error(result.error ?? 'Command failed.');
+        const result: RoomCommandResult = await invokeCommandWithPolicy(
+          store,
+          request.commandId,
+          request.input,
+          {surface: 'mcp', actor: request.principalId},
+        );
+        if (!result.success)
+          throw Object.assign(new Error(result.error ?? 'Command failed.'), {
+            code: result.code,
+            details: result.data,
+          });
         const artifactId = creating
           ? (result.data as {artifactId: string}).artifactId
           : request.artifactId!;

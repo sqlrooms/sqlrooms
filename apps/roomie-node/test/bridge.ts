@@ -1,0 +1,61 @@
+import {createStore} from 'zustand/vanilla';
+import {createRoomShellSlice} from '@sqlrooms/room-shell';
+import {registerCommandsForOwner} from '@sqlrooms/room-store';
+import {createMosaicSlice} from '@sqlrooms/mosaic';
+import {createLocalCapabilityRuntime} from '@sqlrooms/mcp/room';
+import {registerBrowserMcpBridge} from '@sqlrooms/mcp/browser';
+import {createRoomieDomainSlice} from '../../roomie-cli-ui/src/createRoomieDomainSlice';
+import {createRoomieCommands} from '../../roomie-cli-ui/src/commands';
+import type {RoomState} from '../../roomie-cli-ui/src/RoomState';
+
+/** Exercise the production browser runtime/bridge without mounting a renderer. */
+export async function connectBridge(url: string, token: string) {
+  const store = createStore<RoomState>()((set, get, api) => ({
+    ...createRoomShellSlice({})(set, get, api),
+    ...createMosaicSlice()(set, get, api),
+    ...createRoomieDomainSlice()(set, get, api),
+  }));
+  registerCommandsForOwner(
+    store,
+    'roomie',
+    createRoomieCommands({
+      resolveLocalFile: async () => {
+        throw new Error('No fixture uploads.');
+      },
+    }),
+  );
+  const runtime = createLocalCapabilityRuntime({
+    store,
+    commandFilter: (command) => command.owner === 'roomie',
+    policy: {
+      authorize: ({input}) =>
+        (input as {input?: {title?: string}}).input?.title === 'denied'
+          ? {
+              allowed: false,
+              result: {
+                ok: false,
+                code: 'policy_denied',
+                message: 'Fixture host policy.',
+              },
+            }
+          : {allowed: true},
+    },
+  });
+  let ready!: () => void;
+  const started = new Promise<void>((resolve) => {
+    ready = resolve;
+  });
+  const bridge = registerBrowserMcpBridge(runtime, {
+    url,
+    token,
+    onStatusChange: (status) => {
+      if (status === 'ready') ready();
+    },
+  });
+  await started;
+  return async () => {
+    bridge.dispose();
+    runtime.dispose();
+    await runtime.drain();
+  };
+}

@@ -292,12 +292,18 @@ importers:
       '@duckdb/node-api':
         specifier: 2.0.0-r.1
         version: 2.0.0-r.1
+      '@modelcontextprotocol/sdk':
+        specifier: 1.30.0
+        version: 1.30.0(zod@4.1.13)
       '@sqlrooms/documents':
         specifier: workspace:*
         version: link:../../packages/documents
       '@sqlrooms/duckdb-node':
         specifier: workspace:*
         version: link:../../packages/duckdb-node
+      '@sqlrooms/mcp':
+        specifier: workspace:*
+        version: link:../../packages/mcp
       '@sqlrooms/mosaic':
         specifier: workspace:*
         version: link:../../packages/mosaic

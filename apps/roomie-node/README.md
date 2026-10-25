@@ -1,8 +1,9 @@
 # Roomie Node workspace host
 
-This is the **M1a foundation draft** of the Roomie Node Workspace and Cloud
+This is the **M1a + M1b draft** of the Roomie Node Workspace and Cloud
 Agents plan, stacked on PR #960 (`eed050a6`) and #959 (`8eb7a853`). It is an
-in-process host API, with real native databases and shared Roomie commands.
+in-process host API and authenticated loopback MCP server, with real native
+databases and shared Roomie commands.
 The Python launcher and browser remain available while the replacement is built.
 
 ## Run
@@ -108,8 +109,8 @@ transaction rollback, tentative reads/publication, nested content, slow
 preparation, uncertain responses, failed-closed recovery, owner exclusion and
 real process crashes before/after commit.
 
-**This is trusted local development mode.** There is no HTTP/MCP endpoint, scoped
-credential policy, sandboxed harness or locked hosted DuckDB configuration yet.
+**This is trusted local development mode.** The authenticated MCP endpoint is
+loopback-only. There is no sandboxed harness or locked hosted DuckDB configuration yet.
 Quack clients deliberately receive broad analytical authority. Do not deploy
 this foundation as the hosted security boundary.
 
@@ -122,8 +123,7 @@ only in Loro. The explicit `stateOwnership.ts` schemas and single-owner field
 test reject newly persisted fields until classified. The browser's Node protocol
 connection remains a later milestone; these two launch paths are not connected.
 
-M1b–M4 add authenticated MCP, common protocol conformance, harness supervision,
-browser SQL/Arrow and committed-content subscriptions, conversations/approvals,
+M2–M4 add harness supervision, browser SQL/Arrow and committed-content subscriptions, conversations/approvals,
 revision-checked browser editing, migration/bundles, platform distribution and
 hosted isolation. Loro snapshot compaction and bounded history retention also
 remain to be added; this draft replays the committed update log in order.
@@ -131,3 +131,121 @@ remain to be added; this draft replays the committed update log in order.
 Do not copy an active workspace directory as a portable bundle. Stop the host
 before copying until consistent two-database export is implemented. Artifact
 and block IDs are already preserved by durable content recovery.
+
+## Authenticated MCP (M1b)
+
+```js
+import {readFile} from 'node:fs/promises';
+import {Client} from '@modelcontextprotocol/sdk/client/index.js';
+import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import {
+  openWorkspace,
+  startWorkspaceServer,
+} from './apps/roomie-node/dist/index.mjs';
+
+const workspace = await openWorkspace({directory: '/tmp/my-roomie-workspace'});
+const server = await startWorkspaceServer({workspace});
+const client = new Client({name: 'My client', version: '1'});
+try {
+  // Give a trusted native client only this private file path; never log its token.
+  const credential = JSON.parse(await readFile(server.credentialPath, 'utf8'));
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL(server.mcpUrl), {
+      requestInit: {headers: {Authorization: `Bearer ${credential.token}`}},
+    }),
+  );
+  const created = await client.callTool({
+    name: 'execute_command',
+    arguments: {
+      commandId: 'block-document.create',
+      input: {title: 'An external report'},
+      commit: {operationId: 'report-create-1'},
+    },
+  });
+  const receipt = created.structuredContent.data.receipt;
+  await client.callTool({
+    name: 'execute_command',
+    arguments: {
+      commandId: 'block-document.rename',
+      input: {artifactId: receipt.artifactId, title: 'Revised report'},
+      commit: {
+        operationId: 'report-rename-1',
+        artifactId: receipt.artifactId,
+        expectedRevision: receipt.revision,
+      },
+    },
+  });
+} finally {
+  await client.close();
+  try {
+    await server.dispose();
+  } finally {
+    await workspace.dispose();
+  }
+}
+```
+
+The stateless Streamable HTTP endpoint uses the pinned official TypeScript SDK
+1.30.0. It authenticates every request with a freshly generated, workspace-owner
+credential. It binds only `127.0.0.1`, validates exact Host and optional Origin,
+ignores forwarded routing claims, and sends `no-store`/`no-referrer`. Credentials
+from another workspace or a previous server start are rejected. There is no
+public token-bearing URL or unauthenticated owner-token exchange. A temporary
+POSIX directory (0700) and file (0600) carry credentials outside the workspace;
+shutdown removes them, including when the workspace cannot flush. Windows ACLs
+and reverse-proxy deployment remain unsupported.
+
+`search_commands`, `get_command`, and `execute_command` reuse the command catalog,
+search ranking, input validation, and policy guards. The Node capability
+`sqlrooms/durable-content-v1` adds the optional `commit` argument shown above;
+it is required for mutations. Read calls need no commit metadata. Existing
+content reads and writes require explicit targets. `block-document.get` returns
+`data.revision` from the same committed read boundary. Mutations return
+`data.receipt` only after durable commit; stale revisions return
+`{ok:false, code:'revision-conflict', details:{currentRevision, ...}}`. The stable
+owner principal is stamped by the host, never trusted from client metadata.
+Keep the same operation ID and input after uncertain responses, even across
+restart. An operation ID reused with different input is rejected.
+
+A host can supply an additional `policy.authorize` to deny calls. High-risk and
+confirmation-gated commands remain denied; approvals are a later milestone.
+HTTP disconnect does not cancel an accepted durable mutation. Shutdown stops
+admission, cancels waiting capability calls, and drains actual accepted work.
+A policy decision arriving after timeout or shutdown cannot start a new mutation.
+Clients should reconcile a timeout by retrying the same operation. The server
+owns its transport; the caller owns and must dispose the workspace afterward.
+
+Bootstrap ports the existing `/auth.json`, `/api/auth/ticket`,
+`/api/auth/exchange`, and `/api/auth/renew` protections. Native owners can mint
+bounded, two-minute single-use `#sqlrooms-ticket=` launch links. Exchanged page
+credentials expire after 30 minutes and can renew while valid; they cannot call
+MCP or mint tickets. No browser renderer/transport is connected in M1b, so these
+page credentials currently grant renewal only. The unauthenticated exchange
+body is capped at 4 KiB and MCP request bodies at 256 KiB.
+
+## Protocol conformance
+
+```sh
+# Use the existing Python workspace environment after its normal dependency setup.
+pnpm --filter roomie-node build
+ROOMIE_CONFORMANCE_PYTHON="$PWD/python/.venv/bin/python" \
+  pnpm --filter roomie-node test:conformance
+```
+
+[Shared fixtures](../../tests/protocol/mcp.json) exercise the same HTTP requests
+against the Node host and the real Python launcher, MCP service, authentication,
+bootstrap routes and WebSocket broker. The Python target uses the existing
+browser capability runtime/Roomie domain without mounting a renderer; it does
+not use the Node durable host or a stub broker. The supported common protocol
+is MCP `2025-11-25`. Both targets cover discovery, command search/inspection,
+input failures, command authoring, matching text/structured results, request IDs,
+host policy denial and credential/origin/bootstrap admission. The Python CI job
+runs both targets and fails if either cannot start.
+
+Intentional capability differences are recorded in the fixture: Python retains
+its browser SQL tools and existing acknowledgement semantics; Node exposes only
+content commands and its durable commit extension. SQL/Arrow and CRDT
+conformance, browser transport, and real harness sessions remain M2+ work.
+Node-specific tests separately cover persistence/reopen, revision conflicts,
+uncertain responses, denied cross-workspace credentials, expiry/revocation,
+late policy decisions, disconnect and shutdown draining.
