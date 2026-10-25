@@ -7,6 +7,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 import {useStoreWithAi} from '../../AiSlice';
+import type {HarnessRunChatRuntime} from '../../harnessRunTypes';
 import type {LocalAgentChatRuntime} from '../ChatRuntimeContext';
 import {
   createDualModeChatContext,
@@ -70,6 +71,8 @@ export interface ChatComposerState {
    * currently running, or (session mode only) summarizing the conversation.
    */
   isBusy: boolean;
+  /** Allows an explicit send/queue action during an externally supervised run. */
+  canSendWhileRunning?: boolean;
   /**
    * True when an API key must be supplied before sending can succeed.
    *
@@ -305,12 +308,46 @@ function useLocalAgentComposerState(
   );
 }
 
+function useHarnessComposerState(
+  runtime: HarnessRunChatRuntime,
+): ChatComposerState {
+  const blocked = useSendsBlocked();
+  const canSendInput = (text: string) =>
+    !runtime.startBlockedReason &&
+    runtime.ready &&
+    !runtime.sending &&
+    !runtime.queued &&
+    !blocked &&
+    !!text.trim();
+  const send = useVetoableSend(
+    runtime.sendPrompt,
+    runtime.prompt,
+    canSendInput,
+  );
+  return {
+    mode: 'harness-run',
+    prompt: runtime.prompt,
+    setPrompt: runtime.setPrompt,
+    send,
+    cancel: () => {
+      void runtime.stop();
+    },
+    canSend: canSendInput(runtime.prompt),
+    isRunning: runtime.isStreaming,
+    isBusy: !runtime.ready || runtime.sending,
+    canSendWhileRunning: true,
+    needsApiKey: false,
+    sendBlocked: blocked,
+  };
+}
+
 const composerContext = createDualModeChatContext<ChatComposerState>({
   hookName: 'useChatComposer',
   localAgentProviderName: 'LocalAgentChatComposerProvider',
   boundaryName: 'ChatComposerStateBoundary',
   useSessionState: useSessionComposerState,
   useLocalAgentState: useLocalAgentComposerState,
+  useHarnessState: useHarnessComposerState,
 });
 
 /** Mounts composer infrastructure above a state provider, since `send` reads it. */

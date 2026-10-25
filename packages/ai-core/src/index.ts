@@ -344,3 +344,5 @@ export type {
 export * from './harnessRun';
 
 export {createHarnessReplayClient} from './harnessReplayClient';
+
+export {ChatHistoryItem} from './components/ChatHistoryItem';

@@ -6,9 +6,10 @@ import {
   HarnessRun,
 } from '@sqlrooms/ai-config';
 
-/** Pure event projection; unknown kinds retain a visible fallback. */
+/** Project conversation/tool messages; native and unknown events stay in the diagnostic log. */
 export function projectHarnessMessages(events: HarnessRunEvent[]): UIMessage[] {
   const messages = new Map<string, UIMessage>();
+  const outputs = new Map<string, Record<string, unknown>>();
   for (const event of events) {
     const payload = event.payload;
     if (event.kind === 'message.user')
@@ -28,10 +29,29 @@ export function projectHarnessMessages(events: HarnessRunEvent[]): UIMessage[] {
         parts: [{type: 'text', text: text + String(payload.text)}],
       });
     } else if (
-      event.kind === 'tool.started' ||
-      event.kind === 'tool.completed'
+      ['tool.started', 'tool.output', 'tool.completed'].includes(event.kind)
     ) {
       const id = `${event.runId}:tool:${String(payload.callId)}`;
+      const previous = messages.get(id)?.parts[0];
+      const tool = previous?.type === 'dynamic-tool' ? previous : undefined;
+      const oldOutput = outputs.get(id);
+      const output = {
+        ...oldOutput,
+        ...(event.kind === 'tool.completed'
+          ? {result: payload.result, artifactRefs: payload.artifactRefs}
+          : {}),
+        logs:
+          String(oldOutput?.logs ?? '') +
+          (event.kind === 'tool.output' ? String(payload.chunk ?? '') : ''),
+      };
+      outputs.set(id, output);
+      const failed = [
+        'failed',
+        'denied',
+        'declined',
+        'cancelled',
+        'interrupted',
+      ].includes(String(payload.status));
       messages.set(id, {
         id,
         role: 'assistant',
@@ -39,30 +59,52 @@ export function projectHarnessMessages(events: HarnessRunEvent[]): UIMessage[] {
           {
             type: 'dynamic-tool',
             toolCallId: id,
-            toolName: String(payload.name ?? 'Tool'),
-            ...(event.kind === 'tool.started'
-              ? {state: 'input-available' as const, input: payload.input}
-              : [
-                    'failed',
-                    'denied',
-                    'declined',
-                    'cancelled',
-                    'interrupted',
-                  ].includes(String(payload.status))
+            toolName: String(payload.name ?? tool?.toolName ?? 'Tool'),
+            input: payload.input ?? tool?.input,
+            ...(event.kind === 'tool.completed'
+              ? failed
                 ? {
                     state: 'output-error' as const,
-                    input: payload.input,
                     errorText: String(payload.status),
                   }
-                : {
-                    state: 'output-available' as const,
-                    input: payload.input,
-                    output: payload.result,
-                  }),
+                : {state: 'output-available' as const, output}
+              : {state: 'input-available' as const}),
           },
         ],
       });
     } else if (event.kind === 'run.status') {
+      if (
+        ['succeeded', 'failed', 'cancelled', 'interrupted'].includes(
+          String(payload.status),
+        )
+      ) {
+        for (const [id, message] of messages) {
+          const part = message.parts[0];
+          if (
+            id.startsWith(`${event.runId}:tool:`) &&
+            part?.type === 'dynamic-tool' &&
+            part.state === 'input-available'
+          ) {
+            messages.set(id, {
+              ...message,
+              parts: [
+                {
+                  type: 'dynamic-tool',
+                  toolCallId: part.toolCallId,
+                  toolName: part.toolName,
+                  input: part.input,
+                  state: 'output-error',
+                  errorText:
+                    payload.status === 'succeeded'
+                      ? 'Run ended without a tool result'
+                      : String(payload.status),
+                },
+              ],
+            });
+          }
+        }
+      }
+
       messages.set(event.eventId, {
         id: event.eventId,
         role: 'assistant',
@@ -102,21 +144,6 @@ export function projectHarnessMessages(events: HarnessRunEvent[]): UIMessage[] {
           },
         ],
       });
-    } else if (
-      !['message.completed', 'turn.started', 'turn.completed'].includes(
-        event.kind,
-      )
-    ) {
-      messages.set(event.eventId, {
-        id: event.eventId,
-        role: 'assistant',
-        parts: [
-          {
-            type: 'text',
-            text: `${event.kind}: ${String(payload.summary ?? payload.text ?? '')}`,
-          },
-        ],
-      });
     }
   }
   return [...messages.values()];
@@ -132,6 +159,7 @@ export function createHarnessRunStore() {
     queued: string;
     error?: string;
     ready: boolean;
+    sending: boolean;
   }>()(() => ({
     events: [],
     lastSeq: 0,
@@ -139,6 +167,7 @@ export function createHarnessRunStore() {
     prompt: '',
     queued: '',
     ready: false,
+    sending: false,
   }));
 }
 /** Add one validated event in sequence order; duplicates never append message text twice. */

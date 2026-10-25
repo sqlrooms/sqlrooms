@@ -159,7 +159,10 @@ describe('host-owned harness replay', () => {
           events.find((e) => e.kind === 'tool.completed')?.payload.status,
         ).toBe('cancelled');
       }
-      expect(transcript).toContain('native.unknown');
+      expect(transcript).not.toContain('native.unknown');
+      expect(
+        store.getState().events.some((e) => e.kind === 'native.unknown'),
+      ).toBe(true);
     },
   );
   it('deduplicates reconnect deliveries and projects each message exactly once', () => {
@@ -217,7 +220,7 @@ describe('host-owned harness replay', () => {
       event(2, 'future.kind', {summary: 'Future event'}),
     ]);
     expect(messages[0]?.parts[0]).toMatchObject({state: 'output-error'});
-    expect(JSON.stringify(messages[1])).toContain('future.kind: Future event');
+    expect(messages).toHaveLength(1);
   });
   it('replay client sends only events after the cursor and rejects writes', async () => {
     const events = [
@@ -242,3 +245,72 @@ describe('host-owned harness replay', () => {
     ).rejects.toThrow('read-only');
   });
 });
+
+it('reconciles tool output and completion without losing the started name, input, or artifact', () => {
+  const events = [
+    event(1, 'tool.started', {
+      callId: 'c',
+      name: 'execute_command',
+      toolClass: 'mcp',
+      input: {commandId: 'block-document.create'},
+    }),
+    event(2, 'tool.output', {callId: 'c', stream: 'stdout', chunk: 'one'}),
+    event(3, 'tool.output', {callId: 'c', stream: 'stdout', chunk: 'two'}),
+    event(4, 'tool.completed', {
+      callId: 'c',
+      status: 'succeeded',
+      result: {revision: 1},
+      artifactRefs: [{artifactId: 'report'}],
+    }),
+    event(5, 'native.unknown', {
+      nativeType: 'thread/tokenUsage/updated',
+      summary: 'tokens',
+    }),
+    event(6, 'usage', {tokens: 100}),
+  ];
+  const messages = projectHarnessMessages(events);
+  expect(messages).toHaveLength(1);
+  expect(messages[0]?.parts[0]).toMatchObject({
+    toolName: 'execute_command',
+    input: {commandId: 'block-document.create'},
+    state: 'output-available',
+    output: {
+      logs: 'onetwo',
+      result: {revision: 1},
+      artifactRefs: [{artifactId: 'report'}],
+    },
+  });
+  expect(projectHarnessMessages(events.slice(0, 3))[0]?.parts[0]).toMatchObject(
+    {toolName: 'execute_command', state: 'input-available'},
+  );
+  expect(
+    projectHarnessMessages([
+      ...events,
+      {
+        ...event(7, 'tool.started', {callId: 'c', name: 'another', input: {}}),
+        runId: 'other',
+      },
+    ]),
+  ).toHaveLength(2);
+});
+
+it.each(['cancelled', 'interrupted', 'failed'])(
+  'settles unfinished tools when a run is %s without inventing completion',
+  (status) => {
+    const messages = projectHarnessMessages([
+      event(1, 'tool.started', {callId: 'pending', name: 'read', input: {}}),
+      event(2, 'tool.completed', {
+        callId: 'done',
+        name: 'write',
+        status: 'succeeded',
+        result: 'saved',
+      }),
+      event(3, 'run.status', {status}),
+    ]);
+    expect(messages[0]?.parts[0]).toMatchObject({
+      state: 'output-error',
+      errorText: status,
+    });
+    expect(messages[1]?.parts[0]).toMatchObject({state: 'output-available'});
+  },
+);

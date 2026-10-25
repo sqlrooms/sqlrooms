@@ -16,8 +16,25 @@ import {
   BlockDocumentEditor,
   BlockDocumentChartRendererProvider,
 } from '@sqlrooms/documents';
-import {TooltipProvider} from '@sqlrooms/ui';
-import {HarnessRunChat} from '@sqlrooms/ai-core';
+import {
+  useIsMobile,
+  TooltipProvider,
+  Badge,
+  Button,
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+  SidebarProvider,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarTrigger,
+} from '@sqlrooms/ui';
+import {HarnessRunChat, ChatHistoryItem} from '@sqlrooms/ai-core';
 import {createRoomieDomainSlice} from '../createRoomieDomainSlice';
 import type {RoomState} from '../RoomState';
 import {RoomieContent} from '../stateOwnership';
@@ -71,8 +88,12 @@ roomStore.setState((current) =>
 );
 const conversations = (await hostRequest('/api/conversations')) as {
   id: string;
+  title?: string;
+  updatedAt?: string;
+  status?: string;
 }[];
 function WorkspaceView() {
+  const isMobile = useIsMobile();
   const artifacts = useRoomStore(
     (state) => state.artifacts.config.artifactsById,
   );
@@ -139,6 +160,32 @@ function WorkspaceView() {
       stop();
     };
   }, []);
+  useEffect(() => {
+    let alive = true;
+    let generation = 0;
+    const refresh = () => {
+      const current = ++generation;
+      void hostRequest('/api/conversations')
+        .then((values) => {
+          if (alive && generation === current) setConversationList(values);
+        })
+        .catch(() => {});
+    };
+    const stop = subscribeHost({
+      afterSeq: 0,
+      onStatus: (status) => {
+        if (status === 'Connected') refresh();
+      },
+      onEvent: (event) => {
+        if (event.kind === 'run.status' || event.kind === 'message.user')
+          refresh();
+      },
+    });
+    return () => {
+      alive = false;
+      stop();
+    };
+  }, []);
   const [connection, setConnection] = useState('Connecting');
   useEffect(
     () =>
@@ -154,94 +201,164 @@ function WorkspaceView() {
     [],
   );
   return (
-    <div className="roomie roomie-node">
-      <header className="roomie-header">
+    <div className="bg-background text-foreground flex h-svh min-h-0 flex-col">
+      <header className="flex h-14 shrink-0 items-center gap-3 overflow-x-auto border-b px-4 text-sm">
         <strong className="roomie-brand">Roomie</strong>
-        <span>Document read-only</span>
-        <span>{connection}</span>
+        <Badge variant="secondary">Documents read-only</Badge>
+        <Badge variant="outline">{connection}</Badge>
         {approvalError && <span role="alert">{approvalError}</span>}
         {approvalConversations
           .filter((value) => value !== conversationId)
           .map((value) => (
-            <button
-              className="roomie-action"
+            <Button
+              variant="outline"
+              size="sm"
               key={value}
               onClick={() => selectConversation(value)}
             >
-              Approval waiting in {value.slice(0, 8)}
-            </button>
+              Approval waiting:{' '}
+              {conversationList.find((item) => item.id === value)?.title ??
+                'Conversation'}
+            </Button>
           ))}
       </header>
-      <div className="roomie-body">
-        <nav className="roomie-sidebar">
-          <h2>Documents</h2>
-          {ids.map((value) => (
-            <button
-              className="block w-full p-2 text-left"
-              key={value}
-              onClick={() => setSelection(value)}
-            >
-              {artifacts[value]?.title}
-            </button>
-          ))}
-          <h2>Conversations</h2>
-          {conversationList.map((value) => (
-            <button
-              className="block w-full truncate p-2 text-left"
-              key={value.id}
-              onClick={() => setConversationId(value.id)}
-            >
-              {value.id.slice(0, 8)}
-            </button>
-          ))}
-          <button onClick={() => setConversationId(undefined)}>
-            New conversation
-          </button>
-        </nav>
-        <main className="roomie-node-document min-w-0 flex-1 overflow-auto">
-          {id ? (
-            <BlockDocumentChartRendererProvider renderer={ChartBlockRenderer}>
-              <BlockDocumentEditor
-                key={id}
-                documentId={id}
-                title={artifacts[id]?.title}
-                value={documents[id]!.content}
-                assets={documents[id]!.assets}
-                readOnly
-                onChange={() => {}}
+      <SidebarProvider className="min-h-0! flex-1 overflow-hidden">
+        <Sidebar
+          collapsible="offcanvas"
+          className="top-14! h-[calc(100svh-3.5rem)]!"
+        >
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Documents</SidebarGroupLabel>
+              <SidebarMenu>
+                {ids.map((value) => (
+                  <SidebarMenuItem key={value}>
+                    <SidebarMenuButton
+                      isActive={id === value}
+                      onClick={() => setSelection(value)}
+                    >
+                      {artifacts[value]?.title}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Conversations</SidebarGroupLabel>
+              <Button
+                variant="outline"
+                className="mb-3"
+                onClick={() => setConversationId(undefined)}
               >
-                <BlockDocumentEditor.Content />
-              </BlockDocumentEditor>
-            </BlockDocumentChartRendererProvider>
-          ) : (
-            <p>Ask Roomie to create a document.</p>
-          )}
-          {id && (
-            <details>
-              <summary>Committed document source</summary>
-              <pre className="overflow-auto text-xs whitespace-pre-wrap">
-                {JSON.stringify(documents[id], null, 2)}
-              </pre>
-            </details>
-          )}
-        </main>
-        <aside className="roomie-node-chat flex shrink-0 flex-col border-l bg-white">
-          <HarnessRunChat.Root
-            key={conversationId ?? 'new'}
-            client={harnessClient}
-            conversationId={conversationId}
-            onConversation={selectConversation}
+                New conversation
+              </Button>
+              <div className="space-y-2">
+                {conversationList.map((value) => (
+                  <ChatHistoryItem
+                    key={value.id}
+                    session={{
+                      id: value.id,
+                      name: value.title ?? 'New conversation',
+                      lastOpenedAt: value.updatedAt
+                        ? Date.parse(value.updatedAt)
+                        : undefined,
+                      isRunning: [
+                        'running',
+                        'queued',
+                        'awaiting-approval',
+                        'awaiting-input',
+                      ].includes(value.status ?? ''),
+                    }}
+                    description={value.status ?? 'Starting'}
+                    isActive={value.id === conversationId}
+                    onClick={() => setConversationId(value.id)}
+                  />
+                ))}
+              </div>
+            </SidebarGroup>
+          </SidebarContent>
+        </Sidebar>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="flex h-9 shrink-0 items-center border-b px-2">
+            <SidebarTrigger />
+            <span className="text-muted-foreground text-xs">Workspace</span>
+          </div>
+          <ResizablePanelGroup
+            orientation={isMobile ? 'vertical' : 'horizontal'}
           >
-            <p className="p-3 text-xs">
-              Host-owned conversation. Closing this tab leaves work running.
-            </p>
-            <HarnessRunChat.Approvals />
-            <HarnessRunChat.Messages className="min-h-0 flex-1" />
-            <HarnessRunChat.Details onArtifact={setSelection} />
-            <HarnessRunChat.Controls />
-          </HarnessRunChat.Root>
-        </aside>
-      </div>
+            <ResizablePanel defaultSize="60%" minSize="25%">
+              <main className="roomie-node-document h-full min-w-0 overflow-auto">
+                {id ? (
+                  <BlockDocumentChartRendererProvider
+                    renderer={ChartBlockRenderer}
+                  >
+                    <BlockDocumentEditor
+                      key={id}
+                      documentId={id}
+                      title={artifacts[id]?.title}
+                      value={documents[id]!.content}
+                      assets={documents[id]!.assets}
+                      readOnly
+                      onChange={() => {}}
+                    >
+                      <BlockDocumentEditor.Content />
+                    </BlockDocumentEditor>
+                  </BlockDocumentChartRendererProvider>
+                ) : (
+                  <p>Ask Roomie to create a document.</p>
+                )}
+                {id && (
+                  <details>
+                    <summary>Committed document source</summary>
+                    <pre className="overflow-auto text-xs whitespace-pre-wrap">
+                      {JSON.stringify(documents[id], null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </main>
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize="40%" minSize="25%">
+              <aside className="flex h-full min-h-0 flex-col overflow-y-auto">
+                <HarnessRunChat.Root
+                  key={conversationId ?? 'new'}
+                  client={harnessClient}
+                  conversationId={conversationId}
+                  onConversation={selectConversation}
+                  startBlockedReason={
+                    conversationList.some(
+                      (item) =>
+                        item.id !== conversationId &&
+                        [
+                          'queued',
+                          'running',
+                          'awaiting-input',
+                          'awaiting-approval',
+                        ].includes(item.status ?? ''),
+                    )
+                      ? 'Another conversation is running. Open it to resolve approvals or stop it before starting here.'
+                      : undefined
+                  }
+                >
+                  <p className="p-3 text-xs">
+                    Host-owned conversation. Closing this tab leaves work
+                    running.
+                  </p>
+                  <HarnessRunChat.Approvals />
+                  <HarnessRunChat.Messages
+                    className={
+                      isMobile ? 'min-h-40 flex-1 shrink-0' : 'min-h-0 flex-1'
+                    }
+                    onArtifact={setSelection}
+                  />
+                  <HarnessRunChat.Details />
+                  <HarnessRunChat.Controls />
+                </HarnessRunChat.Root>
+              </aside>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
+      </SidebarProvider>
     </div>
   );
 }

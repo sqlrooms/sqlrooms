@@ -13,15 +13,49 @@ import {
 } from '@sqlrooms/ai-config';
 import type {HarnessRunClient, HarnessRunChatRuntime} from '../src/harnessRun';
 jest.unstable_mockModule('../src/components/LocalAgentChatMessages', () => ({
-  LocalAgentChatMessages: () => null,
+  LocalAgentChatMessages: ({
+    renderToolDetails,
+  }: {
+    renderToolDetails?: (call: {
+      toolCallId: string;
+      output: unknown;
+    }) => React.ReactNode;
+  }) => {
+    const runtime = useChatRuntime();
+    return runtime.mode === 'harness-run' ? (
+      <>
+        {runtime.messages.flatMap((message) =>
+          message.parts.map((part) =>
+            part.type === 'dynamic-tool' &&
+            part.state === 'output-available' ? (
+              <React.Fragment key={part.toolCallId}>
+                {renderToolDetails?.({
+                  toolCallId: part.toolCallId,
+                  output: part.output,
+                })}
+              </React.Fragment>
+            ) : null,
+          ),
+        )}
+      </>
+    ) : null;
+  },
 }));
 // JSDOM omits structuredClone; the fixture client needs the browser's clone API.
 Object.assign(globalThis, {
   TransformStream,
+  ResizeObserver: class {
+    observe() {}
+    disconnect() {}
+  },
   structuredClone: (value: unknown) => deserialize(serialize(value)),
 });
-const {HarnessRunChatRoot, HarnessRunDetails} =
-  await import('../src/harnessRun');
+const {
+  HarnessRunChatRoot,
+  HarnessRunMessages,
+  HarnessRunDetails,
+  HarnessRunControls,
+} = await import('../src/harnessRun');
 const {useChatRuntime} = await import('../src/components/ChatRuntimeContext');
 Object.assign(globalThis, {IS_REACT_ACT_ENVIRONMENT: true});
 const run: HarnessRun = {
@@ -94,11 +128,14 @@ async function fixture() {
     root.render(
       <HarnessRunChatRoot client={client} conversationId="conversation">
         <Probe />
+        <HarnessRunControls />
+        <HarnessRunMessages />
       </HarnessRunChatRoot>,
     );
   });
   return {
     client,
+    element,
     snapshot,
     get runtime() {
       return runtime!;
@@ -232,7 +269,8 @@ it('opens the real Claude recording artifact through the shared details renderer
           client={client}
           conversationId={recordedRun.conversationId}
         >
-          <HarnessRunDetails onArtifact={onArtifact} />
+          <HarnessRunMessages onArtifact={onArtifact} />
+          <HarnessRunDetails />
         </HarnessRunChatRoot>,
       ),
     );
@@ -244,5 +282,81 @@ it('opens the real Claude recording artifact through the shared details renderer
     expect(onArtifact).toHaveBeenCalledWith('awmqfvy17nl7xx7osenvlrtf');
   } finally {
     await act(async () => root.unmount());
+  }
+});
+
+it('uses the shared composer to queue during a run without replacing a queued turn', async () => {
+  const f = await fixture();
+  try {
+    await act(async () =>
+      f.emit(
+        event(1, 'run.status', {
+          status: 'running',
+          run: {...run, status: 'running'},
+        }),
+      ),
+    );
+    await act(async () => f.runtime.setPrompt('Follow up'));
+    const button = [...f.element.querySelectorAll('button')].find(
+      (b) => b.textContent === 'Queue next turn',
+    )!;
+    expect(button.disabled).toBe(false);
+    expect(f.element.querySelector('textarea')?.disabled).toBe(false);
+    await act(async () => button.click());
+    expect(f.runtime.queued).toBe('Follow up');
+    await act(async () => f.runtime.sendPrompt('Do not replace'));
+    expect(f.runtime.queued).toBe('Follow up');
+    expect(f.element.textContent).toContain('Stop');
+  } finally {
+    await f.close();
+  }
+});
+
+it.each([{}, 'invalid', [null, {}, {artifactId: 3}]])(
+  'ignores malformed untrusted artifact references: %j',
+  async (artifactRefs) => {
+    const f = await fixture();
+    try {
+      await act(async () =>
+        f.emit(
+          event(1, 'tool.completed', {
+            callId: 'bad',
+            status: 'succeeded',
+            artifactRefs,
+          }),
+        ),
+      );
+      expect(f.element.textContent).not.toContain('Open document');
+    } finally {
+      await f.close();
+    }
+  },
+);
+
+it('stop clears a local queued turn before cancellation publishes terminal state', async () => {
+  const f = await fixture();
+  try {
+    await act(async () =>
+      f.emit(
+        event(1, 'run.status', {
+          status: 'running',
+          run: {...run, status: 'running'},
+        }),
+      ),
+    );
+    await act(async () => f.runtime.sendPrompt('Must not start after Stop'));
+    f.client.cancel = async () => {
+      f.emit(
+        event(2, 'run.status', {
+          status: 'cancelled',
+          run: {...run, status: 'cancelled'},
+        }),
+      );
+    };
+    await act(async () => f.runtime.stop());
+    expect(f.runtime.queued).toBe('');
+    expect(f.client.startTurn).not.toHaveBeenCalled();
+  } finally {
+    await f.close();
   }
 });

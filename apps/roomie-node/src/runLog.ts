@@ -365,7 +365,12 @@ export function createRunLog(
       assertHealthy();
       return db
         .prepare(
-          'SELECT id, created_at FROM conversations ORDER BY rowid DESC LIMIT 100',
+          `SELECT c.id, c.created_at,
+            (SELECT substr(json_extract(e.record, '$.payload.text'), 1, 100)
+             FROM run_events e WHERE e.conversation_id=c.id AND json_extract(e.record, '$.kind')='message.user' ORDER BY e.seq LIMIT 1) AS title,
+            (SELECT json_extract(e.record, '$.at') FROM run_events e WHERE e.conversation_id=c.id ORDER BY e.seq DESC LIMIT 1) AS updatedAt,
+            (SELECT json_extract(r.record, '$.status') FROM runs r WHERE r.conversation_id=c.id ORDER BY r.rowid DESC LIMIT 1) AS status
+           FROM conversations c ORDER BY updatedAt DESC LIMIT 100`,
         )
         .all();
     },

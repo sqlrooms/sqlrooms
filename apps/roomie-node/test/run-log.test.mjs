@@ -165,3 +165,21 @@ test('failed startup run recovery releases the native owner for retry', async ()
     await rm(directory, {recursive: true, force: true});
   }
 });
+
+test('conversation history labels use the first prompt and latest durable status after reopen', async () =>
+  fixture(async (db, reopen) => {
+    const {run} = db.runs.start(
+      {idempotencyKey: 'history', text: 'Explain monthly revenue'},
+      'owner',
+      capabilities,
+      'hash',
+      1000,
+    );
+    db.runs.finish(run.runId, 'succeeded', 'Done');
+    db = reopen();
+    const [conversation] = db.runs.conversations();
+    assert.equal(conversation.id, run.conversationId);
+    assert.equal(conversation.title, 'Explain monthly revenue');
+    assert.equal(conversation.status, 'succeeded');
+    assert.ok(conversation.updatedAt);
+  }));

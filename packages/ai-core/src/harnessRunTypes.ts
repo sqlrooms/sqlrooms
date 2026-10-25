@@ -47,6 +47,12 @@ export type HarnessRunChatRuntime = Omit<LocalAgentChatRuntime, 'mode'> & {
   run?: HarnessRun;
   error?: string;
   queued: string;
+  /** Snapshot is loaded and commands may be submitted. */
+  ready: boolean;
+  /** A start request is awaiting acknowledgement. */
+  sending: boolean;
+  /** Host-wide admission reason when another conversation owns the active run. */
+  startBlockedReason?: string;
   resolveApproval: (id: string, decision: 'approve' | 'deny') => Promise<void>;
   fetchBlob: HarnessRunClient['fetchBlob'];
 };

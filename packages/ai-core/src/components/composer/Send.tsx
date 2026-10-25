@@ -20,8 +20,8 @@ export type ChatComposerSendProps = Omit<ActionButtonProps, 'onActivate'> & {
 /**
  * Sends the current prompt on activation.
  *
- * **Self-hiding:** renders `null` while a run is in flight — use {@link Stop}
- * for that state. Disabled whenever {@link useChatComposer}'s `canSend` is
+ * **Self-hiding:** renders `null` while a run is in flight unless the runtime
+ * supports sending/queuing during a run. {@link Stop} remains independently available. Disabled whenever {@link useChatComposer}'s `canSend` is
  * false.
  */
 export const Send = forwardRef<HTMLButtonElement, ChatComposerSendProps>(
@@ -33,7 +33,7 @@ export const Send = forwardRef<HTMLButtonElement, ChatComposerSendProps>(
       composer.send();
     }, [composer, onBeforeSend]);
 
-    if (composer.isRunning) return null;
+    if (composer.isRunning && !composer.canSendWhileRunning) return null;
 
     return (
       <ActionButton

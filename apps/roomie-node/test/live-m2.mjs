@@ -1,4 +1,5 @@
 // Opt-in live acceptance driver; run from apps/roomie-node with authenticated Codex 0.163.0.
+import {launchTicket} from './launch-ticket.mjs';
 import {mkdir, writeFile} from 'node:fs/promises';
 import {resolve, join} from 'node:path';
 import {DuckDBInstance} from '@duckdb/node-api';
@@ -48,6 +49,9 @@ await writeFile(
   {mode: 0o600},
 );
 console.log(JSON.stringify({url: server.url, directory}));
+console.log(
+  `Browser sign-in (single use, expires in 2 minutes): ${await launchTicket(server)}`,
+);
 let last = 0;
 const interval = setInterval(() => {
   for (const event of workspace.runs.events(last)) {

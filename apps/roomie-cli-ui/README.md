@@ -39,7 +39,7 @@ before choosing a replacement. Column selection, sorting and page size are
 editable through Edit blocks → data-table settings.
 Shared domain composition and content commands also power the separate
 [Node workspace foundation](../roomie-node/README.md); its authenticated browser
-transport is not implemented yet.
+transport now supports the M2 read-only document and harness chat viewer.
 Use **Add data** in the sidebar to choose or drop a CSV, Parquet, JSON, or JSONL
 file. Roomie fills an available table name from the filename and automatically
 shows up to 100 rows using `@sqlrooms/data-table`. Edit the name if needed, then
@@ -66,3 +66,14 @@ persistence regressions. `pnpm roomie:build` builds the dependency graph, browse
 bundle, tool contract, notices, wheel and sdist. See
 [Python usage and release instructions](../../python/roomie/README.md) and
 [verification evidence](../../python/roomie/VERIFICATION.md).
+
+## Node viewer (M2)
+
+See the [Node host startup instructions](../roomie-node/README.md#local-start-and-browser-sign-in).
+`src/node/view.tsx` composes the shared sidebar, responsive resizable panels,
+`ChatHistoryItem`, `HarnessRunChat` composer/message/tool controls, and read-only
+`BlockDocumentEditor`. History uses host-provided prompt labels and live status;
+tool receipt links select the corresponding document. Host approval navigation
+and document selection stay in Roomie. Native diagnostics are collapsed separately.
+There is no embedded model loop, document editing, or broader query support in
+this viewer. Closing a tab leaves host work running; reopening replays durable history.

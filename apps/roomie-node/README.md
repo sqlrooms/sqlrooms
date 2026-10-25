@@ -1,6 +1,6 @@
 # Roomie Node workspace host
 
-This is the **M1a + M1b draft** of the Roomie Node Workspace and Cloud
+This is the **M1a + M1b + M2 draft** of the Roomie Node Workspace and Cloud
 Agents plan, stacked on PR #960 (`eed050a6`) and #959 (`8eb7a853`). It is an
 in-process host API and authenticated loopback MCP server, with real native
 databases and shared Roomie commands.
@@ -120,12 +120,12 @@ M1a separates content from browser-local IndexedDB preferences. The existing
 Python/browser path now writes a version-2 content-only `__roomie.ui_state`
 envelope and reads legacy version-1 content; the new Node host stores content
 only in Loro. The explicit `stateOwnership.ts` schemas and single-owner field
-test reject newly persisted fields until classified. The browser's Node protocol
-connection remains a later milestone; these two launch paths are not connected.
+test reject newly persisted fields until classified. The Node viewer now uses authenticated host subscriptions and the shared chat runtime;
+the existing Python/browser launcher remains separate.
 
-M2–M4 add harness supervision, browser SQL/Arrow and committed-content subscriptions, conversations/approvals,
-revision-checked browser editing, migration/bundles, platform distribution and
-hosted isolation. Loro snapshot compaction and bounded history retention also
+M2 provides harness supervision, browser SQL/Arrow and committed-content subscriptions,
+and conversations/approvals. M3/M4 retain revision-checked browser editing,
+migration/bundles, platform distribution and hosted isolation. Loro snapshot compaction and bounded history retention also
 remain to be added; this draft replays the committed update log in order.
 
 Do not copy an active workspace directory as a portable bundle. Stop the host
@@ -303,6 +303,42 @@ sequence replay. Closing its subscription never cancels work. It displays pendin
 approvals, explicit stop, tool output, source document links, and new-turn context
 limitations. Input during a run is queued locally for the next turn; it is lost
 on page reload and is not presented as native live input.
+
+### Local start and browser sign-in
+
+Start or reopen an ordinary workspace without synthetic data:
+
+```sh
+ROOMIE_M2_DIRECTORY=/tmp/my-roomie-workspace \
+  pnpm --filter roomie-node exec node test/live-m2.mjs
+```
+
+Every launch prints a fresh single-use browser sign-in URL, valid for two minutes.
+The host stays browserless until you choose to open it. The URL contains only a
+bootstrap ticket; the owner credential is neither printed nor placed in a URL.
+After expiry or redemption, issue another link while the host is running:
+
+```sh
+ROOMIE_M2_DIRECTORY=/tmp/my-roomie-workspace \
+  pnpm --filter roomie-node exec node test/launch-ticket.mjs
+```
+
+This reads the private `control.json` credential-file reference and calls the
+existing owner-authenticated ticket endpoint. Restarting the host invalidates old
+credentials and prints a fresh link. `--seed` is only for synthetic demo data in
+a new workspace, never needed for sign-in. This is the existing development
+launch path, not a packaged launcher or M4 distribution work.
+
+The viewer uses shared sidebar, resizable panels, history rows, composer controls,
+message/tool renderers and UI controls. Narrow screens stack the resizable document
+and chat panels. History labels use the first prompt and latest durable activity/status.
+Native notifications stay in collapsed Diagnostics; one tool disclosure retains
+its lifecycle, input/output and document links. Roomie keeps document selection and
+workspace approval navigation in the app; approvals and host-run admission remain
+host-authoritative. Queued text belongs to the current mounted chat and is lost
+when navigating away or reloading. Documents and their editor controls stay read-only;
+query coverage is unchanged (broader Mosaic queries, including histogram query
+requirements, remain M3).
 
 ### Reproduce the synthetic acceptance fixture
 
