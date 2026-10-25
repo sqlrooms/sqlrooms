@@ -19,14 +19,26 @@ export async function hostRequest(path: string, body?: unknown) {
         },
   );
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error ?? 'Host request failed.');
+  if (!response.ok)
+    throw Object.assign(
+      new Error(result.message ?? result.error ?? 'Host request failed.'),
+      {
+        code: result.code,
+        details: result.details,
+        definitive: response.status < 500,
+      },
+    );
   return result;
 }
 /** Subscription with bounded retry and committed-cursor replay; closing it never cancels a run. */
 export function subscribeHost(options: {
   afterSeq?: number;
   onEvent?: (event: HarnessRunEvent) => void;
-  onContent?: (content: unknown) => void;
+  onContent?: (
+    content: unknown,
+    revisions: Record<string, number>,
+    sequence: number,
+  ) => void;
   onStatus?: (status: string) => void;
 }) {
   let stopped = false,
@@ -52,7 +64,7 @@ export function subscribeHost(options: {
           if (afterSeq !== undefined)
             socket?.send(JSON.stringify({type: 'run-subscribe', afterSeq}));
         } else if (frame.type === 'crdt-snapshot')
-          options.onContent?.(frame.content);
+          options.onContent?.(frame.content, frame.revisions, frame.sequence);
         else if (frame.type === 'run-event') {
           const event = HarnessRunEvent.parse(frame.event);
           if (event.seq > (afterSeq ?? 0)) {

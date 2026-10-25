@@ -9,13 +9,12 @@ import {
 } from '@sqlrooms/duckdb';
 import {
   createMosaicSlice,
-  ChartBlockRenderer,
   createDefaultChartTypes,
+  createDefaultMosaicDashboardPanelRenderers,
 } from '@sqlrooms/mosaic';
-import {
-  BlockDocumentEditor,
-  BlockDocumentChartRendererProvider,
-} from '@sqlrooms/documents';
+import {createContentReceiver} from './contentReceiver';
+import {NodeDocument} from './Document';
+import {initializeBrowserViewState} from '../browserViewState';
 import {
   useIsMobile,
   TooltipProvider,
@@ -39,7 +38,7 @@ import {createRoomieDomainSlice} from '../createRoomieDomainSlice';
 import type {RoomState} from '../RoomState';
 import {RoomieContent} from '../stateOwnership';
 import {mergeRoomieContent} from '../contentPersistence';
-import {pageCredential} from './auth';
+import {pageCredential, authorizedFetch} from './auth';
 import {hostRequest, harnessClient, subscribeHost} from './client';
 import '../style.css';
 
@@ -53,8 +52,13 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       connector,
       config: {title: 'Roomie', dataSources: []},
     })(set, get, api),
-    ...createMosaicSlice({preagg: {enabled: false}})(set, get, api),
+    ...createMosaicSlice({preagg: {enabled: true, schema: 'mosaic'}})(
+      set,
+      get,
+      api,
+    ),
     ...createRoomieDomainSlice({
+      panelRenderers: createDefaultMosaicDashboardPanelRenderers(),
       chartTypes: createDefaultChartTypes({includeCustomSpec: false}),
     })(set, get, api),
   }),
@@ -92,7 +96,42 @@ const conversations = (await hostRequest('/api/conversations')) as {
   updatedAt?: string;
   status?: string;
 }[];
+await initializeBrowserViewState(roomStore, initial.workspaceId);
+
 function WorkspaceView() {
+  const [renderGeneration, setRenderGeneration] = useState(0);
+  const [dataError, setDataError] = useState('');
+  const [dataStatus, setDataStatus] = useState('');
+  const [uploading, setUploading] = useState(false);
+  async function refreshData() {
+    await hostRequest('/api/refresh', {});
+    await connector.reconnect();
+    await roomStore.getState().db.refreshTableSchemas();
+  }
+  useEffect(
+    () =>
+      connector.subscribeConnectionStatus((status) => {
+        if (status !== 'connected') return;
+        const connection = roomStore.getState().mosaic.connection;
+        if (connection.status === 'ready') {
+          connection.coordinator.clear({clients: false});
+          connection.coordinator.preaggregator.clear();
+        }
+        setRenderGeneration((value) => value + 1);
+      }),
+    [],
+  );
+  const [revisions, setRevisions] = useState<Record<string, number>>(
+    initial.revisions,
+  );
+  const [applyContent] = useState(() =>
+    createContentReceiver(initial.sequence, (content, revisions) => {
+      roomStore.setState((current) =>
+        mergeRoomieContent(current, RoomieContent.parse(content)),
+      );
+      setRevisions(revisions);
+    }),
+  );
   const isMobile = useIsMobile();
   const artifacts = useRoomStore(
     (state) => state.artifacts.config.artifactsById,
@@ -100,8 +139,18 @@ function WorkspaceView() {
   const documents = useRoomStore(
     (state) => state.blockDocuments.config.artifacts,
   );
-  const ids = useMemo(() => Object.keys(documents), [documents]);
-  const [selection, setSelection] = useState<string>();
+  const artifactOrder = useRoomStore(
+    (state) => state.artifacts.config.artifactOrder,
+  );
+  const ids = useMemo(
+    () => artifactOrder.filter((id) => Boolean(documents[id])),
+    [artifactOrder, documents],
+  );
+  const selection = useRoomStore(
+    (state) => state.artifacts.config.currentArtifactId,
+  );
+  const setSelection = (value: string) =>
+    roomStore.getState().artifacts.setCurrentArtifact(value);
   const id =
     selection && documents[selection] ? selection : ids[ids.length - 1];
   const [conversationId, setConversationId] = useState<string | undefined>(
@@ -191,10 +240,8 @@ function WorkspaceView() {
     () =>
       subscribeHost({
         onStatus: setConnection,
-        onContent: (content) => {
-          roomStore.setState((current) =>
-            mergeRoomieContent(current, RoomieContent.parse(content)),
-          );
+        onContent: (content, revisions, sequence) => {
+          applyContent(content, revisions, sequence);
           void roomStore.getState().db.refreshTableSchemas();
         },
       }),
@@ -204,7 +251,98 @@ function WorkspaceView() {
     <div className="bg-background text-foreground flex h-svh min-h-0 flex-col">
       <header className="flex h-14 shrink-0 items-center gap-3 overflow-x-auto border-b px-4 text-sm">
         <strong className="roomie-brand">Roomie</strong>
-        <Badge variant="secondary">Documents read-only</Badge>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            void refreshData().catch((error) => setDataError(error.message))
+          }
+        >
+          Refresh data
+        </Button>
+        <label className="cursor-pointer text-sm">
+          {uploading ? 'Importing…' : 'Import file'}
+          <input
+            aria-label="Import data file"
+            className="sr-only"
+            type="file"
+            accept=".csv,.json,.jsonl,.parquet,.arrow"
+            disabled={uploading}
+            onChange={async (event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              setUploading(true);
+              setDataError('');
+              setDataStatus('');
+              try {
+                const suffix = file.name.split('.').pop()?.toLowerCase();
+                const format = suffix === 'jsonl' ? 'json' : suffix;
+                if (!['csv', 'json', 'parquet', 'arrow'].includes(format ?? ''))
+                  throw new Error('Choose CSV, JSON, Parquet or Arrow.');
+                if (file.size > 32 * 1024 * 1024)
+                  throw new Error('Upload limit is 32 MiB.');
+                const table =
+                  'import_' +
+                  crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+                const response = await authorizedFetch(
+                  `/api/upload?format=${format}&table=${table}`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/octet-stream',
+                      'X-Roomie-Operation': crypto.randomUUID(),
+                    },
+                    body: file,
+                  },
+                );
+                if (!response.ok)
+                  throw new Error(
+                    (await response.json()).error ?? 'Import failed.',
+                  );
+                await refreshData();
+                setDataStatus('Imported ' + file.name + ' as ' + table);
+                const created = await hostRequest('/api/commands', {
+                  commandId: 'block-document.create',
+                  input: {title: file.name},
+                  commit: {operationId: crypto.randomUUID()},
+                });
+                const receipt = created.data.receipt;
+                await hostRequest('/api/commands', {
+                  commandId: 'block-document.create-stateful-block',
+                  input: {
+                    artifactId: receipt.artifactId,
+                    blockId: crypto.randomUUID(),
+                    blockInstanceId: crypto.randomUUID(),
+                    blockType: 'data-table',
+                    tableName: table,
+                  },
+                  commit: {
+                    operationId: crypto.randomUUID(),
+                    artifactId: receipt.artifactId,
+                    expectedRevision: receipt.revision,
+                  },
+                });
+                const current = await hostRequest('/api/content');
+                applyContent(
+                  current.content,
+                  current.revisions,
+                  current.sequence,
+                );
+                setSelection(receipt.artifactId);
+              } catch (error) {
+                setDataError(
+                  error instanceof Error ? error.message : 'Import failed.',
+                );
+              } finally {
+                setUploading(false);
+                event.target.value = '';
+              }
+            }}
+          />
+        </label>
+        {dataError && <span role="alert">{dataError}</span>}
+        {dataStatus && <span role="status">{dataStatus}</span>}
+        <Badge variant="secondary">Revision-checked documents</Badge>
         <Badge variant="outline">{connection}</Badge>
         {approvalError && <span role="alert">{approvalError}</span>}
         {approvalConversations
@@ -289,21 +427,16 @@ function WorkspaceView() {
             <ResizablePanel defaultSize="60%" minSize="25%">
               <main className="roomie-node-document h-full min-w-0 overflow-auto">
                 {id ? (
-                  <BlockDocumentChartRendererProvider
-                    renderer={ChartBlockRenderer}
-                  >
-                    <BlockDocumentEditor
-                      key={id}
-                      documentId={id}
-                      title={artifacts[id]?.title}
-                      value={documents[id]!.content}
-                      assets={documents[id]!.assets}
-                      readOnly
-                      onChange={() => {}}
-                    >
-                      <BlockDocumentEditor.Content />
-                    </BlockDocumentEditor>
-                  </BlockDocumentChartRendererProvider>
+                  <NodeDocument
+                    key={`${id}:${renderGeneration}`}
+                    id={id}
+                    workspaceId={initial.workspaceId}
+                    revision={revisions[id] ?? 0}
+                    title={artifacts[id]?.title}
+                    content={documents[id]!.content}
+                    assets={documents[id]!.assets}
+                    onCommitted={applyContent}
+                  />
                 ) : (
                   <p>Ask Roomie to create a document.</p>
                 )}

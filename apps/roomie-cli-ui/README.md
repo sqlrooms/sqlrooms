@@ -77,3 +77,18 @@ tool receipt links select the corresponding document. Host approval navigation
 and document selection stay in Roomie. Native diagnostics are collapsed separately.
 There is no embedded model loop, document editing, or broader query support in
 this viewer. Closing a tab leaves host work running; reopening replays durable history.
+
+### Node host editing and rendering
+
+The Node viewer uses shared document, Mosaic chart/table/dashboard and HTML
+renderers. Edit document creates a local draft; Save publishes exact document
+content and title through `block-document.set-content` with the base revision and
+an idempotency key. A stale revision preserves the draft and shows committed
+content. An uncertain network outcome locks the draft and offers Retry same save.
+Agent and browser edits share the same host command and SQLite commit boundary.
+
+Import file accepts CSV, JSON, Parquet or Arrow up to 32 MiB and creates a new
+physical table and a document showing it. Refresh data refreshes the host catalog and reconnects the
+disposable Mosaic cache after external Quack changes. Local filtering/sorting never
+writes shared content. Raw INTERVAL results require an explicit VARCHAR cast.
+See the [Node host README](../roomie-node/README.md) for limits and bundle APIs.
