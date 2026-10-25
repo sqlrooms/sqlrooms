@@ -89,3 +89,7 @@ use it behind their own persistence/read boundary without exposing a live store.
 The ordinary local-read policy permits verified built-in `time_bucket` and
 `epoch_ms` for temporal chart queries. User-defined shadowing functions, external
 scans, and unverified functions still require approval.
+
+Ordinary local reads include arithmetic operators and `isfinite` used by Mosaic
+histograms. These names still require live catalog verification: shadowing macros,
+external readers, dynamic queries and internal namespaces are not admitted.

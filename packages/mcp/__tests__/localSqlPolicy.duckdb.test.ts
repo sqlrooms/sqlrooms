@@ -11,6 +11,8 @@ import {
 // under classification is bound or executed, including file scans and DML CTEs.
 const python = process.env.DUCKDB_TEST_PYTHON;
 const cases = {
+  histogram:
+    'SELECT floor(value / 100) * 100, count(*) FROM workspace.main.sales WHERE isfinite(value) GROUP BY 1',
   temporal:
     "SELECT time_bucket(INTERVAL 1 MONTH, TIMESTAMP '2026-01-02'), epoch_ms(TIMESTAMP '2026-01-02')",
   union: 'SELECT 1 UNION ALL SELECT 2',
@@ -72,6 +74,16 @@ with duckdb.connect() as con:
         if (sql.includes('duckdb_functions()'))
           return tableFromJSON([
             ...[
+              '+',
+              '-',
+              '*',
+              '/',
+              '//',
+              '%',
+              '**',
+              'floor',
+              'count_star',
+              'isfinite',
               'upper',
               'lower',
               'sum',
@@ -140,6 +152,16 @@ with duckdb.connect() as con:
           : original(sql)) as typeof connector.query;
       db.getConnector = async () => connector;
       expect(await needsLocalReadApproval(db, statements)).toBe(true);
+    });
+
+    it('permits verified histogram arithmetic', async () => {
+      const {db} = database('histogram');
+      const statements = await inspectLocalSelect(
+        db,
+        cases.histogram,
+        '__sqlrooms',
+      );
+      expect(await needsLocalReadApproval(db, statements)).toBe(false);
     });
 
     it('permits read-only set operations', async () => {

@@ -873,3 +873,6 @@ MIT
 
 Document chart headers honor the document renderer's `readOnly` flag: caption
 editing and the chart settings control are disabled in read-only viewers.
+
+Table explorer column metadata preserves declared DECIMAL precision and scale,
+so native Arrow decimal cells use the same scale as the database.

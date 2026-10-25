@@ -154,7 +154,7 @@ function visitSql(
 // table functions require approval. Check live metadata too: macros can shadow
 // otherwise familiar function names. Never EXPLAIN/bind a file scan to classify it.
 const ORDINARY_FUNCTIONS = new Set(
-  `count count_star sum avg min max median mode stddev stddev_pop stddev_samp variance var_pop var_samp quantile_cont quantile_disc approx_count_distinct first last any_value string_agg list array_agg abs round ceil ceiling floor sqrt pow power exp ln log log10 sign greatest least lower upper length char_length trim ltrim rtrim concat concat_ws substring substr replace split_part contains starts_with ends_with regexp_matches regexp_replace coalesce ifnull nullif strftime strptime date_part date_trunc time_bucket epoch_ms to_months trunc datediff date_diff date_add extract year month day hour minute second row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value`.split(
+  `+ - * / // % ** isfinite count count_star sum avg min max median mode stddev stddev_pop stddev_samp variance var_pop var_samp quantile_cont quantile_disc approx_count_distinct first last any_value string_agg list array_agg abs round ceil ceiling floor sqrt pow power exp ln log log10 sign greatest least lower upper length char_length trim ltrim rtrim concat concat_ws substring substr replace split_part contains starts_with ends_with regexp_matches regexp_replace coalesce ifnull nullif strftime strptime date_part date_trunc time_bucket epoch_ms to_months to_days trunc datediff date_diff date_add extract year month day hour minute second row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value`.split(
     ' ',
   ),
 );
