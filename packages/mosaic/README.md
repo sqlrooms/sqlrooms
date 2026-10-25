@@ -870,3 +870,6 @@ For complete working examples, see:
 ## License
 
 MIT
+
+Document chart headers honor the document renderer's `readOnly` flag: caption
+editing and the chart settings control are disabled in read-only viewers.

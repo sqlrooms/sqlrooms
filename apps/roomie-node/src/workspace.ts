@@ -3,7 +3,10 @@ import {mkdir, realpath} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createStore} from 'zustand/vanilla';
 import {createRoomShellSlice} from '@sqlrooms/room-shell';
-import {createNodeDuckDbConnector} from '@sqlrooms/duckdb-node';
+import {
+  createNodeDuckDbConnector,
+  queryToArrowTable,
+} from '@sqlrooms/duckdb-node';
 import {createMosaicSlice} from '@sqlrooms/mosaic';
 import {
   registerCommandsForOwner,
@@ -11,9 +14,11 @@ import {
   type RoomCommandResult,
 } from '@sqlrooms/room-store';
 import {z} from 'zod';
+import {escapeVal} from '@sqlrooms/duckdb-core';
 import {createRoomieDomainSlice} from '../../roomie-cli-ui/src/createRoomieDomainSlice';
 import {selectRoomieContent} from '../../roomie-cli-ui/src/stateOwnership';
 import type {RoomState} from '../../roomie-cli-ui/src/RoomState';
+import {assertLocalRenderQuery} from '../../roomie-cli-ui/src/renderQueryPolicy';
 import {createContent} from './content';
 import {assertCommandTarget, createHostCommands} from './commands';
 import {openMetadata, type CommitReceipt, type MetadataStore} from './metadata';
@@ -74,6 +79,9 @@ export async function openWorkspace(options: {
   let closing = false;
   let fault: unknown;
   let queue: Promise<unknown> = Promise.resolve();
+  const queries = new Set<
+    Promise<Awaited<ReturnType<typeof queryToArrowTable>>>
+  >();
   const mutations = new Set<Promise<CommitReceipt | RevisionConflict>>();
   let disposal: Promise<void> | undefined;
   const listeners = new Set<(receipt: CommitReceipt) => void>();
@@ -144,6 +152,7 @@ export async function openWorkspace(options: {
       join(directory, 'meta.sqlite'),
     );
     rebuild();
+    metadata.runs.recover();
     await databaseStore.getState().db.refreshTableSchemas();
     if (options.quack) {
       const {uri, token} = options.quack;
@@ -170,9 +179,45 @@ export async function openWorkspace(options: {
 
   return {
     directory,
+    runs: persistence.runs,
     engine: 'v2.0.0' as const,
     quack: quackStarted ? ('enabled' as const) : ('disabled' as const),
     ready: Promise.resolve(),
+    /** Host catalog projection for read-only viewers; no arbitrary catalog SQL admission. */
+    catalog: () => {
+      const {tables, currentDatabase, currentSchema} =
+        databaseStore.getState().db;
+      return structuredClone({
+        tables: tables
+          .filter(
+            (table) =>
+              !(table.table.schema ?? '').startsWith('__') &&
+              !table.table.table.startsWith('__'),
+          )
+          .map((value) => ({
+            ...value,
+            table: {
+              database: value.table.database,
+              schema: value.table.schema,
+              table: value.table.table,
+              defaultDatabase: value.table.defaultDatabase,
+            },
+          })),
+        currentDatabase,
+        currentSchema,
+      });
+    },
+    /** Bounded analytical reads, drained before native instance shutdown. */
+    query(sql: string, signal?: AbortSignal) {
+      if (closing || fault || queries.size >= 4)
+        return Promise.reject(
+          new Error('Query service unavailable or at capacity.'),
+        );
+      const task = executeQuery(sql, signal);
+      queries.add(task);
+      void task.finally(() => queries.delete(task)).catch(() => {});
+      return task;
+    },
     /** Return committed content and revisions, never the live Zustand object. */
     snapshot: () =>
       gate(() => ({
@@ -250,6 +295,7 @@ export async function openWorkspace(options: {
       disposal = (async () => {
         await Promise.allSettled([...mutations]);
         await queue;
+        await Promise.allSettled([...queries]);
         listeners.clear();
         unsubscribeDatabase();
         content?.dispose();
@@ -271,6 +317,60 @@ export async function openWorkspace(options: {
       return disposal;
     },
   };
+
+  async function executeQuery(sql: string, signal?: AbortSignal) {
+    if (signal?.aborted) throw new Error('Query cancelled.');
+    const connection = await connector.getInstance().connect();
+    let expired = false;
+    const abort = () => connection.interrupt();
+    signal?.addEventListener('abort', abort, {once: true});
+    const timer = setTimeout(() => {
+      expired = true;
+      abort();
+    }, 30000);
+    const query = async (text: string) => {
+      if (signal?.aborted || expired)
+        throw new Error('Query cancelled or deadline exceeded.');
+      return queryToArrowTable(connection, text);
+    };
+    // Validation and execution share this request's interruptible connection.
+    const policyConnector = new Proxy(
+      {...connector},
+      {
+        get(target, key) {
+          return key === 'query' ? query : Reflect.get(target, key);
+        },
+      },
+    );
+    try {
+      // Mosaic asks for DESCRIBE metadata. Validate its underlying SELECT before
+      // DuckDB binds it; DESCRIBE must never become a file/table-function bypass.
+      const describe = /^\s*(?:DESCRIBE|DESC)\s+([\s\S]+)$/i.exec(sql);
+      const inspectedSql = describe
+        ? /^\s*(?:SELECT|WITH)\b/i.test(describe[1]!)
+          ? describe[1]!
+          : `SELECT * FROM ${describe[1]}`
+        : sql;
+      await assertLocalRenderQuery(
+        {
+          ...databaseStore.getState().db,
+          getConnector: async () => policyConnector,
+          sqlSelectToJson: async (text) =>
+            JSON.parse(
+              (await query(`SELECT json_serialize_sql(${escapeVal(text)})`))
+                .getChildAt(0)!
+                .get(0),
+            ),
+        },
+        inspectedSql,
+      );
+      return await query(sql);
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', abort);
+      connection.closeSync();
+    }
+  }
 
   async function executeMutation(
     raw: WorkspaceMutation,

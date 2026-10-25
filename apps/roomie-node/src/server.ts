@@ -3,6 +3,12 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from 'node:http';
+import {z} from 'zod';
+import {readFile} from 'node:fs/promises';
+import {resolve, extname, sep} from 'node:path';
+import {HarnessStartTurn, HarnessApprovalDecision} from '@sqlrooms/ai-config';
+import {createSupervisor} from './supervisor';
+import {attachWorkspaceSockets} from './sockets';
 import {Server} from '@modelcontextprotocol/sdk/server/index.js';
 import {StreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
@@ -19,9 +25,20 @@ import type {openWorkspace} from './workspace';
 export async function startWorkspaceServer(options: {
   workspace: Awaited<ReturnType<typeof openWorkspace>>;
   port?: number;
+  /** Built Roomie UI directory; root serves the document-read-only node.html entry. */
+  uiDirectory?: string;
+  /** Explicit trusted local harness mode; no hosted isolation claim. */
+  harness?: {
+    trustedLocal: true;
+    executable?: string;
+    model?: string;
+    deadlineMs?: number;
+  };
   /** Additional host policy can deny calls; it cannot grant missing credentials. */
   policy?: RoomCapabilityPolicy;
 }) {
+  if (options.harness && options.harness.trustedLocal !== true)
+    throw new Error('Harness execution requires explicit trustedLocal: true.');
   const access = createWorkspaceAccess();
   const runtime = createWorkspaceMcpRuntime(options.workspace, options.policy);
   let origin = '';
@@ -40,6 +57,13 @@ export async function startWorkspaceServer(options: {
       void work.finally(() => active.delete(work));
     },
   );
+  const sockets = attachWorkspaceSockets(server, {
+    workspace: options.workspace,
+    access,
+    origin: () => origin,
+  });
+  let supervisor: ReturnType<typeof createSupervisor> | undefined;
+  const runSignals = new Map<string, AbortController>();
   let credential: Awaited<ReturnType<typeof writeCredentialFile>> | undefined;
   try {
     await new Promise<void>((resolve, reject) => {
@@ -53,6 +77,25 @@ export async function startWorkspaceServer(options: {
     if (!address || typeof address === 'string')
       throw new Error('Missing listener address.');
     origin = `http://127.0.0.1:${address.port}`;
+    if (options.harness)
+      supervisor = createSupervisor({
+        workspace: options.workspace,
+        mcpUrl: `${origin}/mcp`,
+        ...options.harness,
+        drain: () => runtime.drain(),
+        credentials: {
+          issue: () => {
+            const token = access.issueHarness();
+            runSignals.set(token, new AbortController());
+            return token;
+          },
+          revoke: (token) => {
+            access.revoke(token);
+            runSignals.get(token)?.abort();
+            runSignals.delete(token);
+          },
+        },
+      });
     credential = await writeCredentialFile({
       token: access.ownerToken,
       binding: access.binding,
@@ -62,6 +105,8 @@ export async function startWorkspaceServer(options: {
   } catch (error) {
     access.close();
     runtime.dispose();
+    await supervisor?.dispose();
+    await sockets.dispose();
     server.close();
     server.closeAllConnections();
     await credential?.close();
@@ -85,6 +130,11 @@ export async function startWorkspaceServer(options: {
         // Closing sockets does not cancel an accepted durable mutation.
         server.closeAllConnections();
         try {
+          try {
+            await supervisor?.dispose();
+          } finally {
+            await sockets.dispose();
+          }
           await Promise.allSettled([...active]);
           await runtime.drain();
           await options.workspace.flush();
@@ -113,6 +163,31 @@ export async function startWorkspaceServer(options: {
       )
         throw accessDenied('forbidden');
       const path = request.url;
+      if (
+        options.uiDirectory &&
+        request.method === 'GET' &&
+        (path === '/' || path === '/node.html' || path?.startsWith('/assets/'))
+      ) {
+        const root = resolve(options.uiDirectory);
+        const file = resolve(root, path === '/' ? 'node.html' : '.' + path!);
+        if (!file.startsWith(root + sep)) throw accessDenied('forbidden');
+        const types: Record<string, string> = {
+          '.html': 'text/html',
+          '.js': 'text/javascript',
+          '.css': 'text/css',
+          '.wasm': 'application/wasm',
+          '.woff2': 'font/woff2',
+        };
+        if (!types[extname(file)]) throw accessDenied('forbidden');
+        try {
+          const bytes = await readFile(file);
+          response.setHeader('Content-Type', types[extname(file)]!);
+          response.end(bytes);
+        } catch {
+          json(response, 404, {error: 'not_found'});
+        }
+        return;
+      }
       const authorization = request.headers.authorization ?? '';
       const token = authorization.toLowerCase().startsWith('bearer ')
         ? authorization.slice(7)
@@ -144,6 +219,111 @@ export async function startWorkspaceServer(options: {
         json(response, 200, access.renew(token));
         return;
       }
+      if (
+        path?.startsWith('/api/runs') ||
+        path?.startsWith('/api/conversations') ||
+        path?.startsWith('/api/approvals') ||
+        path?.startsWith('/api/run-blobs')
+      ) {
+        const caller = access.verify(token, 'runs');
+        const url = new URL(path, origin);
+        const log = options.workspace.runs;
+        if (request.method === 'GET' && url.pathname === '/api/approvals') {
+          access.verify(token, 'runs');
+          json(
+            response,
+            200,
+            log.pending().map((approval) => ({
+              ...approval,
+              conversationId: log.get(approval.runId).conversationId,
+            })),
+          );
+          return;
+        }
+        if (request.method === 'GET' && url.pathname === '/api/conversations') {
+          json(response, 200, log.conversations());
+          return;
+        }
+        if (
+          request.method === 'GET' &&
+          url.pathname === '/api/conversations/snapshot'
+        ) {
+          json(
+            response,
+            200,
+            log.snapshot(z.string().min(1).parse(url.searchParams.get('id'))),
+          );
+          return;
+        }
+        if (request.method === 'GET' && url.pathname === '/api/runs/events') {
+          json(
+            response,
+            200,
+            log.events(
+              Number(url.searchParams.get('after') ?? 0),
+              500,
+              url.searchParams.get('conversationId') ?? undefined,
+            ),
+          );
+          return;
+        }
+        if (request.method === 'GET' && url.pathname === '/api/run-blobs') {
+          json(response, 200, {
+            content: log.blob(
+              z.string().min(1).parse(url.searchParams.get('id')),
+            ),
+          });
+          return;
+        }
+        if (!supervisor) {
+          json(response, 503, {error: 'harness_disabled'});
+          return;
+        }
+        if (request.method === 'POST' && path === '/api/runs/start') {
+          const input = HarnessStartTurn.parse(await readJson(request, 65536));
+          json(response, 200, supervisor.start(input, caller.principalId));
+          return;
+        }
+        if (request.method === 'POST' && path === '/api/runs/cancel') {
+          const input = z
+            .strictObject({runId: z.string()})
+            .parse(await readJson(request, 4096));
+          json(response, 200, await supervisor.cancel(input.runId));
+          return;
+        }
+        if (request.method === 'POST' && path === '/api/approvals/resolve') {
+          const input = HarnessApprovalDecision.parse(
+            await readJson(request, 4096),
+          );
+          json(
+            response,
+            200,
+            supervisor.resolve(
+              input.approvalId,
+              input.decision,
+              caller.principalId,
+            ),
+          );
+          return;
+        }
+        json(response, 400, {error: 'unsupported_run_operation'});
+        return;
+      }
+      if (path === '/api/catalog' && request.method === 'GET') {
+        access.verify(token, 'view');
+        json(response, 200, options.workspace.catalog());
+        return;
+      }
+      if (path === '/api/content' && request.method === 'GET') {
+        access.verify(token, 'view');
+        const snapshot = await options.workspace.snapshot();
+        json(response, 200, {
+          content: snapshot.content,
+          revisions: snapshot.revisions,
+          readOnly: true,
+        });
+        return;
+      }
       if (path !== '/mcp') {
         json(response, 404, {error: 'not_found'});
         return;
@@ -164,7 +344,7 @@ export async function startWorkspaceServer(options: {
             experimental: {'sqlrooms/durable-content-v1': {}},
           },
           instructions:
-            'Content commands only. Writes require commit.operationId and, for existing documents, commit.artifactId and commit.expectedRevision in execute_command arguments. Read a document to obtain its committed revision. Retry uncertain writes with the same operation ID and input. Browser SQL/Arrow, runs and approvals are not available.',
+            'Content commands only. Writes require commit.operationId and, for existing documents, commit.artifactId and commit.expectedRevision in execute_command arguments. Read a document to obtain its committed revision. Retry uncertain writes with the same operation ID and input. Use query for bounded ordinary workspace reads. The host owns runs and approvals independently of browser connections.',
         },
       );
       mcp.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -182,6 +362,7 @@ export async function startWorkspaceServer(options: {
             requestId: String(extra.requestId),
             traceId: String(extra.requestId),
             metadata: request.params._meta,
+            signal: runSignals.get(token)?.signal,
           },
         );
         return {
@@ -202,9 +383,13 @@ export async function startWorkspaceServer(options: {
       }
     } catch (error) {
       const failure = error as {status?: number; code?: string};
-      json(response, failure.status ?? 500, {
-        error: failure.code ?? 'internal_error',
-      });
+      json(
+        response,
+        error instanceof z.ZodError ? 400 : (failure.status ?? 500),
+        {
+          error: failure.code ?? 'internal_error',
+        },
+      );
     }
   }
 }

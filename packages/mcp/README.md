@@ -85,3 +85,7 @@ room-shell; room-shell does not depend on this experimental private package.
 `searchRoomCommands(descriptors, query, limit)` applies the shared intent ranking
 and bounded search-result projection to detached command descriptors. Hosts can
 use it behind their own persistence/read boundary without exposing a live store.
+
+The ordinary local-read policy permits verified built-in `time_bucket` and
+`epoch_ms` for temporal chart queries. User-defined shadowing functions, external
+scans, and unverified functions still require approval.

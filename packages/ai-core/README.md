@@ -1161,3 +1161,19 @@ that field.
 - `@sqlrooms/ai` (recommended high-level integration)
 - `@sqlrooms/ai-settings` (provider/model settings slice + UI)
 - `@sqlrooms/ai-config` (config schemas and migrations)
+
+## External harness conversations
+
+`HarnessRunChat.Root` accepts a `HarnessRunClient` and conversation ID, loads the
+v1 host snapshot and paginated history, then subscribes after its committed cursor.
+Compose `.Messages`, `.Approvals`, and `.Controls` inside it. Closing the view only
+unsubscribes; cancellation is explicit. `createHarnessRunStore`,
+`applyHarnessRunEvent`, and `projectHarnessMessages` expose the replay primitives.
+The client owns reconnection and authentication; unsupported live input queues
+locally for the next turn. Queued text is not persisted across reloads. Unknown
+events retain a fallback; remote markdown does not automatically load images.
+
+`createHarnessReplayClient(snapshot)` provides the same interface for recorded
+fixtures without a live model. Replay rejects run and approval writes. Add
+`.Details` for plain-text tool output, explicit blob loading, and document links
+via `onArtifact`. Approval decisions remain host-authoritative and first-wins.

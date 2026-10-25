@@ -7,7 +7,10 @@ const target = process.env.ROOMIE_API_URL ?? 'http://127.0.0.1:4274';
 export default defineConfig({
   base: './',
   plugins: [react(), wasm(), topLevelAwait(), tailwindcss()],
-  build: {target: 'esnext'},
+  build: {
+    target: 'esnext',
+    rollupOptions: {input: {index: 'index.html', node: 'node.html'}},
+  },
   server: {
     host: '127.0.0.1',
     port: 3200,

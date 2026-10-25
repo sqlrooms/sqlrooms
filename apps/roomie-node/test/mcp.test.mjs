@@ -341,3 +341,21 @@ test('shutdown removes credential material even if workspace flush fails closed'
   await assert.rejects(server.dispose(), /storage fault/);
   await assert.rejects(stat(server.credentialPath), {code: 'ENOENT'});
 });
+
+test('bounded analytical MCP reads preserve decimal units and empty columns', async (t) => {
+  const {server, credential} = await fixture(t);
+  const remote = await client(t, server.mcpUrl, credential.token);
+  const result = await call(remote, {
+    name: 'query',
+    arguments: {sql: 'SELECT 12.34::DECIMAL(10,2) AS amount', maxRows: 10},
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.data.rows[0].amount, '12.34');
+  const empty = await call(remote, {
+    name: 'query',
+    arguments: {sql: 'SELECT 1::INTEGER AS value WHERE false'},
+  });
+  assert.equal(empty.ok, true);
+  assert.equal(empty.data.rows.length, 0);
+  assert.equal(empty.data.columns[0].name, 'value');
+});

@@ -24,18 +24,18 @@ export const LocalAgentChatMessages: FC<LocalAgentChatMessagesProps> = ({
   const runtime = useChatRuntime();
   const toolRenderBehavior = useToolRenderBehavior();
   const activeStatus =
-    runtime.mode === 'local-agent'
+    runtime.mode !== 'session'
       ? getChatActiveStatus(runtime.messages, toolRenderBehavior)
       : undefined;
   const ActiveStatus = useChatRenderingComponents().ActiveStatus;
   const containerRef = useRef<HTMLDivElement>(null);
   const {showScrollButton, scrollToBottom} = useScrollToBottom({
     containerRef,
-    dataToObserve: runtime.mode === 'local-agent' ? runtime.messages : null,
+    dataToObserve: runtime.mode !== 'session' ? runtime.messages : null,
     scrollOnInitialLoad: true,
   });
 
-  if (runtime.mode !== 'local-agent') return null;
+  if (runtime.mode === 'session') return null;
 
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
@@ -124,6 +124,7 @@ const TextPart: FC<{text: string; role: UIMessage['role']}> = ({
   role,
 }) => {
   const isUser = role === 'user';
+  const runtime = useChatRuntime();
   return (
     <div
       className={cn(
@@ -137,7 +138,14 @@ const TextPart: FC<{text: string; role: UIMessage['role']}> = ({
         <span className="whitespace-pre-wrap">{text}</span>
       ) : (
         <div className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={
+              runtime.mode === 'harness-run' ? {img: () => null} : undefined
+            }
+          >
+            {text}
+          </ReactMarkdown>
         </div>
       )}
     </div>

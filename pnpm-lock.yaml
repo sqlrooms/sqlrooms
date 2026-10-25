@@ -192,6 +192,12 @@ importers:
 
   apps/roomie-cli-ui:
     dependencies:
+      '@sqlrooms/ai-config':
+        specifier: workspace:*
+        version: link:../../packages/ai-config
+      '@sqlrooms/ai-core':
+        specifier: workspace:*
+        version: link:../../packages/ai-core
       '@sqlrooms/app-runtime':
         specifier: workspace:*
         version: link:../../packages/app-runtime
@@ -295,9 +301,15 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 1.30.0
         version: 1.30.0(zod@4.1.13)
+      '@sqlrooms/ai-config':
+        specifier: workspace:*
+        version: link:../../packages/ai-config
       '@sqlrooms/documents':
         specifier: workspace:*
         version: link:../../packages/documents
+      '@sqlrooms/duckdb-core':
+        specifier: workspace:*
+        version: link:../../packages/duckdb-core
       '@sqlrooms/duckdb-node':
         specifier: workspace:*
         version: link:../../packages/duckdb-node
@@ -313,6 +325,9 @@ importers:
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../../packages/room-store
+      apache-arrow:
+        specifier: 17.0.0
+        version: 17.0.0
       loro-crdt:
         specifier: ^1.10.3
         version: 1.12.1
@@ -322,6 +337,12 @@ importers:
       react:
         specifier: 19.2.1
         version: 19.2.1
+      smol-toml:
+        specifier: 1.6.1
+        version: 1.6.1
+      ws:
+        specifier: ^8.21.0
+        version: 8.21.0
       zod:
         specifier: 4.1.13
         version: 4.1.13
@@ -332,6 +353,9 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.12.4
+      '@types/ws':
+        specifier: 8.18.2
+        version: 8.18.2
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -10332,6 +10356,9 @@ packages:
 
   '@types/web-bluetooth@0.0.21':
     resolution: {integrity: sha512-oIQLCGWtcFZy2JW77j9k8nHzAOpqMHLQejDA48XXMWH6tjCQHz5RCFz1bzsmROyL6PUm+LLnUiI4BCn221inxA==}
+
+  '@types/ws@8.18.2':
+    resolution: {integrity: sha512-67MQl+fpWKVTT1NYdnmo3U4sc/xPo/zQBncVnI74qmQa0z/b+1g6iYqNmGCPbxO+zz2aklb08a0oHfegiVd0/w==}
 
   '@types/yargs-parser@21.0.3':
     resolution: {integrity: sha512-I4q9QU9MQv4oEOz4tAHJtNz1cwuLxn2F3xcc2iV5WdqLPpUnj30aUuxt1mAxYTG+oe8CZMV/+6rU4S4gRDzqtQ==}
@@ -24827,6 +24854,10 @@ snapshots:
       gl-matrix: 3.4.4
 
   '@types/web-bluetooth@0.0.21': {}
+
+  '@types/ws@8.18.2':
+    dependencies:
+      '@types/node': 24.12.4
 
   '@types/yargs-parser@21.0.3': {}
 

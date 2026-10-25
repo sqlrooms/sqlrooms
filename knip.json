@@ -66,7 +66,8 @@
       "ignoreDependencies": ["@uwdata/mosaic-core", "vite"]
     },
     "apps/roomie-cli-ui": {
-      "ignoreDependencies": ["jest-environment-jsdom", "jsdom"]
+      "ignoreDependencies": ["jest-environment-jsdom", "jsdom"],
+      "entry": ["src/main.{ts,tsx}", "src/node/bootstrap.ts"]
     },
     "apps/sqlrooms-cli-ui": {
       "entry": [

@@ -96,3 +96,14 @@ createRoomStore(
 - `@sqlrooms/ai-core` for core AI slice logic
 - `@sqlrooms/ai-settings` for provider/model settings UI + state
 - `@sqlrooms/ai` for higher-level AI package integration
+
+## Host-owned harness runs
+
+`HarnessRunEvent`, `HarnessRun`, `HarnessCapabilities`, `HarnessStartTurn`,
+`HarnessApprovalDecision` and `HarnessConversationSnapshot` are Zod-only v1
+contracts shared by hosts and browser runtimes. Event sequences are workspace-wide;
+clients snapshot then subscribe after `lastSeq`, deduplicating by sequence.
+Unknown event kinds render generically. Large payloads use a host-authorized
+`blobRef`; previews are never replay events. Attachments and live input are not
+supported by the initial adapter. Restarted work is `interrupted`, never inferred
+successful from model output. Approval decisions require an explicit owner.

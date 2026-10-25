@@ -7,9 +7,11 @@ import {once} from 'node:events';
 import {createInterface} from 'node:readline';
 import {setTimeout as delay} from 'node:timers/promises';
 import {test} from 'node:test';
+import {DuckDBInstance} from '@duckdb/node-api';
 import {openWorkspace, startWorkspaceServer} from '../dist/index.mjs';
 import {connectBridge} from '../dist-test/bridge.mjs';
 import {http} from './http.mjs';
+import {exerciseWebSocket} from './websocket-conformance.mjs';
 
 const fixtures = JSON.parse(
   await readFile(
@@ -32,6 +34,13 @@ for (const kind of ['node', 'python']) {
     });
     let host;
     if (kind === 'node') {
+      const db = await DuckDBInstance.create(join(dir, 'data.duckdb'));
+      const connection = await db.connect();
+      await connection.run(
+        'CREATE TABLE conformance_numbers AS SELECT i FROM range(1000) AS t(i); CREATE TABLE conformance_types AS SELECT [1,2] AS nested',
+      );
+      connection.closeSync();
+      db.closeSync();
       const workspace = await openWorkspace({directory: dir});
       host = await startWorkspaceServer({
         workspace,
@@ -101,6 +110,7 @@ for (const kind of ['node', 'python']) {
       await readFile(foreignServer.credentialPath, 'utf8'),
     );
     const credentials = JSON.parse(await readFile(host.credentialPath, 'utf8'));
+    await exerciseWebSocket(t, kind, host.url, credentials.token);
     const headers = {
       'Content-Type': 'application/json',
       Accept: 'application/json, text/event-stream',

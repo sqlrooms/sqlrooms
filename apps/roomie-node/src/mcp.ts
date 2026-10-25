@@ -7,6 +7,7 @@ import {
 } from '@sqlrooms/mcp';
 import {LOCAL_MCP_TOOLS, searchRoomCommands} from '@sqlrooms/mcp/room';
 import {z} from 'zod';
+import {arrowTableToJson} from '@sqlrooms/duckdb-core';
 import type {openWorkspace} from './workspace';
 
 const CommitMetadata = z.object({
@@ -22,6 +23,37 @@ export function createWorkspaceMcpRuntime(
   policy?: RoomCapabilityPolicy,
 ) {
   const capabilities: RoomCapability[] = [
+    {
+      ...LOCAL_MCP_TOOLS.query,
+      description:
+        'Run a bounded read of ordinary workspace tables. External reads are denied. Content writes use shared commands and revision checks.',
+      execute: async (raw, context) => {
+        const {sql, maxRows = 200} = raw as {sql: string; maxRows?: number};
+        const table = await workspace.query(
+          `SELECT * FROM (${sql.replace(/;\s*$/, '')}) AS roomie_result LIMIT ${maxRows + 1}`,
+          context.signal,
+        );
+        return {
+          ok: true,
+          data: {
+            columns: table.schema.fields.map((field) => ({
+              name: field.name,
+              type: String(field.type),
+            })),
+            rows: JSON.parse(
+              JSON.stringify(
+                arrowTableToJson(table).slice(0, maxRows),
+                (_, value) =>
+                  typeof value === 'bigint' ? value.toString() : value,
+              ),
+            ),
+            rowCount: Math.min(table.numRows, maxRows),
+            maxRows,
+            truncated: table.numRows > maxRows,
+          },
+        };
+      },
+    },
     {
       ...LOCAL_MCP_TOOLS.search_commands,
       execute: async (raw) => {

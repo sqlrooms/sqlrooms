@@ -26,3 +26,5 @@ export type {
   ToolUIPart,
   UIMessagePart,
 } from './schema/UIMessageSchema';
+
+export * from './harnessRun';

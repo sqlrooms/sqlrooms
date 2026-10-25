@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "integer and null",
+      "sql": "SELECT 42::INTEGER AS n, NULL::VARCHAR AS empty",
+      "rows": 1,
+      "columns": ["n", "empty"]
+    },
+    {
+      "name": "empty result",
+      "sql": "SELECT 1::INTEGER AS n WHERE false",
+      "rows": 0,
+      "columns": ["n"]
+    },
+    {
+      "name": "representative native types",
+      "sql": "SELECT 9007199254740993::BIGINT AS big, 12.34::DECIMAL(10,2) AS amount, TIMESTAMP '2026-01-01 01:02:03' AS time",
+      "rows": 1,
+      "columns": ["big", "amount", "time"]
+    },
+    {
+      "name": "nested physical data",
+      "sql": "SELECT nested FROM conformance_types",
+      "rows": 1,
+      "columns": ["nested"]
+    },
+    {
+      "name": "describe local select",
+      "sql": "DESCRIBE SELECT i FROM conformance_numbers",
+      "rows": 1,
+      "columns": [
+        "column_name",
+        "column_type",
+        "null",
+        "key",
+        "default",
+        "extra"
+      ]
+    }
+  ],
+  "capabilities": {
+    "node": {
+      "rawDocumentWrites": false,
+      "snapshotSeeding": false
+    },
+    "python": {
+      "rawDocumentWrites": true,
+      "snapshotSeeding": false,
+      "snapshotSeedingNote": "Disabled for the persistent fixture; legacy Python permits seeding only in eligible empty ephemeral rooms."
+    }
+  }
+}

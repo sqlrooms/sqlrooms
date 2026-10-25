@@ -73,6 +73,7 @@ export const ChartBlockHeader: FC<ChartBlockHeaderProps> = ({
             aria-label={
               isSettingsShown ? 'Close chart settings' : 'Open chart settings'
             }
+            disabled={readOnly}
             aria-pressed={isSettingsShown}
             onClick={handleSettingsClick}
           >

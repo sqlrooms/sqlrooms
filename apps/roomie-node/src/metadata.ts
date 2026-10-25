@@ -1,4 +1,5 @@
 import {DatabaseSync} from 'node:sqlite';
+import {createRunLog, migrateRunLog} from './runLog';
 import type {RoomCommandResult} from '@sqlrooms/room-store';
 
 /** Durable acknowledgement of a content command. */
@@ -38,7 +39,7 @@ export function openMetadata(path: string) {
     const version = Number(
       db.prepare('PRAGMA user_version').get()!.user_version,
     );
-    if (version > 1)
+    if (version > 2)
       throw new Error(`Unsupported Roomie metadata version ${version}`);
     if (version === 0)
       db.exec(`
@@ -61,6 +62,7 @@ export function openMetadata(path: string) {
       PRAGMA user_version=1;
       COMMIT;
     `);
+    if (version < 2) migrateRunLog(db);
   } catch (error) {
     db.close();
     throw error;
@@ -81,7 +83,11 @@ export function openMetadata(path: string) {
     return JSON.parse(String(row.receipt)) as CommitReceipt;
   };
 
+  const runs = createRunLog(db, assertHealthy, (error) => {
+    failed = error;
+  });
   return {
+    runs,
     receipt: (operationId: string, requestHash: string) =>
       receiptFrom(db, operationId, requestHash),
     /** A fresh connection cannot see a writer's uncommitted transaction. */

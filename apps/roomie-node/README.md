@@ -208,7 +208,8 @@ Keep the same operation ID and input after uncertain responses, even across
 restart. An operation ID reused with different input is rejected.
 
 A host can supply an additional `policy.authorize` to deny calls. High-risk and
-confirmation-gated commands remain denied; approvals are a later milestone.
+confirmation-gated workspace commands remain denied. Harness-native approvals are
+managed by the supervisor; approval of a shell request never grants an MCP policy bypass.
 HTTP disconnect does not cancel an accepted durable mutation. Shutdown stops
 admission, cancels waiting capability calls, and drains actual accepted work.
 A policy decision arriving after timeout or shutdown cannot start a new mutation.
@@ -219,8 +220,8 @@ Bootstrap ports the existing `/auth.json`, `/api/auth/ticket`,
 `/api/auth/exchange`, and `/api/auth/renew` protections. Native owners can mint
 bounded, two-minute single-use `#sqlrooms-ticket=` launch links. Exchanged page
 credentials expire after 30 minutes and can renew while valid; they cannot call
-MCP or mint tickets. No browser renderer/transport is connected in M1b, so these
-page credentials currently grant renewal only. The unauthenticated exchange
+MCP or mint tickets. Page credentials also grant the read-only document/query view and owner run,
+approval, and cancellation APIs. The unauthenticated exchange
 body is capped at 4 KiB and MCP request bodies at 256 KiB.
 
 ## Protocol conformance
@@ -243,9 +244,84 @@ host policy denial and credential/origin/bootstrap admission. The Python CI job
 runs both targets and fails if either cannot start.
 
 Intentional capability differences are recorded in the fixture: Python retains
-its browser SQL tools and existing acknowledgement semantics; Node exposes only
-content commands and its durable commit extension. SQL/Arrow and CRDT
-conformance, browser transport, and real harness sessions remain M2+ work.
+its browser SQL tools and existing acknowledgement semantics; Node exposes bounded ordinary reads,
+content commands and its durable commit extension. Shared SQL/Arrow fixtures cover
+request IDs, errors, empty schemas, representative types, cancellation, and CRDT
+join/snapshot framing. Node rejects raw updates and snapshot seeding; Python
+retains its existing client-write semantics.
 Node-specific tests separately cover persistence/reopen, revision conflicts,
 uncertain responses, denied cross-workspace credentials, expiry/revocation,
 late policy decisions, disconnect and shutdown draining.
+
+## Browserless Codex slice (M2)
+
+Requires Node 24 and an authenticated Codex CLI 0.163.0 on PATH. This is explicit
+trusted local mode, not hosted isolation. Build packages and the viewer first:
+
+```sh
+pnpm build
+pnpm --filter roomie-cli-app build
+pnpm --filter roomie-node build
+```
+
+Start with `startWorkspaceServer({workspace, uiDirectory, harness:
+{trustedLocal: true, deadlineMs: 300000}})`. `uiDirectory` is the absolute built
+`apps/roomie-cli-ui/dist` directory. Mint a launch ticket using the owner credential
+and `/api/auth/ticket`; never put the long-lived owner token in a URL.
+The optional `executable` and `model` select the installed Codex executable/model.
+
+The host starts `codex app-server` over bounded stdio, supplies the portable Roomie
+skill in an isolated discovery directory, and issues a revocable MCP-only run
+token. The canonical skill bytes are content-addressed; the harness gets a copy.
+Configured user MCP servers and plugins are disabled for this adapter. This is
+configuration hygiene, not a security sandbox: the process uses the owner's local
+Codex authentication. Enforced filesystem/network isolation, a parent-independent
+watchdog, and hosted deployment remain M4. No hosted isolation is claimed.
+
+One run is active at a time. Runs, completed message batches, tool activity,
+unknown-event diagnostics, and approvals use the same SQLite WAL/FULL writer as
+content commits, with a separate workspace-wide event sequence. Token deltas are
+not durable events. Known injected tokens are redacted before persistence; output
+larger than 16 KiB uses explicit blob retrieval (1 MiB event maximum). Cancellation
+and the hard wall-clock deadline revoke credentials, kill the native process
+group, drain admitted commands, and publish terminal state. A missing owner
+approval waits until a decision, cancellation, or deadline; browser disconnect is
+never permission. Restart marks unfinished runs interrupted and invalidates their
+native approval requests. It does not resume process memory or native sessions.
+
+The viewer uses the existing SQL/Arrow WebSocket connector and chart/document
+renderer. Catalog inspection has its own authenticated DTO endpoint. Render SQL
+is limited to verified ordinary local reads; `DESCRIBE` validates the underlying
+SELECT before binding. Each query has its own interruptible connection and a
+30-second deadline, including validation, with at most four queries and 32 MiB
+serialized results. Charts use uncached queries in M2; broader Mosaic parity is M3.
+Documents are read-only. Editor controls are disabled, and raw Loro writes and
+snapshot seeding are rejected by the host. Only shared commands can commit content.
+
+The `@sqlrooms/ai-core` harness runtime uses snapshot + bounded history + live
+sequence replay. Closing its subscription never cancels work. It displays pending
+approvals, explicit stop, tool output, source document links, and new-turn context
+limitations. Input during a run is queued locally for the next turn; it is lost
+on page reload and is not presented as native live input.
+
+### Reproduce the synthetic acceptance fixture
+
+```sh
+# Opt-in model run; this creates a new directory with six synthetic orders.
+ROOMIE_M2_DIRECTORY=/tmp/roomie-m2-demo \
+  pnpm --filter roomie-node exec node test/live-m2.mjs --seed
+```
+
+The driver writes a private `control.json` containing the local URL and credential
+file path. Start `/api/runs/start` with the owner credential, an idempotency key,
+and a request to inspect workspace knowledge, calculate monthly revenue, and
+create a chart document through Roomie commands. The approved definition is one
+row per paid order, excluding every order present in refunds; payments contain
+retries. Expected values are January 300.00, February 450.00, total 750.00. The
+physical `recognized_revenue` source and equivalent orders/refunds SQL must agree.
+Open a ticketed browser only after the run. Start another turn, close it, reconnect,
+and restart the host without `--seed` to verify history and committed content.
+
+Recorded Codex evidence and recording limitations live in
+[`harness-v1`](../../packages/ai-config/fixtures/harness-v1/README.md). Scripted
+native protocol tests are labeled separately from real-model evidence.

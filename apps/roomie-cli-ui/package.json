@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@sqlrooms/ai-config": "workspace:*",
+    "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/app-runtime": "workspace:*",
     "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
