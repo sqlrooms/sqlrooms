@@ -1,5 +1,9 @@
 # M4 private gateway browser authentication — 2026-10-26
 
+> Historical verification: Docker support was retired on 2026-10-27. Current
+> enforced isolation is Bubblewrap on Linux/Sprite; macOS requires explicit
+> trusted-local execution. See the [current host README](../../apps/roomie-node/README.md).
+
 The private Sprite URL now opens Roomie using the existing Sprite browser login.
 No Roomie launch ticket is needed on this explicitly configured deployment.
 Local launch links, command revisions, explicit approvals and scoped agent MCP

@@ -5,6 +5,10 @@ import {mkdir, writeFile} from 'node:fs/promises';
 import {resolve, join} from 'node:path';
 import {DuckDBInstance} from '@duckdb/node-api';
 import {openWorkspace, startWorkspaceServer} from '../dist/index.mjs';
+if (process.env.ROOMIE_ISOLATION_IMAGE !== undefined)
+  throw Error(
+    'ROOMIE_ISOLATION_IMAGE is no longer supported; select ROOMIE_BWRAP_RUNTIME on Linux or remove it to choose trusted-local explicitly.',
+  );
 const directory = resolve(
   process.env.ROOMIE_M2_DIRECTORY ?? '/private/tmp/roomie-m2-acceptance',
 );
@@ -46,10 +50,11 @@ const server = await startWorkspaceServer({
   port: Number(process.env.ROOMIE_M2_PORT ?? 0),
   uiDirectory: resolve('../roomie-cli-ui/dist'),
   harness: {
-    ...(process.env.ROOMIE_ISOLATION_IMAGE
+    ...(process.env.ROOMIE_BWRAP_RUNTIME
       ? {
           isolation: {
-            image: process.env.ROOMIE_ISOLATION_IMAGE,
+            backend: 'bubblewrap',
+            runtimeDirectory: process.env.ROOMIE_BWRAP_RUNTIME,
             modelEnvironment: {
               OPENAI_API_KEY: process.env.OPENAI_API_KEY,
               ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,

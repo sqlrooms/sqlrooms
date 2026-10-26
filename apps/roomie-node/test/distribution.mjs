@@ -1,6 +1,6 @@
 // Install and exercise the exact packed artifact outside the monorepo. Registry
 // access is explicit here, never hidden in the normal native unit test suite.
-import {mkdtemp, readFile, rm} from 'node:fs/promises';
+import {mkdtemp, readFile, rm, stat} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {execFileSync} from 'node:child_process';
@@ -25,6 +25,9 @@ try {
     {stdio: 'inherit'},
   );
   const installed = join(directory, 'node_modules/@sqlrooms/roomie-node');
+  if (await stat(join(installed, 'container')).catch(() => undefined))
+    throw Error('Retired container files leaked into distribution.');
+  await stat(join(installed, 'bubblewrap', 'sprite-service.sh'));
   const manifest = JSON.parse(
     await readFile(join(installed, 'package.json'), 'utf8'),
   );

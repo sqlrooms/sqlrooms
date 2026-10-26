@@ -81,7 +81,6 @@
     "apps/roomie-node": {
       "entry": [
         "src/index.ts",
-        "container/launch.mjs",
         "bubblewrap/runner.mjs",
         "bubblewrap/entry.mjs",
         "bin/roomie-node.mjs",

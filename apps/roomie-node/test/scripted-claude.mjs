@@ -56,7 +56,7 @@ for await (const line of createInterface({input: process.stdin})) {
         : ['Skill', 'mcp__roomie__search_commands'],
     });
     if (prompt.includes('bypass suite:')) {
-      const {request} = await import('node:http');
+      const {request, Agent} = await import('node:http');
       const cfg = JSON.parse(
         process.argv[process.argv.indexOf('--mcp-config') + 1],
       ).mcpServers.roomie;
@@ -64,8 +64,10 @@ for await (const line of createInterface({input: process.stdin})) {
       const sendHttp = (url, body, authority = cfg.headers.Host) =>
         new Promise((resolve, reject) => {
           const r = request(
-            url,
+            cfg.url,
             {
+              path: url,
+              agent: new Agent({proxyEnv: {}}),
               method: 'POST',
               headers: {
                 Host: authority ?? new URL(url).host,
@@ -78,7 +80,10 @@ for await (const line of createInterface({input: process.stdin})) {
               let raw = '';
               res.on('data', (x) => (raw += x));
               res.on('end', () =>
-                resolve({status: res.statusCode, body: JSON.parse(raw)}),
+                resolve({
+                  status: res.statusCode,
+                  body: raw ? JSON.parse(raw) : null,
+                }),
               );
             },
           );

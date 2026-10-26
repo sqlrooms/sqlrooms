@@ -1,30 +1,21 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  mkdtemp,
-  mkdir,
-  writeFile,
-  rm,
-  readFile,
-  symlink,
-} from 'node:fs/promises';
+import {mkdtemp, mkdir, writeFile, rm, readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {execFileSync} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
 import {
   prepareIsolatedHarness,
   recoverIsolatedHarnesses,
 } from '../dist-test/bridge.mjs';
 import {openWorkspace, startWorkspaceServer} from '../dist/index.mjs';
-const image = process.env.ROOMIE_ISOLATION_IMAGE;
-if (process.env.CI && !image)
-  throw new Error(
-    'CI requires ROOMIE_ISOLATION_IMAGE; isolation tests must not be skipped.',
-  );
-const enabled = {skip: !image, timeout: 120000};
-async function fixture(t, isolation) {
-  const root = await mkdtemp(join(tmpdir(), 'roomie-isolation-'));
+const isolation = {
+  backend: 'bubblewrap',
+  runtimeDirectory: process.env.ROOMIE_BWRAP_RUNTIME,
+};
+const enabled = {skip: !process.env.ROOMIE_BWRAP_RUNTIME, timeout: 120000};
+async function fixture(t) {
+  const root = await mkdtemp(join(tmpdir(), 'ri-'));
   const cwd = join(root, 'sessions', 'run');
   await mkdir(cwd, {recursive: true});
   t.after(async () => {
@@ -42,87 +33,7 @@ async function wait(fn) {
   throw new Error('Timed out');
 }
 test(
-  'real container processes cannot bypass filesystem, credentials, process or privilege boundaries',
-  enabled,
-  async (t) => {
-    const {root, cwd} = await fixture(t);
-    const targets = [
-      'meta.sqlite',
-      'meta.sqlite-wal',
-      'data.duckdb',
-      'data.duckdb.wal',
-      'backup.roomie',
-      'owner-credential',
-      'other/meta.sqlite',
-    ];
-    await mkdir(join(root, 'other'));
-    for (const path of targets)
-      await writeFile(join(root, path), 'private-canary');
-    await writeFile(join(cwd, 'input.txt'), 'intentional input');
-    await symlink(join(root, 'meta.sqlite'), join(cwd, 'escape'));
-    const server = await openWorkspace({directory: join(root, 'workspace')});
-    const http = await startWorkspaceServer({workspace: server});
-    t.after(async () => {
-      await http.dispose();
-      await server.dispose();
-    });
-    const boundary = await prepareIsolatedHarness({
-      isolation: {
-        image,
-        modelEnvironment: {OPENAI_API_KEY: 'delegated-model-canary'},
-      },
-      cwd,
-      workspaceDirectory: root,
-      mcpUrl: http.mcpUrl,
-      token: 'scoped-run-canary',
-      deadlineMs: 20000,
-    });
-    const script = `
-    const fs=require('node:fs'); const cp=require('node:child_process');
-    const denied=[]; for(const p of ${JSON.stringify(targets.map((p) => join(root, p)).concat(['/work/escape', '/work/../../meta.sqlite', '/var/run/docker.sock', `/proc/1/root${join(root, 'meta.sqlite')}`]))}) {
-      try{fs.readFileSync(p);denied.push(false)}catch{denied.push(true)}
-    }
-    fs.writeFileSync('/work/output.txt','writable');
-    let quota=false;const fd=fs.openSync('/work/fill','w');try {const block=Buffer.alloc(8*1024*1024);for(let i=0;i<40;i++)fs.writeSync(fd,block);}catch(e){quota=e.code==='ENOSPC'}finally{fs.closeSync(fd);fs.unlinkSync('/work/fill')}
-    let shellDenied=false;try{cp.execFileSync('sh',['-c','cat \"$1\"','probe',${JSON.stringify(join(root, 'meta.sqlite'))}],{stdio:'pipe'})}catch{shellDenied=true}
-    let rootWrite=false;try{fs.writeFileSync('/etc/roomie-escape','bad');rootWrite=true}catch{}
-    let elevate=false;try{process.setuid(0);elevate=true}catch{}
-    const status=fs.readFileSync('/proc/self/status','utf8');
-    console.log(JSON.stringify({denied,shellDenied,rootWrite,elevate,quota,input:fs.readFileSync('/work/input.txt','utf8'),uid:process.getuid(),env:Object.keys(process.env).sort(),status,
-      codex:cp.execFileSync('codex',['--version'],{encoding:'utf8'}).trim(),claude:cp.execFileSync('claude',['--version'],{encoding:'utf8'}).trim()}));
-  `;
-    const child = boundary.spawn('node', ['-e', script]);
-    let out = '',
-      err = '';
-    child.stdout.on('data', (x) => (out += x));
-    child.stderr.on('data', (x) => (err += x));
-    const done = boundary.done(child);
-    await done;
-    assert.equal(child.exitCode, 0, err);
-    const result = JSON.parse(out);
-    assert.ok(result.denied.every(Boolean));
-    assert.equal(result.shellDenied, true);
-    assert.equal(result.rootWrite, false);
-    assert.equal(result.quota, true);
-    assert.equal(result.elevate, false);
-    assert.equal(result.input, 'intentional input');
-    assert.notEqual(result.uid, 0);
-    assert.deepEqual(result.env, [
-      'HOME',
-      'OPENAI_API_KEY',
-      'PATH',
-      'ROOMIE_RUN_TOKEN',
-      'TMPDIR',
-    ]);
-    assert.match(result.status, /CapEff:\s+0+\n/);
-    assert.match(result.status, /NoNewPrivs:\s+1/);
-    assert.match(result.codex, /0\.163\.0/);
-    assert.match(result.claude, /2\.1\.310/);
-    await assert.rejects(readFile(join(cwd, 'output.txt'))); // Run writes stay in bounded tmpfs.
-  },
-);
-test(
-  'isolated shared adapter redacts delegated keys, preserves approval/cancel, and reaps containers',
+  'Bubblewrap shared adapter redacts delegated keys and preserves scoped commands, approval and cancellation',
   enabled,
   async (t) => {
     const {root} = await fixture(t);
@@ -132,10 +43,10 @@ test(
       harness: {
         adapter: 'claude',
         isolation: {
-          image,
+          ...isolation,
           modelEnvironment: {OPENAI_API_KEY: 'model-secret-echo'},
         },
-        executable: '/opt/roomie/test-claude.mjs',
+        executable: '/runtime/test-claude.mjs',
         deadlineMs: 20000,
       },
     });
@@ -166,8 +77,6 @@ test(
     });
     const otherAddress = new URL(otherServer.mcpUrl);
     const otherHost = otherAddress.host;
-    if (process.platform === 'darwin')
-      otherAddress.hostname = 'host.docker.internal';
     const probe = await post('/api/runs/start', {
       idempotencyKey: 'bypass',
       text:
@@ -187,7 +96,7 @@ test(
     );
     assert.equal(findings.ticket.status, 403);
     assert.equal(findings.approval.status, 403);
-    assert.equal(findings.other.status, 401);
+    assert.equal(findings.other.status, 403);
     assert.equal(findings.query.body.result.structuredContent.ok, false);
     assert.equal(findings.create.body.result.structuredContent.ok, true);
     const artifact =
@@ -217,7 +126,7 @@ test(
     await post('/api/runs/cancel', {runId: b.runId});
     assert.equal(workspace.runs.get(b.runId).status, 'cancelled');
     assert.equal(workspace.runs.pending().length, 0);
-    // Cancel while Docker create is still in flight; terminal waits for cleanup.
+    // Cancel while namespace preparation is still in flight; terminal waits for cleanup.
     const c = await post('/api/runs/start', {
       idempotencyKey: 'startup-cancel',
       text: 'hello',
@@ -227,49 +136,147 @@ test(
   },
 );
 test(
-  'container-local deadline and workspace recovery terminate real descendants',
+  'Bubblewrap explicit Codex API-key delegation initializes only the disposable model home',
   enabled,
   async (t) => {
     const {root, cwd} = await fixture(t);
-    const create = (deadlineMs) =>
-      prepareIsolatedHarness({
-        isolation: {image},
-        cwd,
-        workspaceDirectory: root,
-        mcpUrl: 'http://127.0.0.1:1/mcp',
-        token: 'fake',
-        deadlineMs,
-      });
-    const boundary = await create(500);
-    const child = boundary.spawn('node', [
-      '-e',
-      "require('child_process').spawn('sh',['-c','sleep 300'],{detached:true,stdio:'ignore'});setInterval(()=>{},1000)",
-    ]);
-    child.stdin.end();
+    const boundary = await prepareIsolatedHarness({
+      isolation: {
+        ...isolation,
+        modelEnvironment: {OPENAI_API_KEY: 'sk-roomie-synthetic-login-only'},
+      },
+      cwd,
+      workspaceDirectory: root,
+      mcpUrl: 'http://127.0.0.1:1/mcp',
+      token: 'fake',
+      deadlineMs: 10000,
+    });
+    const child = boundary.spawn('codex', ['login', 'status']);
+    let output = '';
+    child.stdout.on('data', (x) => (output += x));
+    child.stderr.on('data', (x) => (output += x));
     await boundary.done(child);
-    assert.notEqual(child.exitCode, 0);
-    const orphan = await create(20000),
-      process = orphan.spawn('node', ['-e', 'setInterval(()=>{},1000)']);
-    const exited = new Promise((resolve) => process.once('close', resolve));
-    await delay(500);
-    await recoverIsolatedHarnesses(root);
-    await exited;
-    assert.notEqual(process.exitCode, 0);
+    assert.equal(child.exitCode, 0, output);
+    assert.match(output, /API key/i);
+    await assert.rejects(readFile(join(cwd, '.codex', 'auth.json')));
   },
 );
 
 test(
-  'missing isolation image fails closed without trusted-local fallback',
+  'real isolated Codex app-server commits through shared MCP with a credential-free scripted model (Bubblewrap)',
   enabled,
   async (t) => {
+    const {createServer} = await import('node:http');
+    const {mkdirSync, writeFileSync} = await import('node:fs');
     const {root} = await fixture(t);
-    const workspace = await openWorkspace({directory: join(root, 'workspace')});
+    let requests = 0,
+      seenTools = [],
+      received = [];
+    const model = createServer(async (request, response) => {
+      let raw = '';
+      for await (const chunk of request) raw += chunk;
+      const body = JSON.parse(raw);
+      received.push(body.input);
+      requests++;
+      const tools = (body.tools ?? []).flatMap((tool) =>
+        tool.type === 'namespace'
+          ? (tool.tools ?? []).map((child) => ({
+              ...child,
+              name: child.name,
+              namespace: tool.name,
+            }))
+          : [tool],
+      );
+      seenTools = tools.map((tool) => tool.name);
+      const command = tools.find(
+        (tool) =>
+          tool.namespace?.includes('roomie') &&
+          tool.name === (requests === 1 ? 'query' : 'execute_command'),
+      );
+      const item =
+        requests <= 2 && command
+          ? {
+              id: 'fc' + requests,
+              type: 'function_call',
+              call_id: 'call' + requests,
+              name: command.name,
+              namespace: command.namespace,
+              arguments: JSON.stringify(
+                requests === 1
+                  ? {
+                      sql: `SELECT * FROM read_blob('${join(root, 'workspace', 'meta.sqlite')}')`,
+                    }
+                  : {
+                      commandId: 'block-document.create',
+                      input: {title: 'Real isolated Codex'},
+                      commit: {operationId: 'real-isolated-codex'},
+                    },
+              ),
+              status: 'completed',
+            }
+          : {
+              id: 'msg1',
+              type: 'message',
+              role: 'assistant',
+              status: 'completed',
+              content: [
+                {type: 'output_text', text: 'Shared command completed.'},
+              ],
+            };
+      response.writeHead(200, {'content-type': 'text/event-stream'});
+      const emit = (type, data) =>
+        response.write(
+          `event: ${type}\ndata: ${JSON.stringify({type, ...data})}\n\n`,
+        );
+      emit('response.created', {
+        response: {
+          id: 'response' + requests,
+          status: 'in_progress',
+          output: [],
+        },
+      });
+      emit('response.output_item.added', {output_index: 0, item});
+      emit('response.output_item.done', {output_index: 0, item});
+      emit('response.completed', {
+        response: {
+          id: 'response' + requests,
+          status: 'completed',
+          output: [item],
+          usage: {input_tokens: 1, output_tokens: 1, total_tokens: 2},
+        },
+      });
+      response.end();
+    });
+    await new Promise((resolve) => model.listen(0, '127.0.0.1', resolve));
+    t.after(() => {
+      model.closeAllConnections();
+      model.close();
+    });
+    const url = `http://127.0.0.1:${model.address().port}/v1`;
+    const workspace = await openWorkspace({
+      directory: join(root, 'workspace'),
+    });
+    const original = workspace.runs.start;
+    workspace.runs.start = (...args) => {
+      const result = original(...args);
+      if (result.created) {
+        const cwd = join(workspace.directory, 'sessions', result.run.runId);
+        mkdirSync(cwd, {recursive: true});
+        writeFileSync(join(cwd, 'provider.json'), JSON.stringify({url}));
+      }
+      return result;
+    };
     const server = await startWorkspaceServer({
       workspace,
       harness: {
-        isolation: {image: 'sha256:' + '0'.repeat(64)},
-        adapter: 'claude',
-        executable: '/opt/roomie/test-claude.mjs',
+        adapter: 'codex',
+        isolation: {
+          ...isolation,
+          modelOrigins: [new URL(url).origin],
+        },
+        executable: '/runtime/test-codex.mjs',
+        model: 'fixture-model',
+        deadlineMs: 20000,
       },
     });
     t.after(async () => {
@@ -283,284 +290,136 @@ test(
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({idempotencyKey: 'unavailable', text: 'hello'}),
+      body: JSON.stringify({
+        idempotencyKey: 'native-codex',
+        text: 'Use the shared command to create the report.',
+      }),
     });
     assert.equal(response.status, 200);
     const run = await response.json();
-    await wait(() => workspace.runs.get(run.runId).status === 'failed');
-    assert.equal(
-      workspace.runs.events(0).filter((e) => e.kind === 'message.text').length,
-      0,
-    );
-  },
-);
-
-test(
-  'ambiguous Docker create failure removes the daemon-created container',
-  enabled,
-  async (t) => {
-    const {root, cwd} = await fixture(t);
-    const realDocker = execFileSync('which', ['docker'], {
-      encoding: 'utf8',
-    }).trim();
-    const bin = join(root, 'bin'),
-      marker = join(root, 'created-id');
-    await mkdir(bin);
-    await writeFile(
-      join(bin, 'docker'),
-      `#!/usr/bin/env node\nconst {execFileSync}=require('node:child_process');const fs=require('node:fs');const args=process.argv.slice(2);const out=execFileSync(${JSON.stringify(realDocker)},args,{encoding:'utf8'});if(args[0]==='create'){fs.writeFileSync(${JSON.stringify(marker)},out.trim());process.exit(1)}process.stdout.write(out);`,
-      {mode: 0o755},
-    );
-    const previous = process.env.PATH;
-    try {
-      process.env.PATH = bin + ':' + previous;
-      await assert.rejects(
-        prepareIsolatedHarness({
-          isolation: {image},
-          cwd,
-          workspaceDirectory: root,
-          mcpUrl: 'http://127.0.0.1:1/mcp',
-          token: 'fake',
-          deadlineMs: 1000,
-        }),
-      );
-    } finally {
-      process.env.PATH = previous;
-    }
-    const id = await readFile(marker, 'utf8');
-    assert.match(id, /^[a-f0-9]{64}$/);
-    assert.throws(() =>
-      execFileSync(realDocker, ['inspect', id], {stdio: 'pipe'}),
-    );
-  },
-);
-
-test(
-  'explicit Codex API-key delegation initializes only the disposable model home',
-  enabled,
-  async (t) => {
-    const {root, cwd} = await fixture(t);
-    const boundary = await prepareIsolatedHarness({
-      isolation: {
-        image,
-        modelEnvironment: {OPENAI_API_KEY: 'sk-roomie-synthetic-login-only'},
-      },
-      cwd,
-      workspaceDirectory: root,
-      mcpUrl: 'http://127.0.0.1:1/mcp',
-      token: 'fake',
-      deadlineMs: 10000,
-    });
-    const child = boundary.spawn('codex', ['login', 'status']);
-    let output = '';
-    child.stdout.on('data', (x) => (output += x));
-    child.stderr.on('data', (x) => (output += x));
-    child.stdin.end();
-    await boundary.done(child);
-    assert.equal(child.exitCode, 0, output);
-    assert.match(output, /API key/i);
-    await assert.rejects(readFile(join(cwd, '.codex', 'auth.json')));
-  },
-);
-
-for (const profile of [
-  {
-    name: 'Docker',
-    isolation: {image},
-    executable: '/opt/roomie/test-codex.mjs',
-    enabled,
-  },
-  {
-    name: 'Bubblewrap',
-    isolation: {
-      backend: 'bubblewrap',
-      runtimeDirectory: process.env.ROOMIE_BWRAP_RUNTIME,
-    },
-    executable: '/runtime/test-codex.mjs',
-    enabled: {skip: !process.env.ROOMIE_BWRAP_RUNTIME, timeout: 120000},
-  },
-])
-  test(
-    `real isolated Codex app-server commits through shared MCP with a credential-free scripted model (${profile.name})`,
-    profile.enabled,
-    async (t) => {
-      const {createServer} = await import('node:http');
-      const {mkdirSync, writeFileSync} = await import('node:fs');
-      const {root} = await fixture(t, profile.isolation);
-      let requests = 0,
-        seenTools = [],
-        received = [];
-      const model = createServer(async (request, response) => {
-        let raw = '';
-        for await (const chunk of request) raw += chunk;
-        const body = JSON.parse(raw);
-        received.push(body.input);
-        requests++;
-        const tools = (body.tools ?? []).flatMap((tool) =>
-          tool.type === 'namespace'
-            ? (tool.tools ?? []).map((child) => ({
-                ...child,
-                name: child.name,
-                namespace: tool.name,
-              }))
-            : [tool],
-        );
-        seenTools = tools.map((tool) => tool.name);
-        const command = tools.find(
-          (tool) =>
-            tool.namespace?.includes('roomie') &&
-            tool.name === (requests === 1 ? 'query' : 'execute_command'),
-        );
-        const item =
-          requests <= 2 && command
-            ? {
-                id: 'fc' + requests,
-                type: 'function_call',
-                call_id: 'call' + requests,
-                name: command.name,
-                namespace: command.namespace,
-                arguments: JSON.stringify(
-                  requests === 1
-                    ? {
-                        sql: `SELECT * FROM read_blob('${join(root, 'workspace', 'meta.sqlite')}')`,
-                      }
-                    : {
-                        commandId: 'block-document.create',
-                        input: {title: 'Real isolated Codex'},
-                        commit: {operationId: 'real-isolated-codex'},
-                      },
-                ),
-                status: 'completed',
-              }
-            : {
-                id: 'msg1',
-                type: 'message',
-                role: 'assistant',
-                status: 'completed',
-                content: [
-                  {type: 'output_text', text: 'Shared command completed.'},
-                ],
-              };
-        response.writeHead(200, {'content-type': 'text/event-stream'});
-        const emit = (type, data) =>
-          response.write(
-            `event: ${type}\ndata: ${JSON.stringify({type, ...data})}\n\n`,
-          );
-        emit('response.created', {
-          response: {
-            id: 'response' + requests,
-            status: 'in_progress',
-            output: [],
-          },
-        });
-        emit('response.output_item.added', {output_index: 0, item});
-        emit('response.output_item.done', {output_index: 0, item});
-        emit('response.completed', {
-          response: {
-            id: 'response' + requests,
-            status: 'completed',
-            output: [item],
-            usage: {input_tokens: 1, output_tokens: 1, total_tokens: 2},
-          },
-        });
-        response.end();
-      });
-      await new Promise((resolve) => model.listen(0, '127.0.0.1', resolve));
-      t.after(() => {
-        model.closeAllConnections();
-        model.close();
-      });
-      const url = `http://${process.platform === 'darwin' ? 'host.docker.internal' : '127.0.0.1'}:${model.address().port}/v1`;
-      const workspace = await openWorkspace({
-        directory: join(root, 'workspace'),
-      });
-      const original = workspace.runs.start;
-      workspace.runs.start = (...args) => {
-        const result = original(...args);
-        if (result.created) {
-          const cwd = join(workspace.directory, 'sessions', result.run.runId);
-          mkdirSync(cwd, {recursive: true});
-          writeFileSync(join(cwd, 'provider.json'), JSON.stringify({url}));
-        }
-        return result;
-      };
-      const server = await startWorkspaceServer({
-        workspace,
-        harness: {
-          adapter: 'codex',
-          isolation: {
-            ...profile.isolation,
-            ...(profile.name === 'Bubblewrap'
-              ? {modelOrigins: [new URL(url).origin]}
-              : {}),
-          },
-          executable: profile.executable,
-          model: 'fixture-model',
-          deadlineMs: 20000,
-        },
-      });
-      t.after(async () => {
-        await server.dispose();
-        await workspace.dispose();
-      });
-      const {token} = JSON.parse(await readFile(server.credentialPath, 'utf8'));
-      const response = await fetch(server.url + '/api/runs/start', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          idempotencyKey: 'native-codex',
-          text: 'Use the shared command to create the report.',
-        }),
-      });
-      assert.equal(response.status, 200);
-      const run = await response.json();
-      await wait(() =>
-        ['succeeded', 'failed', 'interrupted'].includes(
-          workspace.runs.get(run.runId).status,
-        ),
-      );
-      assert.equal(
+    await wait(() =>
+      ['succeeded', 'failed', 'interrupted'].includes(
         workspace.runs.get(run.runId).status,
-        'succeeded',
-        JSON.stringify(workspace.runs.events(0)),
-      );
-      assert.ok(
-        workspace.runs
-          .events(0)
-          .some(
-            (e) =>
-              e.kind === 'tool.completed' &&
-              e.payload.name === 'query' &&
-              e.payload.status === 'failed',
-          ),
-      );
-      const event = workspace.runs
+      ),
+    );
+    assert.equal(
+      workspace.runs.get(run.runId).status,
+      'succeeded',
+      JSON.stringify(workspace.runs.events(0)),
+    );
+    assert.ok(
+      workspace.runs
         .events(0)
-        .find(
+        .some(
           (e) =>
             e.kind === 'tool.completed' &&
-            e.payload.operationId === 'real-isolated-codex',
-        );
-      assert.ok(
-        event,
-        JSON.stringify({
-          seenTools,
-          received: received
-            .flat()
-            .filter((item) => item.type === 'function_call_output'),
-          events: workspace.runs
-            .events(0)
-            .filter((event) => event.kind.startsWith('tool.')),
-        }),
+            e.payload.name === 'query' &&
+            e.payload.status === 'failed',
+        ),
+    );
+    const event = workspace.runs
+      .events(0)
+      .find(
+        (e) =>
+          e.kind === 'tool.completed' &&
+          e.payload.operationId === 'real-isolated-codex',
       );
-      assert.equal(
-        (await workspace.snapshot()).revisions[
-          event.payload.artifactRefs[0].artifactId
-        ],
-        1,
+    assert.ok(
+      event,
+      JSON.stringify({
+        seenTools,
+        received: received
+          .flat()
+          .filter((item) => item.type === 'function_call_output'),
+        events: workspace.runs
+          .events(0)
+          .filter((event) => event.kind.startsWith('tool.')),
+      }),
+    );
+    assert.equal(
+      (await workspace.snapshot()).revisions[
+        event.payload.artifactRefs[0].artifactId
+      ],
+      1,
+    );
+  },
+);
+
+test('obsolete and unknown isolation profiles fail before recovery or launch', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'roomie-retired-'));
+  t.after(() => rm(root, {recursive: true, force: true}));
+  const workspace = await openWorkspace({directory: root});
+  t.after(() => workspace.dispose());
+  for (const retired of [
+    undefined,
+    {image: 'sha256:' + 'a'.repeat(64)},
+    {backend: 'docker', image: 'sha256:' + 'a'.repeat(64)},
+    {backend: 'unknown', runtimeDirectory: '/unused'},
+    {backend: 'bubblewrap', runtimeDirectory: '/unused', image: 'obsolete'},
+    {backend: 'bubblewrap'},
+  ]) {
+    await assert.rejects(
+      recoverIsolatedHarnesses(root, retired),
+      /explicit Bubblewrap runtime/,
+    );
+    await assert.rejects(
+      prepareIsolatedHarness({
+        isolation: retired,
+        cwd: root,
+        workspaceDirectory: root,
+        mcpUrl: 'http://127.0.0.1:1/mcp',
+        token: 'synthetic',
+        deadlineMs: 1000,
+      }),
+      /explicit Bubblewrap runtime/,
+    );
+    if (retired)
+      await assert.rejects(
+        startWorkspaceServer({workspace, harness: {isolation: retired}}),
+        /explicit Bubblewrap runtime/,
       );
-    },
+  }
+});
+
+test('missing Bubblewrap runtime never falls back to a host process', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'roomie-missing-'));
+  t.after(() => rm(root, {recursive: true, force: true}));
+  await assert.rejects(
+    prepareIsolatedHarness({
+      isolation: {
+        backend: 'bubblewrap',
+        runtimeDirectory: join(root, 'missing'),
+      },
+      cwd: root,
+      workspaceDirectory: root,
+      mcpUrl: 'http://127.0.0.1:1/mcp',
+      token: 'synthetic',
+      deadlineMs: 1000,
+    }),
+    /ENOENT|unprivileged Linux host/,
   );
+});
+
+test('live acceptance driver rejects retired image environment before creating its workspace', async (t) => {
+  const {execFile} = await import('node:child_process');
+  const {promisify} = await import('node:util');
+  const {stat} = await import('node:fs/promises');
+  const root = await mkdtemp(join(tmpdir(), 'roomie-driver-'));
+  t.after(() => rm(root, {recursive: true, force: true}));
+  const directory = join(root, 'must-not-exist');
+  await assert.rejects(
+    promisify(execFile)(
+      process.execPath,
+      [new URL('./live-m2.mjs', import.meta.url).pathname],
+      {
+        env: {
+          ...process.env,
+          ROOMIE_M2_DIRECTORY: directory,
+          ROOMIE_ISOLATION_IMAGE: 'sha256:' + 'a'.repeat(64),
+        },
+      },
+    ),
+    /ROOMIE_ISOLATION_IMAGE is no longer supported/,
+  );
+  await assert.rejects(stat(directory), {code: 'ENOENT'});
+});

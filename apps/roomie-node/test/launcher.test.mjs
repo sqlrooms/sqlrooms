@@ -98,7 +98,18 @@ test('launcher validates arguments before creating a workspace', async () => {
       '--isolation-image',
       'sha256:' + '0'.repeat(64),
     ],
-    ['--harness', 'codex', '--isolation-image', 'latest'],
+    ['--harness', 'codex', '--isolation-image', 'sha256:' + '0'.repeat(64)],
+    [
+      '--harness',
+      'codex',
+      '--trusted-local',
+      '--bubblewrap-runtime',
+      '/unused',
+    ],
+    ['--bubblewrap-runtime', '/unused'],
+    ...(process.platform === 'darwin'
+      ? [['--harness', 'codex', '--bubblewrap-runtime', '/unused']]
+      : []),
     ['--deadline-ms', 'Infinity'],
     ['--unknown'],
   ]) {

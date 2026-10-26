@@ -27,10 +27,6 @@ try {
   await cp(join(root, 'bubblewrap'), join(stage, 'bubblewrap'), {
     recursive: true,
   });
-  await cp(join(root, 'container'), join(stage, 'container'), {
-    recursive: true,
-    filter: (path) => !path.endsWith('Dockerfile.test'),
-  });
   await cp(join(root, 'README.md'), join(stage, 'README.md'));
   await cp(join(root, '../../LICENSE.md'), join(stage, 'LICENSE'));
   await cp(join(root, '../../LICENSE.md'), join(stage, 'NOTICE'));
@@ -53,7 +49,6 @@ try {
           'service',
           'bubblewrap',
           'dist',
-          'container',
           'README.md',
           'LICENSE',
           'NOTICE',

@@ -60,7 +60,30 @@ test(
   'Bubblewrap denies host files, process access, sockets and direct network with real runtimes',
   enabled,
   async (t) => {
-    const {root, boundary} = await fixture(t);
+    const priorHostSecret = process.env.ROOMIE_HOST_ONLY;
+    process.env.ROOMIE_HOST_ONLY = 'host-only-canary';
+    t.after(() => {
+      if (priorHostSecret === undefined) delete process.env.ROOMIE_HOST_ONLY;
+      else process.env.ROOMIE_HOST_ONLY = priorHostSecret;
+    });
+    const {root, cwd, boundary} = await fixture(t, 15000, {
+      ...isolation,
+      modelEnvironment: {
+        OPENAI_API_KEY: 'delegated-model-canary',
+        ROOMIE_HOST_ONLY: 'must-not-delegate',
+      },
+    });
+    const canaries = [
+      'meta.sqlite-wal',
+      'data.duckdb',
+      'data.duckdb.wal',
+      'backup.roomie',
+      'owner-credential',
+      'other/meta.sqlite',
+    ];
+    await mkdir(join(root, 'other'));
+    for (const name of canaries)
+      await writeFile(join(root, name), 'private-canary');
     const abstract = '\0roomie-' + randomUUID();
     const listener = net.createServer((socket) => socket.destroy());
     await new Promise((resolve, reject) => {
@@ -71,9 +94,16 @@ test(
     const script = `
     const fs=require('node:fs'), cp=require('node:child_process'), net=require('node:net');
     const denied=p=>{try{fs.readFileSync(p);return false}catch{return true}};
-    const paths=${JSON.stringify([join(root, 'meta.sqlite'), '/work/escape', '/proc/1/root' + join(root, 'meta.sqlite'), '/.sprite/api.sock', '/var/run/docker.sock'])};
+    const paths=${JSON.stringify([...canaries.map((name) => join(root, name)), join(root, 'meta.sqlite'), '/work/escape', '/proc/1/root' + join(root, 'meta.sqlite'), '/.sprite/api.sock', '/var/run/docker.sock'])};
     const results={files:paths.map(denied),status:fs.readFileSync('/proc/self/status','utf8'),namespace:fs.readlinkSync('/proc/self/ns/pid')};
     fs.writeFileSync('/work/output.txt','yes');
+    results.env=Object.keys(process.env).sort();
+    results.modelKey=process.env.OPENAI_API_KEY;
+    results.runToken=process.env.ROOMIE_RUN_TOKEN;
+    results.readOnly=['/etc/roomie-write','/run-input/input.txt'].map(p=>{try{fs.writeFileSync(p,'bad');return false}catch{return true}});
+    const fd=fs.openSync('/work/fill','w');
+    try{const block=Buffer.alloc(8*1024*1024);for(let i=0;i<40;i++)fs.writeSync(fd,block);results.quota=false}catch(e){results.quota=e.code==='ENOSPC'}finally{fs.closeSync(fd);fs.unlinkSync('/work/fill')}
+    try{cp.execFileSync('sh',['-c','cat "$1"','probe',${JSON.stringify(join(root, 'meta.sqlite'))}],{stdio:'pipe'});results.shellDenied=false}catch{results.shellDenied=true}
     results.input=fs.readFileSync('/work/input.txt','utf8');
     results.codex=cp.execFileSync('codex',['--version'],{encoding:'utf8'}).trim();
     results.claude=cp.execFileSync('claude',['--version'],{encoding:'utf8'}).trim();
@@ -89,6 +119,29 @@ test(
     assert.ok(result.network.every(Boolean));
     assert.notEqual(result.namespace, await readlink('/proc/self/ns/pid'));
     assert.equal(result.elevated, false);
+    assert.ok(result.readOnly.every(Boolean));
+    assert.equal(result.quota, true);
+    assert.equal(result.shellDenied, true);
+    assert.equal(result.modelKey, 'delegated-model-canary');
+    assert.equal(result.runToken, 'scoped-canary');
+    assert.deepEqual(
+      result.env,
+      [
+        'HOME',
+        'HTTP_PROXY',
+        'HTTPS_PROXY',
+        'NODE_USE_ENV_PROXY',
+        'NO_PROXY',
+        'OPENAI_API_KEY',
+        'PATH',
+        'ROOMIE_RUN_TOKEN',
+        'TMPDIR',
+        'http_proxy',
+        'https_proxy',
+        'no_proxy',
+      ].sort(),
+    );
+    await assert.rejects(readFile(join(cwd, 'output.txt')), {code: 'ENOENT'});
     assert.equal(result.input, 'intentional input');
     assert.match(result.status, /CapEff:\s+0+\n/);
     assert.match(result.status, /NoNewPrivs:\s+1/);

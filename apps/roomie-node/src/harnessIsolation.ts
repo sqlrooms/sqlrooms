@@ -1,61 +1,43 @@
-import {
-  execFile,
-  spawn,
-  type ChildProcessWithoutNullStreams,
-} from 'node:child_process';
-import {promisify} from 'node:util';
-import {createHash, randomUUID} from 'node:crypto';
-import {realpath} from 'node:fs/promises';
+import type {ChildProcessWithoutNullStreams} from 'node:child_process';
 import {
   prepareBubblewrapHarness,
   recoverBubblewrapHarnesses,
 } from './bubblewrapIsolation';
 
-const execute = promisify(execFile);
-const docker = (args: string[]) =>
-  execute('docker', args, {timeout: 30000, maxBuffer: 1024 * 1024});
-const workspaceLabel = (directory: string) =>
-  createHash('sha256').update(directory).digest('hex');
-/** Remove only containers owned by this workspace before accepting new runs. */
-export async function recoverIsolatedHarnesses(
-  directory: string,
-  isolation?: HarnessIsolation,
-) {
-  if (isolation?.backend === 'bubblewrap')
-    return recoverBubblewrapHarnesses(directory);
-  const label = workspaceLabel(await realpath(directory));
-  const {stdout} = await docker([
-    'ps',
-    '--all',
-    '--quiet',
-    '--no-trunc',
-    '--filter',
-    `label=org.sqlrooms.workspace=${label}`,
-  ]);
-  const ids = stdout.trim().split('\n').filter(Boolean);
-  for (const id of ids) {
-    if (!/^[a-f0-9]{64}$/.test(id))
-      throw new Error('Invalid recovery container identity.');
-  }
-  if (ids.length) await docker(['rm', '--force', ...ids]);
-}
-/** Explicit OS boundary: immutable Docker image or provisioned Linux Bubblewrap runtime. No implicit fallback. */
-export type HarnessIsolation = (
-  | {
-      backend?: 'docker';
-      image: string;
-    }
-  | {
-      backend: 'bubblewrap';
-      /** Provisioned Linux runtime containing bin/{node,bwrap,codex,claude}; no account home files. */
-      runtimeDirectory: string;
-      /** Exact administrator-selected model origins. Defaults to the OpenAI and Anthropic APIs. */
-      modelOrigins?: string[];
-    }
-) & {
+/** Explicit Linux namespace isolation. There is no implicit trusted-local fallback. */
+export type HarnessIsolation = {
+  backend: 'bubblewrap';
+  /** Provisioned Linux runtime containing bin/{node,bwrap,codex,claude}; no account home files. */
+  runtimeDirectory: string;
+  /** Exact administrator-selected model origins. Defaults to the OpenAI and Anthropic APIs. */
+  modelOrigins?: string[];
   /** Explicit model API delegation only. Workspace/Quack/owner credentials are never accepted here. */
   modelEnvironment?: {OPENAI_API_KEY?: string; ANTHROPIC_API_KEY?: string};
 };
+
+// Runtime callers include JavaScript and persisted deployment configuration.
+// Reject obsolete/unknown profiles before recovery can signal any process.
+function validateIsolation(isolation: HarnessIsolation) {
+  if (
+    !isolation ||
+    isolation.backend !== 'bubblewrap' ||
+    'image' in isolation ||
+    typeof isolation.runtimeDirectory !== 'string' ||
+    !isolation.runtimeDirectory
+  )
+    throw Error(
+      'Isolation requires an explicit Bubblewrap runtime; Docker images are no longer supported.',
+    );
+}
+
+/** Recover only this workspace's positively identified Linux namespace processes. */
+export async function recoverIsolatedHarnesses(
+  directory: string,
+  isolation: HarnessIsolation,
+) {
+  validateIsolation(isolation);
+  await recoverBubblewrapHarnesses(directory);
+}
 /** Prepared process boundary shared by both native adapters. */
 export type IsolatedHarnessProcess = {
   cwd: string;
@@ -66,7 +48,7 @@ export type IsolatedHarnessProcess = {
   done: (child: ChildProcessWithoutNullStreams) => Promise<void>;
   dispose: () => Promise<void>;
 };
-/** Prepare the selected OS boundary before harness execution; resource guarantees depend on the backend. */
+/** Prepare the Linux boundary; aggregate memory/CPU-rate/PID quotas are not provided. */
 export async function prepareIsolatedHarness(options: {
   isolation: HarnessIsolation;
   cwd: string;
@@ -75,124 +57,6 @@ export async function prepareIsolatedHarness(options: {
   workspaceDirectory: string;
   deadlineMs: number;
 }): Promise<IsolatedHarnessProcess> {
-  if (options.isolation.backend === 'bubblewrap')
-    return prepareBubblewrapHarness({...options, isolation: options.isolation});
-  if (!/^sha256:[a-f0-9]{64}$/.test(options.isolation.image))
-    throw new Error('Isolation requires a local immutable Docker image ID.');
-  if (process.platform !== 'linux' && process.platform !== 'darwin')
-    throw new Error(
-      'Container isolation is supported on Linux and macOS only.',
-    );
-  const cwd = await realpath(options.cwd);
-  if (cwd.includes(',')) throw new Error('Unsupported container mount path.');
-  const uid = process.getuid!();
-  if (uid === 0)
-    throw new Error('Run the workspace host as an unprivileged OS user.');
-  const address = new URL(options.mcpUrl);
-  if (address.hostname !== '127.0.0.1' || address.pathname !== '/mcp')
-    throw new Error('Expected the workspace loopback MCP endpoint.');
-  const mcpHost = address.host;
-  // Desktop forwards this gateway to host loopback. Linux uses the host network
-  // only; PID, mount, user authority and IPC boundaries remain isolated.
-  if (process.platform === 'darwin') address.hostname = 'host.docker.internal';
-  const name = `roomie-${randomUUID()}`;
-  let stdout: string;
-  try {
-    ({stdout} = await docker([
-      'create',
-      '--pull=never',
-      '--interactive',
-      '--init',
-      '--name',
-      name,
-      '--label',
-      `org.sqlrooms.workspace=${workspaceLabel(await realpath(options.workspaceDirectory))}`,
-      '--read-only',
-      '--cap-drop=ALL',
-      '--security-opt=no-new-privileges',
-      '--user',
-      `${uid}:${process.getgid!()}`,
-      '--pids-limit=128',
-      '--memory=1g',
-      '--memory-swap=1g',
-      '--cpus=2',
-      '--tmpfs',
-      `/tmp:rw,nosuid,nodev,size=536870912,mode=1777`,
-      ...(process.platform === 'linux'
-        ? ['--network=host']
-        : ['--network=bridge']),
-      '--tmpfs',
-      '/work:rw,nosuid,nodev,size=268435456,mode=1777',
-      '--mount',
-      `type=bind,source=${cwd},target=/run-input,readonly`,
-      '--workdir=/work',
-      '--entrypoint=node',
-      options.isolation.image,
-      '/opt/roomie/launch.mjs',
-    ]));
-  } catch (error) {
-    // The daemon may have created it before the client lost the response.
-    await docker(['rm', '--force', name]).catch(() => {});
-    throw error;
-  }
-  const id = stdout.trim();
-  if (!/^[a-f0-9]{64}$/.test(id))
-    throw new Error('Invalid container identity.');
-  let removal: Promise<void> | undefined;
-  const dispose = () =>
-    (removal ??= docker(['rm', '--force', id]).then(() => {}));
-  let launched = false;
-  return {
-    cwd: '/work',
-    mcpUrl: address.href,
-    mcpHost,
-    spawn(command, args) {
-      if (launched || removal)
-        throw new Error('Container process already consumed.');
-      launched = true;
-      const child = spawn(
-        'docker',
-        ['start', '--attach', '--interactive', id],
-        {
-          stdio: ['pipe', 'pipe', 'pipe'],
-          detached: true,
-        },
-      );
-      child.stdin.on('error', () => {});
-      child.stdin.write(
-        JSON.stringify({
-          command,
-          args,
-          deadlineMs: options.deadlineMs,
-          env: {
-            ROOMIE_RUN_TOKEN: options.token,
-            // Enumerate rather than spreading user objects or the host environment.
-            ...(options.isolation.modelEnvironment?.OPENAI_API_KEY
-              ? {
-                  OPENAI_API_KEY:
-                    options.isolation.modelEnvironment.OPENAI_API_KEY,
-                }
-              : {}),
-            ...(options.isolation.modelEnvironment?.ANTHROPIC_API_KEY
-              ? {
-                  ANTHROPIC_API_KEY:
-                    options.isolation.modelEnvironment.ANTHROPIC_API_KEY,
-                }
-              : {}),
-          },
-        }) + '\n',
-      );
-      return child;
-    },
-    kill() {
-      void dispose().catch(() => {});
-    },
-    async done(child) {
-      await new Promise<void>((resolve) =>
-        child.once('close', () => resolve()),
-      );
-      await dispose();
-    },
-    dispose,
-  };
+  validateIsolation(options.isolation);
+  return prepareBubblewrapHarness(options);
 }

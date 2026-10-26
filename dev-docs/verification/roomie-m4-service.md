@@ -1,5 +1,9 @@
 # Roomie M4 Sprite lifecycle verification
 
+> Historical verification: Docker support was retired on 2026-10-27. Current
+> enforced isolation is Bubblewrap on Linux/Sprite; macOS requires explicit
+> trusted-local execution. See the [current host README](../../apps/roomie-node/README.md).
+
 Date: 2026-10-26. Worktree/branch: `roomie-node-workspace` /
 `feat/roomie-node-workspace`. Continues draft PR #962 from `2db5d73ef` on its
 unchanged base. No Python changes, registry publication or hosted soak claim.

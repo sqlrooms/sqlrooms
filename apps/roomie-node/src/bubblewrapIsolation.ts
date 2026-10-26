@@ -136,7 +136,7 @@ export async function recoverBubblewrapHarnesses(directory: string) {
 
 /** Prepare a Linux namespace boundary; startup failure never selects trusted-local mode. */
 export async function prepareBubblewrapHarness(options: {
-  isolation: Extract<HarnessIsolation, {backend: 'bubblewrap'}>;
+  isolation: HarnessIsolation;
   cwd: string;
   mcpUrl: string;
   token: string;

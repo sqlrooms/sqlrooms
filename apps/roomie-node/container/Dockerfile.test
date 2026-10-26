@@ -1,4 +1,0 @@
-ARG HARNESS_IMAGE=roomie-harness-m4:local
-FROM ${HARNESS_IMAGE}
-COPY --chmod=755 test/scripted-claude.mjs /opt/roomie/test-claude.mjs
-COPY --chmod=755 test/isolated-codex.mjs /opt/roomie/test-codex.mjs

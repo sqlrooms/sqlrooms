@@ -40,7 +40,7 @@ export async function startWorkspaceServer(options: {
   trustedGateway?: {port: number};
   /** Built Roomie UI directory; root serves the document-read-only node.html entry. */
   uiDirectory?: string;
-  /** Explicit trusted-local mode or an enforced container boundary. */
+  /** Explicit trusted-local mode or enforced Linux namespace isolation. */
   harness?: {
     trustedLocal?: true;
     /** Required for enforced isolation; never falls back to trusted-local execution. */

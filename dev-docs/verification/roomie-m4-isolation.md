@@ -1,5 +1,9 @@
 # Roomie M4 isolation and locked database verification
 
+> Historical verification: Docker support was retired on 2026-10-27. Current
+> enforced isolation is Bubblewrap on Linux/Sprite; macOS requires explicit
+> trusted-local execution. See the [current host README](../../apps/roomie-node/README.md).
+
 Baseline `46bbe53fabf2153ea1fb63933a44965c80f521c6`; existing worktree, branch and
 draft PR #962. Current plans and repository instructions were read first. #960
 and #959 remain open at `eed050a6` and `8eb7a853`; the PR base is unchanged.

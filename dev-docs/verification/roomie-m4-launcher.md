@@ -1,5 +1,9 @@
 # M4 local launcher and distribution verification
 
+> Historical verification: Docker support was retired on 2026-10-27. Current
+> enforced isolation is Bubblewrap on Linux/Sprite; macOS requires explicit
+> trusted-local execution. See the [current host README](../../apps/roomie-node/README.md).
+
 Scope: the local portion of the M4 launcher/lifecycle item on draft PR #962.
 Baseline: `cdbfdbdef94d39ec2435e5d65e01d963855f75d3`. PR #960 remains open at
 `eed050a6`; #959 remains open at `8eb7a853`. The base remains

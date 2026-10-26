@@ -26,7 +26,7 @@ pnpm --filter roomie-node pack:local
 
 The result is `apps/roomie-node/release/sqlrooms-roomie-node-0.0.0-m4.0.tgz`.
 It contains the Node bundle, the built browser UI, a `roomie-node` executable,
-container build files and license notices. Runtime dependencies are pinned to
+Bubblewrap runtime provisioning scripts and license notices. Runtime dependencies are pinned to
 installed versions when packed; there are no `workspace:*` references. npm still
 resolves transitive dependencies when installing. Keep the resulting install's
 `package-lock.json` for repeatable updates. The tarball is platform independent;
@@ -56,16 +56,20 @@ disabled. Enable a harness deliberately:
 ```sh
 roomie-node ./my-workspace --harness codex --trusted-local
 roomie-node ./my-workspace --harness claude --trusted-local
-roomie-node ./my-workspace --harness codex --isolation-image sha256:<local-image-id>
+roomie-node ./my-workspace --harness codex --bubblewrap-runtime /absolute/linux-runtime
 ```
 
 Use the installed executable's full path if it is not on your `PATH`.
 Trusted-local mode uses the separately installed Codex **0.163.0** or Claude Code
 **2.1.310** and that tool's existing authentication. Its shell has your OS
-permissions. Container mode requires Docker and the immutable image described
-below, and delegates only explicit `OPENAI_API_KEY`/`ANTHROPIC_API_KEY`
-environment values. It never imports personal login files or falls back to a
-trusted-local harness. Network egress is not restricted by this container profile.
+permissions. Enforced isolation is supported only on Linux/Sprite through
+Bubblewrap. On macOS use no harness or select `--trusted-local` explicitly.
+Bubblewrap delegates only explicit `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` environment
+values; it never imports personal login files or falls back to trusted-local.
+Docker support, `--isolation-image`, and service `image` configuration have been
+removed. Obsolete configurations are rejected. Before upgrading an older Docker
+deployment, stop its service and remove its owned containers with the old version;
+this release does not manage Docker processes.
 `--deadline-ms` bounds runs (default five minutes; maximum one hour).
 
 The process stays in the foreground until Ctrl-C or SIGTERM. Closing the browser
@@ -118,7 +122,7 @@ This initial-install helper refuses existing install/workspace directories and
 preserves the Sprite's URL authentication policy. It installs under
 `/home/sprite/roomie-service`, stores the workspace separately at
 `/home/sprite/roomie-workspace`, and registers the `roomie` service on port 8080.
-It does not install Docker, change privileges, delegate model credentials or
+It does not provision a harness runtime, change privileges, delegate model credentials or
 make the URL public. For updates, stop the service, back up/export the workspace,
 install the new tarball into the same prefix, then start the service again.
 
@@ -136,15 +140,12 @@ The installed entry point is `bin/roomie-sprite.mjs <config.json>`:
 
 Unknown fields fail closed. Runs can be bounded up to one hour; requests up to
 60 seconds. To enable a harness, explicitly add `"harness": "codex"` (or
-`"claude"`) and `"image": "sha256:<immutable-local-image-id>"` after provisioning
-and verifying the existing Docker isolation profile on that Sprite. Docker
-access is root-equivalent; provisioning is an explicit administrator operation.
-The 2026-10-26 disposable Sprite failed this Docker profile: its cgroup controllers
-could not be enabled and `pids.max` was unavailable. The explicit Bubblewrap
-alternative below has different resource limits; Docker's limits are unchanged.
-Trusted-local fallback is forbidden. Only intentional model API environment
-values are delegated; the management socket, owner token and service IPC stay
-outside the container. Quack is always disabled in this adapter.
+`"claude"`) and `"bubblewrapRuntime": "/absolute/roomie-runtime"` after
+provisioning and verifying the Linux Bubblewrap profile below. The Sprite's
+mount/procfs bootstrap is an explicit administrator operation. Trusted-local
+fallback is forbidden. Only intentional model API environment values are
+delegated; the management socket, owner token and service IPC stay outside the
+sandbox. Quack is always disabled in this adapter.
 
 A separate supervisor process owns renewable 30-second Sprite Tasks, renewed
 every ten seconds. HTTP requests, socket queries/uploads, snapshots/replay,
@@ -158,9 +159,9 @@ drains. The ordinary local launcher does not require a lease backend.
 
 Fixed per-operation deadlines cannot be extended by heartbeats. During work,
 ten seconds without a heartbeat or a missed deadline kills the host process
-group, removes workspace-labeled containers, then recovers a fresh generation.
-Task calls time out after three seconds; Docker recovery has two bounded
-30-second calls and an outer 70-second deadline. Cleanup itself retains/renews
+group, reaps positively identified namespace processes, then recovers a fresh
+generation. Task calls time out after three seconds; orphan cleanup has an outer
+70-second deadline. Cleanup itself retains/renews
 its Task. A kernel `flock` excludes duplicate service supervisors before cleanup.
 Each supervisor invocation permits at most three host generations; platform
 service restart policy remains separate. Inspect failures rather than repeatedly
@@ -291,7 +292,7 @@ preparation, uncertain responses, failed-closed recovery, owner exclusion and
 real process crashes before/after commit.
 
 The authenticated MCP endpoint stays loopback-only. The analytical instance is
-locked before exposure, and container-isolated harness mode is available below.
+locked before exposure, and Linux-isolated harness mode is available below.
 Quack clients deliberately receive broad analytical authority. The managed Sprite
 adapter keeps Quack disabled so native work cannot bypass its execution leases.
 Unattended hosted release acceptance remains unfinished.
@@ -518,7 +519,7 @@ and UID. Startup processes must also carry a private per-run marker; a stale
 leaderless process group is never killed by number alone. It reaps identified
 processes and namespace init before admitting work. This reuses the existing external service watchdog.
 
-**Resource difference:** Bubblewrap does not provide Docker's aggregate memory,
+**Resource limits:** Bubblewrap does not provide aggregate memory,
 CPU-rate or PID quotas. This profile bounds wall-clock time, supplied tmpfs mounts,
 per-process CPU time, file size, open files and core dumps. These are not an
 aggregate resource limit across an arbitrary process tree; nested user namespaces
@@ -556,61 +557,14 @@ socket path limits are rejected rather than silently switching transports.
 pinned runtime and runs actual filesystem/network/cleanup probes plus both native
 harnesses against credential-free model fixtures and the shared MCP contract.
 
-### Docker backend
+### Locked analytical configuration
 
-Build the reviewed image locally; runtime accepts its immutable image ID and
-never pulls an image or falls back to trusted-local execution:
-
-```sh
-docker build -t roomie-harness-m4:local apps/roomie-node/container
-docker image inspect --format '{{.Id}}' roomie-harness-m4:local
-```
-
-```ts
-await startWorkspaceServer({
-  workspace,
-  harness: {
-    adapter: 'codex', // or 'claude'
-    isolation: {
-      image: 'sha256:<the-64-character-local-image-id>',
-      modelEnvironment: {OPENAI_API_KEY: process.env.OPENAI_API_KEY},
-    },
-  },
-});
-```
-
-Use exactly one of `isolation` or `trustedLocal: true`. Run the host as a nonroot
-OS user with access to its Docker daemon. Linux uses the host network to reach
-the loopback API; macOS Docker Desktop uses `host.docker.internal` with the
-original Host header. **This is filesystem/process isolation, not network egress
-isolation.** Other services still require their own authentication. Neither
-owner nor Quack credentials are delegated. The run token grants MCP only, is
-revoked on completion/cancellation, and does not grant browser tickets or approval
-resolution. The host owns the Docker daemon; it is never mounted into the run.
-
-The container runs nonroot with all capabilities dropped, no-new-privileges,
-private PID/mount namespaces, read-only root, 1 GiB memory, 2 CPUs and 128 PIDs.
-Only per-run input files are mounted read-only. The writable working directory
-is a 256 MiB tmpfs; temporary home/files use a separate 512 MiB tmpfs. Files,
-metadata, WALs, bundles, backups, host home and other workspaces are not mounted.
-Shell subprocesses inherit this boundary. Run files are disposable; commands and
-SQLite events remain the durable state. No native continuation is advertised.
-
-Only explicitly supplied `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` values enter the
-container. Codex's supported API-key login command writes the delegated key into
-the disposable home. Host account/configuration files are never copied. Known
-delegated keys are redacted from events/blobs. The host environment is not passed
-through. `ROOMIE_ISOLATION_IMAGE` selects this mode in `test/live-m2.mjs`; otherwise
-that development driver retains explicit trusted-local mode.
-
-Cancellation removes the container before terminal publication. Startup failures
-and immediate cancellation do not fall back to the host process. Reopening the
-isolated host removes containers labeled for that workspace before admitting
-runs. A container-local timer also exits ordinary abandoned work, but is not an
-external watchdog or protection against a harness stopping its own timer process.
-Codex's nested shell sandbox currently refuses namespace creation under this
-container profile; this mode deliberately does not loosen Docker restrictions
-for shell execution. Workspace work uses shared MCP commands.
+Only explicitly supplied model keys enter the sandbox. Codex's API-key login
+writes the delegated key into its disposable home; host login files are never
+copied. Known delegated keys are redacted from events/blobs. The run token grants
+MCP only, is revoked on completion/cancellation, and cannot authorize browser
+sign-in or owner approval decisions. `ROOMIE_BWRAP_RUNTIME` selects isolation in
+`test/live-m2.mjs`; otherwise that development driver uses trusted-local mode.
 
 Every workspace now preloads required signed extensions, disables persistent
 secrets and automatic extension installation/loading, disables external access,
@@ -622,20 +576,15 @@ credentials and backups remain outside that allowance. The same locked instance
 serves Arrow, imports, Mosaic sessions and Quack, including stop/restart for
 consistent bundle export. Renderer SQL policy remains an additional boundary.
 
-For reproducible real-process and Quack bypass acceptance:
-
-```sh
-docker build -f apps/roomie-node/container/Dockerfile.test \
-  -t roomie-harness-m4-test:local apps/roomie-node
-ROOMIE_ISOLATION_IMAGE=$(docker image inspect --format '{{.Id}}' roomie-harness-m4-test:local) \
-  pnpm --filter roomie-node test
-```
-
-Container tests are opt-in locally and required in Linux JavaScript CI. They use
-synthetic canaries, a native protocol fixture and the real Codex app-server with
-a credential-free scripted model. They verify the installed Codex/Claude versions
-and actual MCP denial/commit outcomes. See [isolation verification](../../dev-docs/verification/roomie-m4-isolation.md)
-for evidence and limits; this does not complete the hosted M4 release gate.
+The native suite verifies Quack/import/Arrow behavior and analytical SQL bypass
+attempts. The dedicated Linux CI step provisions Bubblewrap and tests both native
+harnesses, shared command commits, credential redaction, approvals, cancellation,
+network/file/process denial, fixed deadlines and orphan recovery. See
+[Bubblewrap verification](../../dev-docs/verification/roomie-m4-bubblewrap.md)
+for the original boundary evidence and limits. Earlier Docker evidence in
+[isolation verification](../../dev-docs/verification/roomie-m4-isolation.md)
+is historical; that backend is no longer shipped. The hosted resource-budget
+and deployed soak gates remain open.
 
 ## Browserless Codex slice (M2)
 
@@ -846,7 +795,7 @@ dedicated ingress. Origin/Host checks protect browsers from CSRF/rebinding;
 they are not proof that an arbitrary local process passed the gateway.
 
 Harnesses must use Bubblewrap's private network with the default model origins.
-Trusted-local, Docker host-network mode and custom model destinations are
+Trusted-local execution and custom model destinations are
 rejected, since those could reach the browser sign-in listener. The per-run
 broker exposes only MCP and the default model authorities, and never the gateway
 session route. Agents retain scoped, revocable credentials and explicit approval.

@@ -401,70 +401,59 @@ test('socket close during lease admission cannot create an orphan query session'
   assert.equal(sessions, 0);
 });
 
-for (const profile of [
-  {
-    name: 'Docker',
-    isolation: {image: process.env.ROOMIE_ISOLATION_IMAGE},
-    enabled: Boolean(process.env.ROOMIE_ISOLATION_IMAGE),
+const watchdogIsolation = {
+  backend: 'bubblewrap',
+  runtimeDirectory: process.env.ROOMIE_BWRAP_RUNTIME,
+};
+test(
+  'external watchdog reaps an isolated process left behind by a stopped host (Bubblewrap)',
+  {skip: !process.env.ROOMIE_BWRAP_RUNTIME, timeout: 60000},
+  async (t) => {
+    const {mkdir} = await import('node:fs/promises');
+    const {prepareIsolatedHarness, recoverIsolatedHarnesses} =
+      await import('../dist-test/bridge.mjs');
+    let directory;
+    const f = await fixture(t, {
+      cleanup: async () => {
+        if (directory)
+          await recoverIsolatedHarnesses(directory, watchdogIsolation);
+      },
+    });
+    directory = join(f.directory, 'workspace');
+    const cwd = join(directory, 'sessions', 'watchdog');
+    await mkdir(cwd, {recursive: true});
+    const boundary = await prepareIsolatedHarness({
+      isolation: watchdogIsolation,
+      cwd,
+      workspaceDirectory: directory,
+      mcpUrl: f.control.url + '/mcp',
+      token: 'watchdog-synthetic-token',
+      deadlineMs: 60000,
+    });
+    let ready = false;
+    const child = boundary.spawn('node', [
+      '-e',
+      "console.log('ready');setInterval(()=>{},1000)",
+    ]);
+    child.stdout.on('data', () => {
+      ready = true;
+    });
+    child.stderr.resume();
+    const drained = boundary.done(child);
+    t.after(() => boundary.dispose());
+    await waitFor(() => ready);
+    await waitFor(() => !f.held());
+    const upload = pendingUpload(f);
+    t.after(() => upload.destroy());
+    await waitFor(f.held);
+    process.kill(f.child.pid, 'SIGSTOP');
+    const end = await f.done();
+    assert.equal(end.value.reason, 'host heartbeat expired');
+    await drained;
+    assert.ok(child.exitCode !== null || child.signalCode !== null);
+    assert.equal(f.held(), false);
   },
-  {
-    name: 'Bubblewrap',
-    isolation: {
-      backend: 'bubblewrap',
-      runtimeDirectory: process.env.ROOMIE_BWRAP_RUNTIME,
-    },
-    enabled: Boolean(process.env.ROOMIE_BWRAP_RUNTIME),
-  },
-])
-  test(
-    `external watchdog reaps an isolated process left behind by a stopped host (${profile.name})`,
-    {skip: !profile.enabled, timeout: 60000},
-    async (t) => {
-      const {mkdir} = await import('node:fs/promises');
-      const {prepareIsolatedHarness, recoverIsolatedHarnesses} =
-        await import('../dist-test/bridge.mjs');
-      let directory;
-      const f = await fixture(t, {
-        cleanup: async () => {
-          if (directory)
-            await recoverIsolatedHarnesses(directory, profile.isolation);
-        },
-      });
-      directory = join(f.directory, 'workspace');
-      const cwd = join(directory, 'sessions', 'watchdog');
-      await mkdir(cwd, {recursive: true});
-      const boundary = await prepareIsolatedHarness({
-        isolation: profile.isolation,
-        cwd,
-        workspaceDirectory: directory,
-        mcpUrl: f.control.url + '/mcp',
-        token: 'watchdog-synthetic-token',
-        deadlineMs: 60000,
-      });
-      let ready = false;
-      const child = boundary.spawn('node', [
-        '-e',
-        "console.log('ready');setInterval(()=>{},1000)",
-      ]);
-      child.stdout.on('data', () => {
-        ready = true;
-      });
-      child.stderr.resume();
-      const drained = boundary.done(child);
-      t.after(() => boundary.dispose());
-      await waitFor(() => ready);
-      await waitFor(() => !f.held());
-      const upload = pendingUpload(f);
-      t.after(() => upload.destroy());
-      await waitFor(f.held);
-      process.kill(f.child.pid, 'SIGSTOP');
-      const end = await f.done();
-      assert.equal(end.value.reason, 'host heartbeat expired');
-      await drained;
-      assert.ok(child.exitCode !== null || child.signalCode !== null);
-      assert.equal(f.held(), false);
-    },
-  );
+);
 
 test(
   'drained release never waits for an acknowledgement across an intentional idle transition',
@@ -495,5 +484,39 @@ test(
     const code = await new Promise((resolve) => child.once('exit', resolve));
     assert.equal(code, 0);
     assert.equal(released, true);
+  },
+);
+
+test(
+  'Sprite service rejects retired image configuration before touching the workspace',
+  {skip: process.platform !== 'linux'},
+  async (t) => {
+    const {mkdtemp, writeFile, rm, stat} = await import('node:fs/promises');
+    const {tmpdir} = await import('node:os');
+    const root = await mkdtemp(join(tmpdir(), 'roomie-service-retired-'));
+    t.after(() => rm(root, {recursive: true, force: true}));
+    const directory = join(root, 'must-not-exist');
+    const config = join(root, 'config.json');
+    await writeFile(
+      config,
+      JSON.stringify({
+        directory,
+        port: 8080,
+        harness: 'codex',
+        image: 'sha256:' + 'a'.repeat(64),
+      }),
+    );
+    const child = spawn(
+      process.execPath,
+      [new URL('../bin/roomie-sprite.mjs', import.meta.url).pathname, config],
+      {stdio: ['ignore', 'pipe', 'pipe']},
+    );
+    let error = '';
+    child.stdout.resume();
+    child.stderr.on('data', (value) => (error += value));
+    const code = await new Promise((resolve) => child.once('exit', resolve));
+    assert.equal(code, 1);
+    assert.match(error, /Unknown service configuration field/);
+    await assert.rejects(stat(directory), {code: 'ENOENT'});
   },
 );

@@ -13,14 +13,13 @@ Serve a persistent workspace on loopback until Ctrl-C. No harness by default.
   --port <0-65535>          Listener port (default: an available port)
   --harness <codex|claude>  Enable a harness; requires one mode below
   --trusted-local          Harness shell has your OS authority (not isolated)
-  --isolation-image <id>   Local immutable Docker sha256 image ID
   --bubblewrap-runtime <dir> Linux runtime provisioned by bubblewrap/provision.sh
   --deadline-ms <ms>       Run deadline (1000-3600000; default: 300000)
   --help                   Show help
   --version                Show version
 
 Requires Node 24.9–24.x on macOS or Linux. Python is not required.
-Quack is disabled. Container mode delegates only explicit OPENAI_API_KEY or
+Quack is disabled. Bubblewrap mode delegates only explicit OPENAI_API_KEY or
 ANTHROPIC_API_KEY environment variables; it never copies personal login files.
 `;
 
@@ -32,7 +31,6 @@ async function main() {
       port: {type: 'string', default: '0'},
       harness: {type: 'string'},
       'trusted-local': {type: 'boolean'},
-      'isolation-image': {type: 'string'},
       'bubblewrap-runtime': {type: 'string'},
       'deadline-ms': {type: 'string', default: '300000'},
       help: {type: 'boolean'},
@@ -58,21 +56,21 @@ async function main() {
   const port = integer(values.port, 0, 65535, 'port');
   const deadlineMs = integer(values['deadline-ms'], 1000, 3600000, 'deadline');
   const adapter = values.harness;
-  const image = values['isolation-image'];
   const runtimeDirectory = values['bubblewrap-runtime'];
   if (adapter && !['codex', 'claude'].includes(adapter))
     throw Error('Harness must be codex or claude.');
   if (
     adapter
-      ? [values['trusted-local'], image, runtimeDirectory].filter(Boolean)
-          .length !== 1
-      : values['trusted-local'] || image || runtimeDirectory
+      ? [values['trusted-local'], runtimeDirectory].filter(Boolean).length !== 1
+      : values['trusted-local'] || runtimeDirectory
   )
     throw Error(
-      'Choose --harness codex|claude with exactly one of --trusted-local, --isolation-image or --bubblewrap-runtime.',
+      'Choose --harness codex|claude with exactly one of --trusted-local or --bubblewrap-runtime.',
     );
-  if (image && !/^sha256:[a-f0-9]{64}$/.test(image))
-    throw Error('Isolation requires a local immutable Docker sha256 image ID.');
+  if (runtimeDirectory && process.platform !== 'linux')
+    throw Error(
+      'Bubblewrap isolation requires Linux. Use --trusted-local explicitly on macOS.',
+    );
   const uiDirectory = resolve(root, 'dist/ui');
   if (
     !(await stat(resolve(uiDirectory, 'node.html')).catch(() => null))?.isFile()
@@ -120,15 +118,11 @@ async function main() {
         ? {
             adapter,
             deadlineMs,
-            ...(image || runtimeDirectory
+            ...(runtimeDirectory
               ? {
                   isolation: {
-                    ...(image
-                      ? {image}
-                      : {
-                          backend: 'bubblewrap',
-                          runtimeDirectory: resolve(runtimeDirectory),
-                        }),
+                    backend: 'bubblewrap',
+                    runtimeDirectory: resolve(runtimeDirectory),
                     modelEnvironment: {
                       OPENAI_API_KEY: process.env.OPENAI_API_KEY,
                       ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
@@ -164,7 +158,7 @@ async function main() {
         : `Browser sign-in (single use, expires in 2 minutes): ${url}`,
     );
     console.log(
-      `Harness: ${adapter ? `${adapter} (${image ? 'container isolation' : runtimeDirectory ? 'Bubblewrap isolation (no aggregate resource quotas)' : 'trusted local: shell has your OS authority'})` : 'disabled'}. Quack: disabled. Stop with Ctrl-C.`,
+      `Harness: ${adapter ? `${adapter} (${runtimeDirectory ? 'Bubblewrap isolation (no aggregate resource quotas)' : 'trusted local: shell has your OS authority'})` : 'disabled'}. Quack: disabled. Stop with Ctrl-C.`,
     );
     if (values.open) {
       const browser = spawn(

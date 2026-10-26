@@ -85,7 +85,7 @@ export function createSupervisor(options: {
     stopping = (async () => {
       try {
         await active.adapter?.stop();
-        // Startup may be creating a container. Do not publish terminal/admit a
+        // Startup may be preparing a namespace. Do not publish terminal/admit a
         // new run until that boundary has been removed too.
         await starting;
         await active.adapter?.stop();

@@ -69,12 +69,6 @@ jobs:
       - name: Typecheck examples
         run: pnpm typecheck:examples
 
-      - name: Build isolated harness acceptance image
-        run: |
-          docker build -t roomie-harness-m4:local apps/roomie-node/container
-          docker build -f apps/roomie-node/container/Dockerfile.test -t roomie-harness-m4-test:local apps/roomie-node
-          echo "ROOMIE_ISOLATION_IMAGE=$(docker image inspect --format '{{.Id}}' roomie-harness-m4-test:local)" >> "$GITHUB_ENV"
-
       - name: Test
         run: pnpm test --filter='!./python/*'
 
@@ -83,6 +77,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y bubblewrap apparmor-utils
           sh apps/roomie-node/bubblewrap/provision.sh /tmp/roomie-bwrap-runtime
+          install -m 755 apps/roomie-node/test/scripted-claude.mjs /tmp/roomie-bwrap-runtime/test-claude.mjs
           install -m 755 apps/roomie-node/test/isolated-codex.mjs /tmp/roomie-bwrap-runtime/test-codex.mjs
           install -m 755 apps/roomie-node/test/isolated-claude.mjs /tmp/roomie-bwrap-runtime/real-claude.mjs
           # Ubuntu restricts user namespaces. Grant only this test launcher the
@@ -93,7 +88,7 @@ jobs:
             setpriv --reuid="$(id -u)" --regid="$(id -g)" --clear-groups \
               --bounding-set=-all --inh-caps=-all --ambient-caps=-all \
               --no-new-privs --pdeathsig=KILL --reset-env \
-            env CI=1 ROOMIE_BWRAP_RUNTIME=/tmp/roomie-bwrap-runtime ROOMIE_ISOLATION_IMAGE="$ROOMIE_ISOLATION_IMAGE" \
+            env CI=1 ROOMIE_BWRAP_RUNTIME=/tmp/roomie-bwrap-runtime \
             /tmp/roomie-bwrap-runtime/bin/node --test --test-concurrency=1 --test-timeout=60000 \
               --test-name-pattern=Bubblewrap apps/roomie-node/test/bubblewrap.test.mjs \
               apps/roomie-node/test/bubblewrap-claude.test.mjs apps/roomie-node/test/isolation.test.mjs \

@@ -55,8 +55,7 @@ export async function superviseHost({
     }
   }
   async function drainCleanup() {
-    // Keep the hold through orphan removal even after the host is dead. The
-    // production Docker cleanup has two bounded 30-second calls.
+    // Keep renewing the hold through bounded orphan removal after host death.
     const renewal = setInterval(() => void serialize(hold), renewMs);
     let deadline;
     try {
@@ -144,7 +143,7 @@ export async function superviseHost({
   };
   try {
     await hold();
-    await drainCleanup(); // Orphaned containers must be gone before any new host starts.
+    await drainCleanup(); // Orphaned namespace processes must be gone before any new host starts.
     if (killing) throw Error('Execution lease unavailable during cleanup.');
     if (signal?.aborted) return {reason: 'service stopping'};
     child = spawnHost();
@@ -187,7 +186,7 @@ export async function superviseHost({
     killing = true;
     await queue;
     if (!held) await hold();
-    // Child death alone is insufficient: detached tools/container processes may live.
+    // Child death alone is insufficient: detached tools may live.
     await drainCleanup();
     if (held) await tasks.release();
     report({event: 'generation-drained', generation});
