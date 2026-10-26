@@ -81,11 +81,15 @@ jobs:
       - name: Verify native Bubblewrap harnesses
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y bubblewrap
+          sudo apt-get install -y bubblewrap apparmor-utils
           sh apps/roomie-node/bubblewrap/provision.sh /tmp/roomie-bwrap-runtime
           install -m 755 apps/roomie-node/test/isolated-codex.mjs /tmp/roomie-bwrap-runtime/test-codex.mjs
           install -m 755 apps/roomie-node/test/isolated-claude.mjs /tmp/roomie-bwrap-runtime/real-claude.mjs
-          sudo unshare --mount --mount-proc \
+          # Ubuntu restricts user namespaces. Grant only this test launcher the
+          # documented userns permission, without changing a host-wide sysctl.
+          sudo apparmor_parser -r apps/roomie-node/test/bubblewrap-ci.apparmor
+          trap 'sudo apparmor_parser -R apps/roomie-node/test/bubblewrap-ci.apparmor' EXIT
+          sudo aa-exec -p roomie-bwrap-ci -- unshare --mount --mount-proc \
             setpriv --reuid="$(id -u)" --regid="$(id -g)" --clear-groups \
               --bounding-set=-all --inh-caps=-all --ambient-caps=-all \
               --no-new-privs --pdeathsig=KILL --reset-env \

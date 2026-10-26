@@ -810,3 +810,11 @@ cannot replace newer WebSocket content. Drafts occupy independently owned local
 storage slots; reconnect/reload retains a pointer and reopened tabs can explicitly
 recover saved copies, including uncertain operations. Saving or discarding one
 tab's copy never implicitly deletes another slot.
+
+Ubuntu 24.04 restricts unprivileged user namespaces through AppArmor. Its
+[documented application-specific `userns` permission](https://documentation.ubuntu.com/release-notes/24.04/)
+is required for a copied runtime outside the distribution profile paths. CI
+loads `test/bubblewrap-ci.apparmor` only for its named launcher using `aa-exec`,
+then removes it; it does not change a host-wide sysctl. Deployment administrators
+must provide the equivalent policy for their service. AppArmor is not the
+filesystem/network boundary implemented here: Bubblewrap namespaces remain required.

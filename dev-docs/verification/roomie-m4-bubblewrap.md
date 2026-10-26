@@ -99,3 +99,12 @@ rlimits, supplied tmpfs bounds and an external wall-clock timer do not prevent
 all resource starvation; nested user namespaces can also allocate additional
 mounts. The watchdog remains inside the same Sprite. Keep aggregate hosted
 resource-budget and approximately two-hour unattended acceptance gates open.
+
+Initial Ubuntu 24.04 CI passed all 99 native tests but denied private loopback
+setup in the new acceptance step (`RTM_NEWADDR: Operation not permitted`).
+The runtime is copied outside Ubuntu's packaged application profiles. The CI
+launcher now gets the documented AppArmor `userns` permission through a named
+profile, removed after the step; host-wide restrictions remain enabled. This
+changes the CI prerequisite, not the harness namespace or capability policy.
+The private Sprite has also returned to `cold` and woken with host PID 2714,
+committed document revision/data and original receipt unchanged.
