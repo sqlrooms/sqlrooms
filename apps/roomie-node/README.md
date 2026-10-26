@@ -139,9 +139,9 @@ Unknown fields fail closed. Runs can be bounded up to one hour; requests up to
 `"claude"`) and `"image": "sha256:<immutable-local-image-id>"` after provisioning
 and verifying the existing Docker isolation profile on that Sprite. Docker
 access is root-equivalent; provisioning is an explicit administrator operation.
-The 2026-10-26 disposable Sprite failed this profile: its cgroup controllers
-could not be enabled and `pids.max` was unavailable. Hosted harness execution
-remains unverified on that target; do not remove the resource limits to start it.
+The 2026-10-26 disposable Sprite failed this Docker profile: its cgroup controllers
+could not be enabled and `pids.max` was unavailable. The explicit Bubblewrap
+alternative below has different resource limits; Docker's limits are unchanged.
 Trusted-local fallback is forbidden. Only intentional model API environment
 values are delegated; the management socket, owner token and service IPC stay
 outside the container. Quack is always disabled in this adapter.
@@ -459,6 +459,104 @@ Sprite leases, external watchdog and deployed soak acceptance remain unfinished.
 [M4 verification](../../dev-docs/verification/roomie-m4.md).
 
 ## Enforced harness isolation and locked analytics (M4)
+
+### Native Linux Bubblewrap backend
+
+Bubblewrap uses the same adapters, supervisor, commands, approvals and receipts.
+Select it explicitly; failed namespace setup never falls back to trusted-local
+execution. Provision a separate runtime without copying any account home:
+
+```sh
+# Linux: Node 24.9–24.x, npm, Bubblewrap and util-linux must already be installed.
+sh apps/roomie-node/bubblewrap/provision.sh /absolute/new/roomie-runtime
+roomie-node /absolute/workspace --harness codex \
+  --bubblewrap-runtime /absolute/new/roomie-runtime
+```
+
+The provisioner installs Codex 0.163.0 and Claude Code 2.1.310 and runs the pinned
+Claude native installer. It refuses an existing destination. The runtime contains
+only runtime software; the host owns it and exposes it read-only. Node/Bubblewrap
+come from the provisioner's installed binaries. Treat the runtime and system
+`/usr` software as trusted deployment inputs, not an immutable OCI image.
+
+```ts
+await startWorkspaceServer({
+  workspace,
+  harness: {
+    adapter: 'codex', // or 'claude'
+    isolation: {
+      backend: 'bubblewrap',
+      runtimeDirectory: '/absolute/roomie-runtime',
+      modelEnvironment: {OPENAI_API_KEY: process.env.OPENAI_API_KEY},
+    },
+  },
+});
+```
+
+Each run has private user, mount, PID, IPC and network namespaces, no Linux
+capabilities, no-new-privileges, read-only system/runtime/input mounts, a 256 MiB
+work tmpfs and 512 MiB temporary home. Workspace databases, WALs, backups, owner
+credentials, service IPC, Sprite/Docker management sockets and other homes are
+not exposed. Nested Codex sandbox execution remains available.
+
+A per-run broker outside the sandbox exposes only the workspace's `/mcp` path
+with its revocable scoped token, plus model destination authorities. Default
+model destinations are `api.openai.com:443` and `api.anthropic.com:443`. The
+administrator may set `modelOrigins` to exact HTTP(S) origins for a private model
+endpoint; HTTP URLs also constrain the forwarded origin. HTTPS CONNECT constrains
+the destination authority, not encrypted SNI or HTTP headers. No arbitrary
+host proxy, owner API, redirect-following gateway or direct network is exposed.
+The broker allows at most 64 inbound connections and bounds request bodies and
+idle time. Explicit model keys enter the disposable home/environment; personal
+login/configuration files are never copied.
+
+The trusted runner has a fixed wall-clock deadline and a separate host-liveness
+pipe. Native stdin EOF may complete a turn normally; it cannot disable liveness
+checks through backpressure. A startup handshake records namespace identity
+before releasing harness input. Recovery checks the kernel boot ID, host PID namespace, process start identity
+and UID. Startup processes must also carry a private per-run marker; a stale
+leaderless process group is never killed by number alone. It reaps identified
+processes and namespace init before admitting work. This reuses the existing external service watchdog.
+
+**Resource difference:** Bubblewrap does not provide Docker's aggregate memory,
+CPU-rate or PID quotas. This profile bounds wall-clock time, supplied tmpfs mounts,
+per-process CPU time, file size, open files and core dumps. These are not an
+aggregate resource limit across an arbitrary process tree; nested user namespaces
+also mean supplied tmpfs sizes are not a total storage budget. Resource starvation
+can still affect the workspace/watchdog. The hosted resource-budget gate and
+deployed soak remain separate from this backend's filesystem/process acceptance.
+
+On the tested Sprite, Landlock is unavailable and an unprivileged fresh procfs
+mount fails. Bootstrap the **service once**, before dropping privileges; do not
+grant a per-run sudo command. After provisioning/installing and stopping the old
+service, set `"harness": "codex"` and
+`"bubblewrapRuntime": "/home/sprite/roomie-runtime"` in its config (remove `image`).
+Register the service as the ordinary Sprite owner:
+
+```sh
+sprite-env services create roomie --cmd /bin/sh \
+  --args /home/sprite/roomie-service/node_modules/@sqlrooms/roomie-node/bubblewrap/sprite-service.sh,/home/sprite/roomie-runtime,/home/sprite/roomie-service/config.json \
+  --http-port 8080 --no-stream
+```
+
+Replace an existing service registration explicitly after stopping it; keep the
+workspace directory and private URL authentication policy. `sprite-service.sh`
+uses sudo only for fixed `unshare`/`setpriv` setup: a private mount namespace
+with fresh procfs, retaining host PID numbering across service restarts. It clears capabilities and
+restores parent-death handling **after** changing identity, before executing any
+Node/package code. The host keeps its own HOME; only the two named model API
+environment variables are explicitly preserved through sudo. These credentials
+must be intentionally provisioned by the owner to use an external model.
+Every harness thereafter starts through unprivileged Bubblewrap. The same
+backend works without this bootstrap on Linux hosts supporting the required
+unprivileged namespace/procfs operations. Long workspace paths exceeding Unix
+socket path limits are rejected rather than silently switching transports.
+
+`ROOMIE_BWRAP_RUNTIME` enables the real Linux acceptance suite. CI provisions the
+pinned runtime and runs actual filesystem/network/cleanup probes plus both native
+harnesses against credential-free model fixtures and the shared MCP contract.
+
+### Docker backend
 
 Build the reviewed image locally; runtime accepts its immutable image ID and
 never pulls an image or falls back to trusted-local execution:

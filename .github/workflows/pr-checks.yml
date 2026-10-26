@@ -78,5 +78,22 @@ jobs:
       - name: Test
         run: pnpm test --filter='!./python/*'
 
+      - name: Verify native Bubblewrap harnesses
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y bubblewrap
+          sh apps/roomie-node/bubblewrap/provision.sh /tmp/roomie-bwrap-runtime
+          install -m 755 apps/roomie-node/test/isolated-codex.mjs /tmp/roomie-bwrap-runtime/test-codex.mjs
+          install -m 755 apps/roomie-node/test/isolated-claude.mjs /tmp/roomie-bwrap-runtime/real-claude.mjs
+          sudo unshare --mount --mount-proc \
+            setpriv --reuid="$(id -u)" --regid="$(id -g)" --clear-groups \
+              --bounding-set=-all --inh-caps=-all --ambient-caps=-all \
+              --no-new-privs --pdeathsig=KILL --reset-env \
+            env CI=1 ROOMIE_BWRAP_RUNTIME=/tmp/roomie-bwrap-runtime ROOMIE_ISOLATION_IMAGE="$ROOMIE_ISOLATION_IMAGE" \
+            /tmp/roomie-bwrap-runtime/bin/node --test --test-concurrency=1 --test-timeout=60000 \
+              --test-name-pattern=Bubblewrap apps/roomie-node/test/bubblewrap.test.mjs \
+              apps/roomie-node/test/bubblewrap-claude.test.mjs apps/roomie-node/test/isolation.test.mjs \
+              apps/roomie-node/test/service.test.mjs
+
       - name: Deterministic behavioral eval wiring
         run: pnpm evals:test

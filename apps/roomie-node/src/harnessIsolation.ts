@@ -6,6 +6,10 @@ import {
 import {promisify} from 'node:util';
 import {createHash, randomUUID} from 'node:crypto';
 import {realpath} from 'node:fs/promises';
+import {
+  prepareBubblewrapHarness,
+  recoverBubblewrapHarnesses,
+} from './bubblewrapIsolation';
 
 const execute = promisify(execFile);
 const docker = (args: string[]) =>
@@ -13,7 +17,12 @@ const docker = (args: string[]) =>
 const workspaceLabel = (directory: string) =>
   createHash('sha256').update(directory).digest('hex');
 /** Remove only containers owned by this workspace before accepting new runs. */
-export async function recoverIsolatedHarnesses(directory: string) {
+export async function recoverIsolatedHarnesses(
+  directory: string,
+  isolation?: HarnessIsolation,
+) {
+  if (isolation?.backend === 'bubblewrap')
+    return recoverBubblewrapHarnesses(directory);
   const label = workspaceLabel(await realpath(directory));
   const {stdout} = await docker([
     'ps',
@@ -30,9 +39,20 @@ export async function recoverIsolatedHarnesses(directory: string) {
   }
   if (ids.length) await docker(['rm', '--force', ...ids]);
 }
-/** An immutable, locally built harness image. No implicit image pull or host environment inheritance. */
-export type HarnessIsolation = {
-  image: string;
+/** Explicit OS boundary: immutable Docker image or provisioned Linux Bubblewrap runtime. No implicit fallback. */
+export type HarnessIsolation = (
+  | {
+      backend?: 'docker';
+      image: string;
+    }
+  | {
+      backend: 'bubblewrap';
+      /** Provisioned Linux runtime containing bin/{node,bwrap,codex,claude}; no account home files. */
+      runtimeDirectory: string;
+      /** Exact administrator-selected model origins. Defaults to the OpenAI and Anthropic APIs. */
+      modelOrigins?: string[];
+    }
+) & {
   /** Explicit model API delegation only. Workspace/Quack/owner credentials are never accepted here. */
   modelEnvironment?: {OPENAI_API_KEY?: string; ANTHROPIC_API_KEY?: string};
 };
@@ -46,7 +66,7 @@ export type IsolatedHarnessProcess = {
   done: (child: ChildProcessWithoutNullStreams) => Promise<void>;
   dispose: () => Promise<void>;
 };
-/** Create an unprivileged, bounded container before any harness code can execute. */
+/** Prepare the selected OS boundary before harness execution; resource guarantees depend on the backend. */
 export async function prepareIsolatedHarness(options: {
   isolation: HarnessIsolation;
   cwd: string;
@@ -55,6 +75,8 @@ export async function prepareIsolatedHarness(options: {
   workspaceDirectory: string;
   deadlineMs: number;
 }): Promise<IsolatedHarnessProcess> {
+  if (options.isolation.backend === 'bubblewrap')
+    return prepareBubblewrapHarness({...options, isolation: options.isolation});
   if (!/^sha256:[a-f0-9]{64}$/.test(options.isolation.image))
     throw new Error('Isolation requires a local immutable Docker image ID.');
   if (process.platform !== 'linux' && process.platform !== 'darwin')

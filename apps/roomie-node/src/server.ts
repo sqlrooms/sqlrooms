@@ -58,7 +58,10 @@ export async function startWorkspaceServer(options: {
       'Choose exactly one harness mode: trustedLocal or isolation.',
     );
   if (options.harness?.isolation)
-    await recoverIsolatedHarnesses(options.workspace.directory);
+    await recoverIsolatedHarnesses(
+      options.workspace.directory,
+      options.harness.isolation,
+    );
   const publicOrigin = options.publicOrigin;
   if (publicOrigin) {
     const url = new URL(publicOrigin);

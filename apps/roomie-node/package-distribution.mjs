@@ -24,6 +24,9 @@ try {
   await cp(join(root, 'dist'), join(stage, 'dist'), {recursive: true});
   await cp(join(root, 'bin'), join(stage, 'bin'), {recursive: true});
   await cp(join(root, 'service'), join(stage, 'service'), {recursive: true});
+  await cp(join(root, 'bubblewrap'), join(stage, 'bubblewrap'), {
+    recursive: true,
+  });
   await cp(join(root, 'container'), join(stage, 'container'), {
     recursive: true,
     filter: (path) => !path.endsWith('Dockerfile.test'),
@@ -48,6 +51,7 @@ try {
         files: [
           'bin',
           'service',
+          'bubblewrap',
           'dist',
           'container',
           'README.md',

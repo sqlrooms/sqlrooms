@@ -14,6 +14,7 @@ Serve a persistent workspace on loopback until Ctrl-C. No harness by default.
   --harness <codex|claude>  Enable a harness; requires one mode below
   --trusted-local          Harness shell has your OS authority (not isolated)
   --isolation-image <id>   Local immutable Docker sha256 image ID
+  --bubblewrap-runtime <dir> Linux runtime provisioned by bubblewrap/provision.sh
   --deadline-ms <ms>       Run deadline (1000-3600000; default: 300000)
   --help                   Show help
   --version                Show version
@@ -32,6 +33,7 @@ async function main() {
       harness: {type: 'string'},
       'trusted-local': {type: 'boolean'},
       'isolation-image': {type: 'string'},
+      'bubblewrap-runtime': {type: 'string'},
       'deadline-ms': {type: 'string', default: '300000'},
       help: {type: 'boolean'},
       version: {type: 'boolean'},
@@ -57,15 +59,17 @@ async function main() {
   const deadlineMs = integer(values['deadline-ms'], 1000, 3600000, 'deadline');
   const adapter = values.harness;
   const image = values['isolation-image'];
+  const runtimeDirectory = values['bubblewrap-runtime'];
   if (adapter && !['codex', 'claude'].includes(adapter))
     throw Error('Harness must be codex or claude.');
   if (
     adapter
-      ? Boolean(values['trusted-local']) === Boolean(image)
-      : values['trusted-local'] || image
+      ? [values['trusted-local'], image, runtimeDirectory].filter(Boolean)
+          .length !== 1
+      : values['trusted-local'] || image || runtimeDirectory
   )
     throw Error(
-      'Choose --harness codex|claude with exactly one of --trusted-local or --isolation-image.',
+      'Choose --harness codex|claude with exactly one of --trusted-local, --isolation-image or --bubblewrap-runtime.',
     );
   if (image && !/^sha256:[a-f0-9]{64}$/.test(image))
     throw Error('Isolation requires a local immutable Docker sha256 image ID.');
@@ -114,10 +118,15 @@ async function main() {
         ? {
             adapter,
             deadlineMs,
-            ...(image
+            ...(image || runtimeDirectory
               ? {
                   isolation: {
-                    image,
+                    ...(image
+                      ? {image}
+                      : {
+                          backend: 'bubblewrap',
+                          runtimeDirectory: resolve(runtimeDirectory),
+                        }),
                     modelEnvironment: {
                       OPENAI_API_KEY: process.env.OPENAI_API_KEY,
                       ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
@@ -146,7 +155,7 @@ async function main() {
     );
     console.log(`Browser sign-in (single use, expires in 2 minutes): ${url}`);
     console.log(
-      `Harness: ${adapter ? `${adapter} (${image ? 'container isolation' : 'trusted local: shell has your OS authority'})` : 'disabled'}. Quack: disabled. Stop with Ctrl-C.`,
+      `Harness: ${adapter ? `${adapter} (${image ? 'container isolation' : runtimeDirectory ? 'Bubblewrap isolation (no aggregate resource quotas)' : 'trusted local: shell has your OS authority'})` : 'disabled'}. Quack: disabled. Stop with Ctrl-C.`,
     );
     if (values.open) {
       const browser = spawn(

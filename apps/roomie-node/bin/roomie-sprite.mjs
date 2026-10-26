@@ -19,6 +19,7 @@ async function main() {
           'publicOrigin',
           'harness',
           'image',
+          'bubblewrapRuntime',
           'requestDeadlineMs',
           'runDeadlineMs',
         ].includes(key),
@@ -42,11 +43,16 @@ async function main() {
   if (config.harness && !['codex', 'claude'].includes(config.harness))
     throw Error('Invalid harness.');
   if (
-    Boolean(config.harness) !== Boolean(config.image) ||
+    (config.harness
+      ? [config.image, config.bubblewrapRuntime].filter(Boolean).length !== 1
+      : Boolean(config.image || config.bubblewrapRuntime)) ||
+    (config.bubblewrapRuntime &&
+      (typeof config.bubblewrapRuntime !== 'string' ||
+        !config.bubblewrapRuntime.startsWith('/'))) ||
     (config.image && !/^sha256:[a-f0-9]{64}$/.test(config.image))
   )
     throw Error(
-      'Managed harnesses require an immutable isolation image; trusted-local is forbidden.',
+      'Managed harnesses require exactly one immutable image or Bubblewrap runtime; trusted-local is forbidden.',
     );
   for (const [key, limit] of [
     ['requestDeadlineMs', 60000],
@@ -104,8 +110,8 @@ async function main() {
     args.push(
       '--harness',
       config.harness,
-      '--isolation-image',
-      config.image,
+      config.image ? '--isolation-image' : '--bubblewrap-runtime',
+      config.image ?? config.bubblewrapRuntime,
       '--deadline-ms',
       String(config.runDeadlineMs ?? 300000),
     );
@@ -113,10 +119,19 @@ async function main() {
   const stop = () => controller.abort();
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
-  const cleanup = config.image
-    ? async () =>
-        (await import('../dist/index.mjs')).recoverIsolatedHarnesses(directory)
-    : async () => {};
+  const cleanup =
+    config.image || config.bubblewrapRuntime
+      ? async () =>
+          (await import('../dist/index.mjs')).recoverIsolatedHarnesses(
+            directory,
+            config.bubblewrapRuntime
+              ? {
+                  backend: 'bubblewrap',
+                  runtimeDirectory: config.bubblewrapRuntime,
+                }
+              : {image: config.image},
+          )
+      : async () => {};
   try {
     // Bound repeated failures. The platform service can be restarted explicitly;
     // ordinary cold wake creates a fresh supervisor and recovers committed state.
