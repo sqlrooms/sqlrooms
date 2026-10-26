@@ -17,6 +17,7 @@ async function main() {
           'directory',
           'port',
           'publicOrigin',
+          'trustedGateway',
           'harness',
           'image',
           'bubblewrapRuntime',
@@ -40,6 +41,18 @@ async function main() {
       new URL(config.publicOrigin).origin !== config.publicOrigin)
   )
     throw Error('Invalid service HTTPS origin.');
+  if (
+    config.trustedGateway !== undefined &&
+    typeof config.trustedGateway !== 'boolean'
+  )
+    throw Error('trustedGateway must be an explicit boolean.');
+  if (
+    config.trustedGateway &&
+    (!config.publicOrigin || (config.harness && !config.bubblewrapRuntime))
+  )
+    throw Error(
+      'Trusted gateway requires private HTTPS ingress and Bubblewrap (or no harness).',
+    );
   if (config.harness && !['codex', 'claude'].includes(config.harness))
     throw Error('Invalid harness.');
   if (
@@ -155,6 +168,7 @@ async function main() {
               ...process.env,
               ROOMIE_MANAGED: '1',
               ROOMIE_PUBLIC_ORIGIN: config.publicOrigin ?? '',
+              ROOMIE_TRUSTED_GATEWAY: config.trustedGateway ? '1' : '0',
             },
           }),
       });

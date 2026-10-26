@@ -60,10 +60,31 @@ export function createWorkspaceAccess(
       expiresAt: credentials.get(token)!.expiresAt! / 1000,
     };
   }
+  // Both ticket and trusted-ingress exchange issue the same limited page session.
+  function issueBrowser() {
+    if (closed) throw accessDenied();
+    for (const [key, value] of credentials)
+      if (value.expiresAt !== undefined && value.expiresAt <= clock())
+        credentials.delete(key);
+    if (
+      [...credentials.values()].filter((value) => value.operations.has('renew'))
+        .length >= 256
+    )
+      throw accessDenied('too_many_sessions');
+    const token = secret();
+    credentials.set(token, {
+      principalId: 'owner',
+      operations: new Set(['renew', 'view', 'runs', 'edit']),
+      expiresAt: clock() + pageTtl,
+    });
+    return describe(token);
+  }
   return {
     binding,
     ownerToken,
     verify,
+    /** Only a host-authenticated ingress may invoke this; grants no MCP/bootstrap authority. */
+    issueBrowser,
     issueHarness() {
       if (closed) throw accessDenied();
       const token = secret();
@@ -87,17 +108,7 @@ export function createWorkspaceAccess(
       tickets.delete(ticket);
       if (closed || expires === undefined || expires <= clock())
         throw accessDenied();
-      for (const [key, value] of credentials)
-        if (value.expiresAt !== undefined && value.expiresAt <= clock())
-          credentials.delete(key);
-      const token = secret();
-      // Browser credentials cannot mint tickets or execute owner MCP tools.
-      credentials.set(token, {
-        principalId: 'owner',
-        operations: new Set(['renew', 'view', 'runs', 'edit']),
-        expiresAt: clock() + pageTtl,
-      });
-      return describe(token);
+      return issueBrowser();
     },
     renew(token: string) {
       verify(token, 'renew');

@@ -34,6 +34,10 @@ export async function startWorkspaceServer(options: {
   lifecycle?: ExecutionLifecycle;
   /** Exact HTTPS browser origin behind a trusted deployment proxy. Local MCP remains loopback. */
   publicOrigin?: string;
+  /** Dedicated browser ingress behind an authenticated private gateway. All local processes
+   * outside Bubblewrap are trusted administrators. Every upstream-authorized admin is the
+   * workspace owner. Only default model origins are allowed. Never expose this listener publicly. */
+  trustedGateway?: {port: number};
   /** Built Roomie UI directory; root serves the document-read-only node.html entry. */
   uiDirectory?: string;
   /** Explicit trusted-local mode or an enforced container boundary. */
@@ -57,11 +61,6 @@ export async function startWorkspaceServer(options: {
     throw new Error(
       'Choose exactly one harness mode: trustedLocal or isolation.',
     );
-  if (options.harness?.isolation)
-    await recoverIsolatedHarnesses(
-      options.workspace.directory,
-      options.harness.isolation,
-    );
   const publicOrigin = options.publicOrigin;
   if (publicOrigin) {
     const url = new URL(publicOrigin);
@@ -73,6 +72,24 @@ export async function startWorkspaceServer(options: {
     )
       throw new Error('publicOrigin must be an exact HTTPS origin.');
   }
+  if (
+    options.trustedGateway &&
+    (!publicOrigin ||
+      !Number.isInteger(options.trustedGateway.port) ||
+      options.trustedGateway.port < 0 ||
+      options.trustedGateway.port > 65535 ||
+      (options.harness &&
+        (options.harness.isolation?.backend !== 'bubblewrap' ||
+          options.harness.isolation.modelOrigins !== undefined)))
+  )
+    throw Error(
+      'Trusted gateway requires an exact HTTPS origin and a private-network Bubblewrap harness with default model origins (or no harness).',
+    );
+  if (options.harness?.isolation)
+    await recoverIsolatedHarnesses(
+      options.workspace.directory,
+      options.harness.isolation,
+    );
   const access = createWorkspaceAccess();
   const runtime = createWorkspaceMcpRuntime(options.workspace, options.policy);
   let origin = '';
@@ -80,27 +97,35 @@ export async function startWorkspaceServer(options: {
   let receivingUploads = 0;
   let disposal: Promise<void> | undefined;
   const active = new Set<Promise<void>>();
-  const server = createServer(
-    {requestTimeout: 10_000, headersTimeout: 10_000},
-    (request, response) => {
-      const work = withExecutionLease(options.lifecycle, 'request', () =>
-        handle(request, response),
-      ).catch(() => {
-        if (!response.headersSent)
-          json(response, 500, {error: 'internal_error'});
-        else response.end();
-      });
-      active.add(work);
-      void work.finally(() => active.delete(work));
-    },
-  );
-  const sockets = attachWorkspaceSockets(server, {
-    workspace: options.workspace,
-    access,
-    origin: () => origin,
-    publicOrigin,
-    lifecycle: options.lifecycle,
-  });
+  function listener(gateway: boolean) {
+    const http = createServer(
+      {requestTimeout: 10_000, headersTimeout: 10_000},
+      (request, response) => {
+        const work = withExecutionLease(options.lifecycle, 'request', () =>
+          handle(request, response, gateway),
+        ).catch(() => {
+          if (!response.headersSent)
+            json(response, 500, {error: 'internal_error'});
+          else response.end();
+        });
+        active.add(work);
+        void work.finally(() => active.delete(work));
+      },
+    );
+    const sockets = attachWorkspaceSockets(http, {
+      workspace: options.workspace,
+      access,
+      origin: () => origin,
+      publicOrigin,
+      lifecycle: options.lifecycle,
+    });
+    return {http, sockets};
+  }
+  const internal = listener(false);
+  const gateway = options.trustedGateway ? listener(true) : undefined;
+  const listeners = [internal, ...(gateway ? [gateway] : [])];
+  const server = internal.http;
+  let gatewayUrl: string | undefined;
   let supervisor: ReturnType<typeof createSupervisor> | undefined;
   const runSignals = new Map<string, AbortController>();
   let credential: Awaited<ReturnType<typeof writeCredentialFile>> | undefined;
@@ -116,6 +141,19 @@ export async function startWorkspaceServer(options: {
     if (!address || typeof address === 'string')
       throw new Error('Missing listener address.');
     origin = `http://127.0.0.1:${address.port}`;
+    if (gateway) {
+      await new Promise<void>((resolve, reject) => {
+        gateway.http.once('error', reject);
+        gateway.http.listen(options.trustedGateway!.port, '127.0.0.1', () => {
+          gateway.http.off('error', reject);
+          resolve();
+        });
+      });
+      const address = gateway.http.address();
+      if (!address || typeof address === 'string')
+        throw Error('Missing gateway listener.');
+      gatewayUrl = `http://127.0.0.1:${address.port}`;
+    }
     if (options.harness)
       supervisor = createSupervisor({
         workspace: options.workspace,
@@ -146,14 +184,18 @@ export async function startWorkspaceServer(options: {
     access.close();
     runtime.dispose();
     await supervisor?.dispose();
-    await sockets.dispose();
-    server.close();
-    server.closeAllConnections();
+    for (const {http, sockets} of listeners) {
+      await sockets.dispose();
+      http.close();
+      http.closeAllConnections();
+    }
     await credential?.close();
     throw error;
   }
   return {
     url: origin,
+    /** Local deployment address, never a credential or proof of gateway identity. */
+    gatewayUrl,
     mcpUrl: `${origin}/mcp`,
     binding: access.binding,
     credentialPath: credential.path,
@@ -164,16 +206,21 @@ export async function startWorkspaceServer(options: {
       access.close();
       runtime.dispose();
       disposal = withExecutionLease(options.lifecycle, 'shutdown', async () => {
-        const stopped = new Promise<void>((resolve, reject) =>
-          server.close((error) => (error ? reject(error) : resolve())),
+        const stopped = Promise.all(
+          listeners.map(
+            ({http}) =>
+              new Promise<void>((resolve, reject) =>
+                http.close((error) => (error ? reject(error) : resolve())),
+              ),
+          ),
         );
         // Closing sockets does not cancel an accepted durable mutation.
-        server.closeAllConnections();
+        for (const {http} of listeners) http.closeAllConnections();
         try {
           try {
             await supervisor?.dispose();
           } finally {
-            await sockets.dispose();
+            await Promise.all(listeners.map(({sockets}) => sockets.dispose()));
           }
           await Promise.allSettled([...active]);
           await runtime.drain();
@@ -187,7 +234,11 @@ export async function startWorkspaceServer(options: {
     },
   };
 
-  async function handle(request: IncomingMessage, response: ServerResponse) {
+  async function handle(
+    request: IncomingMessage,
+    response: ServerResponse,
+    fromGateway: boolean,
+  ) {
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('Referrer-Policy', 'no-referrer');
     try {
@@ -237,7 +288,28 @@ export async function startWorkspaceServer(options: {
         ? authorization.slice(7)
         : String(request.headers['x-sqlrooms-token'] ?? '');
       if (path === '/auth.json' && request.method === 'GET') {
-        json(response, 200, {binding: access.binding});
+        json(response, 200, {
+          binding: access.binding,
+          ...(fromGateway ? {browserAuth: 'trusted-gateway'} : {}),
+        });
+        return;
+      }
+      if (path === '/api/auth/gateway') {
+        // Listener identity is established by the host, never by forwarded headers.
+        // Origin/content type are CSRF protection, not authentication of local callers.
+        if (
+          !fromGateway ||
+          request.method !== 'POST' ||
+          request.headers.host !== new URL(publicOrigin!).host ||
+          request.headers.origin !== publicOrigin ||
+          request.headers['content-type']?.split(';')[0].trim() !==
+            'application/json' ||
+          (request.headers['sec-fetch-site'] !== undefined &&
+            request.headers['sec-fetch-site'] !== 'same-origin')
+        )
+          throw accessDenied('forbidden');
+        await readJson(request, 4096);
+        json(response, 200, access.issueBrowser());
         return;
       }
       if (path === '/api/auth/ticket' && request.method === 'POST') {

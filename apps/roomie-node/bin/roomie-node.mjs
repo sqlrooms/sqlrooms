@@ -82,6 +82,7 @@ async function main() {
     );
   const directory = resolve(positionals[0]);
   const managed = process.env.ROOMIE_MANAGED === '1';
+  const gatewayAuth = managed && process.env.ROOMIE_TRUSTED_GATEWAY === '1';
   if (managed && (values['trusted-local'] || values.open))
     throw Error(
       'Managed service forbids trusted-local harnesses and browser opening.',
@@ -110,7 +111,8 @@ async function main() {
     if (stopping) return;
     server = await startWorkspaceServer({
       workspace,
-      port,
+      port: gatewayAuth ? 0 : port,
+      trustedGateway: gatewayAuth ? {port} : undefined,
       uiDirectory,
       lifecycle,
       publicOrigin: managed ? process.env.ROOMIE_PUBLIC_ORIGIN : undefined,
@@ -138,14 +140,17 @@ async function main() {
         : undefined,
     });
     if (stopping) return;
-    const {token} = JSON.parse(await readFile(server.credentialPath, 'utf8'));
-    const response = await fetch(`${server.url}/api/auth/ticket`, {
-      method: 'POST',
-      headers: {Authorization: `Bearer ${token}`},
-    });
-    if (!response.ok)
-      throw Error(`Browser sign-in failed (${response.status}).`);
-    const {url} = await response.json();
+    let url = process.env.ROOMIE_PUBLIC_ORIGIN;
+    if (!gatewayAuth) {
+      const {token} = JSON.parse(await readFile(server.credentialPath, 'utf8'));
+      const response = await fetch(`${server.url}/api/auth/ticket`, {
+        method: 'POST',
+        headers: {Authorization: `Bearer ${token}`},
+      });
+      if (!response.ok)
+        throw Error(`Browser sign-in failed (${response.status}).`);
+      ({url} = await response.json());
+    }
     console.log(
       JSON.stringify({
         url: server.url,
@@ -153,7 +158,11 @@ async function main() {
         credentialPath: server.credentialPath,
       }),
     );
-    console.log(`Browser sign-in (single use, expires in 2 minutes): ${url}`);
+    console.log(
+      gatewayAuth
+        ? `Browser (private gateway sign-in): ${url}`
+        : `Browser sign-in (single use, expires in 2 minutes): ${url}`,
+    );
     console.log(
       `Harness: ${adapter ? `${adapter} (${image ? 'container isolation' : runtimeDirectory ? 'Bubblewrap isolation (no aggregate resource quotas)' : 'trusted local: shell has your OS authority'})` : 'disabled'}. Quack: disabled. Stop with Ctrl-C.`,
     );

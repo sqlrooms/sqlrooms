@@ -109,3 +109,15 @@ Gateways that reserve `Authorization` can also use
 `credentialHeader: 'x-sqlrooms-token'`, the existing Roomie server token header.
 The default remains `Authorization: Bearer …`; the same origin/expiry protections
 apply to either header. The Node UI opts into the gateway-compatible settings.
+
+Hosts with an explicitly configured authenticated browser ingress may opt into
+`createBrowserAuthorization({..., credentials: 'same-origin', gatewayAuth: true})`.
+Only HTTPS pages whose `/auth.json` advertises `browserAuth: 'trusted-gateway'`
+can exchange a missing/expired session through a same-origin JSON POST to
+`/api/auth/gateway`. Valid tab sessions are reused; host binding changes trigger
+a fresh exchange. Redirects and foreign credential destinations remain refused.
+The default is false, and a supplied invalid launch ticket still fails closed.
+This option supplies browser behavior, not gateway authentication: the host must
+prove ingress through its transport/deployment boundary and enforce session scope,
+CSRF checks and isolation from agents. Node Roomie supplies that server contract;
+other hosts and the Python launcher keep the existing ticket flow.

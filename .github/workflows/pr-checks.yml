@@ -97,7 +97,7 @@ jobs:
             /tmp/roomie-bwrap-runtime/bin/node --test --test-concurrency=1 --test-timeout=60000 \
               --test-name-pattern=Bubblewrap apps/roomie-node/test/bubblewrap.test.mjs \
               apps/roomie-node/test/bubblewrap-claude.test.mjs apps/roomie-node/test/isolation.test.mjs \
-              apps/roomie-node/test/service.test.mjs
+              apps/roomie-node/test/service.test.mjs apps/roomie-node/test/gateway.test.mjs
 
       - name: Deterministic behavioral eval wiring
         run: pnpm evals:test

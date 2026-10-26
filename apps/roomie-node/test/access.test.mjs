@@ -39,3 +39,20 @@ test('outstanding bootstrap tickets are bounded and expired tickets release capa
   now = 10;
   assert.equal(typeof access.ticket(), 'string');
 });
+
+test('gateway browser sessions retain page-only scope, expiry and bounded issuance', () => {
+  let now = 0;
+  const access = createWorkspaceAccess({clock: () => now, pageTtlMs: 10});
+  const page = access.issueBrowser();
+  access.verify(page.token, 'edit');
+  access.verify(page.token, 'runs');
+  assert.throws(() => access.verify(page.token, 'mcp'), /forbidden/);
+  assert.throws(() => access.verify(page.token, 'bootstrap'), /forbidden/);
+  for (let i = 1; i < 256; i++) access.issueBrowser();
+  assert.throws(() => access.issueBrowser(), /too_many_sessions/);
+  now = 10;
+  assert.throws(() => access.verify(page.token, 'view'), /unauthorized/);
+  access.issueBrowser();
+  access.close();
+  assert.throws(() => access.issueBrowser(), /unauthorized/);
+});

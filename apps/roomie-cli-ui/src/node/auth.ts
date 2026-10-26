@@ -5,5 +5,6 @@ export const {authorizedFetch, bootstrapAuthorization, pageCredential} =
     product: 'sqlrooms',
     name: 'Roomie',
     credentials: 'same-origin',
+    gatewayAuth: true,
     credentialHeader: 'x-sqlrooms-token',
   });

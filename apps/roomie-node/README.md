@@ -181,9 +181,9 @@ the authenticated endpoint, using the tunnel's loopback origin. Never put the
 owner token in a URL. The service's built UI and command-backed editing are the
 same as the local launcher. The Node browser explicitly retains same-origin
 gateway cookies and uses the existing `X-SQLRooms-Token` header, so the private
-Sprite gateway can reserve `Authorization`. Roomie still requires its own
-single-use ticket/page token; neither cookie nor gateway login grants workspace
-authority.
+Sprite gateway can reserve `Authorization`. Default ticket mode still requires
+its own launch ticket. Explicit trusted-gateway mode, described below, replaces
+that step with a limited browser session on a verified private ingress.
 
 See [service verification](../../dev-docs/verification/roomie-m4-service.md) for
 reproduction, actual deployed results and the remaining hosted-harness gate.
@@ -818,3 +818,43 @@ loads `test/bubblewrap-ci.apparmor` only for its named launcher using `aa-exec`,
 then removes it; it does not change a host-wide sysctl. Deployment administrators
 must provide the equivalent policy for their service. AppArmor is not the
 filesystem/network boundary implemented here: Bubblewrap namespaces remain required.
+
+### Private gateway browser sign-in
+
+A single-owner private Sprite can set `"trustedGateway": true` alongside its
+exact `publicOrigin` in the managed service configuration. Before enabling it,
+verify the control-plane URL matches that origin and `url_settings` is
+`{"auth":"sprite","private_access":"admins"}` using `sprite api
+/v1/sprites/SPRITE_NAME`. Keep that policy private. The service does not receive
+an organization API credential and cannot detect a later administrator change
+to public URL access. Disable trusted-gateway mode before changing that policy.
+
+The configured service port becomes a dedicated loopback browser ingress behind
+Sprite authentication. Internal MCP/owner APIs use a separate loopback listener.
+Opening the HTTPS URL exchanges the gateway-authenticated browser access for the
+same expiring, tab-local page credential used by launch links. No terminal link
+or manual token copying is needed. Reload after a host restart automatically
+establishes a newly bound session. API and WebSocket requests still require the
+page credential; it cannot mint launch tickets or use owner MCP tools.
+
+This mode trusts the upstream access decision, not a forwarded identity header.
+Every authorized Sprite administrator acts as the single Roomie owner; it is not
+per-user identity or multi-tenant authorization. Host processes outside the
+harness sandbox are trusted administrators. The sign-in route requires a
+same-origin JSON POST, rejects cross-site Fetch Metadata, and exists only on the
+dedicated ingress. Origin/Host checks protect browsers from CSRF/rebinding;
+they are not proof that an arbitrary local process passed the gateway.
+
+Harnesses must use Bubblewrap's private network with the default model origins.
+Trusted-local, Docker host-network mode and custom model destinations are
+rejected, since those could reach the browser sign-in listener. The per-run
+broker exposes only MCP and the default model authorities, and never the gateway
+session route. Agents retain scoped, revocable credentials and explicit approval.
+The real namespace/broker bypass regression runs in Linux CI.
+
+`startWorkspaceServer({workspace, publicOrigin, trustedGateway: {port: 8080}})`
+exposes the same explicit deployment contract to embedded hosts. Its returned
+`url`/`mcpUrl` remain internal; `gatewayUrl` is the local ingress address. The
+caller must provide the authenticated private gateway and restrict all other
+access to that listener. A hostname or forwarded header alone never enables it.
+Default local launches and existing ticket authentication are unchanged.
