@@ -6,3 +6,4 @@ export * from './localMcpToolContract';
 export * from './createLocalRoomCapabilities';
 export * from './createLocalCapabilityRuntime';
 export * from './createLocalDataCommands';
+export * from './searchRoomCommands';

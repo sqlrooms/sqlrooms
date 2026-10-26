@@ -1,0 +1,604 @@
+import {createHash} from 'node:crypto';
+import {mkdir, realpath, mkdtemp, rm, copyFile, cp} from 'node:fs/promises';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {writeBundle} from './bundle';
+import {createStore} from 'zustand/vanilla';
+import {createRoomShellSlice} from '@sqlrooms/room-shell';
+import {createNodeDuckDbConnector} from '@sqlrooms/duckdb-node';
+import {createMosaicSlice} from '@sqlrooms/mosaic';
+import {
+  registerCommandsForOwner,
+  invokeCommandWithPolicy,
+  type RoomCommandResult,
+} from '@sqlrooms/room-store';
+import {z} from 'zod';
+
+import {createRoomieDomainSlice} from '../../roomie-cli-ui/src/createRoomieDomainSlice';
+import {
+  selectRoomieContent,
+  type RoomieContent,
+} from '../../roomie-cli-ui/src/stateOwnership';
+import {
+  mergeRoomieContent,
+  parseContentWorkspace,
+} from '../../roomie-cli-ui/src/contentPersistence';
+import type {RoomState} from '../../roomie-cli-ui/src/RoomState';
+import {createQueryService} from './query';
+import {lockAnalyticalDatabase} from './databaseSecurity';
+import {createUploads, type WorkspaceUpload} from './uploads';
+import {createContent} from './content';
+import {assertCommandTarget, createHostCommands} from './commands';
+import {openMetadata, type CommitReceipt, type MetadataStore} from './metadata';
+
+const activeDirectories = new Set<string>();
+const Mutation = z.strictObject({
+  operationId: z.string().min(1).max(200),
+  principalId: z.string().min(1).max(200),
+  commandId: z.string().min(1),
+  input: z.record(z.string(), z.json()).default({}),
+  artifactId: z.string().min(1).optional(),
+  expectedRevision: z.number().int().nonnegative().optional(),
+});
+
+/** A workspace-only command. Existing-document writes require a revision target. */
+export type WorkspaceMutation = z.input<typeof Mutation>;
+/** Structured conflict for a stale browser draft or agent operation. */
+export type RevisionConflict = {
+  success: false;
+  code: 'revision-conflict';
+  artifactId: string;
+  currentRevision: number;
+};
+
+/**
+ * Initialize the native database, metadata and recovered domain before exposing
+ * any method. The returned facade is the only external access to workspace state.
+ */
+export async function openWorkspace(options: {
+  directory: string;
+  /** Offline migration only: seed empty metadata after validating legacy content. Never exposed over HTTP. */
+  initialContent?: RoomieContent;
+  /** Explicit opt-in. Disabled means native DuckDB 2.0 without Quack. */
+  quack?: {uri: string; token: string};
+  /** Persistence boundary injection for deterministic storage failure tests. */
+  openMetadata?: (path: string) => MetadataStore;
+  /** Read-only analytical/file preparation. No tentative store is exposed. */
+  prepareCommand?: (request: WorkspaceMutation) => Promise<void>;
+}) {
+  await mkdir(options.directory, {recursive: true});
+  const directory = await realpath(options.directory);
+  if (activeDirectories.has(directory))
+    throw new Error('Workspace already has an active host.');
+  activeDirectories.add(directory);
+  // Only host-created import bytes enter this disposable exchange directory.
+  let exchange: string;
+  try {
+    exchange = await mkdtemp(join(tmpdir(), 'roomie-exchange-'));
+  } catch (error) {
+    activeDirectories.delete(directory);
+    throw error;
+  }
+  const connector = createNodeDuckDbConnector({
+    dbPath: join(directory, 'data.duckdb'),
+    config: {
+      storage_compatibility_version: 'v1.4.0',
+      memory_limit: '512MB',
+      threads: '4',
+      allow_persistent_secrets: 'false',
+      allow_unsigned_extensions: 'false',
+      allow_extensions_metadata_mismatch: 'false',
+      allow_unredacted_secrets: 'false',
+    },
+  });
+  // DB services live independently of the disposable content projection. Their
+  // methods must never close over a Zustand store discarded during recovery.
+  const databaseStore = createStore(
+    createRoomShellSlice({
+      connector,
+      config: {title: 'Roomie', dataSources: []},
+    }),
+  );
+  let metadata: MetadataStore | undefined;
+  let content: ReturnType<typeof createContent> | undefined;
+  let store!: ReturnType<typeof createDomain>;
+  let closing = false;
+  let exporting = false;
+  let exportWork: Promise<Awaited<ReturnType<typeof writeBundle>>> | undefined;
+  let fault: unknown;
+  let queue: Promise<unknown> = Promise.resolve();
+  const queryService = createQueryService(
+    connector,
+    () => databaseStore.getState().db,
+  );
+  const mutations = new Set<Promise<CommitReceipt | RevisionConflict>>();
+  let disposal: Promise<void> | undefined;
+  const listeners = new Set<(receipt: CommitReceipt) => void>();
+  let quackStarted = false;
+  let uploads!: ReturnType<typeof createUploads>;
+  const unsubscribeDatabase = databaseStore.subscribe((state) => {
+    store?.setState({db: state.db});
+  });
+
+  function createDomain() {
+    const next = createStore<RoomState>()((set, get, api) => ({
+      ...createRoomShellSlice({
+        connector,
+        config: {title: 'Roomie', dataSources: []},
+      })(set, get, api),
+      db: databaseStore.getState().db,
+      ...createMosaicSlice()(set, get, api),
+      ...createRoomieDomainSlice({}, false)(set, get, api),
+    }));
+    registerCommandsForOwner(next, 'roomie', createHostCommands());
+    return next;
+  }
+
+  function gate<T>(work: () => T | Promise<T>, accepted = false): Promise<T> {
+    if (closing && !accepted)
+      return Promise.reject(new Error('Workspace is closing.'));
+    const result = queue.then(() => {
+      if (fault)
+        throw new Error(
+          'Workspace failed closed; reopen after resolving storage failure.',
+          {cause: fault},
+        );
+      return work();
+    });
+    queue = result.catch(() => {});
+    return result;
+  }
+
+  function rebuild() {
+    content?.dispose();
+    content = undefined;
+    const next = createDomain();
+    content = createContent(next, metadata!.load());
+    store = next;
+  }
+
+  function publish(receipt: CommitReceipt) {
+    for (const listener of listeners) {
+      // Observer failure cannot turn a durable success into a rejected write.
+      try {
+        listener(structuredClone(receipt));
+      } catch {
+        /* Subscribers may reconnect/replay. */
+      }
+    }
+  }
+
+  try {
+    // Native DuckDB's file lock excludes other host processes before SQLite opens.
+    await connector.initialize();
+    const version = await connector.queryJson<{version: string}>(
+      'SELECT version() AS version',
+    );
+    if ([...version][0]?.version !== 'v2.0.0')
+      throw new Error(
+        'Roomie Node requires native DuckDB v2.0.0; refusing silent downgrade.',
+      );
+    await lockAnalyticalDatabase(connector, exchange, Boolean(options.quack));
+    metadata = (options.openMetadata ?? openMetadata)(
+      join(directory, 'meta.sqlite'),
+    );
+    uploads = createUploads(
+      connector,
+      metadata,
+      () => databaseStore.getState().db.refreshTableSchemas(),
+      exchange,
+    );
+    await uploads.initialize();
+    rebuild();
+    if (options.initialContent) {
+      const imported = parseContentWorkspace({
+        application: 'roomie',
+        schemaVersion: 2,
+        ...options.initialContent,
+      });
+      if (metadata.load().length)
+        throw new Error('Cannot seed an existing workspace.');
+      store.setState((current) => mergeRoomieContent(current, imported));
+      content!.push();
+      metadata.initializeContent(
+        content!.doc.export({mode: 'snapshot'}),
+        Object.keys(imported.artifacts.artifactsById),
+      );
+      rebuild();
+    }
+    metadata.runs.recover();
+    await databaseStore.getState().db.refreshTableSchemas();
+    if (options.quack) {
+      const {uri, token} = options.quack;
+      if (
+        !/^quack:127\.0\.0\.1:\d+$/.test(uri) ||
+        !/^[a-zA-Z0-9_-]{32,}$/.test(token)
+      )
+        throw new Error(
+          'Quack requires a loopback URI and a token of at least 32 safe characters.',
+        );
+      await connector.execute(`CALL quack_serve('${uri}', token='${token}')`);
+      quackStarted = true;
+    }
+  } catch (error) {
+    unsubscribeDatabase();
+    content?.dispose();
+    metadata?.close();
+    try {
+      await connector.destroy();
+    } finally {
+      try {
+        await rm(exchange, {recursive: true, force: true});
+      } finally {
+        activeDirectories.delete(directory);
+      }
+    }
+    throw error;
+  }
+  const optionsQuackUri = () => options.quack!.uri;
+  const optionsQuackToken = () => options.quack!.token;
+  const persistence = metadata!;
+
+  return {
+    directory,
+    workspaceId: persistence.workspaceId,
+    runs: {
+      ...persistence.runs,
+      start: (...args: Parameters<typeof persistence.runs.start>) => {
+        if (closing || exporting || fault)
+          throw new Error('Workspace unavailable.');
+        return persistence.runs.start(...args);
+      },
+    },
+    engine: 'v2.0.0' as const,
+    quack: quackStarted ? ('enabled' as const) : ('disabled' as const),
+    ready: Promise.resolve(),
+    /** Analytical uploads have their own transaction and retry receipt. */
+    upload(input: WorkspaceUpload, bytes: Uint8Array) {
+      if (closing || fault || exporting)
+        throw new Error('Workspace unavailable.');
+      return uploads.upload(input, bytes);
+    },
+    /** Explicit refresh after native/Quack changes; clients rebuild their cache. */
+    async refresh() {
+      if (closing || fault) throw new Error('Workspace unavailable.');
+      await databaseStore.getState().db.refreshTableSchemas();
+    },
+    /** Freeze content, drain uploads and pause Quack while both database snapshots are captured. */
+    async exportBundle(
+      destination: string,
+      options: {includeHistory?: boolean} = {},
+    ) {
+      if (closing || fault || exporting || persistence.runs.active())
+        throw new Error(
+          'Stop active runs before exporting; workspace must be available.',
+        );
+      exporting = true;
+      exportWork = (async () => {
+        let staging: string | undefined;
+        let pausedQuack = false;
+        try {
+          staging = await mkdtemp(join(tmpdir(), 'roomie-snapshot-'));
+          const snapshotDirectory = staging;
+          await uploads.flush();
+          await gate(async () => {
+            if (persistence.runs.active())
+              throw new Error('Stop active runs before exporting.');
+            if (quackStarted) {
+              await connector.execute(
+                `CALL quack_stop('${optionsQuackUri()}')`,
+              );
+              pausedQuack = true;
+            }
+            await connector.getConnection().run('CHECKPOINT');
+            await copyFile(
+              join(directory, 'data.duckdb'),
+              join(snapshotDirectory, 'data.duckdb'),
+            );
+            persistence.snapshot(
+              join(snapshotDirectory, 'meta.sqlite'),
+              options.includeHistory === true,
+            );
+            await mkdir(join(snapshotDirectory, 'assets'));
+            await cp(
+              join(directory, 'assets'),
+              join(snapshotDirectory, 'assets'),
+              {
+                recursive: true,
+                dereference: false,
+              },
+            ).catch((error) => {
+              if (error.code !== 'ENOENT') throw error;
+            });
+          }, true);
+          return await writeBundle(
+            staging,
+            destination,
+            options.includeHistory === true,
+          );
+        } finally {
+          try {
+            if (pausedQuack)
+              await connector.execute(
+                `CALL quack_serve('${optionsQuackUri()}', token='${optionsQuackToken()}')`,
+              );
+          } finally {
+            exporting = false;
+            if (staging) await rm(staging, {recursive: true, force: true});
+          }
+        }
+      })();
+      return exportWork;
+    },
+    /** Host catalog projection for read-only viewers; no arbitrary catalog SQL admission. */
+    catalog: () => {
+      const {tables, currentDatabase, currentSchema} =
+        databaseStore.getState().db;
+      return structuredClone({
+        tables: tables
+          .filter(
+            (table) =>
+              !(table.table.schema ?? '').startsWith('__') &&
+              !table.table.table.startsWith('__'),
+          )
+          .map((value) => ({
+            ...value,
+            table: {
+              database: value.table.database,
+              schema: value.table.schema,
+              table: value.table.table,
+              defaultDatabase: value.table.defaultDatabase,
+            },
+          })),
+        currentDatabase,
+        currentSchema,
+      });
+    },
+    /** Bounded analytical reads, drained before native instance shutdown. */
+    query(sql: string, signal?: AbortSignal) {
+      if (closing || fault)
+        return Promise.reject(new Error('Workspace unavailable.'));
+      return queryService.query(sql, signal);
+    },
+    /** A connection-local cache lifetime. Reconnect creates a fresh session. */
+    createQuerySession: () => {
+      if (closing || fault) throw new Error('Workspace unavailable.');
+      return queryService.session();
+    },
+    /** Return committed content and revisions, never the live Zustand object. */
+    snapshot: () =>
+      gate(() => ({
+        sequence: persistence.sequence(),
+        content: selectRoomieContent(store.getState()),
+        revisions: Object.fromEntries(
+          Object.keys(store.getState().blockDocuments.config.artifacts).map(
+            (id) => [id, persistence.revision(id)],
+          ),
+        ),
+        loro: content!.doc.export({mode: 'snapshot'}),
+      })),
+    /** Discover detached descriptors at the committed boundary. */
+    listCommands: () =>
+      gate(() =>
+        structuredClone(
+          store
+            .getState()
+            .commands.listCommands({
+              surface: 'mcp',
+              includeInputSchema: true,
+              includeDisabled: true,
+            })
+            .filter((command) => command.owner === 'roomie'),
+        ),
+      ),
+    /** Reads use the same registry and gate as content writes. */
+    read: (commandId: string, input: Record<string, unknown> = {}) =>
+      gate(async () => {
+        const command = store.getState().commands.registry[commandId];
+        if (!command?.metadata?.readOnly)
+          throw new Error('Expected a read-only content command.');
+        if (
+          commandId !== 'block-document.list' &&
+          typeof input.artifactId !== 'string'
+        )
+          throw new Error('An explicit artifactId is required.');
+        const result = await invokeCommandWithPolicy(store, commandId, input, {
+          surface: 'mcp',
+        });
+        return structuredClone({
+          ...result,
+          ...(typeof input.artifactId === 'string'
+            ? {revision: persistence.revision(input.artifactId)}
+            : {}),
+        });
+      }),
+    /** Run preparation outside the content gate, then revision-check and commit. */
+    mutate(raw: WorkspaceMutation): Promise<CommitReceipt | RevisionConflict> {
+      if (closing) return Promise.reject(new Error('Workspace is closing.'));
+      const mutation = executeMutation(raw);
+      mutations.add(mutation);
+      void mutation.finally(() => mutations.delete(mutation)).catch(() => {});
+      return mutation;
+    },
+    /** Bounded committed audit replay. */
+    events: (after = 0, limit = 100) =>
+      gate(() => {
+        z.number().int().nonnegative().parse(after);
+        z.number().int().min(1).max(1000).parse(limit);
+        return persistence.events(after, limit);
+      }),
+    subscribe(listener: (receipt: CommitReceipt) => void) {
+      if (closing || fault) throw new Error('Workspace is unavailable.');
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    /** Drain accepted preparations as well as the content commit queue. */
+    async flush() {
+      await Promise.allSettled([...mutations]);
+      await gate(() => {});
+    },
+    dispose() {
+      if (disposal) return disposal;
+      closing = true;
+      disposal = (async () => {
+        await Promise.allSettled([...mutations]);
+        await queue;
+        await exportWork?.catch(() => {});
+        await uploads.flush();
+        await queryService.dispose();
+        listeners.clear();
+        unsubscribeDatabase();
+        content?.dispose();
+        try {
+          if (quackStarted)
+            await connector.execute(`CALL quack_stop('${options.quack!.uri}')`);
+        } finally {
+          try {
+            persistence.close();
+          } finally {
+            try {
+              await connector.destroy();
+            } finally {
+              try {
+                await rm(exchange, {recursive: true, force: true});
+              } finally {
+                activeDirectories.delete(directory);
+              }
+            }
+          }
+        }
+      })();
+      return disposal;
+    },
+  };
+
+  async function executeMutation(
+    raw: WorkspaceMutation,
+  ): Promise<CommitReceipt | RevisionConflict> {
+    const request = Mutation.parse(raw);
+    const requestHash = createHash('sha256')
+      .update(canonicalJson(request))
+      .digest('hex');
+    // Receipt lookup precedes even preparation: a committed retry must not
+    // depend on a table or document still existing at its original revision.
+    const prior = await gate(() =>
+      persistence.receipt(request.operationId, requestHash),
+    );
+    if (prior) return prior;
+    // Analytical/catalog work must not hold up content snapshots and MCP reads.
+    await options.prepareCommand?.(structuredClone(request));
+    await databaseStore.getState().db.refreshTableSchemas();
+    return gate(async () => {
+      const prior = persistence.receipt(request.operationId, requestHash);
+      if (prior) return prior;
+      const creating = request.commandId === 'block-document.create';
+      const command = store.getState().commands.registry[request.commandId];
+      if (!command || command.metadata?.readOnly)
+        throw new Error('Expected a mutating content command.');
+      if (creating) {
+        if (
+          request.artifactId !== undefined ||
+          request.expectedRevision !== undefined
+        )
+          throw new Error(
+            'Creation uses its operation ID, without an existing revision target.',
+          );
+      } else {
+        if (
+          request.artifactId === undefined ||
+          request.expectedRevision === undefined
+        )
+          throw new Error(
+            'Existing-document mutations require artifactId and expectedRevision.',
+          );
+        assertCommandTarget(
+          store.getState(),
+          request.commandId,
+          request.input,
+          request.artifactId,
+        );
+        const currentRevision = persistence.revision(request.artifactId);
+        if (request.expectedRevision !== currentRevision)
+          return {
+            success: false,
+            code: 'revision-conflict',
+            artifactId: request.artifactId,
+            currentRevision,
+          };
+      }
+      const from = content!.hasHistory
+        ? content!.doc.oplogVersion()
+        : undefined;
+      let receipt: CommitReceipt;
+      try {
+        const result: RoomCommandResult = await invokeCommandWithPolicy(
+          store,
+          request.commandId,
+          request.input,
+          {surface: 'mcp', actor: request.principalId},
+        );
+        if (!result.success)
+          throw Object.assign(new Error(result.error ?? 'Command failed.'), {
+            code: result.code,
+            details: result.data,
+          });
+        const artifactId = creating
+          ? (result.data as {artifactId: string}).artifactId
+          : request.artifactId!;
+        // Host view state always stays at its default. It is never published.
+        store.getState().artifacts.setCurrentArtifact(undefined);
+        content!.push();
+        // Return the same JSON value both now and when replaying the receipt.
+        receipt = JSON.parse(
+          JSON.stringify({
+            operationId: request.operationId,
+            artifactId,
+            revision: persistence.revision(artifactId) + 1,
+            result,
+          }),
+        );
+        await persistence.commit({
+          receipt,
+          requestHash,
+          update: content!.doc.export({mode: 'update', from}),
+          commandId: request.commandId,
+          principalId: request.principalId,
+        });
+      } catch (error) {
+        try {
+          const committed = persistence.resolveReceipt(
+            request.operationId,
+            requestHash,
+          );
+          // Rebind both mirror and projection even after an uncertain success.
+          rebuild();
+          if (committed) {
+            publish(committed);
+            return committed;
+          }
+        } catch (recoveryError) {
+          fault = recoveryError;
+          throw new Error(
+            'Cannot establish durable state; workspace failed closed.',
+            {cause: recoveryError},
+          );
+        }
+        throw error;
+      }
+      content!.hasHistory = true;
+      publish(receipt);
+      return structuredClone(receipt);
+    }, true);
+  }
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object')
+    return `{${Object.entries(value)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`)
+      .join(',')}}`;
+  return JSON.stringify(value);
+}

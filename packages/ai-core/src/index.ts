@@ -340,3 +340,9 @@ export type {
   ChatSearchContextValue,
   ChatSearchMatch,
 } from './components/ChatSearch';
+
+export * from './harnessRun';
+
+export {createHarnessReplayClient} from './harnessReplayClient';
+
+export {ChatHistoryItem} from './components/ChatHistoryItem';

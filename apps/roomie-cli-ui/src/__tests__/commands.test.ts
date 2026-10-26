@@ -25,6 +25,10 @@ function setup(
     },
   );
   const state = {
+    artifacts: {
+      getArtifact: (id: string) =>
+        documents[id] ? {id, type: 'block-document'} : undefined,
+    },
     db: {
       currentDatabase: 'workspace',
       findTable: (name: string) =>
@@ -44,6 +48,7 @@ function setup(
       })),
     },
     blockDocuments: {
+      getBlocks: (id: string) => documents[id] ?? [],
       config: {
         artifacts: Object.fromEntries(
           Object.entries(documents).map(([id, blocks]) => [
@@ -101,6 +106,19 @@ const tableBlock = (
 });
 
 describe('Roomie authoring commands', () => {
+  it('inspects table blocks with default preferences after content-only hydration', async () => {
+    const {get, context, tables} = setup({document: [tableBlock('table')]});
+    expect(tables.byId['table-instance']).toBeUndefined();
+    const result = await get('block-document.inspect-block').execute(context, {
+      artifactId: 'document',
+      blockId: 'table',
+    });
+    expect(result).toMatchObject({
+      success: true,
+      data: {backingState: TableSettings.parse({})},
+    });
+    expect(tables.byId['table-instance']).toBeUndefined();
+  });
   it('exposes document creation and block commands without standalone artifact creation', () => {
     const ids = setup().commands.map((command) => command.id);
     expect(ids).toContain('block-document.create');

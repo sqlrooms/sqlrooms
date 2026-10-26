@@ -1,0 +1,10 @@
+{
+  "extends": "../roomie-cli-ui/tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "noUnusedLocals": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src", "vite.config.ts", "test/*.ts"]
+}

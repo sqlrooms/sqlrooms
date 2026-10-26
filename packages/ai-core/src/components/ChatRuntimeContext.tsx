@@ -1,11 +1,9 @@
-import {useChat} from '@ai-sdk/react';
 import type {
-  AbstractChat,
-  ChatStatus,
-  FileUIPart,
-  ToolLoopAgent,
-  UIMessage,
-} from 'ai';
+  HarnessRunChatRuntime,
+  LocalAgentChatRuntime,
+} from '../harnessRunTypes';
+import {useChat} from '@ai-sdk/react';
+import type {FileUIPart, ToolLoopAgent, UIMessage} from 'ai';
 import {
   createContext,
   useCallback,
@@ -23,21 +21,12 @@ export type SessionChatRuntime = {
   mode: 'session';
 };
 
-export type LocalAgentChatRuntime = {
-  mode: 'local-agent';
-  messages: UIMessage[];
-  status: ChatStatus;
-  isStreaming: boolean;
-  prompt: string;
-  setPrompt: (value: string) => void;
-  sendPrompt: (value?: string, attachments?: FileUIPart[]) => void;
-  stop: AbstractChat<UIMessage>['stop'];
-  initialSuggestions: readonly string[];
-  suggestionsVisible: boolean;
-  setSuggestionsVisible: (visible: boolean) => void;
-};
+export type {LocalAgentChatRuntime} from '../harnessRunTypes';
 
-export type ChatRuntime = SessionChatRuntime | LocalAgentChatRuntime;
+export type ChatRuntime =
+  | SessionChatRuntime
+  | LocalAgentChatRuntime
+  | HarnessRunChatRuntime;
 
 export type LocalAgentChatRootProps = PropsWithChildren<{
   agent: ToolLoopAgent<any, any, any>;
@@ -49,7 +38,7 @@ export type LocalAgentChatRootProps = PropsWithChildren<{
 
 const SESSION_RUNTIME: SessionChatRuntime = {mode: 'session'};
 
-const ChatRuntimeContext = createContext<ChatRuntime>(SESSION_RUNTIME);
+export const ChatRuntimeContext = createContext<ChatRuntime>(SESSION_RUNTIME);
 
 export const SessionChatRuntimeProvider: FC<PropsWithChildren> = ({
   children,

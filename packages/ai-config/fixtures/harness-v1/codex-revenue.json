@@ -1,0 +1,2347 @@
+[
+  {
+    "schemaVersion": 1,
+    "seq": 1,
+    "eventId": "173b5da0-f631-4cad-bd03-02f350fa4d71",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:26.939Z",
+    "principalId": "owner",
+    "kind": "run.status",
+    "payload": {
+      "status": "queued",
+      "run": {
+        "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+        "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+        "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+        "principalId": "owner",
+        "status": "queued",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": false
+        },
+        "nativeSessionId": null,
+        "deadlineAt": "2026-10-25T12:43:26.939Z",
+        "skillHash": "5624804b46406814571dd354c16729e21e7ea776c03ae79dc3f0521fa4c9b5eb"
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 2,
+    "eventId": "d15b90a0-799c-4278-9416-1e18c0fefc76",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:26.940Z",
+    "principalId": "owner",
+    "kind": "turn.started",
+    "payload": {
+      "origin": "user",
+      "nativeContextResumed": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 3,
+    "eventId": "36c655f1-6652-459f-9daa-b616fa61b0ee",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:26.940Z",
+    "principalId": "owner",
+    "kind": "message.user",
+    "payload": {
+      "text": "What was revenue by month? Retrieve the saved workspace knowledge definition, verify the data and explain the grain and refund convention. Create a new document with a real monthly revenue line chart from the approved physical source table, plus the SQL and exact monthly values in the document. Do all workspace work through Roomie MCP. The workspace already has orders, payments, refunds, and recognized_revenue tables; read the knowledge document for the business definition.",
+      "attachments": []
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 4,
+    "eventId": "947f133c-7555-4f4b-abd9-0646e9883694",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:27.429Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "remoteControl/status/changed",
+      "summary": "remoteControl/status/changed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 5,
+    "eventId": "f216244e-75f9-422d-a085-ccc0b88667d5",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:27.701Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/updated",
+      "summary": "account/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 6,
+    "eventId": "d0343cb0-21d9-4476-af2b-8376e5f96a91",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.241Z",
+    "principalId": "owner",
+    "kind": "run.status",
+    "payload": {
+      "status": "running",
+      "reason": "Harness started.",
+      "run": {
+        "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+        "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+        "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+        "principalId": "owner",
+        "status": "running",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": false
+        },
+        "nativeSessionId": "01a17311-c76c-7fb1-866c-ccf85ea6dcbb",
+        "deadlineAt": "2026-10-25T12:43:26.939Z",
+        "skillHash": "5624804b46406814571dd354c16729e21e7ea776c03ae79dc3f0521fa4c9b5eb"
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 7,
+    "eventId": "a04023f6-7b11-424c-85d5-37e6e541d416",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.246Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/started",
+      "summary": "thread/started"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 8,
+    "eventId": "4f4c9af7-9a1c-4ebe-9f69-072e945b1452",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.248Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 9,
+    "eventId": "afb16726-876a-445b-90ce-e009ce6f4088",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.249Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 10,
+    "eventId": "218d016b-55a8-445f-8dc3-bfd6a6cd8bae",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.250Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 11,
+    "eventId": "e96e619c-e125-43b8-8b12-d8f17bf92efd",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.250Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 12,
+    "eventId": "dc5a2e02-ce6e-4741-a16b-46f547ff4404",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.252Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 13,
+    "eventId": "80ac77e9-cd33-482e-a945-0daa7fd52e89",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.252Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 14,
+    "eventId": "f94ff1d7-3f52-4406-bdb9-50887a37da03",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.254Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 15,
+    "eventId": "450d5ce9-6ce4-4138-8c92-3f02804aa690",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.254Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 16,
+    "eventId": "ee1f2a1b-8e7e-4838-b758-f91493834311",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.254Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 17,
+    "eventId": "5aa57c1a-f3a7-4db8-8251-10c7fe3f41f5",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.255Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 18,
+    "eventId": "261de221-7e4d-4773-b479-46e18340a48a",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.255Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 19,
+    "eventId": "5f9aef1f-cbe8-4631-ae7f-e36be3e1ff20",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.256Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 20,
+    "eventId": "3252ffb1-c34c-4608-b38d-d12e0bbd299e",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.256Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 21,
+    "eventId": "aa77d07c-0f61-4b17-bf4a-dba69e539cbb",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.261Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 22,
+    "eventId": "5e78501b-67f6-4cd4-9213-51de4b0601b5",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.279Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 23,
+    "eventId": "8837ea3d-c4ae-4a7e-8d4f-30760e9ae0e8",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.330Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 24,
+    "eventId": "ad33f261-f183-49af-a479-e2978b0c2392",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.369Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/status/changed",
+      "summary": "thread/status/changed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 25,
+    "eventId": "92261cb5-53b3-4b85-a54a-eaa8c3da42f8",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.373Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "turn/started",
+      "summary": "turn/started"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 26,
+    "eventId": "00111639-94e3-4fac-89e0-449e43a6d0f1",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.572Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 27,
+    "eventId": "0616e614-d68f-4139-bb44-ec2c03c8b6fd",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.579Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 28,
+    "eventId": "229b285b-a2a2-4325-8d1e-59051893f1a3",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:28.708Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 29,
+    "eventId": "a9b3aa06-c086-4b42-a428-0d8f2e008530",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:29.084Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 30,
+    "eventId": "bbd052a5-83b1-4025-9ad2-2b65198e7d17",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:29.084Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "mcpServer/startupStatus/updated",
+      "summary": "mcpServer/startupStatus/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 31,
+    "eventId": "adea4b60-8b38-4a63-b6a7-559ea2c4c2a2",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:34.039Z",
+    "principalId": "owner",
+    "kind": "message.text",
+    "payload": {
+      "messageId": "msg_082921a6aae468c1016addf84893148191bbbaaaed10bdbf4e",
+      "text": "I\u2019m using the roomie skill to retrieve the saved revenue definition, verify the source data and refund treatment, and create a document with the monthly chart, SQL, and exact values."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 32,
+    "eventId": "94043094-60fd-471c-b5c2-aa6660a79e1f",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:34.040Z",
+    "principalId": "owner",
+    "kind": "message.completed",
+    "payload": {
+      "messageId": "msg_082921a6aae468c1016addf84893148191bbbaaaed10bdbf4e",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 33,
+    "eventId": "a5e18486-2163-48b8-a717-ec0b08a69943",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:34.413Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 34,
+    "eventId": "8f08db01-7885-4f56-8d78-5f0460704377",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:34.414Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 35,
+    "eventId": "428ab077-e11e-4e92-990f-d11a2be45398",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-47e5369e-04ff-4064-afdd-3cee1eea15fd",
+    "at": "2026-10-25T12:38:37.547Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-47e5369e-04ff-4064-afdd-3cee1eea15fd",
+      "toolClass": "roomie-command",
+      "name": "search_commands",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 36,
+    "eventId": "62c51301-f4f9-4f3d-88d9-ba71aad9563a",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-47e5369e-04ff-4064-afdd-3cee1eea15fd",
+    "at": "2026-10-25T12:38:37.566Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-47e5369e-04ff-4064-afdd-3cee1eea15fd",
+      "toolClass": "roomie-command",
+      "name": "search_commands",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 37,
+    "eventId": "61315921-88e6-43aa-a510-e8ba7bd69da6",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:37.603Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 38,
+    "eventId": "05eeb7a7-57c2-49bc-84c6-c865afba0a29",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:37.604Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 39,
+    "eventId": "631b3cfb-8374-4edb-a67b-434bb3fa42cb",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-c4603380-db50-4ce3-865a-51782e80f52d",
+    "at": "2026-10-25T12:38:41.436Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-c4603380-db50-4ce3-865a-51782e80f52d",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 40,
+    "eventId": "959b7c58-e941-4b0b-92cb-5be74f60dae6",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-3331c114-cbc2-4ed2-bac5-d4588aa44f17",
+    "at": "2026-10-25T12:38:41.438Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-3331c114-cbc2-4ed2-bac5-d4588aa44f17",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 41,
+    "eventId": "4c69f501-2cb4-4404-bc39-46b773c5f29a",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-08049773-b553-47e3-a230-6da9fe33039d",
+    "at": "2026-10-25T12:38:41.439Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-08049773-b553-47e3-a230-6da9fe33039d",
+      "toolClass": "roomie-command",
+      "name": "search_commands",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 42,
+    "eventId": "2bfc6f20-d834-49c0-9ea2-83b501b16036",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-7dd5c251-42dc-4ab7-a098-3b0cfc43e80e",
+    "at": "2026-10-25T12:38:41.441Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-7dd5c251-42dc-4ab7-a098-3b0cfc43e80e",
+      "toolClass": "roomie-command",
+      "name": "search_commands",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 43,
+    "eventId": "8e087af2-b09b-4d2e-a2d6-de734d5dafa2",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-c4603380-db50-4ce3-865a-51782e80f52d",
+    "at": "2026-10-25T12:38:41.455Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-c4603380-db50-4ce3-865a-51782e80f52d",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 44,
+    "eventId": "db46b1fc-9ffb-4c27-bdb9-52ee01dead6d",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-3331c114-cbc2-4ed2-bac5-d4588aa44f17",
+    "at": "2026-10-25T12:38:41.460Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-3331c114-cbc2-4ed2-bac5-d4588aa44f17",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 45,
+    "eventId": "0c44a995-1635-42cf-974b-b5e88d06625a",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-08049773-b553-47e3-a230-6da9fe33039d",
+    "at": "2026-10-25T12:38:41.464Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-08049773-b553-47e3-a230-6da9fe33039d",
+      "toolClass": "roomie-command",
+      "name": "search_commands",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 46,
+    "eventId": "1ec35fde-885d-4458-9aa3-cc6a62ffe4d7",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-7dd5c251-42dc-4ab7-a098-3b0cfc43e80e",
+    "at": "2026-10-25T12:38:41.465Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-7dd5c251-42dc-4ab7-a098-3b0cfc43e80e",
+      "toolClass": "roomie-command",
+      "name": "search_commands",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 47,
+    "eventId": "cf3888b2-8dcc-468a-995f-72230d7059be",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:41.465Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 48,
+    "eventId": "337ae04b-e8af-4064-8a13-7fa802ab7c9e",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:41.465Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 49,
+    "eventId": "767a0ddc-97ec-4fde-8e2a-d21b1a578407",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-30fde8d9-2a48-4f3b-9287-53b936c5f9ad",
+    "at": "2026-10-25T12:38:44.820Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-30fde8d9-2a48-4f3b-9287-53b936c5f9ad",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 50,
+    "eventId": "0338f972-83b7-4412-a258-310442fff6a5",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-30fde8d9-2a48-4f3b-9287-53b936c5f9ad",
+    "at": "2026-10-25T12:38:44.834Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-30fde8d9-2a48-4f3b-9287-53b936c5f9ad",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 51,
+    "eventId": "907d9d62-9262-4249-92bb-c93c8b39af26",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:44.842Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 52,
+    "eventId": "c864d7d9-c4f5-4076-a8eb-dbe2440075cc",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:44.843Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 53,
+    "eventId": "82a55312-8b3e-4670-9e2b-bf92eb36ea56",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-dafad47f-ccd9-469e-9775-6092b59d325a",
+    "at": "2026-10-25T12:38:48.125Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-dafad47f-ccd9-469e-9775-6092b59d325a",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 54,
+    "eventId": "adf40ebe-36ae-4111-90ff-91b27d88af8f",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-dafad47f-ccd9-469e-9775-6092b59d325a",
+    "at": "2026-10-25T12:38:48.131Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-dafad47f-ccd9-469e-9775-6092b59d325a",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 55,
+    "eventId": "3591cc68-197e-4fdb-93e1-3a5fead1211c",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:48.146Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 56,
+    "eventId": "cab47fab-6014-4c9b-b4c8-92076beb1d51",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:48.146Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 57,
+    "eventId": "70e67b44-573c-4788-891d-348f9c1595b9",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-dba03939-eef3-4f17-b20a-f8243d85c4fb",
+    "at": "2026-10-25T12:38:51.911Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-dba03939-eef3-4f17-b20a-f8243d85c4fb",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 58,
+    "eventId": "df7e2632-3143-4fea-86eb-6fe55d95df7f",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-dba03939-eef3-4f17-b20a-f8243d85c4fb",
+    "at": "2026-10-25T12:38:51.924Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-dba03939-eef3-4f17-b20a-f8243d85c4fb",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 59,
+    "eventId": "b8aaef15-4db8-447a-8671-a283f69850e5",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-f83dd99c-8157-40dc-b22e-9dcfc17480c0",
+    "at": "2026-10-25T12:38:51.925Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-f83dd99c-8157-40dc-b22e-9dcfc17480c0",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 60,
+    "eventId": "55523d78-29e6-4f91-8ce8-82b5851704cb",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-f83dd99c-8157-40dc-b22e-9dcfc17480c0",
+    "at": "2026-10-25T12:38:51.948Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-f83dd99c-8157-40dc-b22e-9dcfc17480c0",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "failed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 61,
+    "eventId": "7582deba-5aa5-4599-8070-b4438247fa9d",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-9a580cc6-d07f-4593-a083-56756efe6179",
+    "at": "2026-10-25T12:38:51.948Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-9a580cc6-d07f-4593-a083-56756efe6179",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 62,
+    "eventId": "7305030e-9d14-4743-9d55-776710ec66f1",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-c518df10-b6ec-474f-bd38-d4246b46dfc1",
+    "at": "2026-10-25T12:38:51.949Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-c518df10-b6ec-474f-bd38-d4246b46dfc1",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 63,
+    "eventId": "136627f5-2123-4625-baca-1ddf599f8fe3",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-c518df10-b6ec-474f-bd38-d4246b46dfc1",
+    "at": "2026-10-25T12:38:51.956Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-c518df10-b6ec-474f-bd38-d4246b46dfc1",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 64,
+    "eventId": "6da51b19-f4c9-4222-9953-06d8c777e05b",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-9a580cc6-d07f-4593-a083-56756efe6179",
+    "at": "2026-10-25T12:38:51.957Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-9a580cc6-d07f-4593-a083-56756efe6179",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 65,
+    "eventId": "c155897f-6e54-433a-9cb9-1d0eea6d3e7f",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:51.957Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 66,
+    "eventId": "f7dffe2f-0e6c-4390-a763-d6a24c139436",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:51.958Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 67,
+    "eventId": "2ce39d3e-d5bf-4919-a52a-c6b760d568f6",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-a900fda3-29fe-4836-ace0-86a735fad409",
+    "at": "2026-10-25T12:38:55.336Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-a900fda3-29fe-4836-ace0-86a735fad409",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 68,
+    "eventId": "c1d618ee-9aa3-4893-80aa-ed7c44e1d426",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-a900fda3-29fe-4836-ace0-86a735fad409",
+    "at": "2026-10-25T12:38:55.343Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-a900fda3-29fe-4836-ace0-86a735fad409",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 69,
+    "eventId": "8bcbd6f9-b5fb-458f-b953-006516678a89",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-c3f30093-3660-4cda-a2e9-3492b5cd34fd",
+    "at": "2026-10-25T12:38:55.343Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-c3f30093-3660-4cda-a2e9-3492b5cd34fd",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 70,
+    "eventId": "7696fc48-2abe-4e42-b8e7-c7a74f423cd9",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-c3f30093-3660-4cda-a2e9-3492b5cd34fd",
+    "at": "2026-10-25T12:38:55.348Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-c3f30093-3660-4cda-a2e9-3492b5cd34fd",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 71,
+    "eventId": "b65bea18-3806-48fa-85b8-f1c6946b4923",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-b1f6887c-6cbc-4265-9f44-2ce6462c6f8e",
+    "at": "2026-10-25T12:38:55.348Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-b1f6887c-6cbc-4265-9f44-2ce6462c6f8e",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 72,
+    "eventId": "3a2236f3-225d-42a3-844e-a1f163863fb2",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-b1f6887c-6cbc-4265-9f44-2ce6462c6f8e",
+    "at": "2026-10-25T12:38:55.353Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-b1f6887c-6cbc-4265-9f44-2ce6462c6f8e",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 73,
+    "eventId": "67fee420-8dd9-46fa-b34d-ab00ad633c70",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-8ceeda90-6ad3-455d-bf02-89a04ab7ed2b",
+    "at": "2026-10-25T12:38:55.353Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-8ceeda90-6ad3-455d-bf02-89a04ab7ed2b",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 74,
+    "eventId": "a29b6cbd-61e5-40eb-a557-c82116cbc992",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-8ceeda90-6ad3-455d-bf02-89a04ab7ed2b",
+    "at": "2026-10-25T12:38:55.358Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-8ceeda90-6ad3-455d-bf02-89a04ab7ed2b",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 75,
+    "eventId": "0e255233-0700-418d-ba0a-09ff737a8e8b",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:55.471Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 76,
+    "eventId": "a9f53628-075d-4e9d-be62-146c751b14ec",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:38:55.471Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 77,
+    "eventId": "f70c1198-a1c2-40c1-9024-e4b347530148",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "rs_082921a6aae468c1016addf86273748191b889977cc0999594",
+    "at": "2026-10-25T12:38:58.448Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "rs_082921a6aae468c1016addf86273748191b889977cc0999594",
+      "toolClass": "other",
+      "name": "reasoning",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 78,
+    "eventId": "5df23b08-5b89-4c71-be93-34d247e21e38",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "rs_082921a6aae468c1016addf86273748191b889977cc0999594",
+    "at": "2026-10-25T12:38:58.448Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "rs_082921a6aae468c1016addf86273748191b889977cc0999594",
+      "toolClass": "other",
+      "name": "reasoning",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 79,
+    "eventId": "370cd7fa-4576-490d-a13d-563963f77d32",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-a65aff62-cb24-4683-900f-cac78a5e9234",
+    "at": "2026-10-25T12:39:05.014Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-a65aff62-cb24-4683-900f-cac78a5e9234",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 80,
+    "eventId": "6c7149e4-1e57-4420-a36b-26d89ae3b076",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-a65aff62-cb24-4683-900f-cac78a5e9234",
+    "at": "2026-10-25T12:39:05.076Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-a65aff62-cb24-4683-900f-cac78a5e9234",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 81,
+    "eventId": "6a59b271-bb75-4cf8-ae4a-f5e06d3d7f82",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-16056973-c505-4953-a037-3deda02c910a",
+    "at": "2026-10-25T12:39:05.077Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-16056973-c505-4953-a037-3deda02c910a",
+      "toolClass": "roomie-command",
+      "name": "search_commands",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 82,
+    "eventId": "05fbd0bc-addf-4d93-b7ad-96dd71955479",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-16056973-c505-4953-a037-3deda02c910a",
+    "at": "2026-10-25T12:39:05.083Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-16056973-c505-4953-a037-3deda02c910a",
+      "toolClass": "roomie-command",
+      "name": "search_commands",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 83,
+    "eventId": "c8a03fc2-e9f9-4981-b0b2-d21b99500771",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-50a694d2-66f4-433d-b5f7-f6d8e41eced4",
+    "at": "2026-10-25T12:39:05.083Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-50a694d2-66f4-433d-b5f7-f6d8e41eced4",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 84,
+    "eventId": "42713f82-f547-4fbe-93f7-45783ee6539c",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-50a694d2-66f4-433d-b5f7-f6d8e41eced4",
+    "at": "2026-10-25T12:39:05.111Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-50a694d2-66f4-433d-b5f7-f6d8e41eced4",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 85,
+    "eventId": "563f74e1-b507-47d5-bb29-4e9a2b8eca6c",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-37cbd5ad-5da9-4bda-a653-94c8f96eb6a0",
+    "at": "2026-10-25T12:39:05.111Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-37cbd5ad-5da9-4bda-a653-94c8f96eb6a0",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 86,
+    "eventId": "6b20b0c9-3036-4e6c-b720-bafca0bbeefe",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-37cbd5ad-5da9-4bda-a653-94c8f96eb6a0",
+    "at": "2026-10-25T12:39:05.139Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-37cbd5ad-5da9-4bda-a653-94c8f96eb6a0",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 87,
+    "eventId": "022e0958-ef3b-4222-b902-2b04071f7445",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:05.139Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 88,
+    "eventId": "cdb342e6-b5c0-4275-94ac-cbea62115c76",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:05.139Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 89,
+    "eventId": "275303cc-1989-4295-9bba-99785f39a908",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "rs_082921a6aae468c1016addf86baa7c8191b4817df1008ab8d1",
+    "at": "2026-10-25T12:39:07.647Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "rs_082921a6aae468c1016addf86baa7c8191b4817df1008ab8d1",
+      "toolClass": "other",
+      "name": "reasoning",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 90,
+    "eventId": "f236aad9-e5a0-47d8-aeda-133be69f91e6",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "rs_082921a6aae468c1016addf86baa7c8191b4817df1008ab8d1",
+    "at": "2026-10-25T12:39:07.649Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "rs_082921a6aae468c1016addf86baa7c8191b4817df1008ab8d1",
+      "toolClass": "other",
+      "name": "reasoning",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 91,
+    "eventId": "24628221-74d3-4fe2-ac29-df34dff632d7",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:09.994Z",
+    "principalId": "owner",
+    "kind": "message.text",
+    "payload": {
+      "messageId": "msg_082921a6aae468c1016addf86baa70819180d912353a8ca875",
+      "text": "The saved definition counts paid orders by order month and excludes an entire order if it appears in refunds. Both the approved `recognized_revenue` table and the equivalent orders/refunds calculation return January 2026: 300.00 and February: 450.00. The currency is not specified in the knowledge document or tables, so I\u2019ll label the amounts in source units."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 92,
+    "eventId": "a65040e1-0454-4518-9a4a-06cb7572513e",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:09.995Z",
+    "principalId": "owner",
+    "kind": "message.completed",
+    "payload": {
+      "messageId": "msg_082921a6aae468c1016addf86baa70819180d912353a8ca875",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 93,
+    "eventId": "6c1bf51d-baa5-4435-a583-83ee80f31b31",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-fed3ba58-5c6d-4885-b45b-823a4c8411fe",
+    "at": "2026-10-25T12:39:15.272Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-fed3ba58-5c6d-4885-b45b-823a4c8411fe",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 94,
+    "eventId": "b4ed39ac-bcd0-46d6-bcee-ef1db7815482",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-fed3ba58-5c6d-4885-b45b-823a4c8411fe",
+    "at": "2026-10-25T12:39:15.284Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-fed3ba58-5c6d-4885-b45b-823a4c8411fe",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 95,
+    "eventId": "1a4e4047-3851-4970-a643-72fb5a028112",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-63ce6319-3ce4-41c1-801e-58b85c33fc7e",
+    "at": "2026-10-25T12:39:15.285Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-63ce6319-3ce4-41c1-801e-58b85c33fc7e",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 96,
+    "eventId": "19809d7d-0896-4fae-9d63-b1179edd698b",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-63ce6319-3ce4-41c1-801e-58b85c33fc7e",
+    "at": "2026-10-25T12:39:15.293Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-63ce6319-3ce4-41c1-801e-58b85c33fc7e",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "failed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 97,
+    "eventId": "36cc894d-3a20-4a4a-b594-937904f27e53",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-62e88ca0-42cc-4878-a45d-7343bd8faafd",
+    "at": "2026-10-25T12:39:15.294Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-62e88ca0-42cc-4878-a45d-7343bd8faafd",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 98,
+    "eventId": "01c0d041-3400-4465-8367-ce6912d7b575",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-62e88ca0-42cc-4878-a45d-7343bd8faafd",
+    "at": "2026-10-25T12:39:15.302Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-62e88ca0-42cc-4878-a45d-7343bd8faafd",
+      "toolClass": "roomie-command",
+      "name": "get_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 99,
+    "eventId": "0c987130-a9ea-4467-9797-666bbb446a2f",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-a1ca75f4-09c0-4ab7-940d-02ae46cb01dc",
+    "at": "2026-10-25T12:39:15.303Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-a1ca75f4-09c0-4ab7-940d-02ae46cb01dc",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 100,
+    "eventId": "3cfe6437-7a9f-4608-91df-73680dafc4a7",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-a1ca75f4-09c0-4ab7-940d-02ae46cb01dc",
+    "at": "2026-10-25T12:39:15.338Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-a1ca75f4-09c0-4ab7-940d-02ae46cb01dc",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 101,
+    "eventId": "4682ea63-8f12-472e-ab56-d2beff81b77e",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:15.364Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 102,
+    "eventId": "2b68d7e9-f42e-4cb0-a629-8b33ac11f2b8",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:15.365Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 103,
+    "eventId": "9453fc5e-cb60-4265-8f8b-1ec4cb277eba",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "rs_082921a6aae468c1016addf8784258819199fd6ec900fe49d5",
+    "at": "2026-10-25T12:39:20.219Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "rs_082921a6aae468c1016addf8784258819199fd6ec900fe49d5",
+      "toolClass": "other",
+      "name": "reasoning",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 104,
+    "eventId": "48632b19-b3a7-4bbd-8982-f81086ba1aaa",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "rs_082921a6aae468c1016addf8784258819199fd6ec900fe49d5",
+    "at": "2026-10-25T12:39:20.220Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "rs_082921a6aae468c1016addf8784258819199fd6ec900fe49d5",
+      "toolClass": "other",
+      "name": "reasoning",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 105,
+    "eventId": "7bb1d4f5-0d4f-48a4-9622-1815f0a39c9b",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-5284d8d1-88b1-4956-8f70-b2ab950ef146",
+    "at": "2026-10-25T12:39:22.616Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-5284d8d1-88b1-4956-8f70-b2ab950ef146",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 106,
+    "eventId": "2ff7e907-f4f3-4c7b-9e2f-199157d95eda",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-5284d8d1-88b1-4956-8f70-b2ab950ef146",
+    "at": "2026-10-25T12:39:22.625Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-5284d8d1-88b1-4956-8f70-b2ab950ef146",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 107,
+    "eventId": "956f80c4-9b9e-4963-b5b6-231b0eefd289",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-74dbbe37-0688-4daa-be00-31d5c340e843",
+    "at": "2026-10-25T12:39:22.625Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-74dbbe37-0688-4daa-be00-31d5c340e843",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 108,
+    "eventId": "00c98e12-94e0-47b6-bc6e-b29c78f70c2e",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-74dbbe37-0688-4daa-be00-31d5c340e843",
+    "at": "2026-10-25T12:39:22.631Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-74dbbe37-0688-4daa-be00-31d5c340e843",
+      "toolClass": "roomie-command",
+      "name": "query",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 109,
+    "eventId": "1961407b-e192-48e9-b2ee-82005c5e5abe",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:22.631Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 110,
+    "eventId": "a70b5c78-85ae-4f6f-8a5e-8bd66a81c719",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:22.631Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 111,
+    "eventId": "6112bd24-6c87-42ee-a792-dc66b11df786",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "rs_082921a6aae468c1016addf880c92c819180f0ab00b7a15d89",
+    "at": "2026-10-25T12:39:28.744Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "rs_082921a6aae468c1016addf880c92c819180f0ab00b7a15d89",
+      "toolClass": "other",
+      "name": "reasoning",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 112,
+    "eventId": "913b984b-146d-4c38-9a49-016ca8b5e00b",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "rs_082921a6aae468c1016addf880c92c819180f0ab00b7a15d89",
+    "at": "2026-10-25T12:39:28.746Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "rs_082921a6aae468c1016addf880c92c819180f0ab00b7a15d89",
+      "toolClass": "other",
+      "name": "reasoning",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 113,
+    "eventId": "be564892-44f0-4141-88c2-b6486d50c0fc",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:37.702Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "skills/changed",
+      "summary": "skills/changed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 114,
+    "eventId": "a395f3f8-1d01-4b05-b789-7ae38a1629b2",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:47.704Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "skills/changed",
+      "summary": "skills/changed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 115,
+    "eventId": "c9841188-2b41-4d2d-a7d1-0f7e2bc05bee",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-a03a0b97-353c-4d4d-8770-5874af2efafd",
+    "at": "2026-10-25T12:39:56.608Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-a03a0b97-353c-4d4d-8770-5874af2efafd",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 116,
+    "eventId": "4a3815a9-d27b-4723-8f0f-74f5b7b1af83",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-a03a0b97-353c-4d4d-8770-5874af2efafd",
+    "at": "2026-10-25T12:39:56.650Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-a03a0b97-353c-4d4d-8770-5874af2efafd",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 117,
+    "eventId": "298a75ef-a992-4845-b9d4-921d3b2d1285",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:56.650Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 118,
+    "eventId": "311c2502-9287-4cb3-927b-0bdc0d8ea418",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:56.651Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 119,
+    "eventId": "99283245-c086-454e-a559-cc460a3c748e",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-885d015d-a84c-44df-b430-5943fd2b1f31",
+    "at": "2026-10-25T12:39:59.691Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-885d015d-a84c-44df-b430-5943fd2b1f31",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 120,
+    "eventId": "b3f19aea-ba3f-49b5-b394-f111bbeab3ca",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-885d015d-a84c-44df-b430-5943fd2b1f31",
+    "at": "2026-10-25T12:39:59.708Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-885d015d-a84c-44df-b430-5943fd2b1f31",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 121,
+    "eventId": "9a3eec3b-b920-4b40-a885-f691c863df8d",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:59.876Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 122,
+    "eventId": "ac7ffd4b-707b-45a8-ac37-076c628c4e4b",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:39:59.877Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 123,
+    "eventId": "d2af83d4-37a2-4060-8a1e-b4d23bc4ecb4",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-866fda46-9cfc-4288-8e94-662752ee35e6",
+    "at": "2026-10-25T12:40:06.546Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-866fda46-9cfc-4288-8e94-662752ee35e6",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 124,
+    "eventId": "9fec5a82-f079-48c9-a82a-91834957fde8",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-866fda46-9cfc-4288-8e94-662752ee35e6",
+    "at": "2026-10-25T12:40:06.584Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-866fda46-9cfc-4288-8e94-662752ee35e6",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 125,
+    "eventId": "f5f66249-e347-4b3a-8851-8fd1c5ebf176",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:40:06.587Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 126,
+    "eventId": "cf8cfd92-0ebe-4aaa-a578-a73a2cfe8188",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:40:06.587Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 127,
+    "eventId": "f6d17348-c435-4af5-ab7f-0b3f7c4d3db8",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-85169fab-e299-43eb-ac1d-ce43cbe1107b",
+    "at": "2026-10-25T12:40:10.336Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-85169fab-e299-43eb-ac1d-ce43cbe1107b",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 128,
+    "eventId": "eb6a77f5-2a84-4a74-826d-d5a5013a77b4",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-85169fab-e299-43eb-ac1d-ce43cbe1107b",
+    "at": "2026-10-25T12:40:10.350Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-85169fab-e299-43eb-ac1d-ce43cbe1107b",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 129,
+    "eventId": "2fdf44ea-d062-427f-aa22-e12fa8299817",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-4af6a991-3c29-4f85-9feb-3a3cd19aeb30",
+    "at": "2026-10-25T12:40:10.350Z",
+    "principalId": "owner",
+    "kind": "tool.started",
+    "payload": {
+      "callId": "exec-4af6a991-3c29-4f85-9feb-3a3cd19aeb30",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "inProgress"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 130,
+    "eventId": "98dad370-b14b-4842-bf2e-f2847ab4a116",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "nativeEventId": "exec-4af6a991-3c29-4f85-9feb-3a3cd19aeb30",
+    "at": "2026-10-25T12:40:10.359Z",
+    "principalId": "owner",
+    "kind": "tool.completed",
+    "payload": {
+      "callId": "exec-4af6a991-3c29-4f85-9feb-3a3cd19aeb30",
+      "toolClass": "roomie-command",
+      "name": "execute_command",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 131,
+    "eventId": "0a1782e8-661e-42ee-8ba0-4a6b53926e5a",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:40:10.370Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 132,
+    "eventId": "ce4b6328-50f7-4ec2-82a2-ac7e76389ae7",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:40:10.371Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 133,
+    "eventId": "32c3f6c8-319e-4b2a-bed1-a2317ecf22b9",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:40:15.961Z",
+    "principalId": "owner",
+    "kind": "message.text",
+    "payload": {
+      "messageId": "msg_082921a6aae468c1016addf8ac7b948191b747e29fc686b734",
+      "text": "| Month | Revenue | Included orders |\n|---|---:|---:|\n| January 2026 | 300.00 | 2 |\n| February 2026 | 450.00 | 2 |\n| **Total** | **750.00** | **4** |\n\nVerified against the saved knowledge definition and independent orders/refunds calculation. Revenue uses one row per paid order, grouped by order month. Any refunded order is excluded entirely; cancelled orders are excluded. Payment retries do not count.\n\nCreated **\u201cMonthly revenue \u2014 verified approved definition\u201d** with a real line chart backed by `recognized_revenue`, both SQL queries, exact values, and verification details.\n\nCurrency and month completeness are unspecified. Document ID: `unseds4ycio10s24h24sy0sk`."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 134,
+    "eventId": "d9540f3a-6f05-4d05-914d-d934c8f25034",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:40:15.963Z",
+    "principalId": "owner",
+    "kind": "message.completed",
+    "payload": {
+      "messageId": "msg_082921a6aae468c1016addf8ac7b948191b747e29fc686b734",
+      "status": "completed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 135,
+    "eventId": "3cf80959-bd0e-42d2-9d3f-cd1dacc50e64",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:40:15.965Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/tokenUsage/updated",
+      "summary": "thread/tokenUsage/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 136,
+    "eventId": "310d90f7-d6bc-47ba-afc8-99c2c41b102f",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:40:15.966Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "account/rateLimits/updated",
+      "summary": "account/rateLimits/updated"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 137,
+    "eventId": "47b2ea65-a033-477b-a00a-f1795c1331bb",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:40:15.979Z",
+    "principalId": "owner",
+    "kind": "native.unknown",
+    "payload": {
+      "nativeType": "thread/status/changed",
+      "summary": "thread/status/changed"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 138,
+    "eventId": "a343e0af-6003-4752-8c29-065bef7ec225",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:40:15.980Z",
+    "principalId": "owner",
+    "kind": "turn.completed",
+    "payload": {
+      "outcome": "succeeded",
+      "reason": "Native turn completed."
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "seq": 139,
+    "eventId": "18672596-3ecd-4777-a867-c8767b2cd519",
+    "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+    "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+    "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+    "at": "2026-10-25T12:40:15.980Z",
+    "principalId": "owner",
+    "kind": "run.status",
+    "payload": {
+      "status": "succeeded",
+      "reason": "Native turn completed.",
+      "run": {
+        "runId": "d64e48f4-2b46-422a-9007-45edd50054ae",
+        "conversationId": "1170f515-59fb-40d5-a06c-cce6c7d00916",
+        "turnId": "c5d71bc6-82fe-453f-96a2-cfa6a3cf62ce",
+        "principalId": "owner",
+        "status": "succeeded",
+        "capabilities": {
+          "liveInput": false,
+          "continueSession": false,
+          "approvalRecovery": false,
+          "cancelTurn": true,
+          "reasoningSummary": false,
+          "planUpdates": false,
+          "usage": false
+        },
+        "nativeSessionId": "01a17311-c76c-7fb1-866c-ccf85ea6dcbb",
+        "deadlineAt": "2026-10-25T12:43:26.939Z",
+        "skillHash": "5624804b46406814571dd354c16729e21e7ea776c03ae79dc3f0521fa4c9b5eb"
+      }
+    }
+  }
+]

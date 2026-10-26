@@ -19,3 +19,5 @@ export type {
   QueryHandle,
   QueryOptions,
 } from '@sqlrooms/duckdb-core';
+
+export {queryToArrowTable} from './helpers';

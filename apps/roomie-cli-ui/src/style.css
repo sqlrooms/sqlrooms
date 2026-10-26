@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 @import '@sqlrooms/ui/tailwind-preset.css';
-@source '../../../packages/{documents,mosaic,ui,layout,app-runtime,room-shell,data-table,codemirror,schema-tree}/src/**/*.{ts,tsx}';
+@source '../../../packages/{ai-core,documents,mosaic,ui,layout,app-runtime,room-shell,data-table,codemirror,schema-tree}/src/**/*.{ts,tsx}';
 :root {
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   color: #23302c;
@@ -192,4 +192,8 @@ button:disabled {
     padding-left: 30px !important;
     padding-right: 16px !important;
   }
+}
+
+.roomie-node-document .tiptap {
+  padding: 28px 24px !important;
 }

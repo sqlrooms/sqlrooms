@@ -33,6 +33,7 @@ export type MosaicDashboardRootProps = PropsWithChildren<{
   defaultTitle?: string;
   /** Layout used when this dashboard needs to be created during render. */
   defaultLayoutType?: MosaicDashboardLayoutType;
+  /** Prevent content/source/layout edits while retaining local filtering. */
   readOnly?: boolean;
   headerActions?: ReactNode;
 }>;
@@ -78,6 +79,7 @@ export function MosaicDashboardRoot({
 
   // Only pass defaultTitle when creating; ensureDashboard renames when title differs.
   useEffect(() => {
+    if (readOnly) return;
     ensureDashboard(
       dashboardId,
       dashboard ? undefined : defaultTitle,
@@ -89,18 +91,21 @@ export function MosaicDashboardRoot({
     defaultLayoutType,
     defaultTitle,
     ensureDashboard,
+    readOnly,
   ]);
 
   const handleCreateChart = useCallback(
     (title: string, config: ChartConfig) => {
+      if (readOnly) return;
       const panel = createMosaicDashboardChartPanelConfig(title, config);
       addPanel(dashboardId, panel);
       setBuilderOpen(false);
     },
-    [addPanel, dashboardId],
+    [addPanel, dashboardId, readOnly],
   );
 
   const handleAddDefaultChart = useCallback(() => {
+    if (readOnly) return;
     // Create chart panel with default field or empty if no numeric columns
     const panel = createMosaicDashboardChartPanelConfig('New Chart', {
       chartType: 'histogram',
@@ -109,7 +114,7 @@ export function MosaicDashboardRoot({
     });
 
     addPanel(dashboardId, panel);
-  }, [addPanel, dashboardId]);
+  }, [addPanel, dashboardId, readOnly]);
 
   const contextValue = useMemo(
     () => ({
@@ -169,6 +174,7 @@ export type MosaicDashboardProps = {
   /** Whether to enable selection of the entire dashboard */
   selectable?: boolean;
   /** Whether settings for this dashboard should avoid mutating state. */
+  /** Prevent content/source/layout edits while retaining local filtering. */
   readOnly?: boolean;
 };
 

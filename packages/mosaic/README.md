@@ -870,3 +870,13 @@ For complete working examples, see:
 ## License
 
 MIT
+
+Document chart headers honor the document renderer's `readOnly` flag: caption
+editing and the chart settings control are disabled in read-only viewers.
+
+Table explorer column metadata preserves declared DECIMAL precision and scale,
+so native Arrow decimal cells use the same scale as the database.
+
+`MosaicDashboard readOnly` also disables table selection, panel settings and layout
+changes and does not seed missing dashboard state. Local filters remain usable.
+Hosts that require revision checks should route content changes through commands.

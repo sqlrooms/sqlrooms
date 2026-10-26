@@ -22,6 +22,19 @@ describe('NodeDuckDbConnector', () => {
     await new Promise((resolve) => setTimeout(resolve, 10));
   });
 
+  it('preserves the declared Arrow schema for an empty SELECT', async () => {
+    const table = await connector.query(
+      'SELECT 1::INTEGER AS n, NULL::VARCHAR AS label WHERE false',
+    );
+    expect(table.numRows).toBe(0);
+    expect(
+      table.schema.fields.map((field) => [field.name, field.type.toString()]),
+    ).toEqual([
+      ['n', 'Int32'],
+      ['label', 'Utf8'],
+    ]);
+  });
+
   describe('initialize', () => {
     it('should initialize successfully', async () => {
       const newConnector = createNodeDuckDbConnector();

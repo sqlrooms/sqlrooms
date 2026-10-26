@@ -1,0 +1,12 @@
+export {
+  openWorkspace,
+  type WorkspaceMutation,
+  type RevisionConflict,
+} from './workspace';
+export {openMetadata, type MetadataStore, type CommitReceipt} from './metadata';
+export {startWorkspaceServer} from './server';
+export {importWorkspaceBundle} from './bundle';
+export {migrateLegacyWorkspace} from './migration';
+
+export {recoverIsolatedHarnesses} from './harnessIsolation';
+export type {ExecutionLifecycle} from './lifecycle';

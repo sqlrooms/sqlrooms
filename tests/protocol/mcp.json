@@ -1,0 +1,169 @@
+{
+  "version": 1,
+  "protocolVersion": "2025-11-25",
+  "tools": ["search_commands", "get_command", "execute_command"],
+  "calls": [
+    {
+      "name": "unknown tool",
+      "tool": "not_a_tool",
+      "input": {},
+      "code": "tool_not_found"
+    },
+    {
+      "name": "invalid schema",
+      "tool": "get_command",
+      "input": {},
+      "code": "invalid_input"
+    },
+    {
+      "name": "unknown command",
+      "tool": "get_command",
+      "input": {
+        "commandId": "missing"
+      },
+      "code": "command_not_found"
+    },
+    {
+      "name": "unknown execution",
+      "tool": "execute_command",
+      "input": {
+        "commandId": "missing"
+      },
+      "code": "command_not_found"
+    },
+    {
+      "name": "extra tool input",
+      "tool": "get_command",
+      "input": {
+        "commandId": "block-document.list",
+        "extra": true
+      },
+      "code": "invalid_input"
+    },
+    {
+      "name": "inspect command",
+      "tool": "get_command",
+      "input": {
+        "commandId": "block-document.list"
+      },
+      "ok": true
+    },
+    {
+      "name": "search command",
+      "tool": "search_commands",
+      "input": {
+        "query": "block-document.list"
+      },
+      "ok": true
+    },
+    {
+      "name": "read document list",
+      "tool": "execute_command",
+      "input": {
+        "commandId": "block-document.list"
+      },
+      "ok": true
+    },
+    {
+      "name": "host policy denial",
+      "tool": "execute_command",
+      "input": {
+        "commandId": "block-document.create",
+        "input": {
+          "title": "denied"
+        }
+      },
+      "code": "policy_denied"
+    },
+    {
+      "name": "invalid command input",
+      "tool": "execute_command",
+      "input": {
+        "commandId": "block-document.create",
+        "input": {
+          "title": 42
+        }
+      },
+      "mutation": true,
+      "code": "command-execution-error"
+    },
+    {
+      "name": "create document",
+      "tool": "execute_command",
+      "input": {
+        "commandId": "block-document.create",
+        "input": {
+          "title": "Conformance document"
+        }
+      },
+      "mutation": true,
+      "ok": true
+    },
+    {
+      "name": "multiword command search",
+      "tool": "search_commands",
+      "input": {
+        "query": "create document"
+      },
+      "ok": true
+    }
+  ],
+  "admission": [
+    {
+      "name": "missing credential",
+      "token": "missing",
+      "status": 401
+    },
+    {
+      "name": "invalid credential",
+      "token": "invalid",
+      "status": 401
+    },
+    {
+      "name": "page credential",
+      "token": "page",
+      "status": 403
+    },
+    {
+      "name": "cross-workspace credential",
+      "token": "foreign",
+      "status": 401
+    },
+    {
+      "name": "untrusted origin",
+      "token": "owner",
+      "headers": {
+        "Origin": "https://evil.invalid"
+      },
+      "status": 403
+    },
+    {
+      "name": "opaque origin",
+      "token": "owner",
+      "headers": {
+        "Origin": "null"
+      },
+      "status": 403
+    },
+    {
+      "name": "untrusted Host",
+      "token": "owner",
+      "headers": {
+        "Host": "evil.invalid"
+      },
+      "status": 403
+    }
+  ],
+  "differences": {
+    "node": {
+      "durableContent": "sqlrooms/durable-content-v1",
+      "tools": "content commands only",
+      "browserCredential": "renew only; browser transport deferred"
+    },
+    "python": {
+      "durableContent": false,
+      "tools": "existing browser catalog includes SQL",
+      "browserCredential": "existing page scopes; no MCP/bootstrap"
+    }
+  }
+}

@@ -5,19 +5,26 @@ import {formatTimeRelative} from '@sqlrooms/utils';
 import type {ChatSessionSchema} from '@sqlrooms/ai-config';
 
 type ChatHistoryItemProps = {
-  session: ChatSessionSchema;
+  session: Pick<ChatSessionSchema, 'id' | 'name'> &
+    Partial<
+      Pick<ChatSessionSchema, 'uiMessages' | 'lastOpenedAt' | 'isRunning'>
+    >;
+  /** Host-provided metadata in place of an embedded-session message count. */
+  description?: string;
   isActive: boolean;
   onClick: () => void;
-  onRename: () => void;
-  onDelete: () => void;
+  onRename?: () => void;
+  onDelete?: () => void;
 };
 
+/** Shared history row for embedded sessions or host-owned conversations. Omit unsupported rename/delete actions. */
 export const ChatHistoryItem: FC<ChatHistoryItemProps> = ({
   session,
   isActive,
   onClick,
   onRename,
   onDelete,
+  description,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -66,7 +73,8 @@ export const ChatHistoryItem: FC<ChatHistoryItemProps> = ({
             ) : null}
           </div>
           <div className="text-muted-foreground mb-2 text-xs">
-            {messageCount} {messageCount === 1 ? 'message' : 'messages'}
+            {description ??
+              `${messageCount} ${messageCount === 1 ? 'message' : 'messages'}`}
             {relativeTime && ` · ${relativeTime}`}
           </div>
           {preview && (
@@ -83,30 +91,34 @@ export const ChatHistoryItem: FC<ChatHistoryItemProps> = ({
             isHovered ? 'opacity-100' : 'opacity-0',
           )}
         >
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRename();
-            }}
-            aria-label="Rename chat"
-          >
-            <PencilIcon className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-destructive hover:text-destructive h-8 w-8 p-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            aria-label="Delete chat"
-          >
-            <TrashIcon className="h-3 w-3" />
-          </Button>
+          {onRename && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRename();
+              }}
+              aria-label="Rename chat"
+            >
+              <PencilIcon className="h-3 w-3" />
+            </Button>
+          )}
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive h-8 w-8 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              aria-label="Delete chat"
+            >
+              <TrashIcon className="h-3 w-3" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

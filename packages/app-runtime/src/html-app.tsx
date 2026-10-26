@@ -233,6 +233,8 @@ export type HtmlAppBlockProps<
   appId?: string;
   className?: string;
   headerActions?: ReactNode;
+  /** Render committed content without initializing or restoring app state. */
+  readOnly?: boolean;
   queryTimeoutMs?: number;
   maxRows?: number;
   /** Host policy run after SELECT parsing and before execution; throw to deny. */
@@ -673,6 +675,7 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   queryTimeoutMs = DEFAULT_QUERY_TIMEOUT_MS,
   maxRows = DEFAULT_MAX_ROWS,
   authorizeQuery,
+  readOnly = false,
 }) => {
   const resolvedAppId = appId ?? blockId;
   const roomStore = useRoomStoreApi();
@@ -699,9 +702,9 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
-    if (!resolvedAppId) return;
+    if (!resolvedAppId || readOnly) return;
     ensureApp(resolvedAppId, {title: title ?? 'HTML App'});
-  }, [ensureApp, resolvedAppId, title]);
+  }, [ensureApp, resolvedAppId, title, readOnly]);
 
   useEffect(() => {
     setPreviewRevisionId(undefined);
@@ -839,9 +842,10 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
               </span>
               <span className="min-w-0 truncate">{previewRevision.name}</span>
               <button
+                disabled={readOnly}
                 className="ml-1 inline-flex shrink-0 items-center gap-1 rounded border border-amber-300 bg-white px-2 py-1 font-medium hover:bg-amber-100"
                 onClick={() => {
-                  if (!resolvedAppId) return;
+                  if (!resolvedAppId || readOnly) return;
                   restoreAppRevision(resolvedAppId, previewRevision.id, {
                     name: `Restore ${previewRevision.name}`,
                   });

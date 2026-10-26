@@ -87,7 +87,10 @@ function createDataTableExplorerArrowType(sqlType: string): arrow.DataType {
         return new arrow.Int64();
       }
       if (/^(decimal|numeric)/.test(type)) {
-        return new arrow.Decimal(38, 9);
+        const match = /^(?:decimal|numeric)\((\d+),\s*(\d+)\)$/.exec(type);
+        const precision = match ? Number(match[1]) : 18;
+        const scale = match ? Number(match[2]) : 3;
+        return new arrow.Decimal(scale, precision);
       }
       return new arrow.Float64();
     case 'binary':

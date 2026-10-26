@@ -18,6 +18,21 @@ import {
 } from '../src/data-table-explorer/utils';
 
 describe('dataTableExplorer utils', () => {
+  it.each([
+    [10, 2],
+    [38, 9],
+    [18, 0],
+  ])(
+    'preserves DECIMAL(%i,%i) display scale and precision',
+    (precision, scale) => {
+      const field = fieldInfoToDataTableExplorerField({
+        column: 'amount',
+        nullable: true,
+        sqlType: `DECIMAL(${precision},${scale})`,
+      });
+      expect(field.type).toEqual(new arrow.Decimal(scale, precision));
+    },
+  );
   it('builds base SQL without pagination and page SQL with limit/offset', () => {
     const base = buildDataTableExplorerBaseQuery({
       columns: ['Magnitude', 'Depth'],

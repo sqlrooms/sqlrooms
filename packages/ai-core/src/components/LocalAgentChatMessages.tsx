@@ -1,7 +1,7 @@
 import {Button, cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import type {UIMessage, UIMessagePart} from 'ai';
 import {ChevronDown} from 'lucide-react';
-import {useRef, type FC} from 'react';
+import {useRef, type FC, type ReactNode} from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
@@ -16,33 +16,46 @@ import type {ChatAttachmentPart} from '../chatAttachments';
 
 export type LocalAgentChatMessagesProps = {
   className?: string;
+  /** Optional details inside the shared tool activity disclosure. */
+  renderToolDetails?: (call: AgentToolCall) => ReactNode;
 };
 
 export const LocalAgentChatMessages: FC<LocalAgentChatMessagesProps> = ({
   className,
+  renderToolDetails,
 }) => {
   const runtime = useChatRuntime();
   const toolRenderBehavior = useToolRenderBehavior();
   const activeStatus =
-    runtime.mode === 'local-agent'
-      ? getChatActiveStatus(runtime.messages, toolRenderBehavior)
-      : undefined;
+    runtime.mode === 'harness-run' && runtime.pendingApprovals.length
+      ? {
+          key: 'harness-approval',
+          label: 'Waiting for owner approval',
+          kind: 'approval' as const,
+        }
+      : runtime.mode !== 'session'
+        ? getChatActiveStatus(runtime.messages, toolRenderBehavior)
+        : undefined;
   const ActiveStatus = useChatRenderingComponents().ActiveStatus;
   const containerRef = useRef<HTMLDivElement>(null);
   const {showScrollButton, scrollToBottom} = useScrollToBottom({
     containerRef,
-    dataToObserve: runtime.mode === 'local-agent' ? runtime.messages : null,
+    dataToObserve: runtime.mode !== 'session' ? runtime.messages : null,
     scrollOnInitialLoad: true,
   });
 
-  if (runtime.mode !== 'local-agent') return null;
+  if (runtime.mode === 'session') return null;
 
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
       <ScrollArea viewportRef={containerRef} className="min-h-0 flex-1">
         <div className="flex flex-col gap-3 p-3">
           {runtime.messages.map((message) => (
-            <LocalAgentMessageView key={message.id} message={message} />
+            <LocalAgentMessageView
+              key={message.id}
+              message={message}
+              renderToolDetails={renderToolDetails}
+            />
           ))}
           {/* An approval pauses the runtime, so `isStreaming` is false while
               the run is very much unfinished — keep reporting it. */}
@@ -71,7 +84,10 @@ export const LocalAgentChatMessages: FC<LocalAgentChatMessagesProps> = ({
   );
 };
 
-const LocalAgentMessageView: FC<{message: UIMessage}> = ({message}) => {
+const LocalAgentMessageView: FC<{
+  message: UIMessage;
+  renderToolDetails?: LocalAgentChatMessagesProps['renderToolDetails'];
+}> = ({message, renderToolDetails}) => {
   const isUser = message.role === 'user';
   const parts = message.parts as UIMessagePart<any, any>[] | undefined;
   if (!parts || parts.length === 0) return null;
@@ -88,6 +104,7 @@ const LocalAgentMessageView: FC<{message: UIMessage}> = ({message}) => {
           key={`${message.id}-${idx}`}
           part={part}
           role={message.role}
+          renderToolDetails={renderToolDetails}
         />
       ))}
     </div>
@@ -97,7 +114,8 @@ const LocalAgentMessageView: FC<{message: UIMessage}> = ({message}) => {
 const LocalAgentMessagePart: FC<{
   part: UIMessagePart<any, any>;
   role: UIMessage['role'];
-}> = ({part, role}) => {
+  renderToolDetails?: LocalAgentChatMessagesProps['renderToolDetails'];
+}> = ({part, role, renderToolDetails}) => {
   const type = (part as {type?: string}).type ?? '';
 
   if (type === 'text') {
@@ -114,7 +132,12 @@ const LocalAgentMessagePart: FC<{
     );
   }
   if (type === 'dynamic-tool' || type.startsWith('tool-')) {
-    return <LocalAgentToolActivityLine part={part} />;
+    return (
+      <LocalAgentToolActivityLine
+        part={part}
+        renderToolDetails={renderToolDetails}
+      />
+    );
   }
   return null;
 };
@@ -124,6 +147,7 @@ const TextPart: FC<{text: string; role: UIMessage['role']}> = ({
   role,
 }) => {
   const isUser = role === 'user';
+  const runtime = useChatRuntime();
   return (
     <div
       className={cn(
@@ -137,7 +161,14 @@ const TextPart: FC<{text: string; role: UIMessage['role']}> = ({
         <span className="whitespace-pre-wrap">{text}</span>
       ) : (
         <div className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={
+              runtime.mode === 'harness-run' ? {img: () => null} : undefined
+            }
+          >
+            {text}
+          </ReactMarkdown>
         </div>
       )}
     </div>
@@ -153,23 +184,38 @@ const ReasoningPart: FC<{text: string}> = ({text}) => {
   );
 };
 
-const LocalAgentToolActivityLine: FC<{part: UIMessagePart<any, any>}> = ({
-  part,
-}) => {
+const LocalAgentToolActivityLine: FC<{
+  part: UIMessagePart<any, any>;
+  renderToolDetails?: LocalAgentChatMessagesProps['renderToolDetails'];
+}> = ({part, renderToolDetails}) => {
   const toolCall = partToAgentToolCall(part);
   const label = useToolLabel(toolCall);
   if (!toolCall) return null;
 
-  return (
+  const line = (
     <div
       className={cn(
         'border-border bg-muted/40 text-muted-foreground flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs',
         toolCall.state === 'error' && 'text-destructive border-destructive/40',
       )}
     >
+      {renderToolDetails && (
+        <ChevronDown className="h-3 w-3 -rotate-90 transition-transform group-open:rotate-0" />
+      )}
       <StatusDot state={toolCall.state} />
       <span className="truncate">{label}</span>
+      {renderToolDetails && <span>{toolCall.state}</span>}
     </div>
+  );
+  return renderToolDetails ? (
+    <details className="group w-full min-w-0">
+      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        {line}
+      </summary>
+      {renderToolDetails(toolCall)}
+    </details>
+  ) : (
+    line
   );
 };
 
@@ -192,7 +238,7 @@ function useToolLabel(toolCall: AgentToolCall | null): string {
     behavior.getActivityLabel?.(toolCall) ??
     behavior.getToolDisplayName?.(toolCall);
   if (custom) return custom;
-  if (toolCall.state === 'pending') return 'Thinking...';
+  if (toolCall.state === 'pending') return toolCall.toolName;
   return toolCall.toolName;
 }
 

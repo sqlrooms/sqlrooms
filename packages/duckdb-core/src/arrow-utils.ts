@@ -11,7 +11,13 @@ export function arrowTableToJson(
   return table.toArray().map((row) =>
     Object.fromEntries(
       Object.entries(row).map(([key, value]) => {
-        return [key, convertValue(value)];
+        return [
+          key,
+          convertValue(
+            value,
+            table.schema.fields.find((field) => field.name === key)?.type,
+          ),
+        ];
       }),
     ),
   );
@@ -22,7 +28,22 @@ export function arrowTableToJson(
  * @param value
  * @returns
  */
-function convertValue(value: unknown) {
+function convertValue(value: unknown, type?: arrow.DataType) {
+  // Arrow decimal values stringify their integer coefficient, without the scale.
+  // Keep exact decimal strings rather than silently changing units or precision.
+  if (value != null && arrow.DataType.isDecimal(type)) {
+    const coefficient = String(value);
+    const negative = coefficient.startsWith('-');
+    const digits = (negative ? coefficient.slice(1) : coefficient).padStart(
+      type.scale + 1,
+      '0',
+    );
+    const scaled =
+      type.scale > 0
+        ? `${digits.slice(0, -type.scale)}.${digits.slice(-type.scale)}`
+        : digits + '0'.repeat(-type.scale);
+    return (negative ? '-' : '') + scaled;
+  }
   if (
     value === null ||
     typeof value === 'boolean' ||

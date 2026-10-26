@@ -8,13 +8,15 @@ import {
   useChatRuntime,
   type LocalAgentChatRuntime,
 } from '../ChatRuntimeContext';
+import type {HarnessRunChatRuntime} from '../../harnessRunTypes';
 
 /**
  * Which chat runtime a piece of normalized chat state was sourced from:
  * `'session'` reads the AI slice, `'local-agent'` reads
- * {@link LocalAgentChatRuntime} and never touches the slice.
+ * {@link LocalAgentChatRuntime}; `harness-run` reads the external host runtime.
+ * Neither external runtime touches the AI slice.
  */
-export type ChatComposerMode = 'session' | 'local-agent';
+export type ChatComposerMode = 'session' | 'local-agent' | 'harness-run';
 
 /**
  * How to build one mode-normalized chat state context.
@@ -37,6 +39,8 @@ export type DualModeChatContextConfig<TState> = {
    * depends on another context being published first.
    */
   BoundaryOuter?: FC<PropsWithChildren>;
+  /** Optional external-harness state adapter, without an AI slice. */
+  useHarnessState?: (runtime: HarnessRunChatRuntime) => TState;
 };
 
 /**
@@ -65,6 +69,7 @@ export function createDualModeChatContext<TState>({
   useSessionState,
   useLocalAgentState,
   BoundaryOuter,
+  useHarnessState,
 }: DualModeChatContextConfig<TState>) {
   const Context = createContext<TState | null>(null);
 
@@ -88,6 +93,17 @@ export function createDualModeChatContext<TState>({
   };
   LocalAgentProvider.displayName = localAgentProviderName;
 
+  const HarnessProvider: FC<PropsWithChildren> = ({children}) => {
+    const runtime = useChatRuntime();
+    if (runtime.mode !== 'harness-run' || !useHarnessState)
+      throw new Error(`${boundaryName} does not support this harness runtime.`);
+    return (
+      <Context.Provider value={useHarnessState(runtime)}>
+        {children}
+      </Context.Provider>
+    );
+  };
+
   const StateBoundary: FC<PropsWithChildren> = ({children}) => {
     const provided = useContext(Context);
     const runtime = useChatRuntime();
@@ -97,7 +113,9 @@ export function createDualModeChatContext<TState>({
     // without either `Chat` root, and session mode would read an absent AI
     // slice. `BoundaryOuter` wraps either branch.
     const inner =
-      runtime.mode === 'local-agent' ? (
+      runtime.mode === 'harness-run' ? (
+        <HarnessProvider>{children}</HarnessProvider>
+      ) : runtime.mode === 'local-agent' ? (
         <LocalAgentProvider>{children}</LocalAgentProvider>
       ) : (
         <SessionProvider>{children}</SessionProvider>

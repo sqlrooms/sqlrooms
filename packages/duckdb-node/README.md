@@ -74,3 +74,7 @@ Creates a new Node.js DuckDB connector.
 - `queryJson(sql, options?)` - Execute SQL and return JSON objects
 - `getInstance()` - Get underlying DuckDB instance
 - `getConnection()` - Get underlying DuckDB connection
+
+`queryToArrowTable(connection, sql)` serializes native results through nanoarrow.
+Hosts may use a dedicated connection per request to interrupt one query without
+interrupting unrelated work. The caller owns authorization and connection cleanup.

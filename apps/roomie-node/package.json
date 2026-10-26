@@ -1,0 +1,44 @@
+{
+  "name": "roomie-node",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build && node copy-ui.mjs",
+    "test": "vite build --config test/vite.config.ts && node --test --test-concurrency=1 --test-timeout=30000 test/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:conformance": "vite build --config test/vite.config.ts && node --test --test-timeout=30000 test/conformance.mjs",
+    "pack:local": "node package-distribution.mjs",
+    "test:distribution": "node test/distribution.mjs"
+  },
+  "dependencies": {
+    "@duckdb/node-api": "2.0.0-r.1",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "@sqlrooms/ai-config": "workspace:*",
+    "@sqlrooms/app-runtime": "workspace:*",
+    "@sqlrooms/documents": "workspace:*",
+    "@sqlrooms/duckdb-core": "workspace:*",
+    "@sqlrooms/duckdb-node": "workspace:*",
+    "@sqlrooms/mcp": "workspace:*",
+    "@sqlrooms/mosaic": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
+    "apache-arrow": "17.0.0",
+    "loro-crdt": "^1.10.3",
+    "loro-mirror": "^1.1.2",
+    "react": "^19.2.0",
+    "smol-toml": "1.6.1",
+    "ws": "^8.21.0",
+    "zod": "^4.1.13",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/ws": "8.18.2",
+    "typescript": "5.9.3",
+    "vite": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=24.9 <25"
+  }
+}

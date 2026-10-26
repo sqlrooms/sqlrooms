@@ -222,3 +222,8 @@ proven useful and each addition has an explicit capability contract:
 
 Those features should reuse the same request/response and diagnostic protocol
 rather than adding a second app-to-host channel.
+
+`HtmlAppBlock` accepts `readOnly` for committed-content viewers. It disables
+revision restoration and skips automatic backing-state initialization; history
+preview and queries remain available. Hosts should route edits through their
+shared command and revision boundary.

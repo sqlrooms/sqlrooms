@@ -58,8 +58,16 @@
       "entry": ["src/main.{ts,tsx}"]
     },
     "apps/*": {},
+    "experiments/quack-node-wasm": {
+      "entry": [
+        "{server,native-smoke,diagnose-loader,loader-probe}.mjs",
+        "main.tsx"
+      ],
+      "ignoreDependencies": ["@uwdata/mosaic-core", "vite"]
+    },
     "apps/roomie-cli-ui": {
-      "ignoreDependencies": ["jest-environment-jsdom", "jsdom"]
+      "ignoreDependencies": ["jest-environment-jsdom", "jsdom"],
+      "entry": ["src/main.{ts,tsx}", "src/node/bootstrap.ts"]
     },
     "apps/sqlrooms-cli-ui": {
       "entry": [
@@ -69,6 +77,15 @@
         "claude-plugin/headers.mjs"
       ],
       "ignoreDependencies": ["@duckdb/node-api"]
+    },
+    "apps/roomie-node": {
+      "entry": [
+        "src/index.ts",
+        "bubblewrap/runner.mjs",
+        "bubblewrap/entry.mjs",
+        "bin/roomie-node.mjs",
+        "bin/roomie-sprite.mjs"
+      ]
     }
   }
 }

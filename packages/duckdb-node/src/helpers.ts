@@ -203,9 +203,28 @@ async function queryToArrowTableViaIpc<T extends arrow.TypeMap = any>(
   );
   const buffers = reader.getColumnsJS()[0] as Uint8Array[] | undefined;
   if (!buffers?.length) {
-    // A zero-row result emits no IPC message at all, so there is no schema to
-    // decode.
-    return emptyTable<T>();
+    // nanoarrow emits no IPC for zero rows. Bind the schema, serialize one
+    // typed NULL row, then slice it away; never fabricate Arrow field types.
+    const description = await conn.runAndReadAll(
+      `DESCRIBE SELECT * FROM (${sql}\n) AS empty_result`,
+    );
+    const columns = description.getRowObjectsJson() as {
+      column_name: string;
+      column_type: string;
+    }[];
+    if (!columns.length) return emptyTable<T>();
+    const projection = columns
+      .map(
+        (column) =>
+          `CAST(NULL AS ${column.column_type}) AS ${quoteIdentifier(column.column_name)}`,
+      )
+      .join(', ');
+    const schemaReader = await conn.runAndReadAll(
+      `SELECT * FROM to_arrow_ipc((SELECT ${projection}))`,
+    );
+    return arrow
+      .tableFromIPC(schemaReader.getColumnsJS()[0] as Uint8Array[])
+      .slice(0, 0) as unknown as arrow.Table<T>;
   }
   return arrow.tableFromIPC(buffers) as unknown as arrow.Table<T>;
 }

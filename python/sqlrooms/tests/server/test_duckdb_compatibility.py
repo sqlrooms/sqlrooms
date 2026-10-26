@@ -144,6 +144,11 @@ async def test_storage_policy_with_older_reader(tmp_path):
             text=True,
         )
 
+    reader_version = older("import duckdb; print(duckdb.__version__)").stdout.strip()
+    assert reader_version.startswith(("1.4.", "1.5.")), (
+        f"DUCKDB_COMPAT_PYTHON must use DuckDB 1.4/1.5, got {reader_version}"
+    )
+
     original = tmp_path / "original.duckdb"
     older(
         "import duckdb,sys; c=duckdb.connect(sys.argv[1]); c.execute('CREATE TABLE saved AS SELECT 42 AS value'); c.close()",

@@ -81,3 +81,43 @@ The `@sqlrooms/mcp/room` entry composes the capability runtime with a room store
 
 These adapters are shared by both local applications. The room entry depends on
 room-shell; room-shell does not depend on this experimental private package.
+
+`searchRoomCommands(descriptors, query, limit)` applies the shared intent ranking
+and bounded search-result projection to detached command descriptors. Hosts can
+use it behind their own persistence/read boundary without exposing a live store.
+
+The ordinary local-read policy permits verified built-in `time_bucket` and
+`epoch_ms` for temporal chart queries. User-defined shadowing functions, external
+scans, and unverified functions still require approval.
+
+Ordinary local reads include arithmetic operators and `isfinite` used by Mosaic
+histograms. These names still require live catalog verification: shadowing macros,
+external readers, dynamic queries and internal namespaces are not admitted.
+
+Verified nonrecursive CTEs use lexical alias resolution; every definition retains
+the same physical-source and function checks. Recursive, unresolved, external and
+shadowed sources remain subject to approval.
+
+`createBrowserAuthorization` defaults to `credentials: 'omit'`. A hosted client
+behind an authenticated same-origin gateway can explicitly pass
+`credentials: 'same-origin'` to retain that gateway's cookies during bootstrap,
+exchange, renewal and authorized requests. This does not replace application
+single-use tickets or page bearer credentials. Cross-origin targets and
+redirects remain rejected; cookies are never forwarded to another origin.
+
+Gateways that reserve `Authorization` can also use
+`credentialHeader: 'x-sqlrooms-token'`, the existing Roomie server token header.
+The default remains `Authorization: Bearer …`; the same origin/expiry protections
+apply to either header. The Node UI opts into the gateway-compatible settings.
+
+Hosts with an explicitly configured authenticated browser ingress may opt into
+`createBrowserAuthorization({..., credentials: 'same-origin', gatewayAuth: true})`.
+Only HTTPS pages whose `/auth.json` advertises `browserAuth: 'trusted-gateway'`
+can exchange a missing/expired session through a same-origin JSON POST to
+`/api/auth/gateway`. Valid tab sessions are reused; host binding changes trigger
+a fresh exchange. Redirects and foreign credential destinations remain refused.
+The default is false, and a supplied invalid launch ticket still fails closed.
+This option supplies browser behavior, not gateway authentication: the host must
+prove ingress through its transport/deployment boundary and enforce session scope,
+CSRF checks and isolation from agents. Node Roomie supplies that server contract;
+other hosts and the Python launcher keep the existing ticket flow.

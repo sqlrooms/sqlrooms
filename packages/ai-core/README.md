@@ -1161,3 +1161,38 @@ that field.
 - `@sqlrooms/ai` (recommended high-level integration)
 - `@sqlrooms/ai-settings` (provider/model settings slice + UI)
 - `@sqlrooms/ai-config` (config schemas and migrations)
+
+## External harness conversations
+
+`HarnessRunChat.Root` accepts a `HarnessRunClient` and conversation ID, loads the
+v1 host snapshot and paginated history, then subscribes after its committed cursor.
+Compose `.Messages`, `.Approvals`, and `.Controls` inside it. Closing the view only
+unsubscribes; cancellation is explicit. `createHarnessRunStore`,
+`applyHarnessRunEvent`, and `projectHarnessMessages` expose the replay primitives.
+The client owns reconnection and authentication; unsupported live input queues
+locally for the next turn. Queued text is not persisted across view unmounts or reloads. Unknown
+events retain a collapsed diagnostic fallback; remote markdown does not automatically load images.
+
+`createHarnessReplayClient(snapshot)` provides the same interface for recorded
+fixtures without a live model. Replay rejects run and approval writes. Add
+`.Details` for collapsed native diagnostics (including usage, rate limits, thread
+notifications, unknown events, and explicit full-blob loading). `.Messages`
+reconciles started/output/completed events into one shared expandable tool row
+per run/call, preserving its name, input, output and terminal errors. Pass
+`onArtifact` to `.Messages` to navigate from tool receipts. Diagnostic notifications
+never become assistant prose. Approval decisions remain host-authoritative and first-wins.
+
+`.Controls` uses the existing composer Input/Send/Stop primitives and `@sqlrooms/ui`
+controls. Enter sends or queues; Shift+Enter inserts a newline. A single pending
+next turn cannot be silently replaced; failed start requests retain their text.
+Stop discards the queued next turn before cancelling.
+An in-flight start disables duplicate submissions. The optional Root
+`startBlockedReason` explains host-wide admission constraints, without granting
+permission or changing host policy. The composer state supports `harness-run`
+and `canSendWhileRunning` so queue-capable runtimes can display Send and Stop together.
+
+`ChatHistoryItem` also accepts host-owned conversation summaries: supply `id` and
+`name`, optional activity/running fields, and `description` for host status. Rename
+and delete controls appear only when their callbacks exist. It needs no AI slice.
+`LocalAgentChatMessages.renderToolDetails` adds a disclosure to the existing tool
+activity row; the harness uses it for plain-text output and artifact callbacks.

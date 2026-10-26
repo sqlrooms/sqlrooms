@@ -32,6 +32,16 @@
       "persistent": true
     },
     "test": {},
+    "roomie-node#build": {
+      "dependsOn": ["^build", "roomie-cli-app#build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/roomie-cli-ui/src/**"],
+      "outputs": ["dist/**"]
+    },
+    "roomie-node#test": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "env": ["ROOMIE_BWRAP_RUNTIME"]
+    },
     "@sqlrooms/mcp#test": {
       "env": ["DUCKDB_TEST_PYTHON"],
       "cache": false
