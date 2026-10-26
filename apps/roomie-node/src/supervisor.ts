@@ -1,3 +1,4 @@
+import type {ExecutionLifecycle} from './lifecycle';
 import {createHash} from 'node:crypto';
 import {mkdir, writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
@@ -32,6 +33,7 @@ export function createSupervisor(options: {
   credentials: {issue: () => string; revoke: (token: string) => void};
   drain?: () => Promise<void>;
   deadlineMs?: number;
+  lifecycle?: ExecutionLifecycle;
   adapter?: 'codex' | 'claude';
   executable?: string;
   model?: string;
@@ -56,6 +58,7 @@ export function createSupervisor(options: {
         adapter?: HarnessAdapter;
         boundary?: IsolatedHarnessProcess;
         stopping: boolean;
+        release?: () => Promise<void>;
       }
     | undefined;
   let closed = false;
@@ -93,6 +96,7 @@ export function createSupervisor(options: {
         // Terminal publication is also the admission boundary for a queued turn.
         current = undefined;
         log.finish(active.id, status, reason);
+        await active.release?.();
       } catch {
         closed = true;
         current = undefined;
@@ -125,11 +129,14 @@ export function createSupervisor(options: {
           deadlineMs,
         ),
         stopping: false,
+        release: undefined as (() => Promise<void>) | undefined,
         adapter: undefined as HarnessAdapter | undefined,
         boundary: undefined as IsolatedHarnessProcess | undefined,
       };
       current = active;
       starting = (async () => {
+        active.release = await options.lifecycle?.acquire('run', deadlineMs);
+        if (active.stopping) return;
         // Immutable canonical bytes and a separate adapter copy; never expose host data paths.
         const canonical = join(
           options.workspace.directory,

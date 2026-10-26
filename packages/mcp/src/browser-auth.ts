@@ -9,9 +9,15 @@ export type BrowserAuthorization = {
 export function createBrowserAuthorization({
   product,
   name,
+  credentials = 'omit',
+  credentialHeader = 'authorization',
 }: {
   product: string;
   name: string;
+  /** Optional same-origin gateway cookies; Roomie bearer/ticket checks remain required. Defaults to omit. */
+  credentials?: 'omit' | 'same-origin';
+  /** Use the existing Roomie token header when a gateway reserves Authorization. */
+  credentialHeader?: 'authorization' | 'x-sqlrooms-token';
 }) {
   let authorization: BrowserAuthorization | undefined;
   let storageKey: string | undefined;
@@ -66,10 +72,12 @@ export function createBrowserAuthorization({
       clearSession();
       throw new Error(RECOVERY);
     }
-    return {Authorization: `Bearer ${authorization.token}`};
+    return credentialHeader === 'authorization'
+      ? {Authorization: `Bearer ${authorization.token}`}
+      : {'X-SQLRooms-Token': authorization.token};
   }
 
-  /** Fetch only the current instance, with no ambient credentials or redirects. */
+  /** Fetch only the current instance, with explicit gateway-cookie policy and no redirects. */
   async function authorizedFetch(url: string, init: RequestInit = {}) {
     const headers = new Headers(init.headers);
     for (const [name, value] of Object.entries(authorizationHeaders(url)))
@@ -77,7 +85,7 @@ export function createBrowserAuthorization({
     const response = await fetch(url, {
       ...init,
       headers,
-      credentials: 'omit',
+      credentials,
       redirect: 'error',
       cache: 'no-store',
     });
@@ -133,7 +141,7 @@ export function createBrowserAuthorization({
     if (ticket)
       history.replaceState(null, '', location.pathname + location.search);
     const identityResponse = await fetch(instancePath('/auth.json'), {
-      credentials: 'omit',
+      credentials,
       redirect: 'error',
       cache: 'no-store',
     });
@@ -162,7 +170,7 @@ export function createBrowserAuthorization({
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ticket}),
-        credentials: 'omit',
+        credentials,
         redirect: 'error',
         cache: 'no-store',
       });

@@ -1,3 +1,4 @@
+import {withExecutionLease, type ExecutionLifecycle} from './lifecycle';
 import {
   createServer,
   type IncomingMessage,
@@ -29,6 +30,10 @@ import type {openWorkspace} from './workspace';
 export async function startWorkspaceServer(options: {
   workspace: Awaited<ReturnType<typeof openWorkspace>>;
   port?: number;
+  /** Optional deployment owner; browser connections themselves never hold a lease. */
+  lifecycle?: ExecutionLifecycle;
+  /** Exact HTTPS browser origin behind a trusted deployment proxy. Local MCP remains loopback. */
+  publicOrigin?: string;
   /** Built Roomie UI directory; root serves the document-read-only node.html entry. */
   uiDirectory?: string;
   /** Explicit trusted-local mode or an enforced container boundary. */
@@ -54,6 +59,17 @@ export async function startWorkspaceServer(options: {
     );
   if (options.harness?.isolation)
     await recoverIsolatedHarnesses(options.workspace.directory);
+  const publicOrigin = options.publicOrigin;
+  if (publicOrigin) {
+    const url = new URL(publicOrigin);
+    if (
+      url.protocol !== 'https:' ||
+      url.origin !== publicOrigin ||
+      url.username ||
+      url.password
+    )
+      throw new Error('publicOrigin must be an exact HTTPS origin.');
+  }
   const access = createWorkspaceAccess();
   const runtime = createWorkspaceMcpRuntime(options.workspace, options.policy);
   let origin = '';
@@ -64,7 +80,9 @@ export async function startWorkspaceServer(options: {
   const server = createServer(
     {requestTimeout: 10_000, headersTimeout: 10_000},
     (request, response) => {
-      const work = handle(request, response).catch(() => {
+      const work = withExecutionLease(options.lifecycle, 'request', () =>
+        handle(request, response),
+      ).catch(() => {
         if (!response.headersSent)
           json(response, 500, {error: 'internal_error'});
         else response.end();
@@ -77,6 +95,8 @@ export async function startWorkspaceServer(options: {
     workspace: options.workspace,
     access,
     origin: () => origin,
+    publicOrigin,
+    lifecycle: options.lifecycle,
   });
   let supervisor: ReturnType<typeof createSupervisor> | undefined;
   const runSignals = new Map<string, AbortController>();
@@ -98,6 +118,7 @@ export async function startWorkspaceServer(options: {
         workspace: options.workspace,
         mcpUrl: `${origin}/mcp`,
         ...options.harness,
+        lifecycle: options.lifecycle,
         drain: () => runtime.drain(),
         credentials: {
           issue: () => {
@@ -139,7 +160,7 @@ export async function startWorkspaceServer(options: {
       closing = true;
       access.close();
       runtime.dispose();
-      disposal = (async () => {
+      disposal = withExecutionLease(options.lifecycle, 'shutdown', async () => {
         const stopped = new Promise<void>((resolve, reject) =>
           server.close((error) => (error ? reject(error) : resolve())),
         );
@@ -158,7 +179,7 @@ export async function startWorkspaceServer(options: {
           await credential!.close();
           await stopped;
         }
-      })();
+      });
       return disposal;
     },
   };
@@ -173,9 +194,13 @@ export async function startWorkspaceServer(options: {
       }
       // Exact authorities prevent DNS rebinding. Forwarded headers never establish trust.
       if (
-        request.headers.host !== new URL(origin).host ||
+        ![
+          new URL(origin).host,
+          ...(publicOrigin ? [new URL(publicOrigin).host] : []),
+        ].includes(request.headers.host ?? '') ||
         (request.headers.origin !== undefined &&
-          request.headers.origin !== origin)
+          request.headers.origin !== origin &&
+          request.headers.origin !== publicOrigin)
       )
         throw accessDenied('forbidden');
       const path = request.url;
@@ -215,7 +240,7 @@ export async function startWorkspaceServer(options: {
       if (path === '/api/auth/ticket' && request.method === 'POST') {
         access.verify(token, 'bootstrap');
         json(response, 200, {
-          url: `${origin}/#sqlrooms-ticket=${access.ticket()}`,
+          url: `${publicOrigin ?? origin}/#sqlrooms-ticket=${access.ticket()}`,
         });
         return;
       }

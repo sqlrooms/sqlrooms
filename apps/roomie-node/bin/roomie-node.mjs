@@ -77,6 +77,15 @@ async function main() {
       'Built browser UI is missing. Build or reinstall the Roomie distribution.',
     );
   const directory = resolve(positionals[0]);
+  const managed = process.env.ROOMIE_MANAGED === '1';
+  if (managed && (values['trusted-local'] || values.open))
+    throw Error(
+      'Managed service forbids trusted-local harnesses and browser opening.',
+    );
+  const lifecycle = managed
+    ? (await import('../service/lease-client.mjs')).connectExecutionLifecycle()
+    : undefined;
+  let startup;
   let workspace,
     server,
     stopping = false;
@@ -92,12 +101,15 @@ async function main() {
   try {
     const {openWorkspace, startWorkspaceServer} =
       await import('../dist/index.mjs');
+    startup = await lifecycle?.acquire('startup', 120000);
     workspace = await openWorkspace({directory});
     if (stopping) return;
     server = await startWorkspaceServer({
       workspace,
       port,
       uiDirectory,
+      lifecycle,
+      publicOrigin: managed ? process.env.ROOMIE_PUBLIC_ORIGIN : undefined,
       harness: adapter
         ? {
             adapter,
@@ -153,13 +165,20 @@ async function main() {
       });
       browser.unref();
     }
+    await startup?.();
+    startup = undefined;
+    lifecycle?.ready();
     await stopped;
   } finally {
+    const releaseShutdown = await lifecycle?.acquire('shutdown');
     try {
       await server?.dispose();
     } finally {
       await workspace?.dispose();
     }
+    await startup?.();
+    await releaseShutdown?.();
+    lifecycle?.close();
     process.off('SIGINT', signal);
     process.off('SIGTERM', signal);
   }

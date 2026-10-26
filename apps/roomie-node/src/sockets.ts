@@ -1,3 +1,4 @@
+import {withExecutionLease, type ExecutionLifecycle} from './lifecycle';
 import type {Server} from 'node:http';
 import {WebSocketServer, WebSocket} from 'ws';
 import {arrowTableToJson} from '@sqlrooms/duckdb-core';
@@ -13,6 +14,8 @@ export function attachWorkspaceSockets(
     workspace: Awaited<ReturnType<typeof openWorkspace>>;
     access: ReturnType<typeof createWorkspaceAccess>;
     origin: () => string;
+    publicOrigin?: string;
+    lifecycle?: ExecutionLifecycle;
   },
 ) {
   const {workspace, access} = options;
@@ -26,8 +29,13 @@ export function attachWorkspaceSockets(
     try {
       if (
         new URL(request.url ?? '/', options.origin()).pathname !== '/ws' ||
-        request.headers.host !== new URL(options.origin()).host ||
-        (request.headers.origin && request.headers.origin !== options.origin())
+        ![
+          new URL(options.origin()).host,
+          ...(options.publicOrigin ? [new URL(options.publicOrigin).host] : []),
+        ].includes(request.headers.host ?? '') ||
+        (request.headers.origin &&
+          request.headers.origin !== options.origin() &&
+          request.headers.origin !== options.publicOrigin)
       ) {
         socket.destroy();
         return;
@@ -59,37 +67,61 @@ export function attachWorkspaceSockets(
     const authorize = () => access.verify(token, 'view');
     const snapshot = () => {
       snapshotQueue = snapshotQueue
-        .then(async () => {
-          if (!joined || disposed) return;
-          authorize();
-          const state = await workspace.snapshot();
-          if (!joined || disposed) return;
-          authorize();
-          send({
-            type: 'crdt-snapshot',
-            roomId: 'workspace',
-            data: Buffer.from(state.loro).toString('base64'),
-            sequence: state.sequence,
-            content: state.content,
-            revisions: state.revisions,
-            readOnly: true,
-          });
-        })
+        .then(() =>
+          withExecutionLease(options.lifecycle, 'request', async () => {
+            if (!joined || disposed) return;
+            authorize();
+            const state = await workspace.snapshot();
+            if (!joined || disposed) return;
+            authorize();
+            send({
+              type: 'crdt-snapshot',
+              roomId: 'workspace',
+              data: Buffer.from(state.loro).toString('base64'),
+              sequence: state.sequence,
+              content: state.content,
+              revisions: state.revisions,
+              readOnly: true,
+            });
+          }),
+        )
         .catch(() => ws.close(1008, 'Workspace unavailable.'));
+      const task = snapshotQueue;
+      work.add(task);
+      void task.finally(() => work.delete(task));
     };
+    let replayTask: Promise<void> | undefined;
+    let replayRequested = false;
     const replay = () => {
       if (replayAfter === undefined || disposed) return;
-      try {
-        access.verify(token, 'runs');
-        const page = workspace.runs.events(replayAfter, 500);
-        for (const event of page) {
-          send({type: 'run-event', event});
-          replayAfter = event.seq;
-        }
-        if (page.length === 500) setImmediate(replay);
-      } catch {
-        ws.close(1008, 'Replay unavailable.');
-      }
+      replayRequested = true;
+      if (replayTask) return;
+      const task = withExecutionLease(
+        options.lifecycle,
+        'request',
+        async () => {
+          while (replayRequested && !disposed) {
+            replayRequested = false;
+            access.verify(token, 'runs');
+            const page = workspace.runs.events(replayAfter!, 500);
+            for (const event of page) {
+              send({type: 'run-event', event});
+              replayAfter = event.seq;
+            }
+            if (page.length === 500) {
+              replayRequested = true;
+              await new Promise<void>((resolve) => setImmediate(resolve));
+            }
+          }
+        },
+      ).catch(() => ws.close(1008, 'Replay unavailable.'));
+      replayTask = task;
+      work.add(task);
+      void task.finally(() => {
+        work.delete(task);
+        replayTask = undefined;
+        if (replayRequested && !disposed) replay();
+      });
     };
     const unsubscribe = workspace.subscribe(snapshot);
     const unsubscribeRuns = workspace.runs.subscribe(replay);
@@ -113,14 +145,18 @@ export function attachWorkspaceSockets(
       unsubscribeRuns();
       for (const controller of queries.values()) controller.abort();
       if (session) {
-        const task = session.dispose();
+        const task = withExecutionLease(options.lifecycle, 'request', () =>
+          session!.dispose(),
+        ).catch(() => ws.terminate());
         work.add(task);
         void task.finally(() => work.delete(task));
       }
     });
     ws.on('error', () => ws.close());
     ws.on('message', (data, binary) => {
-      const task = handle(data, binary).catch((error) =>
+      const task = withExecutionLease(options.lifecycle, 'request', () =>
+        handle(data, binary),
+      ).catch((error) =>
         send({
           type: 'error',
           error: String(
@@ -132,6 +168,7 @@ export function attachWorkspaceSockets(
       void task.finally(() => work.delete(task));
     });
     async function handle(data: import('ws').RawData, binary: boolean) {
+      if (disposed) return;
       if (binary) {
         authorize();
         const bytes = Buffer.isBuffer(data)

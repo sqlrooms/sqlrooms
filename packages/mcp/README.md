@@ -97,3 +97,15 @@ external readers, dynamic queries and internal namespaces are not admitted.
 Verified nonrecursive CTEs use lexical alias resolution; every definition retains
 the same physical-source and function checks. Recursive, unresolved, external and
 shadowed sources remain subject to approval.
+
+`createBrowserAuthorization` defaults to `credentials: 'omit'`. A hosted client
+behind an authenticated same-origin gateway can explicitly pass
+`credentials: 'same-origin'` to retain that gateway's cookies during bootstrap,
+exchange, renewal and authorized requests. This does not replace application
+single-use tickets or page bearer credentials. Cross-origin targets and
+redirects remain rejected; cookies are never forwarded to another origin.
+
+Gateways that reserve `Authorization` can also use
+`credentialHeader: 'x-sqlrooms-token'`, the existing Roomie server token header.
+The default remains `Authorization: Bearer …`; the same origin/expiry protections
+apply to either header. The Node UI opts into the gateway-compatible settings.

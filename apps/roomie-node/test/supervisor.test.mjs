@@ -14,11 +14,12 @@ async function waitFor(fn) {
   }
   throw new Error('Timed out');
 }
-async function fixture(t, deadlineMs = 5000) {
+async function fixture(t, deadlineMs = 5000, lifecycle) {
   const directory = await mkdtemp(join(tmpdir(), 'roomie-supervisor-'));
   const workspace = await openWorkspace({directory});
   const server = await startWorkspaceServer({
     workspace,
+    lifecycle,
     harness: {
       trustedLocal: true,
       executable: resolve('test/scripted-codex.mjs'),
@@ -209,4 +210,31 @@ test('event persistence failure revokes work and does not publish a false termin
   } finally {
     await recovered.dispose();
   }
+});
+
+test('approval wait retains its run lease until deadline, process drain, and terminal persistence', async (t) => {
+  const leases = new Set();
+  let terminalAtRelease;
+  const lifecycle = {
+    async acquire(kind) {
+      const lease = {kind};
+      leases.add(lease);
+      return async () => {
+        if (kind === 'run') terminalAtRelease = workspace.runs.events(0).at(-1);
+        leases.delete(lease);
+      };
+    },
+  };
+  const {workspace, post} = await fixture(t, 1200, lifecycle);
+  const {data: run} = await post('/api/runs/start', {
+    idempotencyKey: 'lease-wait',
+    text: 'Request approval',
+  });
+  await waitFor(() => workspace.runs.pending()[0]);
+  assert.ok([...leases].some((lease) => lease.kind === 'run'));
+  assert.equal(workspace.runs.get(run.runId).status, 'awaiting-approval');
+  await waitFor(() => terminalAtRelease);
+  assert.equal(terminalAtRelease.kind, 'run.status');
+  assert.equal(terminalAtRelease.payload.status, 'interrupted');
+  assert.equal(leases.size, 0);
 });

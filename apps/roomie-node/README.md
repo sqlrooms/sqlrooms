@@ -84,8 +84,8 @@ leaves the host available with the printed link. After redemption, normal page
 credential renewal applies. If an unused link expires, restart the launcher for
 a new one, or use the authenticated `/api/auth/ticket` API. `--help` lists all
 options. The launcher is a foreground service, not an OS login/background-service
-installer; Sprite service leases, an external watchdog and deployed soak testing
-remain separate M4 work.
+installer. The optional Sprite service adapter is described below; the deployed
+soak remains a separate M4 acceptance gate.
 
 Verify the **installed tarball**, independently of repository module links:
 
@@ -99,6 +99,94 @@ from outside the repository against real databases. CI runs this separately from
 the ordinary native suite. See
 [`roomie-m4-launcher.md`](../../dev-docs/verification/roomie-m4-launcher.md) for
 verification evidence and platform limits.
+
+## Sprite service and execution leases
+
+The optional Linux adapter runs one persistent workspace per Sprite. It wraps
+this same launcher and shared commands; it does not add an agent-specific data
+path. It requires Node 24.9–24.x, npm, `flock` (util-linux), the Sprite local Tasks
+API and service manager. Start with an **authenticated, disposable Sprite** and
+the locally built tarball:
+
+```sh
+scripts/deploy-roomie-node-to-sprite.sh SPRITE_NAME \
+  apps/roomie-node/release/sqlrooms-roomie-node-0.0.0-m4.0.tgz \
+  https://YOUR_SPRITE.sprites.app
+```
+
+This initial-install helper refuses existing install/workspace directories and
+preserves the Sprite's URL authentication policy. It installs under
+`/home/sprite/roomie-service`, stores the workspace separately at
+`/home/sprite/roomie-workspace`, and registers the `roomie` service on port 8080.
+It does not install Docker, change privileges, delegate model credentials or
+make the URL public. For updates, stop the service, back up/export the workspace,
+install the new tarball into the same prefix, then start the service again.
+
+The installed entry point is `bin/roomie-sprite.mjs <config.json>`:
+
+```json
+{
+  "directory": "/home/sprite/roomie-workspace",
+  "port": 8080,
+  "publicOrigin": "https://YOUR_SPRITE.sprites.app",
+  "requestDeadlineMs": 60000,
+  "runDeadlineMs": 300000
+}
+```
+
+Unknown fields fail closed. Runs can be bounded up to one hour; requests up to
+60 seconds. To enable a harness, explicitly add `"harness": "codex"` (or
+`"claude"`) and `"image": "sha256:<immutable-local-image-id>"` after provisioning
+and verifying the existing Docker isolation profile on that Sprite. Docker
+access is root-equivalent; provisioning is an explicit administrator operation.
+The 2026-10-26 disposable Sprite failed this profile: its cgroup controllers
+could not be enabled and `pids.max` was unavailable. Hosted harness execution
+remains unverified on that target; do not remove the resource limits to start it.
+Trusted-local fallback is forbidden. Only intentional model API environment
+values are delegated; the management socket, owner token and service IPC stay
+outside the container. Quack is always disabled in this adapter.
+
+A separate supervisor process owns renewable 30-second Sprite Tasks, renewed
+every ten seconds. HTTP requests, socket queries/uploads, snapshots/replay,
+commands, harness runs (including bounded approval waits), shutdown flushes and
+orphan cleanup retain a hold until their actual work drains. Idle browser
+subscriptions alone do not hold a Task. The host requests admission over private
+IPC **before** executing work. A missing/failed lease never grants permission.
+`ExecutionLifecycle.acquire()` is the optional host API for another deployment
+adapter; its returned asynchronous release must finish after work and durability
+drains. The ordinary local launcher does not require a lease backend.
+
+Fixed per-operation deadlines cannot be extended by heartbeats. During work,
+ten seconds without a heartbeat or a missed deadline kills the host process
+group, removes workspace-labeled containers, then recovers a fresh generation.
+Task calls time out after three seconds; Docker recovery has two bounded
+30-second calls and an outer 70-second deadline. Cleanup itself retains/renews
+its Task. A kernel `flock` excludes duplicate service supervisors before cleanup.
+Each supervisor invocation permits at most three host generations; platform
+service restart policy remains separate. Inspect failures rather than repeatedly
+restarting a broken deployment.
+
+This watchdog is **outside the workspace host event loop, in the same Sprite**.
+It is not an off-VM monitor and cannot make progress while the entire VM or
+supervisor is stalled. Expiring Tasks prevent a lost supervisor from retaining
+an indefinite hold. Restart reconciles committed state and interrupted runs;
+it never resumes an old approval automatically. Releasing a Task permits
+platform idle shutdown; it does not promise immediate sleep or zero billing.
+
+Use `sprite-env services stop roomie` / `start roomie` for explicit service
+control. An incoming request to the authenticated Sprite HTTP proxy can start
+its configured HTTP service. For a local browser tunnel, use
+`sprite proxy -s SPRITE_NAME 8080:8080`; mint a fresh single-use ticket through
+the authenticated endpoint, using the tunnel's loopback origin. Never put the
+owner token in a URL. The service's built UI and command-backed editing are the
+same as the local launcher. The Node browser explicitly retains same-origin
+gateway cookies and uses the existing `X-SQLRooms-Token` header, so the private
+Sprite gateway can reserve `Authorization`. Roomie still requires its own
+single-use ticket/page token; neither cookie nor gateway login grants workspace
+authority.
+
+See [service verification](../../dev-docs/verification/roomie-m4-service.md) for
+reproduction, actual deployed results and the remaining hosted-harness gate.
 
 ## Development and host API
 
@@ -204,8 +292,9 @@ real process crashes before/after commit.
 
 The authenticated MCP endpoint stays loopback-only. The analytical instance is
 locked before exposure, and container-isolated harness mode is available below.
-Quack clients deliberately receive broad analytical authority. Hosted lifecycle,
-external watchdog and unattended release acceptance remain unfinished.
+Quack clients deliberately receive broad analytical authority. The managed Sprite
+adapter keeps Quack disabled so native work cannot bypass its execution leases.
+Unattended hosted release acceptance remains unfinished.
 
 ## Remaining plan work
 
@@ -220,7 +309,7 @@ M2 provides harness supervision, browser SQL/Arrow and committed-content subscri
 M3 adds revision-checked editing, query/upload parity, migration and consistent
 bundles. M4 adds the second live harness and the isolation boundary described
 below, plus the local launcher and draft distribution above. Hosted lifecycle
-and soak acceptance remain unfinished.
+and deployed soak acceptance remain gated as described below.
 Loro snapshot compaction and bounded history retention also remain to be added.
 
 Do not copy an active workspace directory as a portable bundle. Use
@@ -286,8 +375,8 @@ ignores forwarded routing claims, and sends `no-store`/`no-referrer`. Credential
 from another workspace or a previous server start are rejected. There is no
 public token-bearing URL or unauthenticated owner-token exchange. A temporary
 POSIX directory (0700) and file (0600) carry credentials outside the workspace;
-shutdown removes them, including when the workspace cannot flush. Windows ACLs
-and reverse-proxy deployment remain unsupported.
+shutdown removes them, including when the workspace cannot flush. Windows ACLs remain unsupported. The Sprite adapter supplies one exact HTTPS
+`publicOrigin`; arbitrary forwarded Host/Origin claims are never trusted.
 
 `search_commands`, `get_command`, and `execute_command` reuse the command catalog,
 search ranking, input validation, and policy guards. The Node capability

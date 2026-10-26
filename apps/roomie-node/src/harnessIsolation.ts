@@ -23,11 +23,12 @@ export async function recoverIsolatedHarnesses(directory: string) {
     '--filter',
     `label=org.sqlrooms.workspace=${label}`,
   ]);
-  for (const id of stdout.trim().split('\n').filter(Boolean)) {
+  const ids = stdout.trim().split('\n').filter(Boolean);
+  for (const id of ids) {
     if (!/^[a-f0-9]{64}$/.test(id))
       throw new Error('Invalid recovery container identity.');
-    await docker(['rm', '--force', id]);
   }
+  if (ids.length) await docker(['rm', '--force', ...ids]);
 }
 /** An immutable, locally built harness image. No implicit image pull or host environment inheritance. */
 export type HarnessIsolation = {
