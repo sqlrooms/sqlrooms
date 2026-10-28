@@ -1,5 +1,5 @@
 import {type FC} from 'react';
-import {KeplerSidePanels} from '@sqlrooms/kepler';
+import {KeplerSidePanels} from '@kepler.gl/sqlrooms';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {useCurrentMap} from './useCurrentMap';
 

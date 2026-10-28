@@ -55,7 +55,7 @@ Why: combines SQL execution, query editing, and tool-driven AI workflows.
 
 Use:
 
-- `@sqlrooms/kepler` for Kepler.gl maps
+- `@kepler.gl/sqlrooms` for Kepler.gl maps (maintained in the kepler.gl repo)
 - (plus core stack from recipe 1)
 
 Why: map-centric exploratory analytics with DuckDB-backed data.
@@ -84,7 +84,7 @@ When generating code, these prompts usually yield good architecture:
 
 3. **Map analytics app**
 
-   > Build a SQLRooms app with `@sqlrooms/kepler` that loads a parquet table and adds it to a Kepler map with auto-created layers.
+   > Build a SQLRooms app with `@kepler.gl/sqlrooms` that loads a parquet table and adds it to a Kepler map with auto-created layers.
 
 ## Machine-readable docs (llms.txt)
 
@@ -112,6 +112,6 @@ https://sqlrooms.org/llms-full.txt
 - `@sqlrooms/ai`: https://sqlrooms.org/api/ai.md
 - `@sqlrooms/ai-settings`: https://sqlrooms.org/api/ai-settings.md
 - `@sqlrooms/schema-tree`: https://sqlrooms.org/api/schema-tree.md
-- `@sqlrooms/kepler`: https://sqlrooms.org/api/kepler.md
+- `@kepler.gl/sqlrooms`: https://github.com/keplergl/kepler.gl/tree/master/src/sqlrooms
 - `@sqlrooms/motherduck`: https://sqlrooms.org/api/motherduck.md
 - `@sqlrooms/ui`: https://sqlrooms.org/api/ui.md

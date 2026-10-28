@@ -10,6 +10,35 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### `@sqlrooms/kepler` moved to `@kepler.gl/sqlrooms` (deprecated)
+
+The Kepler.gl integration now lives in the
+[kepler.gl repository](https://github.com/keplergl/kepler.gl/tree/master/src/sqlrooms)
+and is published as `@kepler.gl/sqlrooms`. `@sqlrooms/kepler` and
+`@sqlrooms/kepler-config` are deprecated and will not receive further updates.
+
+Swap the dependency and update imports; the exported API is unchanged:
+
+```bash
+npm uninstall @sqlrooms/kepler @sqlrooms/kepler-config
+npm install @kepler.gl/sqlrooms
+```
+
+```ts
+// Before
+import {createKeplerSlice, KeplerMapContainer} from '@sqlrooms/kepler';
+import {KeplerSliceConfig} from '@sqlrooms/kepler-config';
+
+// After
+import {createKeplerSlice, KeplerMapContainer} from '@kepler.gl/sqlrooms';
+import {KeplerSliceConfig} from '@kepler.gl/sqlrooms/config';
+```
+
+`@kepler.gl/sqlrooms` depends on `@sqlrooms/room-shell`, `@sqlrooms/ui`,
+`@sqlrooms/duckdb-core`, and `@sqlrooms/s3-browser`. Keep those on the same
+version as the rest of your `@sqlrooms/*` packages so the app and Kepler share
+one room store.
+
 ### `@sqlrooms/documents`: canonical document names (breaking)
 
 The prerelease document APIs now distinguish structured block documents from

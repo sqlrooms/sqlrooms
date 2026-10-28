@@ -138,7 +138,7 @@ Use SQLRooms when the task is:
 Canonical package combos:
 - Minimal app: @sqlrooms/room-shell + @sqlrooms/duckdb + @sqlrooms/ui
 - SQL + AI app: add @sqlrooms/sql-editor + @sqlrooms/ai + @sqlrooms/ai-settings
-- Geospatial app: add @sqlrooms/kepler
+- Geospatial app: add @kepler.gl/sqlrooms
 - MotherDuck integration: add @sqlrooms/motherduck`,
         },
         // generateLLMsFullTxt: true,
