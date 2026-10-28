@@ -64,7 +64,7 @@ overrides:
   ws@>=8.0.0 <8.20.1: 8.21.0
   zod: 4.1.13
 
-packageExtensionsChecksum: sha256-8CydoOKHxOSay+IG8L2vKcEOoPo55QBV/4qmS/SCIxk=
+packageExtensionsChecksum: sha256-TKPLPViaitqWuk1dY4klPRrqRrCCPMkRi5S3/DVSXLg=
 
 patchedDependencies:
   image-size@0.7.5: 539106326193918147bbe316fda5d631372279285c4a9eca6dc227e3af52f321
@@ -24250,7 +24250,9 @@ snapshots:
 
   '@probe.gl/stats@4.1.1': {}
 
-  '@protomaps/basemaps@5.7.2': {}
+  '@protomaps/basemaps@5.7.2':
+    dependencies:
+      '@maplibre/maplibre-gl-style-spec': 24.8.5
 
   '@radix-ui/number@1.1.1': {}
 

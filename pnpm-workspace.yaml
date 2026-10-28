@@ -72,6 +72,10 @@ overrides:
   ws@>=8.0.0 <8.20.1: 8.21.0
   zod: 4.1.13
 packageExtensions:
+  # Basemaps exposes style-spec types but declares it only as a devDependency.
+  '@protomaps/basemaps@5.7.2':
+    dependencies:
+      '@maplibre/maplibre-gl-style-spec': ^24.8.1
   # Kepler table imports this peer at runtime but does not declare it.
   '@kepler.gl/table@3.3.0-alpha.0':
     dependencies:
