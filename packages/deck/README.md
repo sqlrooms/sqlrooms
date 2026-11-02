@@ -767,7 +767,22 @@ It then produces canonical deck-facing geometry outputs for:
 Specialized layers such as `GeoArrowArcLayer`, `GeoArrowTripsLayer`, and
 `GeoArrowH3HexagonLayer` reuse the prepared table but bind additional
 configured columns on top for source/target geometry,
-timestamps, or index cells.
+timestamps, or index cells. Trip timestamps may be a short relative series or
+absolute timestamps. Typed Arrow timestamps, including DuckDB `TIMESTAMP`
+and dates before 1970, are rebased to relative seconds before animation to
+preserve Float32 precision, including nanosecond intervals. Numeric epoch seconds,
+milliseconds, and microseconds are inferred by magnitude; use typed Arrow
+timestamps for dates near 1970, where numeric units are ambiguous. Short
+non-negative relative series stay unchanged; negative series are rebased to zero.
+Null list rows and null timestamp values do not affect the animation range.
+
+In JSON specs, explicit `currentTime` and `trailLength` use the input units:
+milliseconds for typed Arrow timestamps (matching Arrow's JavaScript getters),
+or the numeric column's units. Conversion rebases `currentTime` and scales
+`trailLength` once; explicit zero values are preserved. Converted layers and
+the built-in playback controls then use the normalized timeline. Timestamp
+summaries and buffers are reused during playback; replace the timestamp vector
+when its data changes rather than mutating its backing buffers.
 
 This work is cached internally in a module-global prepared dataset store. That
 cache is separate from any upstream query cache:
