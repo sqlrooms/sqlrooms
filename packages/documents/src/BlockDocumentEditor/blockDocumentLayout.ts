@@ -46,8 +46,11 @@ export const BLOCK_DOCUMENT_CONTENT_GUTTER =
  */
 export const BLOCK_DOCUMENT_CONTENT_CLASS_NAME = [
   'prose prose-sm dark:prose-invert prose-a:text-primary prose-a:underline-offset-2',
-  'prose-headings:tracking-normal prose-h1:my-3 prose-h1:text-2xl prose-h1:leading-tight',
-  'prose-h2:my-2 prose-h2:text-xl prose-h2:leading-snug prose-h3:my-2 prose-h3:text-lg prose-h3:leading-snug',
+  // Headings sit closer to the content they introduce than to what precedes
+  // them. Top margins must exceed paragraph (~16px) and block (`my-4`) margins,
+  // or margin collapsing leaves equal space on both sides.
+  'prose-headings:tracking-normal prose-h1:mt-8 prose-h1:mb-3 prose-h1:text-2xl prose-h1:leading-tight',
+  'prose-h2:mt-7 prose-h2:mb-2 prose-h2:text-xl prose-h2:leading-snug prose-h3:mt-5 prose-h3:mb-2 prose-h3:text-lg prose-h3:leading-snug',
   'prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-li:leading-6',
   'prose-code:before:content-none prose-code:after:content-none',
   'prose-pre:bg-muted prose-pre:text-foreground prose-pre:my-3 prose-pre:rounded-md prose-pre:px-3 prose-pre:py-2',
