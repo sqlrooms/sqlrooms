@@ -9,6 +9,8 @@ export type TripTimestampNormalization = {
   divisor: number;
   /** Largest normalized timestamp. This is the animation length. */
   max: number;
+  /** Raw Arrow origin, subtracted before conversion to preserve small deltas. */
+  timestampOrigin?: bigint;
 };
 
 // Prepared Arrow vectors are immutable inputs. Weak keys let replacement
@@ -30,21 +32,18 @@ const EPOCH_MILLISECOND_ABS = 1e11;
 const EPOCH_MICROSECOND_ABS = 1e14;
 
 /**
- * Read one timestamp child value as milliseconds when the child is an Arrow
- * timestamp, matching `Vector.get`. Other numeric children are returned as
- * stored.
+ * Keep typed Arrow timestamps as bigint until rebasing; numeric columns keep
+ * their original units. Nulls must not contribute to the animation range.
  */
-export function readTripTimestampValue(child: Data, index: number): number {
+function readTripTimestampValue(child: Data, index: number): number | bigint {
   if (!child.getValid(index)) return NaN;
   const raw = child.values?.[index];
-  if (typeof raw === 'bigint') {
-    return timestampToMilliseconds(child, Number(raw));
-  }
-  const numeric = typeof raw === 'number' ? raw : Number(raw);
-  if (!Number.isFinite(numeric)) return NaN;
-  return timestampToMilliseconds(child, numeric);
+  return DataType.isTimestamp(child.type) && typeof raw === 'bigint'
+    ? raw
+    : Number(raw);
 }
 
+/** Convert Arrow timestamp units to the milliseconds used by JSON settings. */
 function timestampToMilliseconds(child: Data, value: number): number {
   if (!DataType.isTimestamp(child.type)) return value;
   switch (child.type.unit) {
@@ -62,17 +61,15 @@ function timestampToMilliseconds(child: Data, value: number): number {
 }
 
 /** Map a min/max pair onto a Float32-safe range that starts near 0. */
-export function planTripTimestampNormalization(
+function planTripTimestampNormalization(
   min: number,
   max: number,
-  isTimestamp = false,
 ): TripTimestampNormalization | null {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
   const maxAbs = Math.max(Math.abs(min), Math.abs(max));
-  const origin = isTimestamp || Math.abs(min) >= EPOCH_REBASE_MIN ? min : 0;
-  const divisor = isTimestamp
-    ? 1000 // Typed timestamps were read as milliseconds, regardless of date.
-    : maxAbs >= EPOCH_MICROSECOND_ABS
+  const origin = min < 0 || min >= EPOCH_REBASE_MIN ? min : 0;
+  const divisor =
+    maxAbs >= EPOCH_MICROSECOND_ABS
       ? 1_000_000
       : maxAbs >= EPOCH_MILLISECOND_ABS
         ? 1000
@@ -98,25 +95,34 @@ export function summarizeTripTimestamps(
 ): TripTimestampNormalization | null {
   const cached = summaries.get(vector);
   if (cached !== undefined) return cached;
-  let min = Infinity;
-  let max = -Infinity;
-  let isTimestamp = false;
+  let min: number | bigint = Infinity;
+  let max: number | bigint = -Infinity;
+  let timestampChild: Data | undefined;
   for (const chunk of vector.data) {
     const child = chunk.children[0];
     const offsets = chunk.valueOffsets;
     if (!child || !offsets || offsets.length < 2) continue;
-    isTimestamp ||= DataType.isTimestamp(child.type);
+    if (DataType.isTimestamp(child.type)) timestampChild = child;
     for (let row = 0; row < chunk.length; row++) {
       if (!chunk.getValid(row)) continue;
       for (let index = offsets[row]!; index < offsets[row + 1]!; index++) {
         const value = readTripTimestampValue(child, index);
-        if (!Number.isFinite(value)) continue;
+        if (typeof value === 'number' && !Number.isFinite(value)) continue;
         if (value < min) min = value;
         if (value > max) max = value;
       }
     }
   }
-  const summary = planTripTimestampNormalization(min, max, isTimestamp);
+  const summary =
+    timestampChild && typeof min === 'bigint' && typeof max === 'bigint'
+      ? {
+          origin: timestampToMilliseconds(timestampChild, Number(min)),
+          divisor: 1000,
+          max:
+            timestampToMilliseconds(timestampChild, Number(max - min)) / 1000,
+          timestampOrigin: min,
+        }
+      : planTripTimestampNormalization(Number(min), Number(max));
   summaries.set(vector, summary);
   return summary;
 }
@@ -143,10 +149,14 @@ export function getNormalizedTripTimestampChunk(
     for (let row = 0; row < chunk.length; row++) {
       if (!chunk.getValid(row)) continue;
       for (let index = offsets[row]!; index < offsets[row + 1]!; index++) {
-        values[index - start] = normalizeTripTimestamp(
-          readTripTimestampValue(child, index),
-          plan,
-        );
+        const value = readTripTimestampValue(child, index);
+        values[index - start] =
+          typeof value === 'bigint'
+            ? timestampToMilliseconds(
+                child,
+                Number(value - plan.timestampOrigin!),
+              ) / plan.divisor
+            : normalizeTripTimestamp(value, plan);
       }
     }
   }

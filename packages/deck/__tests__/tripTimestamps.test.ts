@@ -194,6 +194,47 @@ describe('trip timestamps', () => {
     expect(layer.props._tripsMaxTimestamp).toBeCloseTo(5);
   });
 
+  test.each([1_700_000_000_000_000_000n, -315_619_200_000_000_000n])(
+    'preserves nanosecond intervals at raw epoch %s',
+    (start) => {
+      const type = new TimestampNanosecond();
+      const timestamps = new Vector([
+        makeData({
+          type: new List(new Field('item', type, true)),
+          length: 2,
+          valueOffsets: new Int32Array([0, 2, 4]),
+          child: makeData({
+            type,
+            length: 4,
+            data: new BigInt64Array([start + 200n, 0n, start, start + 100n]),
+            nullBitmap: new Uint8Array([0b1101]),
+            nullCount: 1,
+          }),
+        }),
+      ]);
+      // Put the earliest value in a later chunk to verify one exact origin.
+      const chunks = new Vector([
+        ...timestamps.slice(0, 1).data,
+        ...timestamps.slice(1, 2).data,
+      ]);
+      expect(summarizeTripTimestamps(chunks)?.max).toBeCloseTo(2e-7, 14);
+      expect(Array.from(getNormalizedTripTimestampChunk(chunks, 0))).toEqual([
+        Math.fround(2e-7),
+        0,
+      ]);
+      const values = getNormalizedTripTimestampChunk(chunks, 1);
+      expect(Array.from(values)).toEqual([0, Math.fround(1e-7)]);
+      expect(getNormalizedTripTimestampChunk(chunks, 1)).toBe(values);
+
+      const layer = convertTrips(timestamps.slice(1, 2));
+      expect(layer.props._tripsMaxTimestamp).toBeCloseTo(1e-7, 14);
+      expect(Array.from(timestampBuffer(layer))).toEqual([
+        0,
+        Math.fround(1e-7),
+      ]);
+    },
+  );
+
   test('ignores null timestamp values when rebasing valid vertices', () => {
     const start = 1_700_000_000_000;
     const timestamps = vectorFromArray(
@@ -201,7 +242,7 @@ describe('trip timestamps', () => {
       new List(new Field('item', new TimestampMicrosecond(), true)),
     );
 
-    expect(summarizeTripTimestamps(timestamps)).toEqual({
+    expect(summarizeTripTimestamps(timestamps)).toMatchObject({
       origin: start,
       divisor: 1000,
       max: 5,
@@ -329,7 +370,7 @@ describe('trip timestamps', () => {
           new List(new Field('item', type)),
         );
 
-        expect(summarizeTripTimestamps(timestamps)).toEqual({
+        expect(summarizeTripTimestamps(timestamps)).toMatchObject({
           origin: start,
           divisor: 1000,
           max: 5,
@@ -350,6 +391,22 @@ describe('trip timestamps', () => {
       expect(Array.from(timestampBuffer(convertTrips(timestamps)))).toEqual([
         0, 5,
       ]);
+    },
+  );
+
+  test.each([-1000, 1000])(
+    'rebases negative numeric times near zero with an end of %s',
+    (end) => {
+      const timestamps = listOfFloats([[-2000, end]]);
+      const layer = convertTrips(timestamps, {
+        currentTime: -1000,
+        trailLength: 100,
+      });
+
+      expect(layer.props._tripsMaxTimestamp).toBe(end + 2000);
+      expect(layer.props.currentTime).toBe(1000);
+      expect(layer.props.trailLength).toBe(100);
+      expect(Array.from(timestampBuffer(layer))).toEqual([0, end + 2000]);
     },
   );
 

@@ -764,9 +764,11 @@ configured columns on top for source/target geometry,
 timestamps, or index cells. Trip timestamps may be a short relative series or
 absolute timestamps. Typed Arrow timestamps, including DuckDB `TIMESTAMP`
 and dates before 1970, are rebased to relative seconds before animation to
-preserve Float32 precision. Numeric epoch seconds, milliseconds, and microseconds
-are inferred by magnitude; short relative series stay unchanged. Null list rows
-and null timestamp values do not affect the animation range.
+preserve Float32 precision, including nanosecond intervals. Numeric epoch seconds,
+milliseconds, and microseconds are inferred by magnitude; use typed Arrow
+timestamps for dates near 1970, where numeric units are ambiguous. Short
+non-negative relative series stay unchanged; negative series are rebased to zero.
+Null list rows and null timestamp values do not affect the animation range.
 
 In JSON specs, explicit `currentTime` and `trailLength` use the input units:
 milliseconds for typed Arrow timestamps (matching Arrow's JavaScript getters),
