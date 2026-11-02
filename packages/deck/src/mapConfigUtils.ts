@@ -1527,6 +1527,7 @@ export function createDeckMapDashboardPanelConfigForTable(options: {
  *
  * Authored arc, H3, and trips transforms are kept; only the table name
  * is retargeted. Point and polygon maps still regenerate their dataset source.
+ * An explicit fit-to-data zoom cap is retained for the regenerated dataset.
  */
 export function regenerateMapConfigForTable(
   panel: {config: Record<string, unknown>},
@@ -1573,12 +1574,22 @@ export function regenerateMapConfigForTable(
     ) {
       return retargetDeckMapDatasetTableName(existingConfig, table);
     }
+    const currentFit =
+      existingConfig.fitToData?.dataset === datasetId
+        ? existingConfig.fitToData
+        : undefined;
     return updateDeckMapGeometryColumnBindings(
       {
         ...existingConfig,
         datasets: {[datasetId]: nextDataset},
         fitToData: nextConfig.fitToData
-          ? {...nextConfig.fitToData, dataset: datasetId}
+          ? {
+              ...nextConfig.fitToData,
+              dataset: datasetId,
+              ...(typeof currentFit?.maxZoom === 'number'
+                ? {maxZoom: currentFit.maxZoom}
+                : {}),
+            }
           : existingConfig.fitToData,
       },
       datasetId,

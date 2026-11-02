@@ -317,6 +317,12 @@ dataset extent using the declared longitude/latitude columns and fits the
 initial map view once, instead of inferring bounds from the loaded Arrow
 payload in React.
 
+Omit `fitToData.maxZoom` to use the default fit-to-data zoom ceiling of 18.
+Set a number only when you want to limit how far fitting zooms in. Existing
+saved values, including `maxZoom: 12`, are preserved when loading a map or
+changing its table, geometry, or coordinate columns. Remove the saved field
+to use the default ceiling; upgrading does not remove existing caps.
+
 Use `createDeckMapPanelFromNativeConfig(...)` when a host surface already has a
 native Deck map config, for example from AI tooling, and needs the same
 dashboard-compatible `deck-json-map` panel shape that the dashboard map tool

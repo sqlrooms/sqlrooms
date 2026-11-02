@@ -292,6 +292,7 @@ describe('mapLayerConfigUtils', () => {
       latitudeColumn: 'latitude',
       longitudeColumn: 'longitude',
     });
+    expect(nextConfig.fitToData).not.toHaveProperty('maxZoom');
     expect(nextConfig.datasets.places.geometryColumn).toBe('__sqlrooms_geom');
     expect(nextConfig.datasets.places.source).toMatchObject({
       tableName: 'places',
@@ -344,7 +345,7 @@ describe('mapLayerConfigUtils', () => {
       fitToData: {
         dataset: 'earthquakes',
         padding: 40,
-        maxZoom: 12,
+        maxZoom: 8,
         geometryColumn: 'geom',
       },
     };
@@ -371,7 +372,7 @@ describe('mapLayerConfigUtils', () => {
       dataset: 'earthquakes',
       longitudeColumn: 'Magnitude',
       latitudeColumn: 'Latitude',
-      maxZoom: 12,
+      maxZoom: 8,
     });
 
     const nextLatitude = setDeckMapLayerCoordinateColumns(
@@ -390,6 +391,7 @@ describe('mapLayerConfigUtils', () => {
       dataset: 'earthquakes',
       longitudeColumn: 'Longitude',
       latitudeColumn: 'Magnitude',
+      maxZoom: 8,
     });
   });
 
@@ -429,7 +431,7 @@ describe('mapLayerConfigUtils', () => {
         longitudeColumn: 'longitude',
         latitudeColumn: 'latitude',
         padding: 40,
-        maxZoom: 12,
+        maxZoom: 8,
       },
     };
 
@@ -446,6 +448,7 @@ describe('mapLayerConfigUtils', () => {
     expect(nextConfig.fitToData).toMatchObject({
       dataset: 'places',
       geometryColumn: 'geom',
+      maxZoom: 8,
     });
     expect(nextConfig.fitToData).not.toHaveProperty('longitudeColumn');
     expect(nextConfig.fitToData).not.toHaveProperty('latitudeColumn');
@@ -1088,7 +1091,7 @@ describe('arc geometry vs lon/lat bindings', () => {
       dataset: 'trips',
       geometryColumns: ['origin_geom', 'dest_geom'],
       padding: 40,
-      maxZoom: 12,
+      maxZoom: 8,
     },
   };
   const sourceColumns = [
@@ -1181,7 +1184,7 @@ describe('arc geometry vs lon/lat bindings', () => {
     expect(nextConfig.fitToData).toMatchObject({
       dataset: 'trips',
       geometryColumns: ['source_geom', 'target_geom'],
-      maxZoom: 12,
+      maxZoom: 8,
     });
     expect(nextConfig.datasets.trips.geometryEncodingHint).toBe('wkb');
   });
@@ -1253,6 +1256,7 @@ describe('arc geometry vs lon/lat bindings', () => {
     expect(afterBoth.fitToData).toMatchObject({
       dataset: 'trips',
       geometryColumns: ['origin_geom', 'dest_geom'],
+      maxZoom: 8,
     });
     expect(
       getDeckMapLayerRecords(afterBoth)[0]?._sqlroomsBinding,
