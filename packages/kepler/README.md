@@ -1,3 +1,10 @@
+> [!WARNING]
+> **Deprecated:** `@sqlrooms/kepler` has moved to the kepler.gl repository and is
+> now published as [`@kepler.gl/sqlrooms`](https://www.npmjs.com/package/@kepler.gl/sqlrooms)
+> ([source](https://github.com/keplergl/kepler.gl/tree/master/src/sqlrooms)).
+> This package will not receive further updates. Replace
+> `@sqlrooms/kepler` imports with `@kepler.gl/sqlrooms`; the API is the same.
+
 Kepler.gl integration for SQLRooms.
 
 Use this package when you want a **map-first analytics experience** in a SQLRooms app, backed by DuckDB tables and SQL.

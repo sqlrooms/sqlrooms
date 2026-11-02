@@ -6,7 +6,7 @@ import {
   type ArtifactTypeDefinition,
 } from '@sqlrooms/artifacts';
 import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
-import {createKeplerSlice, KeplerSliceState} from '@sqlrooms/kepler';
+import {createKeplerSlice, KeplerSliceState} from '@kepler.gl/sqlrooms';
 import {
   createRoomShellSlice,
   createRoomStore,

@@ -1,5 +1,5 @@
 import {RoomPanelComponent} from '@sqlrooms/room-shell';
-import {KeplerMapContainer, KeplerPlotContainer} from '@sqlrooms/kepler';
+import {KeplerMapContainer, KeplerPlotContainer} from '@kepler.gl/sqlrooms';
 
 export const KeplerMapArtifactPanel: RoomPanelComponent = ({meta, panelId}) => {
   const mapId = (meta?.artifactId as string | undefined) ?? panelId;

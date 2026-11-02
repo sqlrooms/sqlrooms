@@ -21,6 +21,14 @@ overrides:
   '@luma.gl/shadertools': 9.3.3
   '@luma.gl/webgl': 9.3.3
   '@duckdb/duckdb-wasm': 1.32.0
+  # @kepler.gl/sqlrooms pins published @sqlrooms/* versions; link the workspace
+  # packages instead so the kepler example shares a single room store.
+  '@kepler.gl/sqlrooms>@sqlrooms/duckdb-core': workspace:*
+  '@kepler.gl/sqlrooms>@sqlrooms/room-shell': workspace:*
+  '@kepler.gl/sqlrooms>@sqlrooms/s3-browser': workspace:*
+  '@kepler.gl/sqlrooms>@sqlrooms/ui': workspace:*
+  # Its published types use z.ZodPreprocess (zod >=4.5) despite declaring ^4.1.8.
+  '@kepler.gl/sqlrooms>zod': 4.5.4
   '@loaders.gl/wms': 4.4.2
   '@loaders.gl/xml': 4.4.2
   '@sigstore/core@<=3.2.0': 3.2.1
@@ -64,6 +72,10 @@ overrides:
   ws@>=8.0.0 <8.20.1: 8.21.0
   zod: 4.1.13
 packageExtensions:
+  # Basemaps exposes style-spec types but declares it only as a devDependency.
+  '@protomaps/basemaps@5.7.2':
+    dependencies:
+      '@maplibre/maplibre-gl-style-spec': ^24.8.1
   # Kepler table imports this peer at runtime but does not declare it.
   '@kepler.gl/table@3.3.0-alpha.0':
     dependencies:

@@ -3,7 +3,7 @@ import {
   KeplerImageExport,
   KeplerProvider,
   useKeplerStateActions,
-} from '@sqlrooms/kepler';
+} from '@kepler.gl/sqlrooms';
 import {
   Button,
   Dialog,
