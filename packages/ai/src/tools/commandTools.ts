@@ -71,6 +71,12 @@ export const SearchCommandsToolParameters = z.object({
   riskLevel: CommandRiskLevelSchema.optional().describe(
     'Optional risk-level filter.',
   ),
+  readOnly: z
+    .boolean()
+    .optional()
+    .describe(
+      'Optional ranking hint. Set true when you only need to read or inspect state, so relevant read-only commands rank first. Omit otherwise.',
+    ),
   includeInputSchema: z
     .boolean()
     .optional()
@@ -656,7 +662,6 @@ function rankCommandDescriptors(
   const tokens = tokenizeSearchText(query);
   const hintTokens = tokenizeSearchText(hints.join(' '));
   const hasSearchTerms = Boolean(query || hints.length > 0);
-  const preferReadOnly = isReadCommandSearch(params);
 
   return (
     descriptors
@@ -678,7 +683,7 @@ function rankCommandDescriptors(
         score:
           score +
           (query ? scoreCommandDescriptor(descriptor, '', hintTokens) : 0) +
-          (preferReadOnly && descriptor.readOnly ? 200 : 0) +
+          (matchesReadOnlyHint(descriptor, params) ? 200 : 0) +
           (params.riskLevel ? 20 : 0) +
           (descriptor.enabled ? 10 : 0) +
           (descriptor.visible ? 5 : 0),
@@ -687,25 +692,11 @@ function rankCommandDescriptors(
   );
 }
 
-function isReadCommandSearch(params: SearchCommandsToolParameters): boolean {
-  const tokens = tokenizeSearchText(params.action?.trim() || params.query);
-  const readActions = ['get', 'read', 'list', 'show', 'inspect'];
-  const writeActions = [
-    'create',
-    'add',
-    'update',
-    'edit',
-    'rename',
-    'remove',
-    'delete',
-    'insert',
-    'append',
-    'move',
-  ];
-  return (
-    tokens.some((token) => readActions.includes(token)) &&
-    !tokens.some((token) => writeActions.includes(token))
-  );
+function matchesReadOnlyHint(
+  descriptor: RoomCommandDescriptor,
+  params: SearchCommandsToolParameters,
+): boolean {
+  return params.readOnly === true && descriptor.readOnly;
 }
 
 function scoreCommandDescriptor(
@@ -843,7 +834,7 @@ function createCommandMatchReason(
   if (params.riskLevel && descriptor.riskLevel === params.riskLevel) {
     matches.push(`risk ${params.riskLevel}`);
   }
-  if (descriptor.readOnly && isReadCommandSearch(params)) {
+  if (matchesReadOnlyHint(descriptor, params)) {
     matches.push('read-only command');
   }
   if (descriptor.enabled) {

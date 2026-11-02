@@ -1,4 +1,5 @@
 import {jest} from '@jest/globals';
+import type {CommandToolSearchDescriptor} from '../src/tools/commandTools';
 
 const invokeCommandWithPolicy = jest.fn(
   (
@@ -285,9 +286,9 @@ describe('command tools', () => {
   });
 
   it.each([
-    {query: 'get map block', resourceType: 'block-document', action: 'get'},
-    {query: 'read map'},
-    {query: 'map get'},
+    {query: 'get map block', resourceType: 'block-document', readOnly: true},
+    {query: 'read map', readOnly: true},
+    {query: 'map get', readOnly: true},
   ])(
     'ranks reading the document ahead of map mutations for %j',
     async (params) => {
@@ -313,7 +314,7 @@ describe('command tools', () => {
       SearchCommandsToolParameters.parse({
         query: 'list blocks in document',
         resourceType: 'block-document',
-        action: 'list',
+        readOnly: true,
       }),
     );
 
@@ -327,24 +328,38 @@ describe('command tools', () => {
     const result = await (tools.search_commands as any).execute(
       SearchCommandsToolParameters.parse({
         query: 'block-document.add-map-block',
-        action: 'get',
+        readOnly: true,
       }),
     );
 
     expect(result.commands[0].id).toBe('block-document.add-map-block');
   });
 
-  it('keeps map authoring discoverable with an explicit write action', async () => {
-    const tools = createCommandState(jest.fn(), documentCommandDescriptors);
-    const result = await (tools.search_commands as any).execute(
-      SearchCommandsToolParameters.parse({
-        query: 'get map block',
-        action: 'add',
-      }),
-    );
+  it.each([
+    {query: 'get map block'},
+    {query: 'get map block', action: 'get'},
+    {query: 'list blocks in document', action: 'list'},
+  ])(
+    'does not infer a read-only preference from verbs in %j',
+    async (params) => {
+      const tools = createCommandState(jest.fn(), documentCommandDescriptors);
+      const result = await (tools.search_commands as any).execute(
+        SearchCommandsToolParameters.parse(params),
+      );
+      const hinted = await (tools.search_commands as any).execute(
+        SearchCommandsToolParameters.parse({...params, readOnly: true}),
+      );
+      const scoreOf = (commands: CommandToolSearchDescriptor[], id: string) =>
+        commands.find((command) => command.id === id)?.score ?? 0;
 
-    expect(result.commands[0].id).toBe('block-document.add-map-block');
-  });
+      for (const command of result.commands) {
+        expect(command.matchReason).not.toContain('read-only command');
+      }
+      expect(scoreOf(hinted.commands, 'block-document.get')).toBe(
+        scoreOf(result.commands, 'block-document.get') + 200,
+      );
+    },
+  );
 
   it('searches commands by intent with deterministic ranking', async () => {
     const tools = createCommandState(jest.fn(), commandDescriptors);
