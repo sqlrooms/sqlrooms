@@ -33,7 +33,10 @@ import {
   stripLayerExtensionProps,
 } from './layerConfig';
 import {rewriteGeoArrowAccessors} from './rewriteGeoArrowAccessors';
-import {summarizeTripTimestamps} from './tripTimestamps';
+import {
+  normalizeTripTimestamp,
+  summarizeTripTimestamps,
+} from './tripTimestamps';
 import {isBindableGeoArrowFieldIdentifier} from './compileGeoArrowAccessor';
 import {
   compileLinearScaleAccessor,
@@ -550,20 +553,26 @@ export function createDeckJsonConfiguration(
         }
 
         // For TripsLayer: compute max timestamp for animation and set defaults.
-        // Epoch columns are rebased here and again when the GPU buffer is
-        // filled, using the same rule, so the playhead and the vertices match.
+        // Authored times use the input units. Convert them once; playback and
+        // cached GPU buffers then share the normalized timeline.
         if (layerName === 'GeoArrowTripsLayer' || layerName === 'TripsLayer') {
           const tsVector = boundProps.getTimestamps as arrow.Vector | undefined;
           const summary = tsVector ? summarizeTripTimestamps(tsVector) : null;
-          if (summary && summary.max > 0) {
-            rewritten._tripsMaxTimestamp = summary.max;
-            if (!rewritten.trailLength) {
+          if (summary) {
+            if (summary.max > 0) {
+              rewritten._tripsMaxTimestamp = summary.max;
+            }
+            if (typeof rewritten.trailLength === 'number') {
+              rewritten.trailLength /= summary.divisor;
+            } else if (summary.max > 0) {
               rewritten.trailLength = summary.max;
             }
-            if (
-              rewritten.currentTime === undefined ||
-              rewritten.currentTime === 0
-            ) {
+            if (typeof rewritten.currentTime === 'number') {
+              rewritten.currentTime = normalizeTripTimestamp(
+                rewritten.currentTime,
+                summary,
+              );
+            } else if (summary.max > 0) {
               rewritten.currentTime = summary.max;
             }
           }

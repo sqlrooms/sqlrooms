@@ -1,10 +1,7 @@
 import {CompositeLayer, type Layer, type LayersList} from '@deck.gl/core';
 import {TripsLayer} from '@deck.gl/geo-layers';
 import * as arrow from 'apache-arrow';
-import {
-  normalizeTripTimestampRange,
-  summarizeTripTimestamps,
-} from '../tripTimestamps';
+import {getNormalizedTripTimestampChunk} from '../tripTimestamps';
 
 type TypedArray =
   | Uint8Array
@@ -89,11 +86,6 @@ export class DeckTripsLayer extends CompositeLayer<{
 
     if (!getPath || !getTimestamps) return null;
 
-    const timestampPlan = summarizeTripTimestamps(getTimestamps) ?? {
-      origin: 0,
-      divisor: 1,
-      max: 0,
-    };
     const layers: TripsLayer[] = [];
     const numChunks = getPath.data.length;
 
@@ -135,13 +127,7 @@ export class DeckTripsLayer extends CompositeLayer<{
       // TripsLayer's timestamps attribute does NOT have doublePrecision, so
       // luma.gl's type resolver rejects Float64Array. Timestamps MUST be Float32,
       // and epoch values must be rebased or every vertex collapses to one float.
-      const tsStart = Number(tsData.valueOffsets[0] ?? 0);
-      const tsValues = normalizeTripTimestampRange(
-        tsChild,
-        tsStart,
-        numVertices,
-        timestampPlan,
-      );
+      const tsValues = getNormalizedTripTimestampChunk(getTimestamps, chunkIdx);
 
       const {_tripsMaxTimestamp: _unused, ...restProps} = otherProps;
       void _unused;

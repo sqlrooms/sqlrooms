@@ -11,10 +11,15 @@ export type TripTimestampNormalization = {
   max: number;
 };
 
+// Prepared Arrow vectors are immutable inputs. Weak keys let replacement
+// datasets release both the summary and the GPU buffers cached for playback.
+const summaries = new WeakMap<Vector, TripTimestampNormalization | null>();
+const normalizedChunks = new WeakMap<Vector, Float32Array[]>();
+
 /**
- * Values at or above this are epoch-scale (unix seconds and up). The animation
- * clock starts at 0, so leaving them absolute means the playhead never reaches
- * the data.
+ * Numeric magnitudes at or above this are epoch-scale (unix seconds and up).
+ * The animation clock starts at 0, so leaving them absolute means the playhead
+ * never reaches the data.
  */
 const EPOCH_REBASE_MIN = 1e8;
 
@@ -30,6 +35,7 @@ const EPOCH_MICROSECOND_ABS = 1e14;
  * stored.
  */
 export function readTripTimestampValue(child: Data, index: number): number {
+  if (!child.getValid(index)) return NaN;
   const raw = child.values?.[index];
   if (typeof raw === 'bigint') {
     return timestampToMilliseconds(child, Number(raw));
@@ -59,12 +65,14 @@ function timestampToMilliseconds(child: Data, value: number): number {
 export function planTripTimestampNormalization(
   min: number,
   max: number,
+  isTimestamp = false,
 ): TripTimestampNormalization | null {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
   const maxAbs = Math.max(Math.abs(min), Math.abs(max));
-  const origin = min >= EPOCH_REBASE_MIN ? min : 0;
-  const divisor =
-    maxAbs >= EPOCH_MICROSECOND_ABS
+  const origin = isTimestamp || Math.abs(min) >= EPOCH_REBASE_MIN ? min : 0;
+  const divisor = isTimestamp
+    ? 1000 // Typed timestamps were read as milliseconds, regardless of date.
+    : maxAbs >= EPOCH_MICROSECOND_ABS
       ? 1_000_000
       : maxAbs >= EPOCH_MILLISECOND_ABS
         ? 1000
@@ -72,6 +80,7 @@ export function planTripTimestampNormalization(
   return {origin, divisor, max: (max - origin) / divisor};
 }
 
+/** Normalize a playhead or vertex value; invalid vertices use the range start. */
 export function normalizeTripTimestamp(
   value: number,
   plan: TripTimestampNormalization,
@@ -87,40 +96,60 @@ export function normalizeTripTimestamp(
 export function summarizeTripTimestamps(
   vector: Vector,
 ): TripTimestampNormalization | null {
+  const cached = summaries.get(vector);
+  if (cached !== undefined) return cached;
   let min = Infinity;
   let max = -Infinity;
+  let isTimestamp = false;
   for (const chunk of vector.data) {
     const child = chunk.children[0];
     const offsets = chunk.valueOffsets;
     if (!child || !offsets || offsets.length < 2) continue;
-    // The offset buffer is often longer than length + 1. The valid span is
-    // offsets[0] .. offsets[length].
-    const start = Number(offsets[0] ?? 0);
-    const end = Number(offsets[chunk.length] ?? start);
-    for (let index = start; index < end; index++) {
-      const value = readTripTimestampValue(child, index);
-      if (!Number.isFinite(value)) continue;
-      if (value < min) min = value;
-      if (value > max) max = value;
+    isTimestamp ||= DataType.isTimestamp(child.type);
+    for (let row = 0; row < chunk.length; row++) {
+      if (!chunk.getValid(row)) continue;
+      for (let index = offsets[row]!; index < offsets[row + 1]!; index++) {
+        const value = readTripTimestampValue(child, index);
+        if (!Number.isFinite(value)) continue;
+        if (value < min) min = value;
+        if (value > max) max = value;
+      }
     }
   }
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return null;
-  return planTripTimestampNormalization(min, max);
+  const summary = planTripTimestampNormalization(min, max, isTimestamp);
+  summaries.set(vector, summary);
+  return summary;
 }
 
-/** Fill the Float32 timestamp buffer TripsLayer uploads for one chunk. */
-export function normalizeTripTimestampRange(
-  child: Data,
-  start: number,
-  count: number,
-  plan: TripTimestampNormalization,
+/** Return a cached Float32 buffer for a timestamp chunk, preserving null slots. */
+export function getNormalizedTripTimestampChunk(
+  vector: Vector,
+  chunkIndex: number,
 ): Float32Array {
-  const values = new Float32Array(count);
-  for (let index = 0; index < count; index++) {
-    values[index] = normalizeTripTimestamp(
-      readTripTimestampValue(child, start + index),
-      plan,
-    );
+  let chunks = normalizedChunks.get(vector);
+  if (!chunks) {
+    chunks = [];
+    normalizedChunks.set(vector, chunks);
   }
+  const cached = chunks[chunkIndex];
+  if (cached) return cached;
+  const chunk = vector.data[chunkIndex]!;
+  const offsets = chunk.valueOffsets;
+  const start = offsets[0] ?? 0;
+  const values = new Float32Array((offsets[chunk.length] ?? start) - start);
+  const plan = summarizeTripTimestamps(vector);
+  const child = chunk.children[0];
+  if (plan && child) {
+    for (let row = 0; row < chunk.length; row++) {
+      if (!chunk.getValid(row)) continue;
+      for (let index = offsets[row]!; index < offsets[row + 1]!; index++) {
+        values[index - start] = normalizeTripTimestamp(
+          readTripTimestampValue(child, index),
+          plan,
+        );
+      }
+    }
+  }
+  chunks[chunkIndex] = values;
   return values;
 }
