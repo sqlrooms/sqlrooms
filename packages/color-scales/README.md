@@ -302,3 +302,16 @@ scheme lookup, and legend modeling, while consumers own data extraction and
 runtime integration. That lets SQLRooms stay compatible with D3 chromatic
 scheme naming and Mosaic legend usage patterns without coupling this package to
 either runtime directly.
+
+## Tailwind CSS
+
+Import this package’s source entry in your app’s main CSS, alongside the SQLRooms
+theme preset. It includes sources from transitive SQLRooms dependencies under pnpm.
+
+```css
+@import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/color-scales/tailwind.css';
+```
+
+See the [Tailwind setup guide](https://sqlrooms.org/getting-started#configure-tailwind-css)
+for package selection, workspace development, and migration details.

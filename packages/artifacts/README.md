@@ -314,3 +314,16 @@ Artifact-owned AI sessions attach to artifact shells. If a stateful block is
 wrapped as a top-level artifact, use that artifact id. Stateful blocks hosted
 directly inside a block document should use the containing artifact's chat
 unless the host app intentionally introduces a block-scoped chat model.
+
+## Tailwind CSS
+
+Import this package’s source entry in your app’s main CSS, alongside the SQLRooms
+theme preset. It includes sources from transitive SQLRooms dependencies under pnpm.
+
+```css
+@import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/artifacts/tailwind.css';
+```
+
+See the [Tailwind setup guide](https://sqlrooms.org/getting-started#configure-tailwind-css)
+for package selection, workspace development, and migration details.

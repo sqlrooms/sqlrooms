@@ -1,11 +1,10 @@
 @import 'tailwindcss';
 
 @import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/room-shell/tailwind.css';
 
 @source '../index.html';
 @source './**/*.{ts,tsx}';
-@source '../../../packages/*/src/**/*.{ts,tsx}';
-@source '../node_modules/@sqlrooms/*/dist/';
 
 #root {
   width: 100vw;
