@@ -4,6 +4,9 @@ Use `uv` from `python/`. The maintained distributions are `sqlrooms` (CLI, UI,
 ASGI DuckDB runtime and agent connector) and the independent `sqlrooms-rag`.
 The standalone `sqlrooms-server` distribution is retired from source/builds.
 
+Python 3.11+ is required by the DuckDB 2.0 workspace. See the
+[engine, file compatibility and rollback policy](sqlrooms/DUCKDB_COMPATIBILITY.md).
+
 ```sh
 uv sync --package sqlrooms
 uv run --package sqlrooms sqlrooms ./workspace.duckdb

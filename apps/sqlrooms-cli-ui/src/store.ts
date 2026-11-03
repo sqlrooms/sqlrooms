@@ -34,6 +34,7 @@ import {
   createDefaultLoadTableSchemasFilter,
   defaultLoadSchemaCatalogFilter,
   escapeVal,
+  isReadOnlySqlSelect,
   makeQualifiedTableName,
   QualifiedTableName,
   quoteParsedRawSqlTableReference,
@@ -282,18 +283,7 @@ async function assertSingleReadonlyPythonSql(query: string) {
     );
   }
 
-  const statements =
-    parsedQuery &&
-    typeof parsedQuery === 'object' &&
-    'statements' in parsedQuery &&
-    Array.isArray(parsedQuery.statements)
-      ? parsedQuery.statements
-      : [];
-  const nodeType = String(
-    (statements[0] as {node?: {type?: unknown}} | undefined)?.node?.type ?? '',
-  ).toLowerCase();
-
-  if (statements.length !== 1 || !nodeType.includes('select')) {
+  if (!isReadOnlySqlSelect(parsedQuery)) {
     throw new Error(
       'Python SQL bridge only allows a single readonly SELECT query.',
     );

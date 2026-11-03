@@ -1,4 +1,5 @@
 import logging
+import json
 import random
 from hashlib import sha256
 from functools import partial
@@ -7,6 +8,45 @@ import pyarrow as pa
 import time
 
 logger = logging.getLogger(__name__)
+
+
+def assert_select_only(con, sql):
+    """Parse without binding sources; reject writes nested inside SELECT CTEs."""
+    parsed = json.loads(
+        con.execute("SELECT json_serialize_sql(?)", [sql]).fetchall()[0][0]
+    )
+    statements = parsed.get("statements", [])
+    if (
+        parsed.get("error")
+        or len(statements) != 1
+        or statements[0]["node"]["type"]
+        not in {"SELECT_NODE", "SET_OPERATION_NODE", "RECURSIVE_CTE_NODE", "CTE_NODE"}
+    ):
+        raise ValueError("Only one SELECT statement is allowed")
+
+    def visit(value):
+        if isinstance(value, dict):
+            kind = value.get("type", "")
+            if (
+                isinstance(kind, str)
+                and kind.endswith("_NODE")
+                and kind
+                not in {
+                    "SELECT_NODE",
+                    "SET_OPERATION_NODE",
+                    "RECURSIVE_CTE_NODE",
+                    "CTE_NODE",
+                }
+            ):
+                raise ValueError("Only read-only SELECT query nodes are allowed")
+            for child in value.values():
+                visit(child)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child)
+
+    visit(statements)
+
 
 # Transaction conflict retry configuration
 MAX_CONFLICT_RETRIES = 5
@@ -74,6 +114,7 @@ def get_arrow(con, sql):
                 con.execute("COMMIT")
             return None
         arrow_result = result.to_arrow_table()
+        _check_arrow_types(arrow_result.schema)
         if started_transaction:
             con.execute("COMMIT")
         return arrow_result
@@ -85,6 +126,29 @@ def get_arrow(con, sql):
                 pass
         logger.error(f"Failed to convert result to Arrow: {str(e)}")
         raise
+
+
+def _check_arrow_types(fields):
+    """Reject VARIANT storage bytes until the browser Arrow client can decode them."""
+    for field in fields:
+        if (field.metadata or {}).get(
+            b"ARROW:extension:name"
+        ) == b"arrow.parquet.variant":
+            raise ValueError(
+                "VARIANT results are not supported by the browser Arrow client. "
+                "Cast VARIANT values to JSON or a concrete SQL type in the query."
+            )
+        data_type = field.type
+        if pa.types.is_struct(data_type) or pa.types.is_union(data_type):
+            _check_arrow_types(data_type)
+        elif (
+            pa.types.is_list(data_type)
+            or pa.types.is_large_list(data_type)
+            or pa.types.is_fixed_size_list(data_type)
+        ):
+            _check_arrow_types([data_type.value_field])
+        elif pa.types.is_map(data_type):
+            _check_arrow_types([data_type.key_field, data_type.item_field])
 
 
 def arrow_to_bytes(table):

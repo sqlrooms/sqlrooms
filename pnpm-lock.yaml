@@ -2950,6 +2950,9 @@ importers:
       '@sqlrooms/blocks':
         specifier: workspace:*
         version: link:../blocks
+      '@sqlrooms/duckdb-core':
+        specifier: workspace:*
+        version: link:../duckdb-core
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../room-store
@@ -4044,6 +4047,9 @@ importers:
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
+      apache-arrow:
+        specifier: 17.0.0
+        version: 17.0.0
       jest:
         specifier: ^30.3.0
         version: 30.4.2(@types/node@24.12.4)

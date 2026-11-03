@@ -87,7 +87,12 @@ class DuckDBRuntime(MetadataStorage):
 
         def initialize():
             self.storage_root.mkdir(parents=True, exist_ok=True)
-            self.connection = duckdb.connect(self.database_path)
+            # New workspaces remain readable by the pinned WASM 1.4 engine.
+            # Existing files retain their storage version; this is not a downgrade.
+            self.connection = duckdb.connect(
+                self.database_path,
+                config={"storage_compatibility_version": "v1.4.0"},
+            )
             try:
                 for spec in self.extensions:
                     name, repo = (spec.split("@", 1) + [None])[:2]

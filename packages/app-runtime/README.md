@@ -9,6 +9,12 @@ startup.
 
 ## Runtime Scope
 
+The host's `db.sqlSelectToJson` must return the full DuckDB
+`json_serialize_sql` result, including `statements`. The built-in
+`executeReadonlyQuery` rejects nested data-modifying CTEs and unknown query-node
+kinds before host admission or execution. The optional host authorization hook
+still owns function, macro, and external-source policy.
+
 The first supported app surface is the `html-app` stateful block. The same
 bridge contract can also be reused by artifact shells and WebContainer previews,
 but the block remains the durable v1 state model.

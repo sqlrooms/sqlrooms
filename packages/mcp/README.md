@@ -5,6 +5,15 @@
 Transport-neutral room capabilities and the internal browser RPC protocol used
 by SQLRooms MCP hosts.
 
+`inspectLocalSelect` rejects nested data-modifying CTEs and unknown query-node
+kinds before catalog reads or approval. It checks every component of DuckDB 2.0
+nested schema paths for internal namespaces. Ordinary-read classification visits
+both legacy `children` and structured `arguments` expressions.
+
+Run the released-parser contract tests with `DUCKDB_TEST_PYTHON` pointing to an
+isolated Python interpreter containing DuckDB, for example:
+`DUCKDB_TEST_PYTHON=/path/to/python pnpm test --runInBand localSqlPolicy.duckdb`.
+
 The core runtime owns catalog ordering, JSON Schema validation, invocation
 policy, cancellation, timeouts, and JSON-serializable results. It does not
 depend on React, browser globals, FastAPI, Electron, or an AI SDK.

@@ -9,6 +9,11 @@ This package combines:
 
 Use this package when you want AI chat + tool execution in a SQLRooms app without wiring low-level pieces manually.
 
+`createQueryTool` defaults to `readOnly: true` and validates the entire serialized
+query tree, including DuckDB 2.0 data-modifying CTEs. Set `readOnly: false` only
+when the tool should have write authority. Structural SELECT validation does not
+restrict side effects or external access through functions, macros, or views.
+
 `createDefaultAiInstructions` includes a hybrid DuckDB table context: small
 current-database `main` catalogs include full schemas for every table, while
 larger catalogs include a few full schemas, additional table names with row

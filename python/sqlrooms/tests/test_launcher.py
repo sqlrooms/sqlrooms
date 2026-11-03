@@ -769,7 +769,7 @@ def test_cars_fixture_upload_imports_from_project_uploads_dir(server, tmp_path):
             "CREATE TABLE cars AS SELECT * FROM read_csv_auto(?)",
             [str(uploaded_path)],
         )
-        row_count = con.sql("SELECT count(*) FROM cars").fetchone()[0]
+        row_count = con.execute("SELECT count(*) FROM cars").fetchall()[0][0]
         columns = [row[1] for row in con.sql("PRAGMA table_info('cars')").fetchall()]
 
     assert row_count == 4
@@ -787,6 +787,46 @@ def test_project_query_blocks_internal_metadata_namespace(server):
 
     assert response.status_code == 403
     assert response.json()["error"] == "Access to internal schema __sqlrooms is denied"
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "DELETE FROM sales RETURNING *",
+        "UPDATE sales SET value=0 RETURNING *",
+        "INSERT INTO sales VALUES (7) RETURNING *",
+    ],
+)
+def test_project_query_rejects_data_modifying_cte_without_writes(server, mutation):
+    server.runtime.extensions = []
+    with authorized_client(server) as client:
+        server.runtime.connection.execute("CREATE TABLE sales AS SELECT 42 AS value")
+        response = client.post(
+            "/api/project/query",
+            json={
+                "sql": f"WITH changed AS ({mutation}) SELECT 1",
+            },
+        )
+        assert response.status_code == 400
+        assert server.runtime.connection.execute("SELECT * FROM sales").fetchall() == [
+            (42,)
+        ]
+        assert (
+            client.post(
+                "/api/project/query", json={"sql": "SELECT * FROM sales"}
+            ).status_code
+            == 200
+        )
+
+
+def test_project_query_accepts_read_only_set_operations(server):
+    server.runtime.extensions = []
+    with authorized_client(server) as client:
+        response = client.post(
+            "/api/project/query", json={"sql": "SELECT 1 AS value UNION ALL SELECT 2"}
+        )
+        assert response.status_code == 200
+        assert response.json()["rows"] == [{"value": 1}, {"value": 2}]
 
 
 def test_api_upload_allows_files_larger_than_previous_cap(server, tmp_path):

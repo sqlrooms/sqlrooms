@@ -9,6 +9,9 @@ uvx sqlrooms ./sqlrooms.db
 ```
 
 The `sqlrooms` distribution includes the CLI, UI, and reusable Python runtime.
+It requires Python **3.11+** and DuckDB **2.0.x**. Read the
+[DuckDB compatibility and rollback policy](DUCKDB_COMPATIBILITY.md) before
+upgrading existing workspaces or sharing files with WASM/older readers.
 See [migration instructions](MIGRATION.md) before upgrading an environment that
 contains the former `sqlrooms-server` distribution.
 

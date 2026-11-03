@@ -69,6 +69,7 @@ export {
 } from './useSql';
 
 // Re-export from @sqlrooms/duckdb-core
+export {isReadOnlySqlSelect} from '@sqlrooms/duckdb-core';
 export {
   arrowTableToJson,
   columnTypeCategoryToSelectorType,

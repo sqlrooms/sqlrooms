@@ -1,5 +1,6 @@
 import {
   arrowTableToJson,
+  isReadOnlySqlSelect,
   parseQualifiedSqlIdentifier,
   type QualifiedTableName,
   type DuckDbSliceState,
@@ -22,16 +23,12 @@ export async function inspectLocalSelect(
   namespace: string,
 ): Promise<unknown[]> {
   const parsed = await db.sqlSelectToJson(sql.trim());
-  if (
-    parsed.error ||
-    parsed.statements.length !== 1 ||
-    parsed.statements[0]?.node.type !== 'SELECT_NODE'
-  ) {
+  if (parsed.error || !isReadOnlySqlSelect(parsed)) {
     throw new LocalSqlError(
       'query_not_readonly',
       parsed.error
         ? parsed.error_message
-        : 'Only one SELECT statement is allowed.',
+        : 'Only one SELECT statement with read-only query nodes is allowed.',
     );
   }
   const references: Record<string, unknown>[] = [];
@@ -39,9 +36,12 @@ export async function inspectLocalSelect(
     if (node.type === 'BASE_TABLE') references.push(node);
     if (
       node.type === 'BASE_TABLE' &&
-      [node.catalog_name, node.schema_name, node.table_name].some((name) =>
-        isInternal(name, namespace),
-      )
+      [
+        node.catalog_name,
+        node.schema_name,
+        node.table_name,
+        ...qualifiedPath(node),
+      ].some((name) => isInternal(name, namespace))
     ) {
       throw new LocalSqlError(
         'query_internal_namespace',
@@ -131,6 +131,11 @@ function isInternal(value: unknown, namespace: string) {
   );
 }
 
+function qualifiedPath(node: Record<string, unknown>): unknown[] {
+  const name = node.qualified_name as {path?: unknown} | undefined;
+  return Array.isArray(name?.path) ? name.path : [];
+}
+
 function visitSql(
   value: unknown,
   visit: (node: Record<string, unknown>) => void,
@@ -167,7 +172,12 @@ export async function needsLocalReadApproval(
     if (node.type === 'TABLE_FUNCTION') uncertain = true;
     if (node.class === 'FUNCTION' || node.class === 'WINDOW') {
       const name = String(node.function_name).toLowerCase();
-      if (!ORDINARY_FUNCTIONS.has(name) || node.schema || node.catalog)
+      if (
+        !ORDINARY_FUNCTIONS.has(name) ||
+        node.schema ||
+        node.catalog ||
+        qualifiedPath(node).length > 1
+      )
         uncertain = true;
       functions.add(name);
     }

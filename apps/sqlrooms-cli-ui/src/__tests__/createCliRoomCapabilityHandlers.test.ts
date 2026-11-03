@@ -1,5 +1,6 @@
 import {beforeEach, describe, expect, jest, test} from '@jest/globals';
 import type {RoomCommandDescriptor} from '@sqlrooms/room-shell';
+import {isReadOnlySqlSelect} from '../../../../packages/duckdb-core/src/sqlSelect';
 
 const query = jest.fn(
   async (_sql: string, _options?: {signal?: AbortSignal}) => {
@@ -81,6 +82,7 @@ const state = {
 };
 
 jest.unstable_mockModule('@sqlrooms/duckdb', () => ({
+  isReadOnlySqlSelect,
   loadSchemaCatalog: jest.fn(async () => []),
   parseQualifiedSqlIdentifier: (table: string) => ({table}),
   arrowTableToJson: (result: {rows: unknown[]}) => [...result.rows],
