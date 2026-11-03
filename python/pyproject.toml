@@ -2,6 +2,7 @@
 members = [
   "sqlrooms",
   "sqlrooms-rag",
+  "sqlrooms-flowmap",
 ]
 
 [tool.uv]

@@ -1,0 +1,5 @@
+@import 'tailwindcss';
+@import '@sqlrooms/ui/tailwind-preset.css';
+
+@source '../../../packages/*/src/**/*.{ts,tsx}';
+@source '../node_modules/@sqlrooms/*/dist/';
