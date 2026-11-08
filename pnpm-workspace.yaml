@@ -43,7 +43,7 @@ overrides:
   js-yaml@>=4.0.0 <4.3.1: 4.3.1
   linkify-it@<=5.0.1: 5.0.2
   lodash: 4.18.1
-  markdown-it@<=14.1.1: 14.3.0
+  markdown-it@<=14.1.1: 14.3.3
   monaco-editor: 0.55.1
   next@>=16.0.0 <16.2.11: 16.3.0
   node-fetch: 2.7.0
