@@ -46,7 +46,7 @@
     "@webcontainer/api": "^1.6.1",
     "ai": "^6.0.159",
     "html-to-image": "^1.11.13",
-    "lucide-react": "^0.555.0",
+    "lucide-react": "^0.577.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zod": "^4.1.8",
