@@ -58,7 +58,7 @@
     "ai": "^6.0.177",
     "immer": "^11.0.1",
     "lucide-react": "^0.555.0",
-    "maplibre-gl": "^5.12.0",
+    "maplibre-gl": "^6.0.0",
     "react-map-gl": "^8.1.1",
     "zod": "^4.1.8",
     "zustand": "^5.0.8"
