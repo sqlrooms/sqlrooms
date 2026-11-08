@@ -9,7 +9,7 @@ engineStrict: true
 overrides:
   # First same-major releases that fix provider-utils SSRF (CVE-2026-8768).
   # GHSA-866g-f22w-33x8 remains accepted on 3.x until an upstream backport exists.
-  '@ai-sdk/provider-utils@>=3.0.0 <4.0.0': 3.0.26
+  '@ai-sdk/provider-utils@>=3.0.0 <4.0.0': 4.0.33
   '@ai-sdk/provider-utils@>=4.0.0 <5.0.0': 4.0.29
   '@babel/core@<=7.29.0': 7.29.7
   # Keep the complete luma.gl rendering stack aligned with Kepler and Deck.
