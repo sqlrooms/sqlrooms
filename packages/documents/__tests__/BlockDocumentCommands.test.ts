@@ -492,6 +492,15 @@ describe('block document commands', () => {
     expect(descriptor?.description).toContain('Vega-Lite');
     expect(descriptor?.inputDescription).toContain('vegaLiteSpec');
     expect(JSON.stringify(descriptor?.inputSchema)).toContain('vegaLiteSpec');
+
+    // `toPortableSchema` converts output-mode, where a Zod default marks the
+    // key required. The portable schema is what command discovery hands MCP
+    // clients, so `tableName` must not land in `required`.
+    const inputSchema = descriptor?.inputSchema as
+      | {properties?: Record<string, unknown>; required?: string[]}
+      | undefined;
+    expect(inputSchema?.properties).toHaveProperty('tableName');
+    expect(inputSchema?.required ?? []).not.toContain('tableName');
   });
 
   it('creates hosted stateful blocks', async () => {

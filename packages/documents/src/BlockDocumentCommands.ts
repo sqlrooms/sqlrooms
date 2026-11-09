@@ -202,12 +202,14 @@ function createBlockDocumentCreateChartBlockInput({
       .describe(
         'Optional natural-language objective this chart block should satisfy.',
       ),
+    // No `.default('')` here: `toPortableSchema` converts output-mode, where a
+    // default marks the key required, which is what command discovery shows
+    // MCP clients. Default it when the command runs instead.
     tableName: tableNameRequired
       ? z.string().describe('Mosaic table name to render.')
       : z
           .string()
           .optional()
-          .default('')
           .describe(
             'Table the chart renders from when its config carries no SQL of its own. Omit when the config carries its own SQL.',
           ),
@@ -798,7 +800,7 @@ export function createBlockDocumentCommands<
           artifactId,
           blockId = createBlockDocumentBlockId(),
           intent,
-          tableName,
+          tableName = '',
           config,
           selectionGroupId,
           caption,
