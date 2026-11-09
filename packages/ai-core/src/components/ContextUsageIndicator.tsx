@@ -122,6 +122,12 @@ export function estimateMessageTokens(msg: UIMessage): number {
 }
 
 type ContextUsageIndicatorProps = {
+  /**
+   * Explicit override for the window. Normally the window comes from the
+   * host's model registry, keyed by the current session's provider/model, so
+   * it follows model switches; use this only to measure against a window the
+   * registry cannot express.
+   */
   contextWindow?: number;
   modelProvider?: string;
   modelName?: string;
@@ -153,7 +159,7 @@ export function createConversationContinuationSeed(
 }
 
 export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
-  contextWindow = DEFAULT_CONTEXT_WINDOW,
+  contextWindow,
   modelProvider,
   modelName,
   usageDetails,
@@ -163,6 +169,25 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
     return sessions.find((session) => session.id === currentSessionId)
       ?.uiMessages as UIMessage[] | undefined;
   });
+  // Resolve the window inside the selector rather than after it: the window
+  // comes from the host's model registry, which can change without the
+  // session's model changing, so selecting the resolved scalar is what lets a
+  // registry update re-render the indicator. It follows `setAiModel` switches
+  // for the same reason, and every surface showing context usage resolves it
+  // the same way.
+  //
+  // The pair comes from `getSelectedModel`, not the stored session pair: the
+  // resolver may move a stale or unregistered stored model to one the next
+  // send will actually use, and measuring against the raw pair would then
+  // report a window that request never runs under.
+  const registeredContextWindow = useStoreWithAi((s) => {
+    const selection = s.ai.getSelectedModel();
+    return selection.model
+      ? s.ai.getModelContextWindow(selection.modelProvider, selection.model)
+      : undefined;
+  });
+  const effectiveContextWindow =
+    contextWindow ?? registeredContextWindow ?? DEFAULT_CONTEXT_WINDOW;
   const getFullInstructions = useStoreWithAi((s) => s.ai.getFullInstructions);
   const sendPrompt = useStoreWithAi((s) => s.ai.sendPrompt);
   const createSession = useStoreWithAi((s) => s.ai.createSession);
@@ -179,7 +204,10 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
   }, [uiMessages, getFullInstructions]);
 
   const totalTokens = contextTokens;
-  const percentage = Math.min((contextTokens / contextWindow) * 100, 100);
+  const percentage = Math.min(
+    (contextTokens / effectiveContextWindow) * 100,
+    100,
+  );
   const isClickable = percentage > USAGE_CRITICAL_THRESHOLD && !isSummarizing;
 
   const handleSummarizeAndContinue = useCallback(async () => {
@@ -250,7 +278,7 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
         `M ${center} ${center} m 0 ${-radius} a ${radius} ${radius} 0 1 1 0 ${2 * radius} a ${radius} ${radius} 0 1 1 0 ${-2 * radius} z`
       : `M ${center} ${center} L ${center} ${center - radius} A ${radius} ${radius} 0 ${sweep > Math.PI ? 1 : 0} 1 ${wedgeEndX} ${wedgeEndY} Z`;
 
-  const tooltipText = `${percentage.toFixed(1)}% · ${formatTokenCount(contextTokens)} / ${formatTokenCount(contextWindow)} context used${cumulativeTokens > contextTokens ? `\n${formatTokenCount(cumulativeTokens)} total tokens consumed` : ''}`;
+  const tooltipText = `${percentage.toFixed(1)}% · ${formatTokenCount(contextTokens)} / ${formatTokenCount(effectiveContextWindow)} context used${cumulativeTokens > contextTokens ? `\n${formatTokenCount(cumulativeTokens)} total tokens consumed` : ''}`;
   // The click target changes while summarizing — it aborts — so the label has
   // to follow it rather than still offering to start the summary.
   const fullTooltip = isSummarizing
