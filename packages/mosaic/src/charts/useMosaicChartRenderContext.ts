@@ -44,8 +44,7 @@ export function useMosaicChartRenderContext(
       return {
         type: 'error',
         error: new Error(
-          `Chart type "${config.chartType}" is not registered in this workspace. ` +
-            'Document charts render Vega-Lite; recreate a chart written with a Mosaic config as a Vega-Lite chart.',
+          `Chart type "${config.chartType}" is not registered in this workspace.`,
         ),
       };
     }

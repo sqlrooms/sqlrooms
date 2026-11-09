@@ -192,7 +192,10 @@ function createBlockDocumentCreateChartBlockInput({
 }: BlockDocumentChartCommandOptions = {}) {
   return z.object({
     artifactId: z.string().describe('Target block document artifact ID.'),
-    blockId: z.string().optional().describe('Optional explicit chart block ID.'),
+    blockId: z
+      .string()
+      .optional()
+      .describe('Optional explicit chart block ID.'),
     intent: z
       .string()
       .optional()
@@ -787,8 +790,7 @@ export function createBlockDocumentCommands<
       keywords: ['block document', 'chart', 'block', 'vgplot'],
       inputSchema: chartBlockInputSchema,
       inputDescription:
-        chartBlock.inputDescription ??
-        DEFAULT_CHART_BLOCK_INPUT_DESCRIPTION,
+        chartBlock.inputDescription ?? DEFAULT_CHART_BLOCK_INPUT_DESCRIPTION,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
