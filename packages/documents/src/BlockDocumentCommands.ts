@@ -64,6 +64,31 @@ export type BlockDocumentStatefulBlockCommandType<TRoomState> = {
 };
 
 /**
+ * Host-specific description of a document chart block's `config`, used by
+ * `block-document.create-chart-block` discovery.
+ *
+ * The block schema keeps `config` opaque because each host renders its own
+ * chart shape. The default describes the Mosaic `ChartConfig` this package's
+ * reference renderers use; a host that renders a different shape (e.g. the
+ * desktop's Vega-Lite `{vegaLiteSpec, sqlQuery}`) passes it here so agents are
+ * told the shape that will actually render.
+ */
+export type BlockDocumentChartCommandOptions = {
+  /** One-line command purpose shown by command discovery. */
+  commandDescription?: string;
+  /** Short input summary shown alongside the command. */
+  inputDescription?: string;
+  /** Description of the `config` payload in the command schema. */
+  configDescription?: string;
+  /**
+   * Whether callers must pass `tableName`. Defaults to true. A host whose chart
+   * config carries its own SQL sets this to false so the table is not a
+   * required binding.
+   */
+  tableNameRequired?: boolean;
+};
+
+/**
  * Configuration for a reusable block-document command family.
  *
  * `allowedBlockTypes` constrains generic block mutations. If it includes
@@ -76,6 +101,11 @@ export type CreateBlockDocumentCommandsOptions<
   commandGroup?: string;
   defaultTitle?: string;
   statefulBlockTypes?: BlockDocumentStatefulBlockCommandType<TRoomState>[];
+  /**
+   * Chart block `config` shape advertised to agents. Omit for the Mosaic
+   * `ChartConfig` default.
+   */
+  chartBlock?: BlockDocumentChartCommandOptions;
   /**
    * Top-level block kinds accepted by generic create, append, insert, and
    * update commands. Omit to accept every block kind.
@@ -149,44 +179,62 @@ const BlockDocumentMoveBlockInput = BlockDocumentBlockIdInput.extend({
   toIndex: z.number().int().describe('Destination top-level block index.'),
 });
 
-const BlockDocumentCreateChartBlockInput = z.object({
-  artifactId: z.string().describe('Target block document artifact ID.'),
-  blockId: z.string().optional().describe('Optional explicit chart block ID.'),
-  intent: z
-    .string()
-    .optional()
-    .describe(
-      'Optional natural-language objective this chart block should satisfy.',
-    ),
-  tableName: z.string().describe('Mosaic table name to render.'),
-  config: z
-    .unknown()
-    .transform((val) => {
-      // If agent passes config as JSON string, parse it
-      if (typeof val === 'string') {
-        try {
-          return JSON.parse(val);
-        } catch {
-          // If parsing fails, return as-is and let validation catch it
-          return val;
+const DEFAULT_CHART_BLOCK_COMMAND_DESCRIPTION =
+  'Create a standalone Mosaic/vgplot chart block';
+const DEFAULT_CHART_BLOCK_INPUT_DESCRIPTION =
+  'Block document artifact ID, tableName, ChartConfig, and optional selection group.';
+const DEFAULT_CHART_CONFIG_DESCRIPTION =
+  'Mosaic ChartConfig payload, for example {chartType:"histogram", settings:{field:"revenue"}} or {chartType:"count-plot", settings:{field:"category"}}.';
+
+function createBlockDocumentCreateChartBlockInput({
+  configDescription = DEFAULT_CHART_CONFIG_DESCRIPTION,
+  tableNameRequired = true,
+}: BlockDocumentChartCommandOptions = {}) {
+  return z.object({
+    artifactId: z.string().describe('Target block document artifact ID.'),
+    blockId: z.string().optional().describe('Optional explicit chart block ID.'),
+    intent: z
+      .string()
+      .optional()
+      .describe(
+        'Optional natural-language objective this chart block should satisfy.',
+      ),
+    tableName: tableNameRequired
+      ? z.string().describe('Mosaic table name to render.')
+      : z
+          .string()
+          .optional()
+          .default('')
+          .describe(
+            'Table the chart renders from when its config carries no SQL of its own. Omit when the config carries its own SQL.',
+          ),
+    config: z
+      .unknown()
+      .transform((val) => {
+        // If agent passes config as JSON string, parse it
+        if (typeof val === 'string') {
+          try {
+            return JSON.parse(val);
+          } catch {
+            // If parsing fails, return as-is and let validation catch it
+            return val;
+          }
         }
-      }
-      return val;
-    })
-    .describe(
-      'Mosaic ChartConfig payload, for example {chartType:"histogram", settings:{field:"revenue"}} or {chartType:"count-plot", settings:{field:"category"}}.',
-    ),
-  selectionGroupId: z
-    .string()
-    .optional()
-    .describe('Optional crossfilter group for linked chart blocks.'),
-  caption: z.string().optional().describe('Optional chart caption.'),
-  index: z
-    .number()
-    .int()
-    .optional()
-    .describe('Optional top-level insertion index. Defaults to append.'),
-});
+        return val;
+      })
+      .describe(configDescription),
+    selectionGroupId: z
+      .string()
+      .optional()
+      .describe('Optional crossfilter group for linked chart blocks.'),
+    caption: z.string().optional().describe('Optional chart caption.'),
+    index: z
+      .number()
+      .int()
+      .optional()
+      .describe('Optional top-level insertion index. Defaults to append.'),
+  });
+}
 
 const BlockDocumentCreateStatefulBlockInput = z.object({
   artifactId: z.string().describe('Target block document artifact ID.'),
@@ -311,6 +359,7 @@ export function createBlockDocumentCommands<
   commandGroup = 'Block Document',
   defaultTitle = 'Block Document',
   statefulBlockTypes = [],
+  chartBlock = {},
   allowedBlockTypes,
 }: CreateBlockDocumentCommandsOptions<TRoomState> = {}): RoomCommand<TRoomState>[] {
   const commandId = (suffix: BlockDocumentCommandSuffix) =>
@@ -328,6 +377,8 @@ export function createBlockDocumentCommands<
     allowedBlockTypeSet,
     statefulBlockTypeSet,
   );
+  const chartBlockInputSchema =
+    createBlockDocumentCreateChartBlockInput(chartBlock);
   const blocksInputSchema = constrainBlockInput(
     BlockDocumentBlocksInput,
     (input) => input.blocks,
@@ -729,12 +780,15 @@ export function createBlockDocumentCommands<
     'create-chart-block': {
       id: commandId('create-chart-block'),
       name: 'Create block document chart block',
-      description: 'Create a standalone Mosaic/vgplot chart block',
+      description:
+        chartBlock.commandDescription ??
+        DEFAULT_CHART_BLOCK_COMMAND_DESCRIPTION,
       group: commandGroup,
       keywords: ['block document', 'chart', 'block', 'vgplot'],
-      inputSchema: BlockDocumentCreateChartBlockInput,
+      inputSchema: chartBlockInputSchema,
       inputDescription:
-        'Block document artifact ID, tableName, ChartConfig, and optional selection group.',
+        chartBlock.inputDescription ??
+        DEFAULT_CHART_BLOCK_INPUT_DESCRIPTION,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -747,7 +801,7 @@ export function createBlockDocumentCommands<
           selectionGroupId,
           caption,
           index,
-        } = input as z.infer<typeof BlockDocumentCreateChartBlockInput>;
+        } = input as z.infer<typeof chartBlockInputSchema>;
         const resolved = resolveBlockDocumentArtifact(
           state,
           artifactId,

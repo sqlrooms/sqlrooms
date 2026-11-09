@@ -655,6 +655,15 @@ focused mutation payloads such as `blockId`, `blockIds`, `blockType`,
 return follow-up IDs such as `tableName`, `blockInstanceId`,
 `statefulBlockType`, the seed `instanceTitle`, and chosen `caption` values.
 
+A chart block's `config` is host-defined, so `block-document.create-chart-block`
+takes a `chartBlock` option (`commandDescription`, `inputDescription`,
+`configDescription`, `tableNameRequired`) to describe the shape that host
+actually renders. Without it the command advertises the Mosaic
+`{chartType, settings}` `ChartConfig` used by the reference renderers. A host
+whose config carries its own SQL — the desktop's Vega-Lite
+`{vegaLiteSpec, sqlQuery}`, for example — sets `tableNameRequired: false` and
+supplies its own descriptions.
+
 Structured block payloads may include an optional `intent` string. Use it for
 the durable natural-language purpose of an agent- or command-created block,
 such as the question a chart should answer or the job an embedded dashboard

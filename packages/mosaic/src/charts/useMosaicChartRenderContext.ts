@@ -43,7 +43,10 @@ export function useMosaicChartRenderContext(
     if (!chartTypeDefinition) {
       return {
         type: 'error',
-        error: new Error(`Invalid chart type definition`),
+        error: new Error(
+          `Chart type "${config.chartType}" is not registered in this workspace. ` +
+            'Document charts render Vega-Lite; recreate a chart written with a Mosaic config as a Vega-Lite chart.',
+        ),
       };
     }
 

@@ -23,6 +23,7 @@ type TestRoomState = BaseRoomStoreState &
 
 function createTestStore({
   allowedBlockTypes,
+  chartBlock,
   readState,
 }: {
   readState?: (context: {
@@ -32,6 +33,9 @@ function createTestStore({
   allowedBlockTypes?: Parameters<
     typeof createBlockDocumentCommands<TestRoomState>
   >[0]['allowedBlockTypes'];
+  chartBlock?: Parameters<
+    typeof createBlockDocumentCommands<TestRoomState>
+  >[0]['chartBlock'];
 } = {}) {
   let timestamp = 100;
   const ensuredStatefulBlocks: Array<{id: string; title: string}> = [];
@@ -67,10 +71,22 @@ function createTestStore({
         },
       ],
       allowedBlockTypes,
+      chartBlock,
     }),
   );
   return {store, ensuredStatefulBlocks};
 }
+
+/** The desktop's host-specific chart-block shape overrides. */
+const VEGA_LITE_CHART_BLOCK_OPTIONS = {
+  commandDescription:
+    'Create a block document chart block from a Vega-Lite spec and the SQL that feeds it',
+  inputDescription:
+    'Block document artifact ID, Vega-Lite config `{vegaLiteSpec, sqlQuery}`, and optional caption/selection group.',
+  configDescription:
+    'Chart config. Document charts are Vega-Lite: pass {vegaLiteSpec: <Vega-Lite spec object>, sqlQuery: <SQL that produces the data>}.',
+  tableNameRequired: false,
+} as const;
 
 describe('block document commands', () => {
   it('inspects inline blocks and registered backing state without changing the document', async () => {
@@ -416,6 +432,66 @@ describe('block document commands', () => {
         caption: 'Revenue',
       },
     ]);
+  });
+
+  it('creates a Vega-Lite chart block without a table name', async () => {
+    const {store} = createTestStore({
+      chartBlock: VEGA_LITE_CHART_BLOCK_OPTIONS,
+    });
+    const createResult = await store
+      .getState()
+      .commands.invokeCommand('block-document.create');
+    const artifactId = (createResult.data as any).artifactId as string;
+    const config = {
+      vegaLiteSpec: {
+        mark: 'bar',
+        encoding: {x: {field: 'decile', type: 'nominal'}},
+      },
+      sqlQuery: 'SELECT * FROM la_pop_deciles',
+    };
+
+    const chartResult = await store
+      .getState()
+      .commands.invokeCommand('block-document.create-chart-block', {
+        artifactId,
+        blockId: 'chart-vega',
+        config,
+        caption: 'Share by decile',
+      });
+
+    // A Vega-Lite config carries its own SQL, so the command must not require a
+    // Mosaic table name — requiring one is what pushed MCP clients into writing
+    // an unrenderable Mosaic `{chartType, settings}` config instead.
+    expect(chartResult.data).toMatchObject({
+      artifactId,
+      blockId: 'chart-vega',
+      blockType: 'chart',
+      tableName: '',
+      caption: 'Share by decile',
+    });
+    expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
+      {
+        id: 'chart-vega',
+        type: 'chart',
+        tableName: '',
+        config,
+        caption: 'Share by decile',
+      },
+    ]);
+  });
+
+  it('advertises the Vega-Lite config shape when the host configures it', () => {
+    const {store} = createTestStore({
+      chartBlock: VEGA_LITE_CHART_BLOCK_OPTIONS,
+    });
+    const descriptor = store
+      .getState()
+      .commands.listCommands({includeInputSchema: true})
+      .find((command) => command.id === 'block-document.create-chart-block');
+
+    expect(descriptor?.description).toContain('Vega-Lite');
+    expect(descriptor?.inputDescription).toContain('vegaLiteSpec');
+    expect(JSON.stringify(descriptor?.inputSchema)).toContain('vegaLiteSpec');
   });
 
   it('creates hosted stateful blocks', async () => {
