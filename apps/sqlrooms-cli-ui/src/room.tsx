@@ -18,7 +18,7 @@ export const Room = () => {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="sqlrooms-cli-ui-theme">
       <RoomShell className="h-screen" roomStore={roomStore}>
-        <SidebarProvider defaultOpen>
+        <SidebarProvider defaultOpen defaultWidth={300}>
           <CliWorkspaceSidebar onToggleSqlEditor={sqlEditor.onToggle} />
           <SidebarInset className="h-svh min-w-0 overflow-hidden">
             <CliWorkspaceStatus />
