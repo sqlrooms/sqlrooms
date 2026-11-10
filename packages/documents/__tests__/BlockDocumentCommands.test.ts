@@ -9,6 +9,7 @@ import {
   type BaseRoomStoreState,
   type CommandSliceState,
 } from '@sqlrooms/room-store';
+import {z} from 'zod';
 import {createStore} from 'zustand';
 import {
   createBlockDocumentCommands,
@@ -77,16 +78,18 @@ function createTestStore({
   return {store, ensuredStatefulBlocks};
 }
 
-/** The desktop's host-specific chart-block shape overrides. */
+/** The desktop's host-specific chart-block config shape. */
 const VEGA_LITE_CHART_BLOCK_OPTIONS = {
-  commandDescription:
+  description:
     'Create a block document chart block from a Vega-Lite spec and the SQL that feeds it',
-  inputDescription:
-    'Block document artifact ID, Vega-Lite config `{vegaLiteSpec, sqlQuery}`, and optional caption/selection group.',
-  configDescription:
-    'Chart config. Document charts are Vega-Lite: pass {vegaLiteSpec: <Vega-Lite spec object>, sqlQuery: <SQL that produces the data>}.',
-  tableNameRequired: false,
-} as const;
+  configSchema: z
+    .object({
+      vegaLiteSpec: z.union([z.string(), z.record(z.string(), z.unknown())]),
+      sqlQuery: z.string().optional(),
+    })
+    .loose()
+    .describe('Document chart config: {vegaLiteSpec, sqlQuery}.'),
+};
 
 describe('block document commands', () => {
   it('inspects inline blocks and registered backing state without changing the document', async () => {
@@ -459,24 +462,68 @@ describe('block document commands', () => {
         caption: 'Share by decile',
       });
 
-    // A Vega-Lite config carries its own SQL, so the command must not require a
-    // Mosaic table name — requiring one is what pushed MCP clients into writing
-    // an unrenderable Mosaic `{chartType, settings}` config instead.
+    // A Vega-Lite config carries its own SQL, so the block must simply omit
+    // `tableName` — storing `''` to mean "no table" is what every reader would
+    // otherwise have to interpret.
     expect(chartResult.data).toMatchObject({
       artifactId,
       blockId: 'chart-vega',
       blockType: 'chart',
-      tableName: '',
       caption: 'Share by decile',
     });
+    expect(
+      (chartResult.data as {tableName?: string}).tableName,
+    ).toBeUndefined();
     expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
       {
         id: 'chart-vega',
         type: 'chart',
-        tableName: '',
         config,
         caption: 'Share by decile',
       },
+    ]);
+  });
+
+  it('rejects a config that does not match the host chart schema', async () => {
+    const {store} = createTestStore({
+      chartBlock: VEGA_LITE_CHART_BLOCK_OPTIONS,
+    });
+    const createResult = await store
+      .getState()
+      .commands.invokeCommand('block-document.create');
+    const artifactId = (createResult.data as any).artifactId as string;
+
+    const chartResult = await store
+      .getState()
+      .commands.invokeCommand('block-document.create-chart-block', {
+        artifactId,
+        config: {chartType: 'bar', settings: {x: 'decile', y: 'pop'}},
+      });
+
+    expect(chartResult.success).toBe(false);
+    expect(JSON.stringify(chartResult)).toContain('vegaLiteSpec');
+    expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([]);
+  });
+
+  it('accepts a table-less chart block through the generic block commands', async () => {
+    const {store} = createTestStore();
+    const createResult = await store
+      .getState()
+      .commands.invokeCommand('block-document.create');
+    const artifactId = (createResult.data as any).artifactId as string;
+    const config = {vegaLiteSpec: {mark: 'bar'}, sqlQuery: 'SELECT 1'};
+
+    // `tableName` is optional on the block schema itself, not just on
+    // create-chart-block, so append/insert/update treat the same block the same.
+    await expect(
+      store.getState().commands.invokeCommand('block-document.append-blocks', {
+        artifactId,
+        blocks: [{id: 'chart-no-table', type: 'chart', config}],
+      }),
+    ).resolves.toMatchObject({success: true});
+
+    expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
+      {id: 'chart-no-table', type: 'chart', config},
     ]);
   });
 
@@ -490,16 +537,24 @@ describe('block document commands', () => {
       .find((command) => command.id === 'block-document.create-chart-block');
 
     expect(descriptor?.description).toContain('Vega-Lite');
-    expect(descriptor?.inputDescription).toContain('vegaLiteSpec');
-    expect(JSON.stringify(descriptor?.inputSchema)).toContain('vegaLiteSpec');
+    expect(descriptor?.inputDescription).toContain('chart config');
 
-    // `toPortableSchema` converts output-mode, where a Zod default marks the
-    // key required. The portable schema is what command discovery hands MCP
-    // clients, so `tableName` must not land in `required`.
+    // The host's config schema is what command discovery advertises, so the
+    // real shape — not just a description of it — reaches MCP clients.
     const inputSchema = descriptor?.inputSchema as
-      | {properties?: Record<string, unknown>; required?: string[]}
+      | {
+          properties?: {
+            config?: {properties?: Record<string, unknown>};
+            tableName?: unknown;
+          };
+          required?: string[];
+        }
       | undefined;
+    expect(inputSchema?.properties?.config?.properties).toHaveProperty(
+      'vegaLiteSpec',
+    );
     expect(inputSchema?.properties).toHaveProperty('tableName');
+    expect(inputSchema?.required ?? []).toContain('config');
     expect(inputSchema?.required ?? []).not.toContain('tableName');
   });
 

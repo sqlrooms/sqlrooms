@@ -64,28 +64,21 @@ export type BlockDocumentStatefulBlockCommandType<TRoomState> = {
 };
 
 /**
- * Host-specific description of a document chart block's `config`, used by
+ * Host-specific shape of a document chart block's `config`, used by
  * `block-document.create-chart-block` discovery.
  *
  * The block schema keeps `config` opaque because each host renders its own
- * chart shape. The default describes the Mosaic `ChartConfig` this package's
- * reference renderers use; a host that renders a different shape (e.g. the
- * desktop's Vega-Lite `{vegaLiteSpec, sqlQuery}`) passes it here so agents are
- * told the shape that will actually render.
+ * chart shape. A host that renders a specific shape (e.g. the desktop's
+ * Vega-Lite `{vegaLiteSpec, sqlQuery}`) passes a schema here: it is advertised
+ * to agents as JSON Schema and validates the config when the command runs, so a
+ * wrong config fails with an actionable error instead of saving a block that
+ * cannot render. Its `.describe()` supplies the config description.
  */
 export type BlockDocumentChartCommandOptions = {
   /** One-line command purpose shown by command discovery. */
-  commandDescription?: string;
-  /** Short input summary shown alongside the command. */
-  inputDescription?: string;
-  /** Description of the `config` payload in the command schema. */
-  configDescription?: string;
-  /**
-   * Whether callers must pass `tableName`. Defaults to true. A host whose chart
-   * config carries its own SQL sets this to false so the table is not a
-   * required binding.
-   */
-  tableNameRequired?: boolean;
+  description?: string;
+  /** Schema validating (and describing) the chart block's `config`. */
+  configSchema?: z.ZodType;
 };
 
 /**
@@ -180,15 +173,33 @@ const BlockDocumentMoveBlockInput = BlockDocumentBlockIdInput.extend({
 });
 
 const DEFAULT_CHART_BLOCK_COMMAND_DESCRIPTION =
-  'Create a standalone Mosaic/vgplot chart block';
+  'Create a standalone chart block';
 const DEFAULT_CHART_BLOCK_INPUT_DESCRIPTION =
-  'Block document artifact ID, tableName, ChartConfig, and optional selection group.';
-const DEFAULT_CHART_CONFIG_DESCRIPTION =
-  'Mosaic ChartConfig payload, for example {chartType:"histogram", settings:{field:"revenue"}} or {chartType:"count-plot", settings:{field:"category"}}.';
+  'Block document artifact ID, chart config, and optional caption/selection group.';
+const DEFAULT_CHART_CONFIG_SCHEMA = z
+  .unknown()
+  .describe(
+    'Mosaic ChartConfig payload, for example {chartType:"histogram", settings:{field:"revenue"}} or {chartType:"count-plot", settings:{field:"category"}}.',
+  );
+
+/**
+ * Accept a config as either the object itself or a JSON string of it, then
+ * validate the parsed value against the host's schema.
+ */
+function parseChartConfigThen<T extends z.ZodType>(schema: T) {
+  return z.preprocess((val) => {
+    if (typeof val !== 'string') return val;
+    try {
+      return JSON.parse(val);
+    } catch {
+      // Hand the raw string to the schema so its error names the real problem.
+      return val;
+    }
+  }, schema);
+}
 
 function createBlockDocumentCreateChartBlockInput({
-  configDescription = DEFAULT_CHART_CONFIG_DESCRIPTION,
-  tableNameRequired = true,
+  configSchema = DEFAULT_CHART_CONFIG_SCHEMA,
 }: BlockDocumentChartCommandOptions = {}) {
   return z.object({
     artifactId: z.string().describe('Target block document artifact ID.'),
@@ -202,32 +213,13 @@ function createBlockDocumentCreateChartBlockInput({
       .describe(
         'Optional natural-language objective this chart block should satisfy.',
       ),
-    // No `.default('')` here: `toPortableSchema` converts output-mode, where a
-    // default marks the key required, which is what command discovery shows
-    // MCP clients. Default it when the command runs instead.
-    tableName: tableNameRequired
-      ? z.string().describe('Mosaic table name to render.')
-      : z
-          .string()
-          .optional()
-          .describe(
-            'Table the chart renders from when its config carries no SQL of its own. Omit when the config carries its own SQL.',
-          ),
-    config: z
-      .unknown()
-      .transform((val) => {
-        // If agent passes config as JSON string, parse it
-        if (typeof val === 'string') {
-          try {
-            return JSON.parse(val);
-          } catch {
-            // If parsing fails, return as-is and let validation catch it
-            return val;
-          }
-        }
-        return val;
-      })
-      .describe(configDescription),
+    tableName: z
+      .string()
+      .optional()
+      .describe(
+        'Table the chart renders from; omit when the config carries its own SQL.',
+      ),
+    config: parseChartConfigThen(configSchema),
     selectionGroupId: z
       .string()
       .optional()
@@ -786,13 +778,11 @@ export function createBlockDocumentCommands<
       id: commandId('create-chart-block'),
       name: 'Create block document chart block',
       description:
-        chartBlock.commandDescription ??
-        DEFAULT_CHART_BLOCK_COMMAND_DESCRIPTION,
+        chartBlock.description ?? DEFAULT_CHART_BLOCK_COMMAND_DESCRIPTION,
       group: commandGroup,
       keywords: ['block document', 'chart', 'block', 'vgplot'],
       inputSchema: chartBlockInputSchema,
-      inputDescription:
-        chartBlock.inputDescription ?? DEFAULT_CHART_BLOCK_INPUT_DESCRIPTION,
+      inputDescription: DEFAULT_CHART_BLOCK_INPUT_DESCRIPTION,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -800,7 +790,7 @@ export function createBlockDocumentCommands<
           artifactId,
           blockId = createBlockDocumentBlockId(),
           intent,
-          tableName = '',
+          tableName,
           config,
           selectionGroupId,
           caption,
@@ -827,7 +817,7 @@ export function createBlockDocumentCommands<
           commandId('create-chart-block'),
           artifactId,
           {
-            tableName,
+            ...(tableName !== undefined ? {tableName} : {}),
             selectionGroupId,
             caption,
             ...blockResultData([block]),
@@ -1044,7 +1034,7 @@ function blockResultData(blocks: BlockDocumentBlockType[]) {
     }
 
     if (block.type === 'chart') {
-      data.tableName = block.tableName;
+      if (block.tableName !== undefined) data.tableName = block.tableName;
       data.selectionGroupId = block.selectionGroupId;
       data.caption = block.caption;
     }

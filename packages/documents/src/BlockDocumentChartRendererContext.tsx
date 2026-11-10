@@ -12,7 +12,7 @@ import type {BlockDocumentBlockHeaderActionsRenderer} from './BlockDocumentBlock
 export type BlockDocumentChartRendererProps = {
   documentId: string;
   blockId: string;
-  tableName: string;
+  tableName?: string;
   config: unknown;
   selectionGroupId?: string;
   caption?: string;
