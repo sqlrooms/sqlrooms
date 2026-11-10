@@ -1,3 +1,9 @@
+> [!WARNING]
+> **Deprecated:** these schemas are now part of
+> [`@kepler.gl/sqlrooms`](https://www.npmjs.com/package/@kepler.gl/sqlrooms)
+> and available from its lightweight `@kepler.gl/sqlrooms/config` entry point.
+> This package will not receive further updates.
+
 Zod schemas for persisted Kepler slice state used by `@sqlrooms/kepler`.
 
 ## Installation

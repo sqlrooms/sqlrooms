@@ -1,4 +1,4 @@
-import {KeplerMapSchema} from '@sqlrooms/kepler';
+import {KeplerMapSchema} from '@kepler.gl/sqlrooms';
 import {getCurrentKeplerMapArtifactId, useRoomStore} from '../store';
 
 export function useCurrentMap(): KeplerMapSchema | undefined {
