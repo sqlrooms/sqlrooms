@@ -16,6 +16,8 @@ An example showcasing integration with [deck.gl](https://deck.gl/) for geospatia
 - Real-time commenting and annotation system
 - Contextual discussions tied to specific data points
 
+The map requires a browser with WebGL2 support.
+
 To create a new project from the deckgl-discuss example run this:
 
 ```bash

@@ -38,12 +38,12 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
-    "@deck.gl/core": "9.3.2",
-    "@deck.gl/geo-layers": "9.3.2",
-    "@deck.gl/json": "9.3.2",
-    "@deck.gl/layers": "9.3.2",
-    "@deck.gl/mapbox": "9.3.2",
-    "@deck.gl/react": "9.3.2",
+    "@deck.gl/core": "9.4.1",
+    "@deck.gl/geo-layers": "9.4.1",
+    "@deck.gl/json": "9.4.1",
+    "@deck.gl/layers": "9.4.1",
+    "@deck.gl/maplibre": "9.4.1",
+    "@deck.gl/react": "9.4.1",
     "@geoarrow/deck.gl-geoarrow": "^0.4.1",
     "@loaders.gl/geoarrow": "^4.4.1",
     "@loaders.gl/gis": "^4.4.1",
@@ -58,7 +58,7 @@
     "ai": "^6.0.177",
     "immer": "^11.0.1",
     "lucide-react": "^0.555.0",
-    "maplibre-gl": "^5.12.0",
+    "maplibre-gl": "^6.17.0",
     "react-map-gl": "^8.1.1",
     "zod": "^4.1.8",
     "zustand": "^5.0.8"

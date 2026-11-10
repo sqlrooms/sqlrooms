@@ -1,6 +1,6 @@
 import type {Layer} from '@deck.gl/core';
 import {JSONConverter} from '@deck.gl/json';
-import {MapboxOverlay} from '@deck.gl/mapbox';
+import {MapLibreOverlay} from '@deck.gl/maplibre';
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
 import {useBaseRoomStore} from '@sqlrooms/room-store';
 import {
@@ -253,8 +253,8 @@ function DeckOverlayControl({
   interleaved,
   ...deckProps
 }: {interleaved: boolean} & Record<string, unknown>) {
-  const overlay = useControl<MapboxOverlay>(
-    () => new MapboxOverlay({interleaved}),
+  const overlay = useControl<MapLibreOverlay>(
+    () => new MapLibreOverlay({interleaved}),
   );
   const prevLayerKeyRef = useRef<string>('');
   const [clearing, setClearing] = useState(false);
@@ -678,6 +678,10 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
 
         <Map
           ref={mapRef as any}
+          workerUrl={
+            new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url)
+              .href
+          }
           {...(mergedMapProps as object)}
           {...(mapInitialViewState
             ? {initialViewState: mapInitialViewState as object}
