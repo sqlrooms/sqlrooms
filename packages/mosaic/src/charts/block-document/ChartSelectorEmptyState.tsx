@@ -7,6 +7,8 @@ type ChartSelectorEmptyStateProps = {
   onChange?: (table: DataTable) => void;
   tables: DataTable[];
   value?: DataTable;
+  /** Why the picker is showing, e.g. the block has no table or it is missing. */
+  message?: string;
 };
 
 /**

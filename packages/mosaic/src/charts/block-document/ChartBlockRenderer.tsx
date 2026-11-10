@@ -64,6 +64,11 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
         disabled={readOnly || !onTableNameChange}
         onChange={handleTableChange}
         tables={tables}
+        message={
+          tableName
+            ? `Table "${tableName}" was not found. Choose another table.`
+            : 'This chart block has no table yet. Choose the table it should render.'
+        }
       />
     );
   }
