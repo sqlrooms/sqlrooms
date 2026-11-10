@@ -413,7 +413,10 @@ export function blockDocumentNodeToBlock(
         id,
         intent,
         type: 'chart',
-        tableName: node.attrs?.tableName,
+        // The chart node attribute defaults to null; `tableName` is optional,
+        // not nullable. Pass through the same normalization as other attrs so a
+        // table-less chart block is not dropped as invalid on read-back.
+        tableName: optionalString(node.attrs?.tableName),
         config: node.attrs?.config,
         selectionGroupId: optionalString(node.attrs?.selectionGroupId),
         caption: optionalString(node.attrs?.caption),
