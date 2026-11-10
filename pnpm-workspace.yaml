@@ -71,22 +71,43 @@ packageExtensions:
     dependencies:
       '@loaders.gl/core': 4.4.1
       '@loaders.gl/wms': 4.4.2
-  # loaders.gl 4.4.1 imports this package but does not declare it.
+  # Kepler layers also import these loaders at runtime.
+  '@kepler.gl/layers@3.3.0-alpha.0':
+    dependencies:
+      '@loaders.gl/images': 4.4.1
+      '@loaders.gl/terrain': 4.4.1
+      '@loaders.gl/textures': 4.4.1
+      '@loaders.gl/tiles': 4.4.1
+  # Kepler's Deck layers import these packages at runtime.
+  '@kepler.gl/deckgl-layers@3.3.0-alpha.0':
+    dependencies:
+      '@deck.gl/mesh-layers': 9.4.1
+      '@luma.gl/shadertools': 9.4.2
+  # These loaders.gl releases import schema-utils without declaring it.
   '@loaders.gl/csv@4.4.1':
     dependencies:
       '@loaders.gl/schema-utils': 4.4.1
   '@loaders.gl/geoarrow@4.4.1':
     dependencies:
       '@loaders.gl/schema-utils': 4.4.1
+  '@loaders.gl/geoarrow@4.5.4':
+    dependencies:
+      '@loaders.gl/schema-utils': 4.5.4
   '@loaders.gl/mvt@4.4.1':
     dependencies:
       '@loaders.gl/schema-utils': 4.4.1
+  '@loaders.gl/mvt@4.5.4':
+    dependencies:
+      '@loaders.gl/schema-utils': 4.5.4
   '@loaders.gl/parquet@4.4.1':
     dependencies:
       '@loaders.gl/schema-utils': 4.4.1
   '@loaders.gl/terrain@4.4.1':
     dependencies:
       '@loaders.gl/schema-utils': 4.4.1
+  '@loaders.gl/terrain@4.5.4':
+    dependencies:
+      '@loaders.gl/schema-utils': 4.5.4
 patchedDependencies:
   image-size@0.7.5: patches/image-size@0.7.5.patch
   sigstore@4.1.1: patches/sigstore@4.1.0.patch
