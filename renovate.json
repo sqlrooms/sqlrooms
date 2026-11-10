@@ -1,7 +1,34 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "group:allNonMajor"],
+  "extends": ["config:recommended"],
+  "constraints": {
+    "node": "^24.9.0"
+  },
   "prConcurrentLimit": 5,
   "prHourlyLimit": 0,
-  "dependencyDashboard": true
+  "dependencyDashboard": true,
+  "packageRules": [
+    {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "JavaScript non-major dependencies"
+    },
+    {
+      "matchManagers": ["pep621", "pyenv"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Python non-major dependencies"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "GitHub Actions non-major dependencies"
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "dependencyDashboardApproval": false
+  }
 }
