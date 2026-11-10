@@ -18,7 +18,7 @@ import {ensureTable} from '../../../ai/tool-helpers';
  * Extends base chart input with histogram-specific settings including field and bin configuration.
  */
 export const HistogramToolInput = BaseChartToolInput.extend({
-  settings: HistogramChartSettings.required(),
+  settings: HistogramChartSettings.required({field: true, color: true}),
 });
 
 /**
