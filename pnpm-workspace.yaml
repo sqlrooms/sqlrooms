@@ -11,13 +11,13 @@ overrides:
   '@ai-sdk/provider-utils@>=4.0.0 <5.0.0': 4.0.33
   '@babel/core@<=7.29.0': 7.29.7
   # Keep the complete luma.gl rendering stack aligned with Kepler and Deck.
-  '@luma.gl/constants': 9.3.3
-  '@luma.gl/core': 9.3.3
-  '@luma.gl/effects': 9.3.3
-  '@luma.gl/engine': 9.3.3
-  '@luma.gl/gltf': 9.3.3
-  '@luma.gl/shadertools': 9.3.3
-  '@luma.gl/webgl': 9.3.3
+  '@luma.gl/constants': 9.4.2
+  '@luma.gl/core': 9.4.2
+  '@luma.gl/effects': 9.4.2
+  '@luma.gl/engine': 9.4.2
+  '@luma.gl/gltf': 9.4.2
+  '@luma.gl/shadertools': 9.4.2
+  '@luma.gl/webgl': 9.4.2
   '@duckdb/duckdb-wasm': 1.32.0
   '@loaders.gl/wms': 4.4.2
   '@loaders.gl/xml': 4.4.2
@@ -62,26 +62,52 @@ overrides:
   ws@>=8.0.0 <8.20.1: 8.21.0
   zod: 4.6.6
 packageExtensions:
-  # Kepler table imports this peer at runtime but does not declare it.
+  # Protomaps' published declarations import this undeclared type dependency.
+  '@protomaps/basemaps@5.7.2':
+    dependencies:
+      '@maplibre/maplibre-gl-style-spec': ^26.5.1
+  # Kepler table imports these packages at runtime without declaring them.
   '@kepler.gl/table@3.3.0-alpha.0':
     dependencies:
       '@loaders.gl/core': 4.4.1
-  # loaders.gl 4.4.1 imports this package but does not declare it.
+      '@loaders.gl/wms': 4.4.2
+  # Kepler layers also import these loaders at runtime.
+  '@kepler.gl/layers@3.3.0-alpha.0':
+    dependencies:
+      '@loaders.gl/images': 4.4.1
+      '@loaders.gl/terrain': 4.4.1
+      '@loaders.gl/textures': 4.4.1
+      '@loaders.gl/tiles': 4.4.1
+  # Kepler's Deck layers import these packages at runtime.
+  '@kepler.gl/deckgl-layers@3.3.0-alpha.0':
+    dependencies:
+      '@deck.gl/mesh-layers': 9.4.1
+      '@luma.gl/shadertools': 9.4.2
+  # These loaders.gl releases import schema-utils without declaring it.
   '@loaders.gl/csv@4.4.1':
     dependencies:
       '@loaders.gl/schema-utils': 4.4.1
   '@loaders.gl/geoarrow@4.4.1':
     dependencies:
       '@loaders.gl/schema-utils': 4.4.1
+  '@loaders.gl/geoarrow@4.5.4':
+    dependencies:
+      '@loaders.gl/schema-utils': 4.5.4
   '@loaders.gl/mvt@4.4.1':
     dependencies:
       '@loaders.gl/schema-utils': 4.4.1
+  '@loaders.gl/mvt@4.5.4':
+    dependencies:
+      '@loaders.gl/schema-utils': 4.5.4
   '@loaders.gl/parquet@4.4.1':
     dependencies:
       '@loaders.gl/schema-utils': 4.4.1
   '@loaders.gl/terrain@4.4.1':
     dependencies:
       '@loaders.gl/schema-utils': 4.4.1
+  '@loaders.gl/terrain@4.5.4':
+    dependencies:
+      '@loaders.gl/schema-utils': 4.5.4
 patchedDependencies:
   image-size@0.7.5: patches/image-size@0.7.5.patch
   sigstore@4.1.1: patches/sigstore@4.1.0.patch
