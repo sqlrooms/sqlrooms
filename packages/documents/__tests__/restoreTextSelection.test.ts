@@ -13,6 +13,12 @@ const schema = new Schema({
       attrs: {id: {default: null}},
     },
     chart: {group: 'block', atom: true, attrs: {id: {default: null}}},
+    bulletList: {
+      group: 'block',
+      content: 'listItem+',
+      attrs: {id: {default: null}},
+    },
+    listItem: {content: 'paragraph+'},
     text: {},
   },
 });
@@ -25,6 +31,15 @@ function block(type: string, id: string | null, text = '') {
 /** Wrap top-level blocks in a document node. */
 function doc(...blocks: ProseMirrorNode[]) {
   return schema.node('doc', null, blocks);
+}
+
+/** Build a top-level bullet list with one editable paragraph. */
+function listBlock(id: string, text: string) {
+  return schema.node('bulletList', {id}, [
+    schema.node('listItem', null, [
+      schema.node('paragraph', null, schema.text(text)),
+    ]),
+  ]);
 }
 
 /** Position just inside the start of the top-level block with this ID. */
@@ -178,6 +193,26 @@ describe('restoreTextSelection', () => {
     expect(restored.to).toBe(startOf(after, 'b'));
     expect(restored.$from.parent.attrs.id).toBe('b');
     expect(restored.$to.parent.attrs.id).toBe('b');
+  });
+
+  it('keeps the caret inside a list when the list moves', () => {
+    const before = doc(
+      listBlock('list', 'First item'),
+      block('paragraph', 'b', 'BBBB'),
+    );
+    const selection = TextSelection.create(before, startOf(before, 'list') + 2);
+
+    // The list is a container of editable paragraphs, not an atom: the old
+    // caret offset must map inside the moved list, not after it.
+    const after = doc(
+      block('paragraph', 'prefix', 'P'),
+      listBlock('list', 'First item'),
+      block('paragraph', 'b', 'BBBB'),
+    );
+    const restored = restoreTextSelection(selection, after);
+
+    expect(restored.$from.node(1).attrs.id).toBe('list');
+    expect(restored.from).toBe(startOf(after, 'list') + 2);
   });
 
   it('skips adjacent charts to reach the next text block', () => {

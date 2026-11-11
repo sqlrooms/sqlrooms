@@ -38,6 +38,48 @@ function nearestTextPosition(
   return null;
 }
 
+/** Whether a node is a textblock or contains one (a list, for example). */
+function hasTextblock(node: ProseMirrorNode): boolean {
+  if (node.isTextblock) return true;
+  let found = false;
+  node.descendants((child) => {
+    if (found) return false;
+    if (child.isTextblock) {
+      found = true;
+      return false;
+    }
+    return undefined;
+  });
+  return found;
+}
+
+/**
+ * Nearest text position to `pos` that stays inside `[rangeStart, rangeEnd]`.
+ * Used for text-containing containers: moving the container should keep the
+ * endpoint in the same nested paragraph, not jump past the whole container.
+ * Returns null when the range holds no text position.
+ */
+function nearestTextPositionWithin(
+  nextDoc: ProseMirrorNode,
+  pos: number,
+  rangeStart: number,
+  rangeEnd: number,
+): number | null {
+  const clamped = Math.max(rangeStart, Math.min(pos, rangeEnd));
+  const $pos = nextDoc.resolve(clamped);
+  if ($pos.parent.isTextblock) return clamped;
+
+  const after = Selection.findFrom($pos, 1, true);
+  if (after && after.from >= rangeStart && after.from <= rangeEnd) {
+    return after.from;
+  }
+  const before = Selection.findFrom($pos, -1, true);
+  if (before && before.from >= rangeStart && before.from <= rangeEnd) {
+    return before.from;
+  }
+  return null;
+}
+
 /**
  * Shift one selection endpoint by the movement of the top-level block it
  * belongs to, matched by block ID, and keep it inside that block's text. Falls
@@ -56,19 +98,30 @@ function shiftedEndpoint(
     const nextBlockPos = findTopLevelBlockPosition(nextDoc, blockId);
     if (nextBlockPos !== null) {
       const nextBlock = nextDoc.nodeAt(nextBlockPos);
-      if (nextBlock?.isTextblock) {
-        // Positions inside a textblock run from just after its opening token to
-        // just after its last character. Clamping matters when the block got
-        // shorter: adding the old in-block offset could otherwise land the
-        // endpoint inside the following block.
-        const blockStart = nextBlockPos + 1;
-        const blockEnd = blockStart + nextBlock.content.size;
-        return Math.max(
-          blockStart,
-          Math.min(pos + (nextBlockPos - $pos.before(1)), blockEnd),
-        );
-      }
       if (nextBlock) {
+        // The old in-block offset, moved to the block's new position. Positions
+        // inside the matched node run from just after its opening token to just
+        // before its closing token. Clamping matters when the block got
+        // shorter: the old offset could otherwise land in the following block.
+        const relative = pos - $pos.before(1);
+        const blockStart = nextBlockPos + 1;
+        const blockEnd = nextBlockPos + nextBlock.nodeSize - 1;
+        const mapped = nextBlockPos + relative;
+
+        if (nextBlock.isTextblock) {
+          return Math.max(blockStart, Math.min(mapped, blockEnd));
+        }
+        if (hasTextblock(nextBlock)) {
+          // A list or another text-containing container: keep the endpoint in
+          // the same nested paragraph rather than after the whole container.
+          const within = nearestTextPositionWithin(
+            nextDoc,
+            mapped,
+            blockStart,
+            blockEnd,
+          );
+          if (within !== null) return within;
+        }
         // The block changed into an atom (a chart, say), which a TextSelection
         // cannot sit inside: use the nearest text position after it.
         return nearestTextPosition(
