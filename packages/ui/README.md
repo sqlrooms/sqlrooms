@@ -207,6 +207,49 @@ function SettingsPanel({onClose}: {onClose: () => void}) {
 }
 ```
 
+## Resizable Sidebar
+
+Pass `defaultWidth` (in pixels) to `SidebarProvider` to let users resize the
+sidebar by dragging its `SidebarRail`. A click on the rail still toggles the
+sidebar; dragging well past `minWidth` collapses it, and dragging a collapsed
+sidebar outward reopens it. While the rail has focus, the arrow keys resize the
+sidebar and Enter or Space toggles it.
+
+`onWidthChange` fires once a resize finishes, so it is a good place to persist
+the width. `maxWidth` may change over time (for example with the window size):
+the sidebar is shown clamped to it, but the width the user chose comes back
+once there is room again.
+
+```tsx
+import {
+  Sidebar,
+  SidebarInset,
+  SidebarProvider,
+  SidebarRail,
+} from '@sqlrooms/ui';
+
+function Layout({children}: {children: React.ReactNode}) {
+  const [savedWidth] = useState(() => Number(localStorage.getItem('w')) || 288);
+  return (
+    <SidebarProvider
+      defaultWidth={savedWidth}
+      minWidth={224}
+      maxWidth={640}
+      onWidthChange={(width) => localStorage.setItem('w', String(width))}
+    >
+      <Sidebar>
+        {/* sidebar content */}
+        <SidebarRail />
+      </Sidebar>
+      <SidebarInset>{children}</SidebarInset>
+    </SidebarProvider>
+  );
+}
+```
+
+Without `defaultWidth`, the sidebar keeps a fixed width (the `--sidebar-width`
+CSS variable) and the rail only toggles it.
+
 ## Advanced Features
 
 - **Component Composition**: Build complex UIs by composing simple components

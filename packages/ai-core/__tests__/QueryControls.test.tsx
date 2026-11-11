@@ -40,6 +40,8 @@ const {QueryControls} = await import('../src/components/QueryControls');
 const {InlineApiKeyInput} = await import('../src/components/InlineApiKeyInput');
 
 describe('QueryControls — unified across runtime modes', () => {
+  afterEach(() => jest.useRealTimers());
+
   beforeEach(() => {
     // Session mode by default, as an unmocked tree would be; the local-agent
     // tests install a local-agent runtime themselves.
@@ -590,6 +592,7 @@ describe('QueryControls — unified across runtime modes', () => {
   it.each(['component', 'zero', 'omitted'] as const)(
     'session mode preserves the context-usage indicator with %s details',
     async (detailsKind) => {
+      jest.useFakeTimers();
       const mountDetails = jest.fn();
       function UsageDetails() {
         React.useEffect(() => {
@@ -644,6 +647,12 @@ describe('QueryControls — unified across runtime modes', () => {
 
       // The context-usage indicator renders as a button with a percentage/
       // token-count aria-label once there is any estimated usage.
+      // Settle the composer's delayed autofocus before focusing the tooltip;
+      // otherwise it can steal focus mid-assertion on a busy CI runner.
+      await act(async () => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(document.activeElement).toBe(textarea(container));
       const indicator = Array.from(container.querySelectorAll('button')).find(
         (btn) => btn.getAttribute('aria-label')?.includes('context used'),
       );

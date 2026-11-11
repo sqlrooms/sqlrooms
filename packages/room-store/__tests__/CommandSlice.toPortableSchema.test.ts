@@ -95,6 +95,20 @@ describe('toPortableSchema via exportCommandInputSchema', () => {
     });
   });
 
+  it('expands nested compact unions and preserves default values', () => {
+    const schema = z.object({
+      names: z.array(z.string().nullable()),
+      data: z.object({type: z.array(z.string())}).default({type: ['custom']}),
+    });
+
+    expect(exportCommandInputSchema(schema)).toMatchObject({
+      properties: {
+        names: {items: {anyOf: [{type: 'string'}, {type: 'null'}]}},
+        data: {default: {type: ['custom']}},
+      },
+    });
+  });
+
   it('exports default schemas with default value', () => {
     expect(exportCommandInputSchema(z.string().default('abc'))).toMatchObject({
       type: 'string',

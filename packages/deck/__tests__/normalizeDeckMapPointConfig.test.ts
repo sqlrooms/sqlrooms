@@ -743,6 +743,69 @@ describe('applyDeckMapTableSelection', () => {
     ],
   };
 
+  describe.each([
+    {
+      name: 'longitude/latitude',
+      table: placesGeoTable,
+      fitColumns: {longitudeColumn: 'longitude', latitudeColumn: 'latitude'},
+    },
+    {
+      name: 'geometry',
+      table: {
+        ...placesGeoTable,
+        columns: [{name: 'geometry', type: 'GEOMETRY'}],
+      },
+      fitColumns: {geometryColumn: 'geometry'},
+    },
+  ])('table changes to $name columns', ({table, fitColumns}) => {
+    it.each([undefined, 0, 8, 12])('preserves maxZoom %s', (maxZoom) => {
+      const seeded = createDeckMapConfigForTable({
+        tableName: 'old_places',
+        columns: [
+          {name: 'Long', type: 'DOUBLE'},
+          {name: 'Lat', type: 'DOUBLE'},
+        ],
+      });
+      const config = {
+        ...seeded,
+        fitToData: {
+          ...seeded.fitToData!,
+          ...(maxZoom === undefined ? {} : {maxZoom}),
+        },
+      };
+
+      const next = applyDeckMapTableSelection(config, table);
+
+      expect(next.fitToData).toEqual({
+        dataset: Object.keys(next.datasets)[0],
+        ...fitColumns,
+        padding: 40,
+        ...(maxZoom === undefined ? {} : {maxZoom}),
+      });
+      if (maxZoom === undefined) {
+        expect(next.fitToData).not.toHaveProperty('maxZoom');
+      }
+      expect(applyDeckMapTableSelection(next, table).fitToData).toEqual(
+        next.fitToData,
+      );
+    });
+  });
+
+  it('does not copy a zoom cap from an unrelated fit dataset', () => {
+    const config = {
+      ...createDeckMapConfigForTable({
+        tableName: 'old_places',
+        columns: placesGeoTable.columns,
+      }),
+      fitToData: {dataset: 'other', maxZoom: 8},
+    };
+
+    const next = applyDeckMapTableSelection(config, placesGeoTable);
+
+    expect(next.fitToData?.dataset).toBe('places');
+    expect(next.fitToData).not.toHaveProperty('maxZoom');
+  });
+
   function createArcMapConfig() {
     return {
       spec: {
@@ -1262,7 +1325,6 @@ describe('applyDeckMapTableSelection', () => {
     expect(next.fitToData).toEqual({
       dataset: 'h3_cells',
       padding: 40,
-      maxZoom: 12,
     });
   });
 

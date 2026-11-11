@@ -16,6 +16,7 @@ const invokeCommandWithPolicy = jest.fn(
 );
 
 jest.unstable_mockModule('@sqlrooms/room-shell', () => ({
+  exportCommandInputSchema: (schema: unknown) => schema,
   hasCommandSliceState: () => true,
   invokeCommandWithPolicy,
 }));
@@ -166,6 +167,63 @@ function createCommandState(
 }
 
 describe('command tools', () => {
+  it('decodes JSON-encoded object input before command policy and validation', async () => {
+    const invokeCommand = jest.fn(async () => ({success: true}));
+    const tools = createCommandState(invokeCommand, commandDescriptors);
+
+    await (tools.execute_command as any).execute({
+      commandId: 'artifact.rename',
+      input: '{"title":"Event analysis"}',
+    });
+
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'artifact.rename',
+      {title: 'Event analysis'},
+      expect.anything(),
+    );
+  });
+
+  it.each(['{"title":', 'plain text'])(
+    'leaves malformed input %j for command validation',
+    async (input) => {
+      const invokeCommand = jest.fn(async () => ({success: false}));
+      const tools = createCommandState(invokeCommand, commandDescriptors);
+
+      await (tools.execute_command as any).execute({
+        commandId: 'artifact.rename',
+        input,
+      });
+
+      expect(invokeCommand).toHaveBeenCalledWith(
+        'artifact.rename',
+        input,
+        expect.anything(),
+      );
+    },
+  );
+
+  it.each([{type: 'string'}, undefined])(
+    'preserves string input for schema %j',
+    async (inputSchema) => {
+      const invokeCommand = jest.fn(async () => ({success: true}));
+      const tools = createCommandState(invokeCommand, [
+        {...commandDescriptors[0], inputSchema},
+      ]);
+      const input = '{"title":"literal JSON text"}';
+
+      await (tools.execute_command as any).execute({
+        commandId: 'artifact.rename',
+        input,
+      });
+
+      expect(invokeCommand).toHaveBeenCalledWith(
+        'artifact.rename',
+        input,
+        expect.anything(),
+      );
+    },
+  );
+
   it.each([
     {query: 'nonexistent'},
     {query: 'nonexistent', resourceType: 'artifact', riskLevel: 'low'},

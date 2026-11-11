@@ -58,6 +58,9 @@
       "entry": ["src/main.{ts,tsx}"]
     },
     "apps/*": {},
+    "apps/roomie-cli-ui": {
+      "ignoreDependencies": ["jest-environment-jsdom", "jsdom"]
+    },
     "apps/sqlrooms-cli-ui": {
       "entry": [
         "src/main.{ts,tsx}",

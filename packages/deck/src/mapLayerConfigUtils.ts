@@ -702,7 +702,6 @@ export function setDeckMapLayerGeometryColumn(
           dataset: datasetId,
           geometryColumn,
           padding: 40,
-          maxZoom: 12,
         });
 
   const nextDataset = {
@@ -805,7 +804,7 @@ export function setDeckMapLayerCoordinateColumns(
       : {padding: 40}),
     ...(typeof currentFit?.maxZoom === 'number'
       ? {maxZoom: currentFit.maxZoom}
-      : {maxZoom: 12}),
+      : {}),
     ...(keepSourceGeometry
       ? {
           geometryColumn: currentFit?.geometryColumn ?? dataset.geometryColumn,
@@ -949,16 +948,16 @@ function nextArcFitToData(
     current?.dataset === datasetId && typeof current.padding === 'number'
       ? current.padding
       : 40;
-  const maxZoom =
+  const savedMaxZoom =
     current?.dataset === datasetId && typeof current.maxZoom === 'number'
-      ? current.maxZoom
-      : 12;
+      ? {maxZoom: current.maxZoom}
+      : {};
   if (sourceGeometryColumn && targetGeometryColumn) {
     return {
       dataset: datasetId,
       geometryColumns: [sourceGeometryColumn, targetGeometryColumn],
       padding,
-      maxZoom,
+      ...savedMaxZoom,
     };
   }
   if (sourceGeometryColumn || targetGeometryColumn) {
@@ -966,11 +965,11 @@ function nextArcFitToData(
       dataset: datasetId,
       geometryColumn: sourceGeometryColumn ?? targetGeometryColumn,
       padding,
-      maxZoom,
+      ...savedMaxZoom,
     };
   }
   if (current?.dataset === datasetId) {
-    return {dataset: datasetId, padding, maxZoom};
+    return {dataset: datasetId, padding, ...savedMaxZoom};
   }
   return current;
 }

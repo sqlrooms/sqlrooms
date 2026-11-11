@@ -179,7 +179,7 @@ workflow's CLI tests and `evals:test`. The explicit-target discovery regression
 belongs there; it needs no model credentials.
 
 The `external-document-canary` job runs alongside the embedded Promptfoo job in
-`evals-nightly.yml`, on the same nightly schedule and manual dispatch (both targets by default, or
+`evals-weekly.yml`, on the same weekly schedule and manual dispatch (both targets by default, or
 select one target for a declared follow-up). Both use
 `secrets.OPENROUTER_API_KEY` and `vars.SQLROOMS_EVAL_MODEL`. The repository variable
 starts at `deepseek/deepseek-v4-flash-0731`; change it in Settings → Secrets and

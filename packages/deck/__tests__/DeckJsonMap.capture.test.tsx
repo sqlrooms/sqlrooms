@@ -19,8 +19,8 @@ let onDeckRender: ((context: unknown) => void) | undefined;
 let datasetStates: Record<string, PreparedDeckDatasetState> = {};
 const setCanvasAttribute = jest.fn();
 
-jest.unstable_mockModule('@deck.gl/mapbox', () => ({
-  MapboxOverlay: jest.fn(() => ({
+jest.unstable_mockModule('@deck.gl/maplibre', () => ({
+  MapLibreOverlay: jest.fn(() => ({
     getCanvas: () => ({setAttribute: setCanvasAttribute}),
     setProps: (props: {
       onLoad?: () => void;

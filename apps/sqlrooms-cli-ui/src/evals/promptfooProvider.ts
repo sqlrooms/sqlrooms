@@ -44,7 +44,7 @@ function requiredEnvironment(name: string): string {
   const value = process.env[name];
   if (!value) {
     throw new Error(
-      `Missing ${name}. Set it before running the SQLRooms nightly eval suite.`,
+      `Missing ${name}. Set it before running the SQLRooms weekly eval suite.`,
     );
   }
   return value;
