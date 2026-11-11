@@ -16,10 +16,12 @@ const schema = new Schema({
   },
 });
 
+/** Build a top-level text block with the given type, id and text. */
 function block(type: string, id: string | null, text = '') {
   return schema.node(type, {id}, text ? schema.text(text) : undefined);
 }
 
+/** Wrap top-level blocks in a document node. */
 function doc(...blocks: ProseMirrorNode[]) {
   return schema.node('doc', null, blocks);
 }

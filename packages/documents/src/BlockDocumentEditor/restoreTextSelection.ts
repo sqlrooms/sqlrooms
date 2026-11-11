@@ -1,6 +1,7 @@
 import type {Node as ProseMirrorNode} from '@tiptap/pm/model';
 import {TextSelection, type Selection} from '@tiptap/pm/state';
 
+/** Position of the top-level node whose `id` attribute is `blockId`, or null. */
 function findTopLevelBlockPosition(
   doc: ProseMirrorNode,
   blockId: string,
