@@ -1,5 +1,5 @@
 import type {Node as ProseMirrorNode} from '@tiptap/pm/model';
-import {TextSelection, type Selection} from '@tiptap/pm/state';
+import {Selection, TextSelection} from '@tiptap/pm/state';
 
 /** Position of the top-level node whose `id` attribute is `blockId`, or null. */
 function findTopLevelBlockPosition(
@@ -18,10 +18,30 @@ function findTopLevelBlockPosition(
 type ResolvedPos = Selection['$from'];
 
 /**
+ * Nearest valid text position to `pos`, preferring the position after it and
+ * falling back to the one before. Returns the clamped numeric position only
+ * when the document has no textblock at all.
+ */
+function nearestTextPosition(
+  nextDoc: ProseMirrorNode,
+  pos: number,
+  maxPos: number,
+): number {
+  const clamped = Math.max(0, Math.min(pos, maxPos));
+  const $pos = nextDoc.resolve(clamped);
+  const after = Selection.near($pos, 1);
+  if (after instanceof TextSelection) return after.from;
+  const before = Selection.near($pos, -1);
+  if (before instanceof TextSelection) return before.from;
+  return clamped;
+}
+
+/**
  * Shift one selection endpoint by the movement of the top-level block it
  * belongs to, matched by block ID, and keep it inside that block's text. Falls
- * back to the original position when the block has no ID, no longer exists, or
- * changed into a node without text.
+ * back to the nearest text position when the block has no ID, no longer exists,
+ * or changed into a node without text, so the endpoint never sits between
+ * blocks.
  */
 function shiftedEndpoint(
   pos: number,
@@ -46,9 +66,18 @@ function shiftedEndpoint(
           Math.min(pos + (nextBlockPos - $pos.before(1)), blockEnd),
         );
       }
+      if (nextBlock) {
+        // The block changed into an atom (a chart, say), which a TextSelection
+        // cannot sit inside: use the nearest text position after it.
+        return nearestTextPosition(
+          nextDoc,
+          nextBlockPos + nextBlock.nodeSize,
+          maxPos,
+        );
+      }
     }
   }
-  return Math.max(0, Math.min(pos, maxPos));
+  return nearestTextPosition(nextDoc, pos, maxPos);
 }
 
 /**

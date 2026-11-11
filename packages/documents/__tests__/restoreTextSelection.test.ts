@@ -12,6 +12,7 @@ const schema = new Schema({
       content: 'text*',
       attrs: {id: {default: null}},
     },
+    chart: {group: 'block', atom: true, attrs: {id: {default: null}}},
     text: {},
   },
 });
@@ -157,7 +158,29 @@ describe('restoreTextSelection', () => {
     expect(restored.$from.parent.attrs.id).toBe('b');
   });
 
-  it('falls back to numeric offsets when the block is gone', () => {
+  it('moves a non-text block’s endpoint to the nearest text position', () => {
+    const before = doc(
+      block('paragraph', 'a', 'Hello'),
+      block('paragraph', 'b', 'BBBB'),
+    );
+    const selection = TextSelection.create(
+      before,
+      startOf(before, 'a') + 2,
+      startOf(before, 'a') + 4,
+    );
+
+    // The paragraph with id 'a' became an atom (a chart): its old numeric
+    // position is between blocks, so both endpoints must land in a textblock.
+    const after = doc(block('chart', 'a'), block('paragraph', 'b', 'BBBB'));
+    const restored = restoreTextSelection(selection, after);
+
+    expect(restored.from).toBe(startOf(after, 'b'));
+    expect(restored.to).toBe(startOf(after, 'b'));
+    expect(restored.$from.parent.attrs.id).toBe('b');
+    expect(restored.$to.parent.attrs.id).toBe('b');
+  });
+
+  it('falls back to the nearest text position when the block is gone', () => {
     const before = doc(
       block('title', null, 'Title'),
       block('paragraph', 'removed', 'Hello'),
@@ -168,5 +191,6 @@ describe('restoreTextSelection', () => {
     const restored = restoreTextSelection(selection, after);
 
     expect(restored.from).toBeLessThanOrEqual(after.content.size);
+    expect(restored.$from.parent.type.name).toBe('title');
   });
 });
