@@ -19,8 +19,9 @@ type ResolvedPos = Selection['$from'];
 
 /**
  * Shift one selection endpoint by the movement of the top-level block it
- * belongs to, matched by block ID. Falls back to the original position when the
- * block has no ID or no longer exists.
+ * belongs to, matched by block ID, and keep it inside that block's text. Falls
+ * back to the original position when the block has no ID, no longer exists, or
+ * changed into a node without text.
  */
 function shiftedEndpoint(
   pos: number,
@@ -32,10 +33,19 @@ function shiftedEndpoint(
   if (typeof blockId === 'string') {
     const nextBlockPos = findTopLevelBlockPosition(nextDoc, blockId);
     if (nextBlockPos !== null) {
-      return Math.max(
-        0,
-        Math.min(pos + (nextBlockPos - $pos.before(1)), maxPos),
-      );
+      const nextBlock = nextDoc.nodeAt(nextBlockPos);
+      if (nextBlock?.isTextblock) {
+        // Positions inside a textblock run from just after its opening token to
+        // just after its last character. Clamping matters when the block got
+        // shorter: adding the old in-block offset could otherwise land the
+        // endpoint inside the following block.
+        const blockStart = nextBlockPos + 1;
+        const blockEnd = blockStart + nextBlock.content.size;
+        return Math.max(
+          blockStart,
+          Math.min(pos + (nextBlockPos - $pos.before(1)), blockEnd),
+        );
+      }
     }
   }
   return Math.max(0, Math.min(pos, maxPos));
@@ -59,10 +69,18 @@ export function restoreTextSelection(
   nextDoc: ProseMirrorNode,
 ): TextSelection {
   const maxPos = nextDoc.content.size;
-
-  return TextSelection.create(
+  const from = shiftedEndpoint(
+    selection.from,
+    selection.$from,
     nextDoc,
-    shiftedEndpoint(selection.from, selection.$from, nextDoc, maxPos),
-    shiftedEndpoint(selection.to, selection.$to, nextDoc, maxPos),
+    maxPos,
   );
+  const to = shiftedEndpoint(selection.to, selection.$to, nextDoc, maxPos);
+
+  // Reordering can move the block holding `from` past the block holding `to`.
+  // Selecting between crossed positions would select every block in between,
+  // including ones outside the original selection; collapse instead.
+  if (from > to) return TextSelection.create(nextDoc, to);
+
+  return TextSelection.create(nextDoc, from, to);
 }

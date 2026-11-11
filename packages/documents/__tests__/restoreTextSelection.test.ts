@@ -106,6 +106,57 @@ describe('restoreTextSelection', () => {
     expect(restored.$to.parent.attrs.id).toBe('b');
   });
 
+  it('keeps an endpoint inside a block that got shorter', () => {
+    const before = doc(
+      block('paragraph', 'a', 'Hello world'),
+      block('paragraph', 'b', 'BBBB'),
+    );
+    const selection = TextSelection.create(
+      before,
+      startOf(before, 'a') + 8,
+      startOf(before, 'a') + 10,
+    );
+
+    const after = doc(
+      block('paragraph', 'a', 'Hi'),
+      block('paragraph', 'b', 'BBBB'),
+    );
+    const restored = restoreTextSelection(selection, after);
+
+    // 'Hi' has two text positions after its start; both old offsets clamp to
+    // the end of the block instead of spilling into 'b'.
+    const blockEnd = startOf(after, 'a') + 2;
+    expect(restored.from).toBe(blockEnd);
+    expect(restored.to).toBe(blockEnd);
+    expect(restored.$from.parent.attrs.id).toBe('a');
+    expect(restored.$to.parent.attrs.id).toBe('a');
+  });
+
+  it('collapses instead of selecting between crossed endpoints', () => {
+    const before = doc(
+      block('paragraph', 'a', 'AAAA'),
+      block('paragraph', 'b', 'BBBB'),
+      block('paragraph', 'c', 'CCCC'),
+    );
+    const selection = TextSelection.create(
+      before,
+      startOf(before, 'a') + 2,
+      startOf(before, 'b') + 2,
+    );
+
+    // Moving A behind C crosses the mapped endpoints: A's is now after B's.
+    const after = doc(
+      block('paragraph', 'b', 'BBBB'),
+      block('paragraph', 'c', 'CCCC'),
+      block('paragraph', 'a', 'AAAA'),
+    );
+    const restored = restoreTextSelection(selection, after);
+
+    expect(restored.empty).toBe(true);
+    expect(restored.from).toBe(startOf(after, 'b') + 2);
+    expect(restored.$from.parent.attrs.id).toBe('b');
+  });
+
   it('falls back to numeric offsets when the block is gone', () => {
     const before = doc(
       block('title', null, 'Title'),
