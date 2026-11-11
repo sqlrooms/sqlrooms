@@ -77,6 +77,33 @@ describe('restoreTextSelection', () => {
     expect(restored.to).toBe(startOf(after, 'note') + 4);
   });
 
+  it('shifts each endpoint by the block it belongs to', () => {
+    // A selection from A into B. Reordering moves A (and the prefix block) but
+    // leaves B where it was, so B's endpoint must not take A's negative shift.
+    const before = doc(
+      block('paragraph', 'prefix', 'P'),
+      block('paragraph', 'a', 'AAAA'),
+      block('paragraph', 'b', 'BBBB'),
+    );
+    const selection = TextSelection.create(
+      before,
+      startOf(before, 'a') + 2,
+      startOf(before, 'b') + 2,
+    );
+
+    const after = doc(
+      block('paragraph', 'a', 'AAAA'),
+      block('paragraph', 'prefix', 'P'),
+      block('paragraph', 'b', 'BBBB'),
+    );
+    const restored = restoreTextSelection(selection, after);
+
+    expect(restored.from).toBe(startOf(after, 'a') + 2);
+    expect(restored.to).toBe(startOf(after, 'b') + 2);
+    expect(restored.$from.parent.attrs.id).toBe('a');
+    expect(restored.$to.parent.attrs.id).toBe('b');
+  });
+
   it('falls back to numeric offsets when the block is gone', () => {
     const before = doc(
       block('title', null, 'Title'),
