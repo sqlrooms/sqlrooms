@@ -26,16 +26,19 @@ function shiftedEndpoint(
   pos: number,
   $pos: ResolvedPos,
   nextDoc: ProseMirrorNode,
-  clamp: (pos: number) => number,
+  maxPos: number,
 ): number {
   const blockId = $pos.depth > 0 ? $pos.node(1).attrs.id : undefined;
   if (typeof blockId === 'string') {
     const nextBlockPos = findTopLevelBlockPosition(nextDoc, blockId);
     if (nextBlockPos !== null) {
-      return clamp(pos + (nextBlockPos - $pos.before(1)));
+      return Math.max(
+        0,
+        Math.min(pos + (nextBlockPos - $pos.before(1)), maxPos),
+      );
     }
   }
-  return clamp(pos);
+  return Math.max(0, Math.min(pos, maxPos));
 }
 
 /**
@@ -56,11 +59,10 @@ export function restoreTextSelection(
   nextDoc: ProseMirrorNode,
 ): TextSelection {
   const maxPos = nextDoc.content.size;
-  const clamp = (pos: number) => Math.max(0, Math.min(pos, maxPos));
 
   return TextSelection.create(
     nextDoc,
-    shiftedEndpoint(selection.from, selection.$from, nextDoc, clamp),
-    shiftedEndpoint(selection.to, selection.$to, nextDoc, clamp),
+    shiftedEndpoint(selection.from, selection.$from, nextDoc, maxPos),
+    shiftedEndpoint(selection.to, selection.$to, nextDoc, maxPos),
   );
 }
