@@ -180,6 +180,39 @@ describe('restoreTextSelection', () => {
     expect(restored.$to.parent.attrs.id).toBe('b');
   });
 
+  it('skips adjacent charts to reach the next text block', () => {
+    const before = doc(
+      block('paragraph', 'a', 'Hello'),
+      block('paragraph', 'b', 'BBBB'),
+    );
+    const selection = TextSelection.create(before, startOf(before, 'a') + 2);
+
+    // 'a' became a chart directly before another chart. Both `Selection.near`
+    // directions from between them would return node selections; the text
+    // search must skip both charts and land in 'c'.
+    const after = doc(
+      block('chart', 'a'),
+      block('chart', 'b'),
+      block('paragraph', 'c', 'CCCC'),
+    );
+    const restored = restoreTextSelection(selection, after);
+
+    expect(restored.from).toBe(startOf(after, 'c'));
+    expect(restored.$from.parent.attrs.id).toBe('c');
+  });
+
+  it('returns a valid non-text selection when no textblock remains', () => {
+    const before = doc(block('paragraph', 'a', 'Hello'), block('chart', 'b'));
+    const selection = TextSelection.create(before, startOf(before, 'a') + 2);
+
+    const after = doc(block('chart', 'a'), block('chart', 'b'));
+    const restored = restoreTextSelection(selection, after);
+
+    expect(restored).not.toBeInstanceOf(TextSelection);
+    expect(restored.from).toBeGreaterThanOrEqual(0);
+    expect(restored.from).toBeLessThanOrEqual(after.content.size);
+  });
+
   it('falls back to the nearest text position when the block is gone', () => {
     const before = doc(
       block('title', null, 'Title'),
