@@ -527,6 +527,120 @@ describe('block document commands', () => {
     ]);
   });
 
+  describe.each(['create', 'append-blocks', 'insert-blocks', 'update-block'])(
+    'host chart config in %s',
+    (suffix) => {
+      function mutationInput(artifactId: string, config: unknown) {
+        const block = {id: 'chart', type: 'chart', config};
+        return suffix === 'update-block'
+          ? {artifactId, blockId: block.id, block}
+          : {artifactId, blocks: [block], index: 0};
+      }
+
+      it('rejects invalid configs without changing document state', async () => {
+        const {store} = createTestStore({
+          chartBlock: VEGA_LITE_CHART_BLOCK_OPTIONS,
+        });
+        const artifactId = store
+          .getState()
+          .artifacts.createArtifact({type: 'block-document'});
+        store
+          .getState()
+          .blockDocuments.appendBlocks(artifactId, [
+            {id: 'chart', type: 'chart', config: {vegaLiteSpec: {mark: 'bar'}}},
+          ]);
+        const before = JSON.stringify({
+          artifacts: store.getState().artifacts.config,
+          documents: store.getState().blockDocuments.config,
+        });
+
+        const result = await store
+          .getState()
+          .commands.invokeCommand(
+            `block-document.${suffix}`,
+            mutationInput(artifactId, {chartType: 'bar', settings: {}}),
+          );
+
+        expect(result.success).toBe(false);
+        expect(JSON.stringify(result)).toContain('vegaLiteSpec');
+        expect(JSON.stringify(result)).toContain(
+          suffix === 'update-block'
+            ? 'block.config.vegaLiteSpec'
+            : 'blocks.0.config.vegaLiteSpec',
+        );
+        expect(
+          JSON.stringify({
+            artifacts: store.getState().artifacts.config,
+            documents: store.getState().blockDocuments.config,
+          }),
+        ).toBe(before);
+      });
+
+      it.each(['object', 'JSON string'])(
+        'saves the validated %s config, including schema defaults',
+        async (inputFormat) => {
+          const {store} = createTestStore({
+            chartBlock: {
+              configSchema: VEGA_LITE_CHART_BLOCK_OPTIONS.configSchema.extend({
+                sqlQuery: z.string().default('SELECT 1'),
+              }),
+            },
+          });
+          const artifactId = store
+            .getState()
+            .artifacts.createArtifact({type: 'block-document'});
+          if (suffix === 'update-block') {
+            store
+              .getState()
+              .blockDocuments.appendBlocks(artifactId, [
+                {id: 'chart', type: 'paragraph', text: []},
+              ]);
+          }
+          const config = {vegaLiteSpec: {mark: 'bar'}};
+
+          const result = await store
+            .getState()
+            .commands.invokeCommand(
+              `block-document.${suffix}`,
+              mutationInput(
+                artifactId,
+                inputFormat === 'JSON string' ? JSON.stringify(config) : config,
+              ),
+            );
+
+          expect(result.success).toBe(true);
+          const targetArtifactId =
+            suffix === 'create'
+              ? (result.data as {artifactId: string}).artifactId
+              : artifactId;
+          expect(
+            store.getState().blockDocuments.getBlocks(targetArtifactId),
+          ).toEqual([
+            {
+              id: 'chart',
+              type: 'chart',
+              config: {...config, sqlQuery: 'SELECT 1'},
+            },
+          ]);
+        },
+      );
+
+      it('advertises the host chart shape in generic command discovery', () => {
+        const {store} = createTestStore({
+          chartBlock: VEGA_LITE_CHART_BLOCK_OPTIONS,
+        });
+        const descriptor = store
+          .getState()
+          .commands.listCommands({includeInputSchema: true})
+          .find((command) => command.id === `block-document.${suffix}`);
+
+        expect(JSON.stringify(descriptor?.inputSchema)).toContain(
+          'vegaLiteSpec',
+        );
+      });
+    },
+  );
+
   it('advertises the Vega-Lite config shape when the host configures it', () => {
     const {store} = createTestStore({
       chartBlock: VEGA_LITE_CHART_BLOCK_OPTIONS,
