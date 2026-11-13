@@ -2,6 +2,10 @@ import {mergeAttributes, Node, ReactNodeViewRenderer} from '@tiptap/react';
 import {BlockDocumentChartNodeView} from '../node-views/BlockDocumentChartNodeView';
 import {stopWidgetNodeViewEvent} from './nodeViewEvents';
 
+/**
+ * Reads a chart block's `config` back from the JSON in `data-config`, falling
+ * back to an empty config when it is missing or not valid JSON.
+ */
 function parseChartConfigAttribute(value: string | null): unknown {
   if (!value) return {};
   try {
@@ -11,6 +15,10 @@ function parseChartConfigAttribute(value: string | null): unknown {
   }
 }
 
+/**
+ * Tiptap node for a chart block in a block document. The chart itself is drawn
+ * by the renderer registered with `BlockDocumentChartRendererProvider`.
+ */
 export const BlockDocumentChartNode = Node.create({
   name: 'blockDocumentChart',
   group: 'block',
