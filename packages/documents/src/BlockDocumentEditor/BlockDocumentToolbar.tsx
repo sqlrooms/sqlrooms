@@ -78,7 +78,6 @@ export const BlockDocumentToolbar: FC<BlockDocumentToolbarProps> = ({
         aria-label="Insert chart block"
         onClick={() =>
           insertAtomBlock('blockDocumentChart', {
-            tableName: '',
             config: {},
             caption: '',
           })

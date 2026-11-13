@@ -655,6 +655,23 @@ focused mutation payloads such as `blockId`, `blockIds`, `blockType`,
 return follow-up IDs such as `tableName`, `blockInstanceId`,
 `statefulBlockType`, the seed `instanceTitle`, and chosen `caption` values.
 
+A chart block's `config` is host-defined. Pass `chartBlock: {configSchema,
+description}` to `createBlockDocumentCommands` to advertise the shape that host
+actually renders: the schema becomes the `config` JSON Schema that command
+discovery hands agents, and it validates the config in
+`block-document.create-chart-block` and the generic `create`, `append-blocks`,
+`insert-blocks`, and `update-block` commands. A wrong config fails before any
+mutation instead of saving a block that cannot render. Configs passed as JSON
+strings are parsed before validation, and schema defaults and transforms are
+saved in the block. Its `.describe()` supplies the config description. Without
+the option the command keeps a loose `unknown` config with the Mosaic example
+used by the reference renderers.
+
+`tableName` is optional on chart blocks and on the chart command: omit it when
+the config carries its own SQL (the desktop's Vega-Lite
+`{vegaLiteSpec, sqlQuery}`, for example) rather than storing an empty string.
+Existing documents that carry a table name still load.
+
 Structured block payloads may include an optional `intent` string. Use it for
 the durable natural-language purpose of an agent- or command-created block,
 such as the question a chart should answer or the job an embedded dashboard

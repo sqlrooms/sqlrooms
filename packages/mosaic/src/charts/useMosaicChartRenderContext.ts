@@ -43,7 +43,9 @@ export function useMosaicChartRenderContext(
     if (!chartTypeDefinition) {
       return {
         type: 'error',
-        error: new Error(`Invalid chart type definition`),
+        error: new Error(
+          `Chart type "${config.chartType}" is not registered in this workspace.`,
+        ),
       };
     }
 

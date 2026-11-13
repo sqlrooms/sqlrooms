@@ -174,4 +174,26 @@ describe('BlockDocument rich text support', () => {
       expect(node.content).toBeUndefined();
     });
   });
+
+  describe('chart blocks without a table', () => {
+    it('reads a chart node whose omitted tableName defaulted to null', () => {
+      // The TipTap chart extension defaults tableName to null; the block schema
+      // treats the field as optional, so the conversion must normalize null to
+      // undefined rather than dropping the chart as invalid.
+      const block = blockDocumentNodeToBlock({
+        type: 'blockDocumentChart',
+        attrs: {
+          id: 'chart-1',
+          tableName: null,
+          config: {vegaLiteSpec: {mark: 'bar'}, sqlQuery: 'SELECT 1'},
+        },
+      });
+
+      expect(block).toEqual({
+        id: 'chart-1',
+        type: 'chart',
+        config: {vegaLiteSpec: {mark: 'bar'}, sqlQuery: 'SELECT 1'},
+      });
+    });
+  });
 });

@@ -53,7 +53,7 @@ export const BlockDocumentChartNodeView: FC<
   const readOnlyRef = useRef(readOnly);
   const attrs = unknownRecord(node.attrs);
   const blockId = optionalString(attrs.id) ?? '';
-  const tableName = optionalString(attrs.tableName) ?? '';
+  const tableName = optionalString(attrs.tableName);
   const selectionGroupId = optionalString(attrs.selectionGroupId);
   const caption = optionalString(attrs.caption);
   const config = attrs.config ?? EMPTY_CHART_CONFIG;

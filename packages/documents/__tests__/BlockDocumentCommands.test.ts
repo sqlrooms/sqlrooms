@@ -9,6 +9,7 @@ import {
   type BaseRoomStoreState,
   type CommandSliceState,
 } from '@sqlrooms/room-store';
+import {z} from 'zod';
 import {createStore} from 'zustand';
 import {
   createBlockDocumentCommands,
@@ -23,6 +24,7 @@ type TestRoomState = BaseRoomStoreState &
 
 function createTestStore({
   allowedBlockTypes,
+  chartBlock,
   readState,
 }: {
   readState?: (context: {
@@ -32,6 +34,9 @@ function createTestStore({
   allowedBlockTypes?: Parameters<
     typeof createBlockDocumentCommands<TestRoomState>
   >[0]['allowedBlockTypes'];
+  chartBlock?: Parameters<
+    typeof createBlockDocumentCommands<TestRoomState>
+  >[0]['chartBlock'];
 } = {}) {
   let timestamp = 100;
   const ensuredStatefulBlocks: Array<{id: string; title: string}> = [];
@@ -67,10 +72,24 @@ function createTestStore({
         },
       ],
       allowedBlockTypes,
+      chartBlock,
     }),
   );
   return {store, ensuredStatefulBlocks};
 }
+
+/** The desktop's host-specific chart-block config shape. */
+const VEGA_LITE_CHART_BLOCK_OPTIONS = {
+  description:
+    'Create a block document chart block from a Vega-Lite spec and the SQL that feeds it',
+  configSchema: z
+    .object({
+      vegaLiteSpec: z.union([z.string(), z.record(z.string(), z.unknown())]),
+      sqlQuery: z.string().optional(),
+    })
+    .loose()
+    .describe('Document chart config: {vegaLiteSpec, sqlQuery}.'),
+};
 
 describe('block document commands', () => {
   it('inspects inline blocks and registered backing state without changing the document', async () => {
@@ -416,6 +435,241 @@ describe('block document commands', () => {
         caption: 'Revenue',
       },
     ]);
+  });
+
+  it('creates a Vega-Lite chart block without a table name', async () => {
+    const {store} = createTestStore({
+      chartBlock: VEGA_LITE_CHART_BLOCK_OPTIONS,
+    });
+    const createResult = await store
+      .getState()
+      .commands.invokeCommand('block-document.create');
+    const artifactId = (createResult.data as any).artifactId as string;
+    const config = {
+      vegaLiteSpec: {
+        mark: 'bar',
+        encoding: {x: {field: 'decile', type: 'nominal'}},
+      },
+      sqlQuery: 'SELECT * FROM la_pop_deciles',
+    };
+
+    const chartResult = await store
+      .getState()
+      .commands.invokeCommand('block-document.create-chart-block', {
+        artifactId,
+        blockId: 'chart-vega',
+        config,
+        caption: 'Share by decile',
+      });
+
+    // A Vega-Lite config carries its own SQL, so the block must simply omit
+    // `tableName` — storing `''` to mean "no table" is what every reader would
+    // otherwise have to interpret.
+    expect(chartResult.data).toMatchObject({
+      artifactId,
+      blockId: 'chart-vega',
+      blockType: 'chart',
+      caption: 'Share by decile',
+    });
+    expect(
+      (chartResult.data as {tableName?: string}).tableName,
+    ).toBeUndefined();
+    expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
+      {
+        id: 'chart-vega',
+        type: 'chart',
+        config,
+        caption: 'Share by decile',
+      },
+    ]);
+  });
+
+  it('rejects a config that does not match the host chart schema', async () => {
+    const {store} = createTestStore({
+      chartBlock: VEGA_LITE_CHART_BLOCK_OPTIONS,
+    });
+    const createResult = await store
+      .getState()
+      .commands.invokeCommand('block-document.create');
+    const artifactId = (createResult.data as any).artifactId as string;
+
+    const chartResult = await store
+      .getState()
+      .commands.invokeCommand('block-document.create-chart-block', {
+        artifactId,
+        config: {chartType: 'bar', settings: {x: 'decile', y: 'pop'}},
+      });
+
+    expect(chartResult.success).toBe(false);
+    expect(JSON.stringify(chartResult)).toContain('vegaLiteSpec');
+    expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([]);
+  });
+
+  it('accepts a table-less chart block through the generic block commands', async () => {
+    const {store} = createTestStore();
+    const createResult = await store
+      .getState()
+      .commands.invokeCommand('block-document.create');
+    const artifactId = (createResult.data as any).artifactId as string;
+    const config = {vegaLiteSpec: {mark: 'bar'}, sqlQuery: 'SELECT 1'};
+
+    // `tableName` is optional on the block schema itself, not just on
+    // create-chart-block, so append/insert/update treat the same block the same.
+    await expect(
+      store.getState().commands.invokeCommand('block-document.append-blocks', {
+        artifactId,
+        blocks: [{id: 'chart-no-table', type: 'chart', config}],
+      }),
+    ).resolves.toMatchObject({success: true});
+
+    expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
+      {id: 'chart-no-table', type: 'chart', config},
+    ]);
+  });
+
+  describe.each(['create', 'append-blocks', 'insert-blocks', 'update-block'])(
+    'host chart config in %s',
+    (suffix) => {
+      function mutationInput(artifactId: string, config: unknown) {
+        const block = {id: 'chart', type: 'chart', config};
+        return suffix === 'update-block'
+          ? {artifactId, blockId: block.id, block}
+          : {artifactId, blocks: [block], index: 0};
+      }
+
+      it('rejects invalid configs without changing document state', async () => {
+        const {store} = createTestStore({
+          chartBlock: VEGA_LITE_CHART_BLOCK_OPTIONS,
+        });
+        const artifactId = store
+          .getState()
+          .artifacts.createArtifact({type: 'block-document'});
+        store
+          .getState()
+          .blockDocuments.appendBlocks(artifactId, [
+            {id: 'chart', type: 'chart', config: {vegaLiteSpec: {mark: 'bar'}}},
+          ]);
+        const before = JSON.stringify({
+          artifacts: store.getState().artifacts.config,
+          documents: store.getState().blockDocuments.config,
+        });
+
+        const result = await store
+          .getState()
+          .commands.invokeCommand(
+            `block-document.${suffix}`,
+            mutationInput(artifactId, {chartType: 'bar', settings: {}}),
+          );
+
+        expect(result.success).toBe(false);
+        expect(JSON.stringify(result)).toContain('vegaLiteSpec');
+        expect(JSON.stringify(result)).toContain(
+          suffix === 'update-block'
+            ? 'block.config.vegaLiteSpec'
+            : 'blocks.0.config.vegaLiteSpec',
+        );
+        expect(
+          JSON.stringify({
+            artifacts: store.getState().artifacts.config,
+            documents: store.getState().blockDocuments.config,
+          }),
+        ).toBe(before);
+      });
+
+      it.each(['object', 'JSON string'])(
+        'saves the validated %s config, including schema defaults',
+        async (inputFormat) => {
+          const {store} = createTestStore({
+            chartBlock: {
+              configSchema: VEGA_LITE_CHART_BLOCK_OPTIONS.configSchema.extend({
+                sqlQuery: z.string().default('SELECT 1'),
+              }),
+            },
+          });
+          const artifactId = store
+            .getState()
+            .artifacts.createArtifact({type: 'block-document'});
+          if (suffix === 'update-block') {
+            store
+              .getState()
+              .blockDocuments.appendBlocks(artifactId, [
+                {id: 'chart', type: 'paragraph', text: []},
+              ]);
+          }
+          const config = {vegaLiteSpec: {mark: 'bar'}};
+
+          const result = await store
+            .getState()
+            .commands.invokeCommand(
+              `block-document.${suffix}`,
+              mutationInput(
+                artifactId,
+                inputFormat === 'JSON string' ? JSON.stringify(config) : config,
+              ),
+            );
+
+          expect(result.success).toBe(true);
+          const targetArtifactId =
+            suffix === 'create'
+              ? (result.data as {artifactId: string}).artifactId
+              : artifactId;
+          expect(
+            store.getState().blockDocuments.getBlocks(targetArtifactId),
+          ).toEqual([
+            {
+              id: 'chart',
+              type: 'chart',
+              config: {...config, sqlQuery: 'SELECT 1'},
+            },
+          ]);
+        },
+      );
+
+      it('advertises the host chart shape in generic command discovery', () => {
+        const {store} = createTestStore({
+          chartBlock: VEGA_LITE_CHART_BLOCK_OPTIONS,
+        });
+        const descriptor = store
+          .getState()
+          .commands.listCommands({includeInputSchema: true})
+          .find((command) => command.id === `block-document.${suffix}`);
+
+        expect(JSON.stringify(descriptor?.inputSchema)).toContain(
+          'vegaLiteSpec',
+        );
+      });
+    },
+  );
+
+  it('advertises the Vega-Lite config shape when the host configures it', () => {
+    const {store} = createTestStore({
+      chartBlock: VEGA_LITE_CHART_BLOCK_OPTIONS,
+    });
+    const descriptor = store
+      .getState()
+      .commands.listCommands({includeInputSchema: true})
+      .find((command) => command.id === 'block-document.create-chart-block');
+
+    expect(descriptor?.description).toContain('Vega-Lite');
+    expect(descriptor?.inputDescription).toContain('chart config');
+
+    // The host's config schema is what command discovery advertises, so the
+    // real shape — not just a description of it — reaches MCP clients.
+    const inputSchema = descriptor?.inputSchema as
+      | {
+          properties?: {
+            config?: {properties?: Record<string, unknown>};
+            tableName?: unknown;
+          };
+          required?: string[];
+        }
+      | undefined;
+    expect(inputSchema?.properties?.config?.properties).toHaveProperty(
+      'vegaLiteSpec',
+    );
+    expect(inputSchema?.properties).toHaveProperty('tableName');
+    expect(inputSchema?.required ?? []).toContain('config');
+    expect(inputSchema?.required ?? []).not.toContain('tableName');
   });
 
   it('creates hosted stateful blocks', async () => {
