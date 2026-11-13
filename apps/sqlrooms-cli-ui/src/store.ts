@@ -82,11 +82,8 @@ import {
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
 
-import {createHttpDbBridge} from '@sqlrooms/db';
-import {
-  createDbSettingsSlice,
-  syncConnectionsToDb,
-} from '@sqlrooms/db-settings';
+import {createHttpDbBridge, DbConnection} from '@sqlrooms/db';
+import {createDbSettingsSlice} from '@sqlrooms/db-settings';
 import {
   BlockDocumentsSliceConfig,
   createMarkdownDocumentsSlice,
@@ -815,19 +812,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createDbSettingsSlice({
           fetch: (url, init) => authorizedFetch(instancePath(url), init),
           config: {
-            connections: (runtimeConfig.dbBridge?.connections ?? []).map(
-              (c) => ({
-                id: c.id,
-                engineId: c.engineId,
-                title: c.title || c.id,
-                runtimeSupport: c.runtimeSupport || 'server',
-                requiresBridge: c.requiresBridge ?? true,
-                bridgeId: c.bridgeId,
-                isCore: c.isCore ?? false,
-                config: c.config,
-              }),
-            ),
-            diagnostics: runtimeConfig.dbBridge?.diagnostics ?? [],
             supportedEngines: runtimeConfig.dbBridge?.supportedEngines ?? [],
             engineConfigFields:
               runtimeConfig.dbBridge?.engineConfigFields ?? {},
@@ -852,6 +836,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 : [],
             },
             createDbProps: {
+              config: {
+                connections: Object.fromEntries(
+                  (runtimeConfig.dbBridge?.connections ?? []).map(
+                    (connection) => [
+                      connection.id,
+                      DbConnection.parse({
+                        ...connection,
+                        title: connection.title || connection.id,
+                        runtimeSupport: connection.runtimeSupport || 'server',
+                        requiresBridge: connection.requiresBridge ?? true,
+                      }),
+                    ],
+                  ),
+                ),
+              },
+              diagnostics: runtimeConfig.dbBridge?.diagnostics ?? [],
               duckDb: {
                 loadTableSchemasFilter: (() => {
                   const filter = createDefaultLoadTableSchemasFilter();
@@ -1034,7 +1034,6 @@ if (bridgeConfig) {
   });
   roomStore.getState().db.connectors.registerBridge(bridge);
 }
-syncConnectionsToDb(roomStore);
 
 function getAiSettingsTomlPayload(state: RoomState) {
   const currentSession = state.ai.getCurrentSession();
