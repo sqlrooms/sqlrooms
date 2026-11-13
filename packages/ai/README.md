@@ -36,6 +36,12 @@ search results by default; commands with `requiresInput: false` can run with
 default input without a schema lookup. Search covers registered commands only;
 other directly available AI tools should be called directly.
 
+For commands with an object input schema, `execute_command` also decodes
+JSON-encoded input strings before the normal command policy and validation
+path. Models should pass objects directly. Commands with string inputs keep
+their literal values; malformed JSON and invalid command fields still fail
+command validation.
+
 Search requires text relevance before applying resource/action hints or
 availability bonuses. It ignores common filler words and matches query tokens
 as words or command-ID segments. Read requests (`get`, `read`, `list`, `show`,

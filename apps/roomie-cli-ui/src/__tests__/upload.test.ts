@@ -1,68 +1,52 @@
 import {describe, expect, it, jest} from '@jest/globals';
-import {uploadBrowserFile, type UploadFetcher} from '../upload';
+import {stageBrowserFile, type UploadFetcher} from '../upload';
 
-describe('browser file upload', () => {
-  it('uploads the bytes before importing the returned server path', async () => {
+describe('browser file staging', () => {
+  it('uploads the bytes and returns a path without importing a table', async () => {
+    const file = new File(['city,value\nZürich,1\n'], 'cars.csv', {
+      type: 'text/csv',
+    });
+    const controller = new AbortController();
     const fetcher = jest.fn<UploadFetcher>(async (_input, init) => {
       expect(init?.method).toBe('POST');
       expect(init?.body).toBeInstanceOf(FormData);
-      return {
-        ok: true,
-        statusText: 'OK',
-        json: async () => ({path: '/tmp/roomie_uploads/cars.csv'}),
-      } as Response;
+      const uploaded = (init?.body as FormData).get('file') as File;
+      expect(uploaded.name).toBe(file.name);
+      expect(await uploaded.text()).toBe(await file.text());
+      expect(init?.signal).toBe(controller.signal);
+      return new Response(JSON.stringify({path: '/tmp/uploads/cars.csv'}));
     });
-    const connector = {
-      loadFile: jest.fn(async (_file: string | File, _tableName: string) => {}),
-    };
-    await uploadBrowserFile(
-      new File(['city,value\nZürich,1\n'], 'cars.csv', {type: 'text/csv'}),
-      'cars',
-      connector,
-      fetcher,
-    );
-    expect(connector.loadFile).toHaveBeenCalledWith(
-      '/tmp/roomie_uploads/cars.csv',
-      'cars',
+    expect(await stageBrowserFile(file, fetcher, controller.signal)).toBe(
+      '/tmp/uploads/cars.csv',
     );
   });
-
-  it('rejects an unsafe server path before importing it', async () => {
-    const connector = {
-      loadFile: jest.fn(async (_file: string | File, _tableName: string) => {}),
-    };
+  it.each(['../private.csv', '', null])(
+    'rejects an invalid server path %s',
+    async (path) => {
+      await expect(
+        stageBrowserFile(
+          new File(['a'], 'data.csv'),
+          async () => new Response(JSON.stringify({path})),
+        ),
+      ).rejects.toThrow('invalid server path');
+    },
+  );
+  it('reports upload errors', async () => {
     await expect(
-      uploadBrowserFile(
-        new File(['value\n1\n'], 'values.csv'),
-        'values',
-        connector,
+      stageBrowserFile(
+        new File(['a'], 'data.csv'),
         async () =>
-          ({
-            ok: true,
-            json: async () => ({path: '../private.csv'}),
-          }) as Response,
+          new Response('{}', {status: 500, statusText: 'Request failed'}),
       ),
-    ).rejects.toThrow('invalid server path');
-    expect(connector.loadFile).not.toHaveBeenCalled();
+    ).rejects.toThrow('Upload failed');
   });
-
-  it('accepts valid server paths containing spaces and Unicode', async () => {
-    const connector = {
-      loadFile: jest.fn(async (_file: string | File, _tableName: string) => {}),
-    };
-    await uploadBrowserFile(
-      new File(['value\n1\n'], 'values.csv'),
-      'values',
-      connector,
-      async () =>
-        ({
-          ok: true,
-          json: async () => ({path: '/tmp/Roomie Zürich/uploads/values.csv'}),
-        }) as Response,
-    );
-    expect(connector.loadFile).toHaveBeenCalledWith(
-      '/tmp/Roomie Zürich/uploads/values.csv',
-      'values',
-    );
+  it('accepts spaces and Unicode in server paths', async () => {
+    const path = '/tmp/Roomie Zürich/uploads/values.csv';
+    expect(
+      await stageBrowserFile(
+        new File(['a'], 'data.csv'),
+        async () => new Response(JSON.stringify({path})),
+      ),
+    ).toBe(path);
   });
 });

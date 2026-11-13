@@ -1,7 +1,7 @@
 import {
-  MapboxOverlay as DeckOverlay,
-  MapboxOverlayProps,
-} from '@deck.gl/mapbox';
+  MapLibreOverlay as DeckOverlay,
+  MapLibreOverlayProps,
+} from '@deck.gl/maplibre';
 import {cn} from '@sqlrooms/ui';
 import {GeoJsonLayer} from 'deck.gl';
 import {MessageCircle, PlusCircle} from 'lucide-react';
@@ -20,7 +20,7 @@ const INITIAL_VIEW_STATE = {
 
 const MAP_STYLE =
   'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-function DeckGLOverlay(props: MapboxOverlayProps) {
+function DeckGLOverlay(props: MapLibreOverlayProps) {
   const overlay = useControl(() => new DeckOverlay(props));
   overlay.setProps(props);
   return null;
@@ -169,7 +169,13 @@ export const MapView: FC<{features: AirportFeature[] | undefined}> = ({
   ];
 
   return (
-    <Map initialViewState={INITIAL_VIEW_STATE} mapStyle={MAP_STYLE}>
+    <Map
+      initialViewState={INITIAL_VIEW_STATE}
+      mapStyle={MAP_STYLE}
+      workerUrl={
+        new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).href
+      }
+    >
       {/* Selected airport popup */}
       {selected && (
         <Popup

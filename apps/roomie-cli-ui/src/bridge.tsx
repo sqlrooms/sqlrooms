@@ -10,6 +10,7 @@ import {
 import {config} from './config';
 import {pageCredential} from './auth';
 import {roomStore, storage} from './store';
+import {ExternalAiStatus} from './ExternalAiStatus';
 
 /** External MCP execution keeps the owning browser, approval and save boundaries. */
 export function Bridge() {
@@ -56,9 +57,7 @@ export function Bridge() {
   }, []);
   return (
     <>
-      <span className="text-xs text-slate-500">
-        External AI · {status === 'ready' ? 'ready' : status}
-      </span>
+      <ExternalAiStatus status={status} />
       {approval.active && (
         <div
           className="roomie-modal"

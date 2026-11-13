@@ -169,7 +169,7 @@ export function tryAggregateWaypointsToLineStrings(
   columns['__geom'] = geometryVector;
 
   // Build timestamps list column if a timestamp column exists.
-  // Must be a proper Arrow List<Float64> vector for GeoArrowTripsLayer.
+  // Preserve timestamp units and nulls for trip normalization.
   if (timestampCol) {
     const tsVector = table.getChild(timestampCol)!;
     const tsOffsets = new Int32Array(numPaths + 1);
@@ -180,20 +180,41 @@ export function tryAggregateWaypointsToLineStrings(
     }
     tsOffsets[numPaths] = tsTotalValues;
 
-    const tsFlat = new Float64Array(tsTotalValues);
+    const rawTimestamps = arrow.DataType.isTimestamp(tsVector.type)
+      ? tsVector.toArray()
+      : undefined;
+    const timestampType = rawTimestamps ? tsVector.type : new arrow.Float64();
+    const tsFlat = rawTimestamps
+      ? new BigInt64Array(tsTotalValues)
+      : new Float64Array(tsTotalValues);
+    const nullBitmap = new Uint8Array(Math.ceil(tsTotalValues / 8));
+    let nullCount = 0;
     let tsWriteIdx = 0;
     for (const key of groupOrder) {
       for (const rowIdx of groups.get(key)!.indices) {
-        tsFlat[tsWriteIdx++] = Number(tsVector.get(rowIdx)) || 0;
+        const index = tsWriteIdx++;
+        if (!tsVector.isValid(rowIdx)) {
+          nullCount++;
+          continue;
+        }
+        nullBitmap[index >> 3] =
+          (nullBitmap[index >> 3] ?? 0) | (1 << (index % 8));
+        if (tsFlat instanceof BigInt64Array) {
+          tsFlat[index] = rawTimestamps![rowIdx]!;
+        } else {
+          tsFlat[index] = Number(tsVector.get(rowIdx));
+        }
       }
     }
 
-    const tsValueField = new arrow.Field('', new arrow.Float64(), true);
+    const tsValueField = new arrow.Field('', timestampType, true);
     const tsListType = new arrow.List(tsValueField);
     const tsValuesData = arrow.makeData({
-      type: new arrow.Float64(),
+      type: timestampType,
       length: tsTotalValues,
       data: tsFlat,
+      nullBitmap,
+      nullCount,
     });
     const tsListData = arrow.makeData({
       type: tsListType,

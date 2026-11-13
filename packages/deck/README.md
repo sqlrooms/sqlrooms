@@ -60,6 +60,8 @@ For Mosaic dashboard integration, also install `@sqlrooms/mosaic`,
 `@uwdata/mosaic-core`, and `@uwdata/mosaic-sql`, then import the adapter from
 `@sqlrooms/deck/mosaic`.
 
+MapLibre-backed maps require a browser with WebGL2 support.
+
 ## What This Package Does
 
 `@sqlrooms/deck` is the JSON-spec bridge between SQLRooms data and deck.gl:
@@ -305,7 +307,6 @@ const mapPanel = createDeckMapDashboardPanelConfig({
     longitudeColumn: 'Longitude',
     latitudeColumn: 'Latitude',
     padding: 40,
-    maxZoom: 12,
   },
 });
 ```
@@ -318,6 +319,12 @@ dataset extent and fits the initial map view once, instead of inferring bounds
 from the loaded Arrow payload in React. The extent query uses the columns named
 on `fitToData`, falling back to the dataset's `geometryColumn` and then to a
 bound layer's `_sqlroomsBinding.geometryColumn` or `hexagonColumn`.
+
+Omit `fitToData.maxZoom` to use the default fit-to-data zoom ceiling of 18.
+Set a number only when you want to limit how far fitting zooms in. Existing
+saved values, including `maxZoom: 12`, are preserved when loading a map or
+changing its table, geometry, or coordinate columns. Remove the saved field
+to use the default ceiling; upgrading does not remove existing caps.
 
 Use `createDeckMapPanelFromNativeConfig(...)` when a host surface already has a
 native Deck map config, for example from AI tooling, and needs the same
@@ -762,7 +769,22 @@ It then produces canonical deck-facing geometry outputs for:
 Specialized layers such as `GeoArrowArcLayer`, `GeoArrowTripsLayer`, and
 `GeoArrowH3HexagonLayer` reuse the prepared table but bind additional
 configured columns on top for source/target geometry,
-timestamps, or index cells.
+timestamps, or index cells. Trip timestamps may be a short relative series or
+absolute timestamps. Typed Arrow timestamps, including DuckDB `TIMESTAMP`
+and dates before 1970, are rebased to relative seconds before animation to
+preserve Float32 precision, including nanosecond intervals. Numeric epoch seconds,
+milliseconds, and microseconds are inferred by magnitude; use typed Arrow
+timestamps for dates near 1970, where numeric units are ambiguous. Short
+non-negative relative series stay unchanged; negative series are rebased to zero.
+Null list rows and null timestamp values do not affect the animation range.
+
+In JSON specs, explicit `currentTime` and `trailLength` use the input units:
+milliseconds for typed Arrow timestamps (matching Arrow's JavaScript getters),
+or the numeric column's units. Conversion rebases `currentTime` and scales
+`trailLength` once; explicit zero values are preserved. Converted layers and
+the built-in playback controls then use the normalized timeline. Timestamp
+summaries and buffers are reused during playback; replace the timestamp vector
+when its data changes rather than mutating its backing buffers.
 
 This work is cached internally in a module-global prepared dataset store. That
 cache is separate from any upstream query cache:

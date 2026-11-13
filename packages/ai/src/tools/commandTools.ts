@@ -5,6 +5,7 @@ import {
   type AiRunContext,
 } from '@sqlrooms/ai-config';
 import {
+  exportCommandInputSchema,
   hasCommandSliceState,
   invokeCommandWithPolicy,
 } from '@sqlrooms/room-shell';
@@ -168,7 +169,9 @@ export const ExecuteCommandToolParameters = z.object({
   input: z
     .unknown()
     .optional()
-    .describe('Optional command input. Must satisfy the command input schema.'),
+    .describe(
+      'Optional command input. Must satisfy the command input schema. Pass object input as a JSON object, not a JSON-encoded string.',
+    ),
   confirmed: z
     .boolean()
     .optional()
@@ -431,7 +434,8 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
           } satisfies ExecuteCommandToolLlmResult;
         }
 
-        if (!state.commands.getCommand(commandId)) {
+        const command = state.commands.getCommand(commandId);
+        if (!command) {
           return {
             success: false,
             commandId,
@@ -493,7 +497,7 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
         const result = await invokeCommandWithPolicy(
           store,
           commandId,
-          input,
+          normalizeCommandToolInput(input, command.inputSchema),
           createCommandToolInvocationOptions(
             defaultSurface,
             options,
@@ -529,6 +533,26 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
     // ([searchToolName], [getToolName], [listToolName], [executeToolName]) to
     // their literal string types.
   } as DefaultCommandTools;
+}
+
+function normalizeCommandToolInput(
+  input: unknown,
+  schema: z.ZodType | undefined,
+): unknown {
+  // Some models encode the nested input as JSON text. Decode only commands
+  // whose schema requires an object, so literal string inputs retain meaning.
+  if (
+    typeof input !== 'string' ||
+    exportCommandInputSchema(schema)?.type !== 'object'
+  ) {
+    return input;
+  }
+  try {
+    return JSON.parse(input) as unknown;
+  } catch {
+    // Let normal command validation report malformed inputs.
+    return input;
+  }
 }
 
 function filterGuardedCommandDescriptors(

@@ -11,11 +11,31 @@ application adapters.
 roomie analysis.duckdb
 roomie --no-open-browser analysis.duckdb
 python -m roomie --version
+roomie agent setup
 roomie agent setup --client claude-code
 roomie agent setup --client codex
 # Review the preview, then add --apply to install the scoped configuration.
 roomie agent status
 ```
+
+Click **External AI** in the browser for connection and skill instructions.
+Its status describes the browser bridge, not whether an assistant is connected
+or a skill is installed.
+
+Run `roomie agent setup` in an interactive terminal to choose Claude Code, Codex,
+or **Other MCP client**. Supported integrations show a preview and ask before
+applying changes; declining, pressing Enter at the chooser, or cancelling exits.
+Other MCP client prints stdio settings using the installed Python interpreter and
+the bundled `SKILL.md` location, without changing any files. Add those settings
+to your client's MCP configuration, then copy the skill to its skill directory or
+add its contents to agent instructions if it does not support skills.
+
+Explicit `--client` commands remain non-interactive previews; add `--apply` to
+install without prompting. `--apply` requires a supported `--client`. Without a
+TTY, bare `roomie agent setup` prints usage and manual connection guidance without
+prompting or modifying files. After setup, restart the assistant (using the
+returned launch command for Claude Code), ask it to use Roomie to open your
+database, and keep the owning browser tab open while it works.
 
 Opening a bare URL does not authorize it. Use the temporary launch link printed
 in an interactive terminal, or open_workspace's launchUrl. Page sessions renew

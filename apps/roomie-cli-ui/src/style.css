@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 @import '@sqlrooms/ui/tailwind-preset.css';
-@source '../../../packages/{documents,mosaic,ui,layout,app-runtime,room-shell,data-table,codemirror}/src/**/*.{ts,tsx}';
+@source '../../../packages/{documents,mosaic,ui,layout,app-runtime,room-shell,data-table,codemirror,schema-tree}/src/**/*.{ts,tsx}';
 :root {
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   color: #23302c;
@@ -55,7 +55,7 @@ button:disabled {
   margin: 24px 8px 8px;
   color: #64756c;
 }
-.roomie-sidebar button {
+.roomie-sidebar > button {
   display: block;
   width: 100%;
   text-align: left;
@@ -63,9 +63,18 @@ button:disabled {
   padding: 8px 10px;
   font-size: 13px;
 }
-.roomie-sidebar button[aria-current='true'] {
+.roomie-sidebar > button[aria-current='true'] {
   background: #e0ebe3;
   color: #175339;
+}
+.roomie-data-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 24px 8px 8px;
+}
+.roomie-data-header h2 {
+  margin: 0;
 }
 .roomie-document {
   flex: 1;
