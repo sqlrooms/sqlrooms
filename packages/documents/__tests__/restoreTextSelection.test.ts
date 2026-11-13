@@ -248,6 +248,57 @@ describe('restoreTextSelection', () => {
     expect(restored.from).toBeLessThanOrEqual(after.content.size);
   });
 
+  it('maps each endpoint by its own block when they move differently', () => {
+    const before = doc(
+      block('title', null, 'Title'),
+      block('paragraph', 'a', 'Alpha'),
+      block('paragraph', 'b', 'Beta'),
+      block('paragraph', 'c', 'Gamma'),
+      block('paragraph', 'd', 'Delta'),
+    );
+    const selection = TextSelection.create(
+      before,
+      startOf(before, 'a') + 1,
+      startOf(before, 'c') + 2,
+    );
+
+    // A moves after B; C stays where it was.
+    const after = doc(
+      block('title', null, 'Title'),
+      block('paragraph', 'b', 'Beta'),
+      block('paragraph', 'a', 'Alpha'),
+      block('paragraph', 'c', 'Gamma'),
+      block('paragraph', 'd', 'Delta'),
+    );
+    const restored = restoreTextSelection(selection, after);
+
+    expect(restored.from).toBe(startOf(after, 'a') + 1);
+    expect(restored.to).toBe(startOf(after, 'c') + 2);
+    expect(restored.$to.parent.attrs.id).toBe('c');
+  });
+
+  it('keeps the selection direction', () => {
+    const before = doc(
+      block('title', null, 'Title'),
+      block('paragraph', 'note', 'Hello'),
+    );
+    const selection = TextSelection.create(
+      before,
+      startOf(before, 'note') + 4,
+      startOf(before, 'note') + 1,
+    );
+
+    const after = doc(
+      block('title', null, 'Title'),
+      block('heading', 'new', 'Inserted'),
+      block('paragraph', 'note', 'Hello'),
+    );
+    const restored = restoreTextSelection(selection, after);
+
+    expect(restored.anchor).toBe(startOf(after, 'note') + 4);
+    expect(restored.head).toBe(startOf(after, 'note') + 1);
+  });
+
   it('falls back to the nearest text position when the block is gone', () => {
     const before = doc(
       block('title', null, 'Title'),

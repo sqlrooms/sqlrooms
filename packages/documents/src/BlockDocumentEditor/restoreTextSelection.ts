@@ -144,34 +144,43 @@ function shiftedEndpoint(
  * block. The endpoints are resolved independently: a selection spanning two
  * blocks can have one block move while the other stays put, and applying the
  * first block's shift to both would move the second endpoint into the wrong
- * block. When an endpoint has no text position to land in — its block is gone,
- * changed type, or the document has no textblock — it falls back to the nearest
- * text position, or to a non-text selection near the old caret.
+ * block. The anchor and head are mapped (rather than from and to), so the
+ * selection keeps its direction. When an endpoint has no text position to land
+ * in — its block is gone, changed type, or the document has no textblock — it
+ * falls back to the nearest text position, or to a non-text selection near the
+ * old caret.
  */
 export function restoreTextSelection(
   selection: Selection,
   nextDoc: ProseMirrorNode,
 ): Selection {
   const maxPos = nextDoc.content.size;
-  const from = shiftedEndpoint(
-    selection.from,
-    selection.$from,
+  const anchor = shiftedEndpoint(
+    selection.anchor,
+    selection.$anchor,
     nextDoc,
     maxPos,
   );
-  const to = shiftedEndpoint(selection.to, selection.$to, nextDoc, maxPos);
+  const head = shiftedEndpoint(
+    selection.head,
+    selection.$head,
+    nextDoc,
+    maxPos,
+  );
 
-  if (from === null || to === null) {
+  if (anchor === null || head === null) {
     // No textblock anywhere: a TextSelection would be invalid, so keep a
     // valid (possibly node) selection near the previous caret instead.
     const fallbackPos = Math.max(0, Math.min(selection.from, maxPos));
     return Selection.near(nextDoc.resolve(fallbackPos), 1);
   }
 
-  // Reordering can move the block holding `from` past the block holding `to`.
-  // Selecting between crossed positions would select every block in between,
-  // including ones outside the original selection; collapse instead.
-  if (from > to) return TextSelection.create(nextDoc, to);
+  // Reordering can move one endpoint's block past the other's, flipping their
+  // order. Selecting between crossed positions would select every block in
+  // between, including ones outside the original selection; collapse instead.
+  const wasForward = selection.anchor <= selection.head;
+  const crossed = wasForward ? anchor > head : anchor < head;
+  if (crossed) return TextSelection.create(nextDoc, Math.min(anchor, head));
 
-  return TextSelection.create(nextDoc, from, to);
+  return TextSelection.create(nextDoc, anchor, head);
 }
