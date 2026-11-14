@@ -108,7 +108,7 @@ function DbConnectionsTriggerButton({
 
 function useMissingDriverCount() {
   const diagnostics = useStoreWithDbSettings(
-    (s) => s.dbSettings.config.diagnostics,
+    (s) => s.db.connectors.diagnostics,
   );
 
   return useMemo(

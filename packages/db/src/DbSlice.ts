@@ -7,11 +7,13 @@ import {decodeArrowIpcChunk} from './arrow-streaming';
 import {
   createDefaultDbConfig,
   hasLoadArrow,
+  isConnectionAvailable,
   isDuplicateAttachError,
   isRuntimeCompatible,
 } from './helpers';
 import type {
   CatalogEntry,
+  ConnectorDriverDiagnostic,
   DbBridge,
   DbConnection,
   DbConnector,
@@ -22,11 +24,15 @@ import type {
   QueryExecutionResult,
 } from './types';
 
+/** Initial database definitions, runtime diagnostics, and core DuckDB options. */
 export type CreateDbSliceProps = {
   duckDb?: CreateDuckDbSliceProps;
   config?: Partial<DbSliceConfig>;
+  /** Initial runtime driver diagnostics, separate from persisted definitions. */
+  diagnostics?: ConnectorDriverDiagnostic[];
 };
 
+/** Create the canonical connection registry and database execution actions. */
 export function createDbSlice(props?: CreateDbSliceProps) {
   const initialConfig = createDefaultDbConfig(props?.config);
   return createSlice<DbSliceState, DbRootState>((set, get, store) => {
@@ -243,6 +249,9 @@ export function createDbSlice(props?: CreateDbSliceProps) {
       if (!connection) {
         throw new Error(`Unknown connection: ${connectionId}`);
       }
+      if (!isConnectionAvailable(connection, get().db.connectors.diagnostics)) {
+        throw new Error(`Connection ${connectionId} is unavailable`);
+      }
 
       const engineId = connection.engineId;
       const connector = get().db.connectors.connectors[connectionId];
@@ -427,6 +436,14 @@ export function createDbSlice(props?: CreateDbSliceProps) {
         },
         connectors: {
           connectors: {},
+          diagnostics: props?.diagnostics ?? [],
+          setDiagnostics: (diagnostics) => {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.db.connectors.diagnostics = diagnostics;
+              }),
+            );
+          },
           bridges: {},
           registerConnection: (connection: DbConnection) => {
             set((state) =>
@@ -461,6 +478,13 @@ export function createDbSlice(props?: CreateDbSliceProps) {
           testConnection: async (connectionId: string) => {
             const connection = get().db.config.connections[connectionId];
             if (!connection) return false;
+            if (
+              !isConnectionAvailable(
+                connection,
+                get().db.connectors.diagnostics,
+              )
+            )
+              return false;
             if (connection.id === get().db.config.coreConnectionId) return true;
             const connector = get().db.connectors.connectors[connectionId];
             if (connector) {
@@ -489,6 +513,13 @@ export function createDbSlice(props?: CreateDbSliceProps) {
             for (const id of ids) {
               const connection = get().db.config.connections[id];
               if (!connection) continue;
+              if (
+                !isConnectionAvailable(
+                  connection,
+                  get().db.connectors.diagnostics,
+                )
+              )
+                continue;
               if (id === get().db.config.coreConnectionId) {
                 const tables = await get().db.loadTableSchemas();
                 entries.push({

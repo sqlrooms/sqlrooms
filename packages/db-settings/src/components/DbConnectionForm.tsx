@@ -45,7 +45,7 @@ function buildConnection(
 
 export function DbConnectionForm({editing, onDone}: DbConnectionFormProps) {
   const upsertConnection = useStoreWithDbSettings(
-    (s) => s.dbSettings.upsertConnection,
+    (s) => s.db.connectors.registerConnection,
   );
   const supportedEngines = useStoreWithDbSettings(
     (s) => s.dbSettings.config.supportedEngines,

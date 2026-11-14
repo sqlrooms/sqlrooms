@@ -1,8 +1,7 @@
-import type {DbConnection} from '@sqlrooms/db';
+import type {ConnectorDriverDiagnostic, DbConnection} from '@sqlrooms/db';
 import {Badge, Button} from '@sqlrooms/ui';
 import {PencilIcon, Trash2Icon} from 'lucide-react';
 import React from 'react';
-import type {ConnectorDriverDiagnostic} from '../DbSettingsSliceConfig';
 import {useStoreWithDbSettings} from '../DbSettingsSlice';
 import {DbConnectionForm} from './DbConnectionForm';
 
@@ -94,14 +93,18 @@ function ConnectionRow({
 }
 
 export function DbConnectionsList() {
-  const connections = useStoreWithDbSettings(
-    (s) => s.dbSettings.config.connections,
+  const connectionDefinitions = useStoreWithDbSettings(
+    (s) => s.db.config.connections,
+  );
+  const connections = React.useMemo(
+    () => Object.values(connectionDefinitions),
+    [connectionDefinitions],
   );
   const diagnostics = useStoreWithDbSettings(
-    (s) => s.dbSettings.config.diagnostics,
+    (s) => s.db.connectors.diagnostics,
   );
   const removeConnection = useStoreWithDbSettings(
-    (s) => s.dbSettings.removeConnection,
+    (s) => s.db.connectors.removeConnection,
   );
   const [editingId, setEditingId] = React.useState<string | null>(null);
 

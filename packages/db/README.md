@@ -71,6 +71,30 @@ returned Arrow table directly.
 Use `registerConnector(connectionId, connector)` instead of a bridge when the
 connector implements `DbConnector` in the current runtime.
 
+## Connection ownership and availability
+
+`db.config.connections` is the canonical registry of all connection definitions,
+including connections with unavailable drivers. Initialize it through
+`createDbSlice({config: {connections}})` and edit it with
+`db.connectors.registerConnection()` / `removeConnection()`.
+`listConnections()` returns all definitions, including core DuckDB. Settings UI
+and persistence consume this same registry; there is no separate settings copy.
+
+Pass runtime driver diagnostics to `createDbSlice({diagnostics})`, or update them
+with `db.connectors.setDiagnostics(diagnostics)`. The exported
+`ConnectorDriverDiagnostic` schema describes availability and installation guidance.
+Diagnostics live at `db.connectors.diagnostics`, separate from connection config.
+
+`isConnectionAvailable(connection, diagnostics)` checks driver availability by
+connection ID and engine ID. A missing diagnostic allows execution; core DuckDB
+is always available. Unavailable connections remain configured, but `runQuery()`
+rejects them, `testConnection()` returns false, and `listCatalog()` skips them.
+Use the same helper when deriving connection options in execution UI. This check
+does not replace registering a connector/bridge or testing actual connectivity.
+
+Connection config can contain credentials. Hosts should redact it before adding
+it to browser persistence or shared workspace state.
+
 ## Notes
 
 - This package is intentionally additive and keeps `@sqlrooms/duckdb` APIs intact.

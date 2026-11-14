@@ -71,6 +71,28 @@ export const DbConnection = z.object({
  */
 export type DbConnection = z.infer<typeof DbConnection>;
 
+/** Driver availability and installation guidance for a configured connection. */
+export const ConnectorDriverDiagnostic = z.object({
+  id: z.string(),
+  engineId: z.string(),
+  title: z.string(),
+  available: z.boolean(),
+  error: z.string().optional(),
+  reason: z.string().optional(),
+  requiredPackages: z.array(z.string()).optional(),
+  installCommands: z
+    .object({
+      uvProject: z.string().optional(),
+      uvxRelaunch: z.string().optional(),
+      uvxWith: z.string().optional(),
+    })
+    .optional(),
+});
+/** Driver availability and installation guidance for a configured connection. */
+export type ConnectorDriverDiagnostic = z.infer<
+  typeof ConnectorDriverDiagnostic
+>;
+
 /**
  * Catalog database entry.
  */
@@ -292,7 +314,8 @@ export type DbSliceConfig = {
    */
   coreMaterialization: CoreMaterializationConfig;
   /**
-   * Registered connections keyed by connection id.
+   * Canonical connection definitions keyed by connection id, including connections
+   * whose drivers are unavailable. Runtime diagnostics live in `db.connectors`.
    */
   connections: Record<string, DbConnection>;
 };
@@ -319,6 +342,10 @@ export type DbSliceState = {
      */
     connectors: {
       connectors: Record<string, DbConnector>;
+      /** Runtime driver diagnostics; unavailable connections remain configured. */
+      diagnostics: ConnectorDriverDiagnostic[];
+      /** Replace runtime diagnostics without changing connection definitions. */
+      setDiagnostics: (diagnostics: ConnectorDriverDiagnostic[]) => void;
       /**
        * Registered bridge transports keyed by bridge id.
        *

@@ -1,6 +1,31 @@
 import type * as arrow from 'apache-arrow';
 import {CORE_DUCKDB_CONNECTION_ID} from './connectors/duckdb';
-import type {DbSliceConfig, RuntimeSupport} from './types';
+import type {
+  ConnectorDriverDiagnostic,
+  DbConnection,
+  DbSliceConfig,
+  RuntimeSupport,
+} from './types';
+
+/**
+ * Whether driver diagnostics permit execution for a connection. Missing diagnostics
+ * do not block execution, and core DuckDB is always available. This does not test
+ * connectivity or guarantee that a connector or bridge has been registered.
+ */
+export function isConnectionAvailable(
+  connection: DbConnection,
+  diagnostics: ConnectorDriverDiagnostic[],
+): boolean {
+  return (
+    connection.isCore ||
+    !diagnostics.some(
+      (diagnostic) =>
+        diagnostic.id === connection.id &&
+        diagnostic.engineId === connection.engineId &&
+        !diagnostic.available,
+    )
+  );
+}
 
 export function isCoreDuckDbConnection(connectionId: string): boolean {
   return connectionId === CORE_DUCKDB_CONNECTION_ID;
