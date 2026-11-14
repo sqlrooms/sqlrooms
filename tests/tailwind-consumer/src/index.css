@@ -1,0 +1,8 @@
+@import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/sql-editor/tailwind.css';
+@import '@sqlrooms/room-shell/tailwind.css';
+
+/* Consumer theme overrides must still reach transitive components. */
+:root {
+  --muted: 210 50% 40%;
+}
