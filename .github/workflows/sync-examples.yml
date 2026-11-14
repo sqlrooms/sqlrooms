@@ -45,6 +45,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '24'
+          check-latest: true
 
       - name: Install jq
         run: sudo apt-get install -y jq
@@ -71,7 +72,7 @@ jobs:
             publish = "dist"
 
           [build.environment]
-            NODE_VERSION = "24.11.1"
+            NODE_VERSION = "24.22.1"
             NODE_OPTIONS = "--max_old_space_size=4096"
             NPM_FLAGS = "--force"  # Override dependency constraints
             CI = "false"  # This will prevent treating warnings as errors
