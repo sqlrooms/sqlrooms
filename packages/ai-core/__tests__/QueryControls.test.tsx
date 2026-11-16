@@ -690,6 +690,216 @@ describe('QueryControls — unified across runtime modes', () => {
     },
   );
 
+  it.each([
+    {
+      case: 'registered window',
+      contextWindow: 1_000_000,
+      label: /^50\.0% · 500\.0K \/ 1\.0M context used/,
+    },
+    {
+      case: 'no registered window',
+      contextWindow: undefined,
+      label: /100\.0% · 500\.0K \/ 200\.0K context used/,
+    },
+    {
+      case: 'non-positive registered window',
+      contextWindow: 0,
+      label: /100\.0% · 500\.0K \/ 200\.0K context used/,
+    },
+  ])(
+    'session mode measures context against the model registry: $case',
+    async ({contextWindow, label}) => {
+      const store = createSessionTestStore({
+        getAvailableModels: () => [
+          {provider: 'anthropic', value: 'test-model', contextWindow},
+        ],
+      });
+      stubAnalysisActions(store);
+      const sessionId = store.getState().ai.createSession('S');
+      store.setState((s) => ({
+        ai: {
+          ...s.ai,
+          config: {
+            ...s.ai.config,
+            sessions: s.ai.config.sessions.map((session) =>
+              session.id === sessionId
+                ? {
+                    ...session,
+                    modelProvider: 'anthropic',
+                    model: 'test-model',
+                    uiMessages: [
+                      {
+                        id: 'm1',
+                        role: 'assistant',
+                        parts: [{type: 'text', text: 'ok'}],
+                        // Enough reported input to land on a different
+                        // percentage per window: 50% of 1M, 100% of 200K.
+                        metadata: {
+                          tokenUsage: {
+                            inputTokens: 500_000,
+                            outputTokens: 10,
+                            totalTokens: 500_010,
+                            lastStepInputTokens: 500_000,
+                          },
+                        },
+                      },
+                    ] as any,
+                  }
+                : session,
+            ),
+          },
+        },
+      }));
+
+      const {container, root} = await renderTree(
+        <TooltipProvider>
+          <RoomStateProvider roomStore={store}>
+            <QueryControls />
+          </RoomStateProvider>
+        </TooltipProvider>,
+      );
+
+      const indicator = Array.from(container.querySelectorAll('button')).find(
+        (btn) => btn.getAttribute('aria-label')?.includes('context used'),
+      );
+      // The percentage, not just the displayed window, has to follow the
+      // registry: 500K against 1M is half full, against the 200K fallback 100%.
+      expect(indicator?.getAttribute('aria-label')).toMatch(label);
+
+      await cleanup(container, root);
+    },
+  );
+
+  it('session mode re-measures when the session switches to a model with another window', async () => {
+    const store = createSessionTestStore({
+      getAvailableModels: () => [
+        {provider: 'anthropic', value: 'wide-model', contextWindow: 1_000_000},
+        {provider: 'anthropic', value: 'narrow-model', contextWindow: 200_000},
+      ],
+    });
+    stubAnalysisActions(store);
+    const sessionId = store.getState().ai.createSession('S');
+    store.setState((s) => ({
+      ai: {
+        ...s.ai,
+        config: {
+          ...s.ai.config,
+          sessions: s.ai.config.sessions.map((session) =>
+            session.id === sessionId
+              ? {
+                  ...session,
+                  modelProvider: 'anthropic',
+                  model: 'wide-model',
+                  uiMessages: [
+                    {
+                      id: 'm1',
+                      role: 'assistant',
+                      parts: [{type: 'text', text: 'ok'}],
+                      metadata: {
+                        tokenUsage: {
+                          inputTokens: 500_000,
+                          outputTokens: 10,
+                          totalTokens: 500_010,
+                          lastStepInputTokens: 500_000,
+                        },
+                      },
+                    },
+                  ] as any,
+                }
+              : session,
+          ),
+        },
+      },
+    }));
+
+    const {container, root} = await renderTree(
+      <TooltipProvider>
+        <RoomStateProvider roomStore={store}>
+          <QueryControls />
+        </RoomStateProvider>
+      </TooltipProvider>,
+    );
+
+    const label = () =>
+      Array.from(container.querySelectorAll('button'))
+        .find((btn) => btn.getAttribute('aria-label')?.includes('context used'))
+        ?.getAttribute('aria-label');
+
+    expect(label()).toMatch(/^50\.0% · 500\.0K \/ 1\.0M context used/);
+
+    // The window is resolved from the registry, so switching the session's
+    // model re-measures without the host re-supplying anything.
+    await act(async () => {
+      store.getState().ai.setAiModel('anthropic', 'narrow-model');
+    });
+
+    expect(label()).toMatch(/100\.0% · 500\.0K \/ 200\.0K context used/);
+
+    await cleanup(container, root);
+  });
+
+  it('session mode measures against the model the next send resolves to', async () => {
+    // A stored pair that is no longer in the registry: the resolver moves the
+    // send to the provider's first available model, and the indicator has to
+    // follow it rather than measure the retired model against the fallback.
+    const store = createSessionTestStore({
+      getAvailableModels: () => [
+        {provider: 'anthropic', value: 'wide-model', contextWindow: 1_000_000},
+      ],
+    });
+    stubAnalysisActions(store);
+    const sessionId = store.getState().ai.createSession('S');
+    store.setState((s) => ({
+      ai: {
+        ...s.ai,
+        config: {
+          ...s.ai.config,
+          sessions: s.ai.config.sessions.map((session) =>
+            session.id === sessionId
+              ? {
+                  ...session,
+                  modelProvider: 'anthropic',
+                  model: 'retired-model',
+                  uiMessages: [
+                    {
+                      id: 'm1',
+                      role: 'assistant',
+                      parts: [{type: 'text', text: 'ok'}],
+                      metadata: {
+                        tokenUsage: {
+                          inputTokens: 500_000,
+                          outputTokens: 10,
+                          totalTokens: 500_010,
+                          lastStepInputTokens: 500_000,
+                        },
+                      },
+                    },
+                  ] as any,
+                }
+              : session,
+          ),
+        },
+      },
+    }));
+
+    const {container, root} = await renderTree(
+      <TooltipProvider>
+        <RoomStateProvider roomStore={store}>
+          <QueryControls />
+        </RoomStateProvider>
+      </TooltipProvider>,
+    );
+
+    const indicator = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.getAttribute('aria-label')?.includes('context used'),
+    );
+    expect(indicator?.getAttribute('aria-label')).toMatch(
+      /^50\.0% · 500\.0K \/ 1\.0M context used/,
+    );
+
+    await cleanup(container, root);
+  });
+
   it('session mode still performs the inline API-key mode swap (frozen recipe)', async () => {
     const store = createSessionTestStore();
 

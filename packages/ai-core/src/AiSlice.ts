@@ -98,6 +98,22 @@ export type {ForkSessionFromMessageArgs} from './chatSessionForking';
 /** A resolved provider/model pair — what the next send would actually use. */
 export type ModelSelection = {modelProvider: string; model: string};
 
+/**
+ * A provider/model pair in a host's model registry, plus what the host knows
+ * about the model that the selection alone cannot express.
+ */
+export type AiAvailableModel = {
+  provider: string;
+  value: string;
+  /**
+   * The model's context window. The provider APIs the app talks to report
+   * tokens used, not the limit, and `LanguageModel` carries no window — so a
+   * host that knows it declares it here, next to the model it belongs to.
+   * Omitted, the usage indicator falls back to a generic window.
+   */
+  contextWindow?: number;
+};
+
 export type AiSliceState = {
   ai: {
     initialize?: () => Promise<void>;
@@ -213,6 +229,17 @@ export type AiSliceState = {
      * e.g. to know which provider a first-time API key belongs to.
      */
     getSelectedModel: () => ModelSelection;
+    /**
+     * The context window the host declared for a model in its registry
+     * ({@link AiSliceOptions.getAvailableModels}), or `undefined` when it
+     * declared none for that pair. Lives here so every surface that shows
+     * context usage reads the same registry the model selection is resolved
+     * against, including after `setAiModel` switches the session's model.
+     */
+    getModelContextWindow: (
+      modelProvider?: string,
+      model?: string,
+    ) => number | undefined;
     /**
      * Whether a model is resolvable by *any* configured path: a custom-model
      * factory supplied to {@link AiSliceOptions.getCustomModel}, or — once a
@@ -402,7 +429,7 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
    * and so runs on each store update. Keep it cheap: return a memoized or
    * module-level array rather than rebuilding one per call.
    */
-  getAvailableModels?: () => Array<{provider: string; value: string}>;
+  getAvailableModels?: () => AiAvailableModel[];
   /** Provide a pre-configured model client for a provider (e.g., Azure). */
   getCustomModel?: () => LanguageModel | undefined;
   getProviderOptions?: GetProviderOptions;
@@ -1168,6 +1195,28 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             currentSession?.modelProvider,
             currentSession?.model,
           );
+        },
+
+        /**
+         * Read the window declared for `model` on its registry entry. A
+         * missing provider matches any provider, so callers holding only the
+         * model name can still resolve it.
+         */
+        getModelContextWindow: (modelProvider?: string, model?: string) => {
+          if (!model) return undefined;
+          const contextWindow = getAvailableModels?.().find(
+            (candidate) =>
+              candidate.value === model &&
+              (!modelProvider || candidate.provider === modelProvider),
+          )?.contextWindow;
+          // A zero, negative or non-finite window would divide usage by
+          // nothing sensible; treat it as "not registered" and let the
+          // caller's fallback apply.
+          return typeof contextWindow === 'number' &&
+            Number.isFinite(contextWindow) &&
+            contextWindow > 0
+            ? contextWindow
+            : undefined;
         },
 
         hasResolvableModel: () => {

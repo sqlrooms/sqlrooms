@@ -19,7 +19,7 @@ You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui
 - `tools` – an AI SDK `ToolSet` (created via the `tool()` helper from `ai`)
 - `getInstructions`
 - `toolRenderers` (optional) – a `ToolRendererRegistry` mapping tool names to React components
-- `getAvailableModels` (optional) – returns selectable `{provider, value}` pairs so new sessions can fall back to the first available model when the configured default is missing, and so `hasResolvableModel` knows which models this app offers. It is consulted on every readiness check, which React selectors run on each store update, so return a memoized or module-level array rather than rebuilding one per call.
+- `getAvailableModels` (optional) – returns selectable `{provider, value, contextWindow?}` pairs so new sessions can fall back to the first available model when the configured default is missing, and so `hasResolvableModel` knows which models this app offers. Declare `contextWindow` when the app knows the model's window: the context-usage indicator measures the conversation against the window registered for the session's model (so it follows `setAiModel`) and falls back to 200K only when none is registered — the provider APIs report tokens used, not the limit, so this is the only place the number can come from. It is consulted on every readiness check, which React selectors run on each store update, so return a memoized or module-level array rather than rebuilding one per call.
 - `getCustomModel` (optional) – returns a pre-constructed AI SDK `LanguageModel`, bypassing the OpenAI-compatible fallback entirely. Use this when a model is produced some other way, e.g. an app streaming through a server-side model proxy so no API key ever reaches the browser.
 
 The built-in OpenAI-compatible chat transport sends images returned by tools as
@@ -110,6 +110,13 @@ and the first `ai.createSession()` transfers it to the new session.
 
 Use `Chat.Composer`'s `topActions` slot for compact controls that should sit in
 the prompt's top row, right-aligned beside context selectors.
+
+The context-usage indicator measures the conversation against the window the
+host registered for the session's model (`contextWindow` on a
+`getAvailableModels` entry), so the number follows model switches without each
+screen having to supply it. With no window registered it falls back to 200K,
+which overstates how full a session on a 1M model is; register the window
+wherever the model is declared.
 
 `Chat.Composer`'s `usageDetails` prop renders host content in the context-usage
 tooltip, under the token counts. Use it when the host meters the conversation

@@ -6,6 +6,7 @@
 export {createAiSlice, useStoreWithAi} from './AiSlice';
 
 export type {
+  AiAvailableModel,
   AiSliceState,
   AiSliceOptions,
   ForkSessionFromMessageArgs,
