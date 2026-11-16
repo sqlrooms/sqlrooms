@@ -137,6 +137,18 @@ function clampInsertIndex(index: number, length: number): number {
   return Math.max(0, Math.min(length, Math.trunc(index)));
 }
 
+/**
+ * Index at which appended blocks belong. The editor keeps an empty paragraph
+ * after a trailing heading, list or embed so there is somewhere to type, and
+ * that paragraph is persisted with the content. Appending after it would leave
+ * a blank line between the existing content and the new blocks.
+ */
+function appendIndex(content: BlockDocumentNodeType[]): number {
+  const last = content[content.length - 1];
+  const isEmptyParagraph = last?.type === 'paragraph' && !last.content?.length;
+  return isEmptyParagraph ? content.length - 1 : content.length;
+}
+
 function getNodeId(node: BlockDocumentNodeType): string | undefined {
   const id = node.attrs?.id;
   return typeof id === 'string' ? id : undefined;
@@ -361,9 +373,11 @@ export function createBlockDocumentsSlice<
       },
 
       appendBlocks(artifactId, blocks) {
+        const content =
+          get().blockDocuments.config.artifacts[artifactId]?.content.content;
         get().blockDocuments.insertBlocks(
           artifactId,
-          Number.POSITIVE_INFINITY,
+          content ? appendIndex(content) : Number.POSITIVE_INFINITY,
           blocks,
         );
       },

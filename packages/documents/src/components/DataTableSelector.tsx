@@ -29,6 +29,8 @@ export type DataTableSelectorProps = {
   onChange?: (table: DataTable) => void;
   tables: DataTable[];
   value?: DataTable;
+  /** Shown above the empty-state selector, e.g. why a table is required. */
+  message?: string;
 };
 
 type GroupedTables = Array<{
@@ -200,11 +202,15 @@ export const DataTableSelector: FC<DataTableSelectorProps> = ({
 /**
  * Presentational empty-state wrapper that renders the same searchable selector.
  */
-export const DataTableSelectorEmptyState: FC<DataTableSelectorProps> = (
-  props,
-) => {
+export const DataTableSelectorEmptyState: FC<DataTableSelectorProps> = ({
+  message,
+  ...props
+}) => {
   return (
-    <div className="flex h-full items-center justify-center p-4">
+    <div className="flex h-full flex-col items-center justify-center gap-2 p-4">
+      {message ? (
+        <p className="text-muted-foreground text-center text-sm">{message}</p>
+      ) : null}
       <div className="bg-popover text-popover-foreground w-full max-w-md rounded-md border shadow-sm">
         <DataTableSelectorCommand {...props} />
       </div>

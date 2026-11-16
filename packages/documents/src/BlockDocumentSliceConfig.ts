@@ -166,7 +166,12 @@ export type BlockDocumentChartImageBlock = z.infer<
 export const BlockDocumentChartBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('chart'),
-  tableName: z.string(),
+  /**
+   * Table the chart renders from. Optional because a chart config can carry
+   * its own SQL (e.g. the desktop's `{vegaLiteSpec, sqlQuery}`); omit it rather
+   * than storing an empty string that every reader has to interpret.
+   */
+  tableName: z.string().optional(),
   config: z.unknown(),
   selectionGroupId: z.string().optional(),
   caption: z.string().optional(),
@@ -313,7 +318,9 @@ export function blockDocumentBlockToNode(
         type: 'blockDocumentChart',
         attrs: {
           ...baseAttrs,
-          tableName: block.tableName,
+          ...(block.tableName !== undefined
+            ? {tableName: block.tableName}
+            : {}),
           config: block.config,
           ...(block.selectionGroupId !== undefined
             ? {selectionGroupId: block.selectionGroupId}
@@ -406,7 +413,10 @@ export function blockDocumentNodeToBlock(
         id,
         intent,
         type: 'chart',
-        tableName: node.attrs?.tableName,
+        // The chart node attribute defaults to null; `tableName` is optional,
+        // not nullable. Pass through the same normalization as other attrs so a
+        // table-less chart block is not dropped as invalid on read-back.
+        tableName: optionalString(node.attrs?.tableName),
         config: node.attrs?.config,
         selectionGroupId: optionalString(node.attrs?.selectionGroupId),
         caption: optionalString(node.attrs?.caption),

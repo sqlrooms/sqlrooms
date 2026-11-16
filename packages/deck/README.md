@@ -60,6 +60,8 @@ For Mosaic dashboard integration, also install `@sqlrooms/mosaic`,
 `@uwdata/mosaic-core`, and `@uwdata/mosaic-sql`, then import the adapter from
 `@sqlrooms/deck/mosaic`.
 
+MapLibre-backed maps require a browser with WebGL2 support.
+
 ## What This Package Does
 
 `@sqlrooms/deck` is the JSON-spec bridge between SQLRooms data and deck.gl:

@@ -282,6 +282,7 @@ export {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
+  type SidebarProviderProps,
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,

@@ -41,7 +41,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout documentation content
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.content_ref || 'main' }}
           fetch-depth: 0
@@ -118,7 +118,7 @@ jobs:
             return latestRelease.tag_name;
 
       - name: Checkout published API source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.api-release.outputs.result }}
           fetch-depth: 0

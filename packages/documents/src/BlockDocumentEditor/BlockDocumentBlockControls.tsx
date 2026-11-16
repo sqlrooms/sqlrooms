@@ -724,7 +724,7 @@ function buildMediaBlockMenuItems(
       icon: BarChart3Icon,
       createNode: (id) => ({
         type: 'blockDocumentChart',
-        attrs: {id, tableName: '', config: {}, caption: ''},
+        attrs: {id, config: {}, caption: ''},
       }),
     },
     ...buildStatefulBlockMenuItems(statefulBlockTypes),

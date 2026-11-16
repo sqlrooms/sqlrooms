@@ -30,7 +30,7 @@ jobs:
       PROMPTFOO_DISABLE_TELEMETRY: '1'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate model and credentials
         run: |
@@ -97,7 +97,7 @@ jobs:
       SQLROOMS_EVAL_PROVIDER: openrouter
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 

@@ -96,7 +96,7 @@ export type BlockDocumentAgentPlanStep =
   | {
       type: 'create-chart-block';
       artifactId: string;
-      tableName: string;
+      tableName?: string;
       selectionGroupId?: string;
     }
   | {

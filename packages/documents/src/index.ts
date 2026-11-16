@@ -117,6 +117,7 @@ export {
   BLOCK_DOCUMENT_COMMAND_SUFFIXES,
   createBlockDocumentCommandIds,
   createBlockDocumentCommands,
+  type BlockDocumentChartCommandOptions,
   type BlockDocumentStatefulBlockCommandContext,
   type BlockDocumentStatefulBlockCommandType,
   type BlockDocumentCommandSuffix,

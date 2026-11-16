@@ -199,6 +199,38 @@ describe('BlockDocumentsSlice', () => {
     }
   });
 
+  it('appends before the empty paragraph the editor keeps at the end', () => {
+    const store = createTestStore();
+    // The editor adds an empty paragraph after a trailing heading and saves it.
+    store.getState().blockDocuments.setContent('block-document-1', {
+      type: 'doc',
+      content: [
+        blockDocumentBlockToNode({
+          id: 'heading',
+          type: 'heading',
+          level: 2,
+          text: [{type: 'text', text: 'Overview'}],
+        }),
+        {type: 'paragraph', attrs: {id: 'trailing'}},
+      ],
+    });
+
+    store.getState().blockDocuments.appendBlocks('block-document-1', [
+      {
+        id: 'paragraph',
+        type: 'paragraph',
+        text: [{type: 'text', text: 'First note'}],
+      },
+    ]);
+
+    expect(
+      store
+        .getState()
+        .blockDocuments.getBlocks('block-document-1')
+        ?.map((block) => block.id),
+    ).toEqual(['heading', 'paragraph', 'trailing']);
+  });
+
   it('appends, inserts, updates, removes, and moves top-level blocks', () => {
     const store = createTestStore();
 

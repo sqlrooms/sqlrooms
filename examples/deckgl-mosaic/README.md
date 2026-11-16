@@ -14,6 +14,8 @@ An example showcasing integration with [deck.gl](https://deck.gl/) and the [UWDa
 
 The architecture uses Mosaic’s global Coordinator to manage state between linked views using SQL predicates. The map spec stays separate from the data, the current Mosaic-filtered Arrow result is passed into `DeckJsonMap`, and multiple JSON layers reuse that same prepared dataset instead of maintaining a local GeoArrow bridge utility.
 
+The map requires a browser with WebGL2 support.
+
 To create a new project from the deckgl-mosaic example run this:
 
 ```bash
