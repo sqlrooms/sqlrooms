@@ -9,7 +9,7 @@ multi-turn scenario.
 
 ## Run
 
-Prerequisites: workspace dependencies and built packages, Node 24.9+, an installed
+Prerequisites: workspace dependencies and built packages, Node `^24.22.1 || >=26.12.1`, an installed
 Codex CLI supporting the options below, authentication for the selected provider,
 and permission to bind a loopback socket. Tested with **codex-cli 0.143.0** and
 **@modelcontextprotocol/sdk 1.30.0**. The runner defaults to `gpt-5.5` with medium
