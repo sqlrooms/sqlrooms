@@ -44,11 +44,12 @@ command validation.
 
 Search requires text relevance before applying resource/action hints or
 availability bonuses. It ignores common filler words and matches query tokens
-as words or command-ID segments. Read requests (`get`, `read`, `list`, `show`,
-`inspect`) favor relevant read-only commands; exact command IDs retain priority.
-Resource and action parameters remain ranking hints, while `riskLevel` is a
-filter. Unmatched queries return zero commands; an empty query can still browse
-the catalog. The reported match count is computed before the result limit.
+as words or command-ID segments. The model sets `readOnly: true` to favor
+relevant read-only commands; search never infers this from verbs in the query,
+and exact command IDs retain priority. Resource and action parameters remain
+ranking hints, while `riskLevel` is a filter. Unmatched queries return zero
+commands; an empty query can still browse the catalog. The reported match
+count is computed before the result limit.
 
 `execute_command` refuses high-risk or
 confirmation-required commands until the caller sets `confirmed: true` after an
