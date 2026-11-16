@@ -1,4 +1,4 @@
-import {getCoreDuckDbConnectionId} from '@sqlrooms/db';
+import {getCoreDuckDbConnectionId, isConnectionAvailable} from '@sqlrooms/db';
 import {useRoomStoreApi} from '@sqlrooms/room-store';
 import {type Draft, produce} from 'immer';
 import {CornerDownRightIcon} from 'lucide-react';
@@ -41,7 +41,17 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const pageVersion = useCellsStore((s) => s.cells.pageVersion?.[id] ?? 0);
   const getCellResult = useCellsStore((s) => s.cells.getCellResult);
   const fetchCellResultPage = useCellsStore((s) => s.cells.fetchCellResultPage);
-  const dbConnections = useCellsStore((s) => s.db.config.connections);
+  const connectionDefinitions = useCellsStore((s) => s.db.config.connections);
+  const diagnostics = useCellsStore((s) => s.db.connectors.diagnostics);
+  const dbConnections = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(connectionDefinitions).filter(([, connection]) =>
+          isConnectionAvailable(connection, diagnostics),
+        ),
+      ),
+    [connectionDefinitions, diagnostics],
+  );
   const connector = useCellsStore((s) => s.db.connector);
   const tableSchemas = useCellsStore((s) => s.db.tables);
 

@@ -12,7 +12,7 @@ import {
 } from '@sqlrooms/ui';
 import {DatabaseIcon} from 'lucide-react';
 import React from 'react';
-import type {ConnectorDriverDiagnostic} from '../DbSettingsSliceConfig';
+import type {ConnectorDriverDiagnostic} from '@sqlrooms/db';
 import {useStoreWithDbSettings} from '../DbSettingsSlice';
 
 function getInstallCommands(diagnostic: ConnectorDriverDiagnostic): string[] {
@@ -68,7 +68,7 @@ function DriverInstallCommands({
 
 function DiagnosticsHint() {
   const diagnostics = useStoreWithDbSettings(
-    (s) => s.dbSettings.config.diagnostics,
+    (s) => s.db.connectors.diagnostics,
   );
   const supportedEngines = useStoreWithDbSettings(
     (s) => s.dbSettings.config.supportedEngines,
@@ -122,7 +122,7 @@ function DiagnosticsHint() {
 
 function DiagnosticsList() {
   const diagnostics = useStoreWithDbSettings(
-    (s) => s.dbSettings.config.diagnostics,
+    (s) => s.db.connectors.diagnostics,
   );
   const sortedDiagnostics = React.useMemo(
     () =>
@@ -185,7 +185,7 @@ function DiagnosticsList() {
 
 function DiagnosticsSummary() {
   const diagnostics = useStoreWithDbSettings(
-    (s) => s.dbSettings.config.diagnostics,
+    (s) => s.db.connectors.diagnostics,
   );
   const {missingCount, installedCount} = React.useMemo(() => {
     const missing = diagnostics.filter((d) => d.available === false);
@@ -206,7 +206,7 @@ function DiagnosticsSummary() {
 
 function DiagnosticsButton() {
   const diagnostics = useStoreWithDbSettings(
-    (s) => s.dbSettings.config.diagnostics,
+    (s) => s.db.connectors.diagnostics,
   );
   const {missingCount, installedCount} = React.useMemo(() => {
     const missing = diagnostics.filter((d) => d.available === false);

@@ -10,8 +10,17 @@ export {
   useStoreWithDb,
   type CreateDbSliceProps,
 } from './DbSlice';
-export {getCoreDuckDbConnectionId, isCoreDuckDbConnection} from './helpers';
-export {DbConnection, RuntimeSupport, DbEngineId} from './types';
+export {
+  getCoreDuckDbConnectionId,
+  isCoreDuckDbConnection,
+  isConnectionAvailable,
+} from './helpers';
+export {
+  DbConnection,
+  RuntimeSupport,
+  DbEngineId,
+  ConnectorDriverDiagnostic,
+} from './types';
 export type {
   CatalogColumn,
   CatalogDatabase,

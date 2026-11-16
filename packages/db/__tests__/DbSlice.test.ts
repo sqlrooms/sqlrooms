@@ -6,6 +6,8 @@ import {
   type BaseRoomStoreState,
 } from '@sqlrooms/room-store';
 import {createDbSlice} from '../src/DbSlice';
+import {isConnectionAvailable} from '../src/helpers';
+import {DbConnection} from '../src/types';
 import type {DbBridge, DbSliceState} from '../src/types';
 
 type TestState = BaseRoomStoreState & DbSliceState;
@@ -50,6 +52,104 @@ function ipcChunk(rows: Array<Record<string, unknown>>): Uint8Array {
   const table = arrow.tableFromJSON(rows);
   return arrow.tableToIPC(table, 'stream');
 }
+
+describe('canonical connections and driver availability', () => {
+  it('retains unavailable definitions while blocking execution and catalog access', async () => {
+    const {store} = createTestStore();
+    const connection = DbConnection.parse({
+      id: 'pg',
+      engineId: 'postgres',
+      title: 'Postgres',
+      requiresBridge: true,
+      bridgeId: 'server',
+    });
+    const executeQuery = jest.fn<DbBridge['executeQuery']>(async () => ({
+      jsonData: [],
+    }));
+    const listCatalog = jest.fn<DbBridge['listCatalog']>(async () => ({
+      databases: [],
+      schemas: [],
+      tables: [],
+    }));
+    const testConnection = jest.fn<DbBridge['testConnection']>(
+      async () => true,
+    );
+    const {db} = store.getState();
+    db.connectors.registerConnection(connection);
+    db.connectors.registerBridge({
+      id: 'server',
+      runtimeSupport: 'server',
+      executeQuery,
+      listCatalog,
+      testConnection,
+      fetchArrow: async () => arrow.tableFromArrays({}),
+      cancelQuery: async () => true,
+    });
+    db.connectors.setDiagnostics([{...connection, available: false}]);
+
+    expect(db.connectors.listConnections()).toContainEqual(connection);
+    expect(store.getState().db.config.connections.pg).toEqual(connection);
+    expect(
+      isConnectionAvailable(
+        connection,
+        store.getState().db.connectors.diagnostics,
+      ),
+    ).toBe(false);
+    await expect(
+      db.connectors.runQuery({
+        connectionId: 'pg',
+        sql: 'select 1',
+        queryType: 'json',
+      }),
+    ).rejects.toThrow('Connection pg is unavailable');
+    expect(await db.connectors.testConnection('pg')).toBe(false);
+    expect(await db.connectors.listCatalog('pg')).toEqual([]);
+    expect(executeQuery).not.toHaveBeenCalled();
+    expect(testConnection).not.toHaveBeenCalled();
+    expect(listCatalog).not.toHaveBeenCalled();
+
+    // Updating diagnostics immediately permits execution without re-registering.
+    db.connectors.setDiagnostics([{...connection, available: true}]);
+    await db.connectors.runQuery({
+      connectionId: 'pg',
+      sql: 'select 1',
+      queryType: 'json',
+    });
+    expect(executeQuery).toHaveBeenCalledTimes(1);
+    expect(await db.connectors.testConnection('pg')).toBe(true);
+    expect(await db.connectors.listCatalog('pg')).toHaveLength(1);
+
+    db.connectors.removeConnection('pg');
+    await expect(
+      db.connectors.runQuery({connectionId: 'pg', sql: 'select 1'}),
+    ).rejects.toThrow('Unknown connection: pg');
+  });
+
+  it('matches diagnostics by ID and engine, and leaves core DuckDB available', () => {
+    const {store} = createTestStore();
+    const {db} = store.getState();
+    const core = db.config.connections[db.config.coreConnectionId]!;
+    const connection = DbConnection.parse({
+      id: 'pg',
+      engineId: 'postgres',
+      title: 'Postgres',
+    });
+    expect(isConnectionAvailable(connection, [])).toBe(true);
+    expect(
+      isConnectionAvailable(connection, [
+        {...connection, id: 'other', available: false},
+      ]),
+    ).toBe(true);
+    expect(
+      isConnectionAvailable(connection, [
+        {...connection, engineId: 'snowflake', available: false},
+      ]),
+    ).toBe(true);
+    expect(isConnectionAvailable(core, [{...core, available: false}])).toBe(
+      true,
+    );
+  });
+});
 
 describe('DbSlice runQuery bridge routing', () => {
   it('attaches ephemeral database only once for concurrent materialization', async () => {
