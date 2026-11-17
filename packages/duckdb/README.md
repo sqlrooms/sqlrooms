@@ -445,12 +445,12 @@ function AdvancedDataLoader() {
 
 ### Detecting the File Format
 
-`detectFileFormat` detects the format of a tabular file. It checks the extension
-of the file name or URL (ignoring a query string), then the content type, then
-the first bytes, and falls back to CSV. It is pure, so apps can call it, for
-example to preview the format before loading or to pick an explicit
-`loadOptions.method` for URLs such as
-`https://host/data.parquet?X-Amz-Signature=…` or `https://api.example.com/export`:
+`detectFileFormat` identifies which DuckDB reader fits a file when its name
+alone doesn't tell, e.g. a URL with a query string or no extension. It checks the
+extension of the file name or URL (ignoring a query string), then the content
+type, then the first bytes (`PAR1`, `ARROW1`, or a leading `[`/`{` for JSON). It
+only picks the reader: delimiters (including tabs), headers, column types and
+JSON layouts (including NDJSON) are left to DuckDB.
 
 ```ts
 import {detectFileFormat} from '@sqlrooms/duckdb';
@@ -458,13 +458,18 @@ import {detectFileFormat} from '@sqlrooms/duckdb';
 detectFileFormat({fileName: 'https://host/data.parquet?sig=abc'}); // 'parquet'
 detectFileFormat({fileName: 'export', contentType: 'text/csv'}); // 'csv'
 
-const bytes = new Uint8Array(await file.slice(0, 64 * 1024).arrayBuffer());
+const bytes = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
 detectFileFormat({fileName: file.name, contentType: file.type, bytes});
-// 'csv' | 'tsv' | 'json' | 'ndjson' | 'parquet' | 'arrow'
+// 'csv' | 'json' | 'parquet' | 'arrow' | undefined
 ```
 
-It returns `undefined` only when the name and content type are not recognized
-and no bytes were given.
+Each format maps to a `loadOptions.method`: `'csv'` → `'read_csv'`, `'json'` →
+`'read_json'`, `'parquet'` → `'read_parquet'`. Arrow IPC has no reader method;
+load it with `loadArrow` instead (e.g. via `tableFromIPC` from `apache-arrow`).
+
+It returns `undefined` when nothing identifies the format. That doesn't mean the
+file is unsupported: DuckDB or one of its extensions may still read it, so keep
+DuckDB's own loading path (`method: 'auto'`) in that case.
 
 ## Exporting Data to CSV
 
