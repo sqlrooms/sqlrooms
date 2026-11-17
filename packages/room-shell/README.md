@@ -88,13 +88,11 @@ export function App() {
 
 A `url` data source is downloaded in the browser and then loaded into DuckDB.
 
-- Public `s3://bucket/key` and `gs://bucket/key` URLs are downloaded from
-  `https://bucket.s3.amazonaws.com/key` and
-  `https://storage.googleapis.com/bucket/key`. The data source config and
-  `roomFiles` keep the URL as entered. Private buckets need signed `https://`
-  URLs.
-- Without `loadOptions.method`, the format is detected from the URL extension,
-  the response `Content-Type`, or the first bytes (see `detectFileFormat` in
+- The URL's extension selects the reader, as for local files. With the browser
+  (WASM) connector, a query string or fragment is ignored, and a URL without an
+  extension (e.g. `https://api.example.com/export`) is loaded with a reader
+  picked from the response `Content-Type` or the first bytes, unless
+  `loadOptions.method` names a reader (see `detectFileFormat` in
   `@sqlrooms/duckdb`).
 - If the download or load fails, `roomFilesProgress[url]` gets
   `{status: 'error', message}` and `dataSourceStates[tableName]` gets

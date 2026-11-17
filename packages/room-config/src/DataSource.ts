@@ -50,16 +50,13 @@ export type FileDataSource = z.infer<typeof FileDataSource>;
  */
 export const UrlDataSource = BaseDataSource.extend({
   type: z.literal(DataSourceTypes.enum.url),
-  /**
-   * URL from which to fetch the data. Public `s3://` and `gs://` URLs are
-   * fetched through their `https://` forms.
-   */
+  /** URL from which to fetch the data */
   url: z
     .string()
     .describe(
-      'URL to fetch data from (https, or public s3:// and gs:// URLs). ' +
-        'Without loadOptions.method, the format (CSV, TSV, JSON, NDJSON, Parquet or Arrow) ' +
-        'is detected from the URL extension, the response Content-Type, or the content.',
+      'URL to fetch data from. The file extension selects the reader (e.g. CSV, JSON, Parquet). ' +
+        'For a URL without an extension, the browser (WASM) connector picks CSV, JSON or Parquet ' +
+        'from the response Content-Type or content, unless loadOptions.method names a reader.',
     ),
   /** Optional configuration for file loading */
   loadOptions: LoadFileOptions.optional().describe(

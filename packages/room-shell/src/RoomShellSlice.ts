@@ -41,7 +41,6 @@ import {
   convertToValidColumnOrTableName,
   downloadFileWithMetadata,
   isDownloadFileError,
-  toPublicHttpsUrl,
 } from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {ReactNode} from 'react';
@@ -195,6 +194,18 @@ const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 const INIT_DB_TASK = 'init-db';
 const INIT_ROOM_TASK = 'init-room';
 const ROOM_SHELL_COMMAND_OWNER = '@sqlrooms/room-shell';
+
+/** True if `a` and `b` load the same file or URL. */
+function isSameFileOrUrlSource(
+  a: DataSource,
+  b: FileDataSource | UrlDataSource,
+): boolean {
+  if (isUrlDataSource(a) && isUrlDataSource(b)) return a.url === b.url;
+  if (isFileDataSource(a) && isFileDataSource(b)) {
+    return a.fileName === b.fileName;
+  }
+  return false;
+}
 
 /**
  * A message for the user explaining why a data source download failed.
@@ -768,12 +779,11 @@ export function createRoomShellSlice(
               }
               downloadedFile = await fileDataSourceLoader(ds, onProgress);
             } else if (isUrlDataSource(ds)) {
-              // ds.url (what the user entered) stays the key in the config,
-              // roomFiles and progress state; only the request is rewritten.
-              const result = await downloadFileWithMetadata(
-                toPublicHttpsUrl(ds.url),
-                {method: ds.httpMethod, headers: ds.headers, onProgress},
-              );
+              const result = await downloadFileWithMetadata(ds.url, {
+                method: ds.httpMethod,
+                headers: ds.headers,
+                onProgress,
+              });
               downloadedFile = result.data;
               contentType = result.contentType;
             } else {
@@ -808,14 +818,21 @@ export function createRoomShellSlice(
             // FileDataSourceCard shows this message; dataSourceStates carries
             // it to UIs that list data sources by table.
             setRoomFileProgress(fileName, {status: 'error', message});
-            set((state) =>
-              produce(state, (draft) => {
-                draft.room.dataSourceStates[ds.tableName] = {
-                  status: DataSourceStatus.ERROR,
-                  message,
-                };
-              }),
+            // The table may have been given another source while this one was
+            // downloading; don't mark the replacement as failed.
+            const current = get().room.config.dataSources.find(
+              (d) => d.tableName === ds.tableName,
             );
+            if (current && isSameFileOrUrlSource(current, ds)) {
+              set((state) =>
+                produce(state, (draft) => {
+                  draft.room.dataSourceStates[ds.tableName] = {
+                    status: DataSourceStatus.ERROR,
+                    message,
+                  };
+                }),
+              );
+            }
           } finally {
             setTaskProgress(DOWNLOAD_DATA_SOURCES_TASK, undefined);
           }

@@ -2,38 +2,27 @@ import * as duckdb from '@duckdb/duckdb-wasm';
 import {DuckDBDataProtocol} from '@duckdb/duckdb-wasm';
 import {
   BaseDuckDbConnectorImpl,
-  DetectedFileFormat,
   DuckDbConnector,
   createBaseDuckDbConnector,
-  detectFileFormat,
   getSqlErrorWithPointer,
   load,
   loadObjects as loadObjectsSql,
   loadSpatial,
 } from '@sqlrooms/duckdb-core';
 import {
-  LoadFile,
   LoadFileOptions,
   StandardLoadOptions,
   isSpatialLoadFileOptions,
 } from '@sqlrooms/room-config';
-import {safeJsonParse, splitFilePath} from '@sqlrooms/utils';
+import {safeJsonParse} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
+import {
+  getExtensionlessFileReader,
+  getRegisteredFileSuffix,
+} from './fileLoadFallback';
 
-/** How many leading bytes of a file to read for format detection. */
-const FORMAT_SNIFF_BYTES = 64 * 1024;
-
-/** DuckDB reader used for each detected format (Arrow is inserted directly). */
-const FORMAT_LOAD_METHODS: Record<
-  Exclude<DetectedFileFormat, 'arrow'>,
-  {method: LoadFile; defaults?: Record<string, unknown>}
-> = {
-  csv: {method: 'read_csv'},
-  tsv: {method: 'read_csv', defaults: {delim: '\t'}},
-  json: {method: 'read_json'},
-  ndjson: {method: 'read_ndjson'},
-  parquet: {method: 'read_parquet'},
-};
+/** How many leading bytes of a file to read to identify its format. */
+const FORMAT_SNIFF_BYTES = 4096;
 
 export interface WasmDuckDbConnectorOptions extends duckdb.DuckDBConfig {
   /** @deprecated use `path` instead */
@@ -240,32 +229,21 @@ export function createWasmDuckDbConnector(
       if (!conn) {
         throw new Error('DuckDB connection not initialized');
       }
-      // Without an explicit method, detect the format of browser files from
-      // their name, `type` and first bytes, so URLs with a query string or no
-      // extension still load. String paths are read by DuckDB itself, which
-      // sees the real path, so they keep using 'auto'.
-      const format =
-        !opts?.method && file instanceof File
-          ? detectFileFormat({
-              fileName: file.name,
+      // DuckDB's 'auto' path identifies a file by its extension. A browser
+      // File without one (e.g. from a URL like https://host/export) gets a
+      // reader chosen from its type and first bytes instead. Files with an
+      // extension, string paths and explicit readers are unchanged.
+      const fallbackMethod =
+        (!opts?.method || opts.method === 'auto') &&
+        file instanceof File &&
+        !getRegisteredFileSuffix(file.name)
+          ? getExtensionlessFileReader({
               contentType: file.type,
               bytes: new Uint8Array(
                 await file.slice(0, FORMAT_SNIFF_BYTES).arrayBuffer(),
               ),
             })
           : undefined;
-
-      if (format === 'arrow') {
-        // No DuckDB reader method for Arrow IPC, so parse and insert it.
-        const table = arrow.tableFromIPC(
-          new Uint8Array(await (file as File).arrayBuffer()),
-        );
-        await conn.insertArrowTable(table, {
-          name: tableName,
-          schema: opts?.schema,
-        });
-        return;
-      }
 
       await withTempRegisteredFile(file, async (fileName) => {
         if (opts && isSpatialLoadFileOptions(opts)) {
@@ -276,9 +254,8 @@ export function createWasmDuckDbConnector(
           } catch {
             await conn!.query(load('auto', tableName, fileName, opts));
           }
-        } else if (format) {
-          const {method, defaults} = FORMAT_LOAD_METHODS[format];
-          await conn!.query(load(method, tableName, fileName, opts, defaults));
+        } else if (fallbackMethod) {
+          await conn!.query(load(fallbackMethod, tableName, fileName, opts));
         } else {
           await conn!.query(
             load(opts?.method ?? 'auto', tableName, fileName, opts),
@@ -327,14 +304,8 @@ export function createWasmDuckDbConnector(
     let fileName: string;
     let tempFileName: string | undefined = undefined;
     if (file instanceof File) {
-      // Keep the extension (DuckDB uses it, e.g. for .gz compression), but not
-      // a URL's query string or fragment.
-      const name = /^[a-z][a-z\d+.-]*:\/\//i.test(file.name)
-        ? file.name.replace(/[?#].*$/, '')
-        : file.name;
-      const {ext} = splitFilePath(name);
-      const safeExt = /^[a-z\d]+$/i.test(ext) ? ext : '';
-      tempFileName = `${Math.random().toString(36).substring(2, 15)}${safeExt ? `.${safeExt}` : ''}`;
+      const suffix = getRegisteredFileSuffix(file.name);
+      tempFileName = `${Math.random().toString(36).substring(2, 15)}${suffix ? `.${suffix}` : ''}`;
       fileName = tempFileName;
       await db.registerFileHandle(
         fileName,

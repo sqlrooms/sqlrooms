@@ -69,7 +69,6 @@ import {
   downloadFile,
   downloadFileWithMetadata,
   isDownloadFileError,
-  toPublicHttpsUrl,
   uploadFile,
   postData,
 } from '@sqlrooms/utils';
@@ -86,11 +85,6 @@ try {
     // error.status is the HTTP status, or 0 for network/CORS failures
   }
 }
-
-toPublicHttpsUrl('s3://bucket/key.parquet');
-// 'https://bucket.s3.amazonaws.com/key.parquet'
-toPublicHttpsUrl('gs://bucket/key.parquet');
-// 'https://storage.googleapis.com/bucket/key.parquet'
 ```
 
 ## Other useful exports

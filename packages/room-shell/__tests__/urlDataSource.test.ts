@@ -5,8 +5,15 @@ import {
   createRoomShellSlice,
   type RoomShellSliceState,
 } from '../src/RoomShellSlice';
+import {DataSourceStatus} from '../src/types';
 
-type FakeResponse = {status: number; body?: string; contentType?: string};
+type FakeResponse = {
+  status: number;
+  body?: string;
+  contentType?: string;
+  /** Delay the response until this promise resolves. */
+  until?: Promise<void>;
+};
 
 /** Minimal XMLHttpRequest stand-in: answers with `nextResponse`, records URLs. */
 let nextResponse: FakeResponse;
@@ -30,7 +37,7 @@ class FakeXhr {
   }
   send() {
     const res = nextResponse;
-    queueMicrotask(() => {
+    void (res.until ?? Promise.resolve()).then(() => {
       if (res.status === 0) {
         this.onerror?.();
         return;
@@ -69,18 +76,16 @@ function createTestStore() {
 }
 
 describe('URL data sources', () => {
-  test('downloads s3:// URLs over https and keeps the original URL', async () => {
+  test('passes the response Content-Type to the connector as File.type', async () => {
     const {store, loadFile} = createTestStore();
     nextResponse = {status: 200, body: 'a,b\n1,2\n', contentType: 'text/csv'};
-    const url = 's3://my-bucket/export';
+    const url = 'https://api.example.com/export?format=csv';
 
     await store
       .getState()
       .room.addDataSource({type: 'url', url, tableName: 't'});
 
-    expect(requestedUrls.at(-1)).toBe(
-      'https://my-bucket.s3.amazonaws.com/export',
-    );
+    expect(requestedUrls.at(-1)).toBe(url);
     expect(loadFile).toHaveBeenCalledTimes(1);
     const [file, tableName, loadOptions] = loadFile.mock
       .calls[0] as unknown as [File, string, unknown];
@@ -136,5 +141,31 @@ describe('URL data sources', () => {
       status: 'error',
       message: 'Could not load the file: Catalog Error: bad file',
     });
+  });
+
+  test('does not mark a replacement source as failed', async () => {
+    const {store} = createTestStore();
+    let respond!: () => void;
+    nextResponse = {status: 404, until: new Promise((r) => (respond = r))};
+    const oldUrl = 'https://example.com/old.csv';
+    const newUrl = 'https://example.com/new.csv';
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const oldLoad = store
+      .getState()
+      .room.addDataSource({type: 'url', url: oldUrl, tableName: 't'});
+    // Replace the table's source while the old download is in flight.
+    await store
+      .getState()
+      .room.addDataSource(
+        {type: 'url', url: newUrl, tableName: 't'},
+        DataSourceStatus.READY,
+      );
+    respond();
+    await oldLoad;
+
+    const {roomFilesProgress, dataSourceStates} = store.getState().room;
+    expect(roomFilesProgress[oldUrl]).toMatchObject({status: 'error'});
+    expect(dataSourceStates.t).toEqual({status: DataSourceStatus.READY});
   });
 });

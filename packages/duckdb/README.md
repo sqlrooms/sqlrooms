@@ -471,10 +471,12 @@ It returns `undefined` when nothing identifies the format. That doesn't mean the
 file is unsupported: DuckDB or one of its extensions may still read it, so keep
 DuckDB's own loading path (`method: 'auto'`) in that case.
 
-The WASM connector uses it too: when `loadFile` gets a browser `File` and no
-`loadOptions.method`, it detects the format from the file's name, `type` and
-first bytes, and loads it with the matching reader (Arrow IPC is inserted
-directly). An explicit `method`, including `'auto'`, is always used as given.
+The WASM connector uses it as a fallback. When `loadFile` gets a browser `File`
+whose name has no extension, and `loadOptions.method` is omitted or `'auto'`,
+it picks `read_csv`, `read_json` or `read_parquet` from the file's `type` and
+first bytes, using `read_csv` when neither identifies the format. Files with an
+extension keep DuckDB's own loading path; a URL's query string and fragment are
+dropped from the name DuckDB sees, and suffixes such as `.csv.gz` are kept.
 
 ## Exporting Data to CSV
 

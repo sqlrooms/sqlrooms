@@ -38,8 +38,6 @@ export {
   type ProgressInfo,
 } from './xhr';
 
-export {toPublicHttpsUrl} from './url';
-
 export {
   splitFilePath,
   convertToValidColumnOrTableName,
