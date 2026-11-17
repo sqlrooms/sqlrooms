@@ -84,6 +84,22 @@ export function App() {
 }
 ```
 
+## URL data sources
+
+A `url` data source is downloaded in the browser and then loaded into DuckDB.
+
+- The URL's extension selects the reader, as for local files. With the browser
+  (WASM) connector, a query string or fragment is ignored, and a URL without an
+  extension (e.g. `https://api.example.com/export`) is loaded with a reader
+  picked from the response `Content-Type` or the first bytes, unless
+  `loadOptions.method` names a reader (see `detectFileFormat` in
+  `@sqlrooms/duckdb`).
+- If the download or load fails, `roomFilesProgress[url]` gets
+  `{status: 'error', message}` and `dataSourceStates[tableName]` gets
+  `{status: 'ERROR', message}`. The message says whether the server blocked the
+  request (CORS) or was unreachable, denied access (401/403), did not find the
+  file (404), or failed to load the file.
+
 ## Common room actions
 
 ```tsx

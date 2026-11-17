@@ -39,7 +39,8 @@ import {
   ProgressInfo,
   convertToUniqueColumnOrTableName,
   convertToValidColumnOrTableName,
-  downloadFile,
+  downloadFileWithMetadata,
+  isDownloadFileError,
 } from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {ReactNode} from 'react';
@@ -193,6 +194,38 @@ const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 const INIT_DB_TASK = 'init-db';
 const INIT_ROOM_TASK = 'init-room';
 const ROOM_SHELL_COMMAND_OWNER = '@sqlrooms/room-shell';
+
+/** True if `a` and `b` load the same file or URL. */
+function isSameFileOrUrlSource(
+  a: DataSource,
+  b: FileDataSource | UrlDataSource,
+): boolean {
+  if (isUrlDataSource(a) && isUrlDataSource(b)) return a.url === b.url;
+  if (isFileDataSource(a) && isFileDataSource(b)) {
+    return a.fileName === b.fileName;
+  }
+  return false;
+}
+
+/**
+ * A message for the user explaining why a data source download failed.
+ */
+function getDownloadErrorMessage(error: unknown): string {
+  if (!isDownloadFileError(error)) {
+    return `Download failed: ${getErrorMessage(error)}`;
+  }
+  const {status} = error;
+  if (status === 0) {
+    return 'The server did not allow this site to read the file (CORS), or it is unreachable.';
+  }
+  if (status === 401 || status === 403) {
+    return `Access denied (HTTP ${status}). The file may be private or require credentials.`;
+  }
+  if (status === 404) {
+    return 'File not found (HTTP 404).';
+  }
+  return `Download failed (HTTP ${status}).`;
+}
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -735,8 +768,10 @@ export function createRoomShellSlice(
             });
             updateTotalFileDownloadProgress();
           };
+          let downloaded = false;
           try {
             let downloadedFile: Uint8Array | File;
+            let contentType: string | undefined;
             if (isFileDataSource(ds)) {
               const {fileDataSourceLoader} = get().room;
               if (!fileDataSourceLoader) {
@@ -744,23 +779,29 @@ export function createRoomShellSlice(
               }
               downloadedFile = await fileDataSourceLoader(ds, onProgress);
             } else if (isUrlDataSource(ds)) {
-              const url = ds.url;
-              downloadedFile = await downloadFile(url, {
+              const result = await downloadFileWithMetadata(ds.url, {
                 method: ds.httpMethod,
                 headers: ds.headers,
                 onProgress,
               });
+              downloadedFile = result.data;
+              contentType = result.contentType;
             } else {
               // This should never happen as filesToDownload only contains FileDataSource | UrlDataSource
               throw new Error('Unsupported data source type');
             }
+            downloaded = true;
             setRoomFileProgress(fileName, {status: 'done'});
             updateTotalFileDownloadProgress();
             const {db} = get();
+            // The content type travels as File.type, which the connector uses
+            // for format detection when loadOptions has no method.
             await db.connector.loadFile(
               downloadedFile instanceof File
                 ? downloadedFile
-                : new File([new Uint8Array(downloadedFile)], fileName),
+                : new File([new Uint8Array(downloadedFile)], fileName, {
+                    type: contentType,
+                  }),
               ds.tableName,
               ds.loadOptions,
             );
@@ -771,11 +812,27 @@ export function createRoomShellSlice(
           } catch (err) {
             captureException(err);
             console.error(err);
-            setRoomFileProgress(fileName, {
-              status: 'error',
-              message: 'Download failed',
-            });
-            // TODO: Make sure the errors are shown
+            const message = downloaded
+              ? `Could not load the file: ${getErrorMessage(err)}`
+              : getDownloadErrorMessage(err);
+            // FileDataSourceCard shows this message; dataSourceStates carries
+            // it to UIs that list data sources by table.
+            setRoomFileProgress(fileName, {status: 'error', message});
+            // The table may have been given another source while this one was
+            // downloading; don't mark the replacement as failed.
+            const current = get().room.config.dataSources.find(
+              (d) => d.tableName === ds.tableName,
+            );
+            if (current && isSameFileOrUrlSource(current, ds)) {
+              set((state) =>
+                produce(state, (draft) => {
+                  draft.room.dataSourceStates[ds.tableName] = {
+                    status: DataSourceStatus.ERROR,
+                    message,
+                  };
+                }),
+              );
+            }
           } finally {
             setTaskProgress(DOWNLOAD_DATA_SOURCES_TASK, undefined);
           }

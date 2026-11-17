@@ -359,6 +359,41 @@ function AdvancedDataLoader() {
 }
 ```
 
+### Detecting the File Format
+
+`detectFileFormat` identifies which DuckDB reader fits a file when its name
+alone doesn't tell, e.g. a URL with a query string or no extension. It checks the
+extension of the file name or URL (ignoring a query string), then the content
+type, then the first bytes (`PAR1`, `ARROW1`, or a leading `[`/`{` for JSON). It
+only picks the reader: delimiters (including tabs), headers, column types and
+JSON layouts (including NDJSON) are left to DuckDB.
+
+```ts
+import {detectFileFormat} from '@sqlrooms/duckdb-core';
+
+detectFileFormat({fileName: 'https://host/data.parquet?sig=abc'}); // 'parquet'
+detectFileFormat({fileName: 'export', contentType: 'text/csv'}); // 'csv'
+
+const bytes = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
+detectFileFormat({fileName: file.name, contentType: file.type, bytes});
+// 'csv' | 'json' | 'parquet' | 'arrow' | undefined
+```
+
+Each format maps to a `loadOptions.method`: `'csv'` → `'read_csv'`, `'json'` →
+`'read_json'`, `'parquet'` → `'read_parquet'`. Arrow IPC has no reader method;
+load it with `loadArrow` instead (e.g. via `tableFromIPC` from `apache-arrow`).
+
+It returns `undefined` when nothing identifies the format. That doesn't mean the
+file is unsupported: DuckDB or one of its extensions may still read it, so keep
+DuckDB's own loading path (`method: 'auto'`) in that case.
+
+The WASM connector uses it as a fallback. When `loadFile` gets a browser `File`
+whose name has no extension, and `loadOptions.method` is omitted or `'auto'`,
+it picks `read_csv`, `read_json` or `read_parquet` from the file's `type` and
+first bytes, using `read_csv` when neither identifies the format. Files with an
+extension keep DuckDB's own loading path; a URL's query string and fragment are
+dropped from the name DuckDB sees, and suffixes such as `.csv.gz` are kept.
+
 ## Exporting Data to CSV
 
 ```tsx

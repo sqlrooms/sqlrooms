@@ -19,6 +19,12 @@ export {
 } from './load/load';
 
 export {
+  detectFileFormat,
+  type DetectedFileFormat,
+  type DetectFileFormatInput,
+} from './load/detectFileFormat';
+
+export {
   type QueryOptions,
   type QueryHandle,
   type DuckDbConnector,
