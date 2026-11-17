@@ -443,6 +443,29 @@ function AdvancedDataLoader() {
 }
 ```
 
+### Detecting the File Format
+
+`detectFileFormat` detects the format of a tabular file. It checks the extension
+of the file name or URL (ignoring a query string), then the content type, then
+the first bytes, and falls back to CSV. It is pure, so apps can call it, for
+example to preview the format before loading or to pick an explicit
+`loadOptions.method` for URLs such as
+`https://host/data.parquet?X-Amz-Signature=…` or `https://api.example.com/export`:
+
+```ts
+import {detectFileFormat} from '@sqlrooms/duckdb';
+
+detectFileFormat({fileName: 'https://host/data.parquet?sig=abc'}); // 'parquet'
+detectFileFormat({fileName: 'export', contentType: 'text/csv'}); // 'csv'
+
+const bytes = new Uint8Array(await file.slice(0, 64 * 1024).arrayBuffer());
+detectFileFormat({fileName: file.name, contentType: file.type, bytes});
+// 'csv' | 'tsv' | 'json' | 'ndjson' | 'parquet' | 'arrow'
+```
+
+It returns `undefined` only when the name and content type are not recognized
+and no bytes were given.
+
 ## Exporting Data to CSV
 
 ```tsx
