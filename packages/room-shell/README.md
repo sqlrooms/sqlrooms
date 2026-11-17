@@ -84,6 +84,24 @@ export function App() {
 }
 ```
 
+## URL data sources
+
+A `url` data source is downloaded in the browser and then loaded into DuckDB.
+
+- Public `s3://bucket/key` and `gs://bucket/key` URLs are downloaded from
+  `https://bucket.s3.amazonaws.com/key` and
+  `https://storage.googleapis.com/bucket/key`. The data source config and
+  `roomFiles` keep the URL as entered. Private buckets need signed `https://`
+  URLs.
+- Without `loadOptions.method`, the format is detected from the URL extension,
+  the response `Content-Type`, or the first bytes (see `detectFileFormat` in
+  `@sqlrooms/duckdb`).
+- If the download or load fails, `roomFilesProgress[url]` gets
+  `{status: 'error', message}` and `dataSourceStates[tableName]` gets
+  `{status: 'ERROR', message}`. The message says whether the server blocked the
+  request (CORS) or was unreachable, denied access (401/403), did not find the
+  file (404), or failed to load the file.
+
 ## Common room actions
 
 ```tsx

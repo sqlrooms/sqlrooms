@@ -382,6 +382,11 @@ detectFileFormat({fileName: file.name, contentType: file.type, bytes});
 It returns `undefined` only when the name and content type are not recognized
 and no bytes were given.
 
+The WASM connector uses it too: when `loadFile` gets a browser `File` and no
+`loadOptions.method`, it detects the format from the file's name, `type` and
+first bytes, and loads it with the matching reader (Arrow IPC is inserted
+directly). An explicit `method`, including `'auto'`, is always used as given.
+
 ## Exporting Data to CSV
 
 ```tsx

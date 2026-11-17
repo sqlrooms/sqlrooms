@@ -67,6 +67,9 @@ generateUniquePath('results.csv', ['results.csv']); // "results_1.csv"
 import {
   safeJsonParse,
   downloadFile,
+  downloadFileWithMetadata,
+  isDownloadFileError,
+  toPublicHttpsUrl,
   uploadFile,
   postData,
 } from '@sqlrooms/utils';
@@ -74,7 +77,20 @@ import {
 const parsed = safeJsonParse('{"ok": true}'); // { ok: true }
 const invalid = safeJsonParse('{'); // undefined
 
-// downloadFile / uploadFile / postData are Promise-based XHR helpers
+// downloadFile / uploadFile / postData are Promise-based XHR helpers.
+// downloadFileWithMetadata also returns the HTTP status and Content-Type.
+try {
+  const {data, contentType} = await downloadFileWithMetadata(url);
+} catch (error) {
+  if (isDownloadFileError(error)) {
+    // error.status is the HTTP status, or 0 for network/CORS failures
+  }
+}
+
+toPublicHttpsUrl('s3://bucket/key.parquet');
+// 'https://bucket.s3.amazonaws.com/key.parquet'
+toPublicHttpsUrl('gs://bucket/key.parquet');
+// 'https://storage.googleapis.com/bucket/key.parquet'
 ```
 
 ## Other useful exports
