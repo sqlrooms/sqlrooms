@@ -2,6 +2,7 @@ import {z} from 'zod';
 import type {JsonObject, JsonValue} from './json.js';
 import {JsonObjectSchema, JsonValueSchema} from './json.js';
 import type {ScenarioDefinition} from './scenario.js';
+import type {RunEvidence} from './evidence.js';
 
 /** Supported evaluator-neutral behavioral check categories. */
 export const BehavioralCheckKindSchema = z.enum([
@@ -10,6 +11,7 @@ export const BehavioralCheckKindSchema = z.enum([
   'answer-grounding',
   'error',
   'policy',
+  'trajectory',
 ]);
 
 /** Structured result produced by one behavioral check. */
@@ -20,6 +22,8 @@ export const BehavioralCheckResultSchema = z
     pass: z.boolean(),
     score: z.number().min(0).max(1),
     reason: z.string().min(1),
+    /** True when the check does not apply to the run's target; excluded from summaries. */
+    notApplicable: z.boolean().optional(),
     evidence: JsonObjectSchema.default(() => ({})),
     metadata: JsonObjectSchema.default(() => ({})),
   })
@@ -46,11 +50,15 @@ export type ObservedMutation = {
 /** Target-neutral material available to behavioral checks. */
 export type BehavioralCheckContext = {
   scenario: ScenarioDefinition;
+  /** Target type that produced the run, such as `cli-embedded` or `cli-external-codex`. */
+  target?: string;
   database?: JsonValue;
   workspace?: JsonValue;
   finalAnswer: string;
   errors: readonly ObservedError[];
   mutations: readonly ObservedMutation[];
+  /** Strictly ordered run events: model, tool, nested-agent and mutation steps. */
+  events?: RunEvidence['events'];
   metadata: JsonObject;
 };
 
@@ -67,6 +75,12 @@ export type BehavioralCheckEvaluation = {
 export type BehavioralCheck = {
   readonly id: string;
   readonly kind: z.infer<typeof BehavioralCheckKindSchema>;
+  /**
+   * Target types this check applies to. Omitted means every target. On other
+   * targets the check reports a not-applicable result, which still satisfies
+   * scenario expectations and is excluded from summaries.
+   */
+  readonly appliesTo?: readonly string[];
   evaluate(
     context: BehavioralCheckContext,
   ): BehavioralCheckEvaluation | Promise<BehavioralCheckEvaluation>;
@@ -75,6 +89,8 @@ export type BehavioralCheck = {
 /** Definition for a behavioral check over one part of the run context. */
 export type BehavioralCheckOptions<TValue> = {
   id: string;
+  /** Target types this check applies to; every target when omitted. */
+  appliesTo?: readonly string[];
   evaluate(
     value: TValue,
     context: BehavioralCheckContext,
@@ -93,6 +109,7 @@ function createSpecializedCheck<TValue>(
   return {
     id: options.id,
     kind,
+    ...(options.appliesTo ? {appliesTo: options.appliesTo} : {}),
     evaluate: (context) => options.evaluate(select(context), context),
   };
 }
@@ -148,6 +165,17 @@ export function createPolicyCheck(
   );
 }
 
+/** Creates a check over the ordered run events, such as tool calls. */
+export function createTrajectoryCheck(
+  options: BehavioralCheckOptions<RunEvidence['events']>,
+): BehavioralCheck {
+  return createSpecializedCheck(
+    'trajectory',
+    options,
+    (context) => context.events ?? [],
+  );
+}
+
 /**
  * Evaluates checks in declaration order and normalizes their results.
  *
@@ -189,6 +217,23 @@ export async function evaluateBehavioralChecks(
 
   const results: BehavioralCheckResult[] = [];
   for (const check of checks) {
+    if (
+      check.appliesTo &&
+      (context.target === undefined ||
+        !check.appliesTo.includes(context.target))
+    ) {
+      results.push(
+        BehavioralCheckResultSchema.parse({
+          checkId: check.id,
+          kind: check.kind,
+          pass: true,
+          score: 1,
+          notApplicable: true,
+          reason: `Not applicable to target ${context.target ?? '(unspecified)'}.`,
+        }),
+      );
+      continue;
+    }
     const evaluation = await check.evaluate(context);
     results.push(
       BehavioralCheckResultSchema.parse({
@@ -205,13 +250,17 @@ export async function evaluateBehavioralChecks(
   return results;
 }
 
-/** Aggregate status and mean score for a set of check results. */
+/**
+ * Aggregate status and mean score for a set of check results. Not-applicable
+ * results are excluded; a set with no applicable results does not pass.
+ */
 export function summarizeBehavioralCheckResults(
-  results: readonly BehavioralCheckResult[],
+  allResults: readonly BehavioralCheckResult[],
 ): {
   pass: boolean;
   score: number;
 } {
+  const results = allResults.filter((result) => !result.notApplicable);
   return {
     pass: results.length > 0 && results.every((result) => result.pass),
     score:

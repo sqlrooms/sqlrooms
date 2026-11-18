@@ -211,9 +211,12 @@ and [OpenRouter configuration example](https://learn.chatgpt.com/docs/security/s
 ## Milestone evidence and exclusions
 
 See [the delivery record](evidence/headless-delivery/README.md) for attempts,
-regression results, and outstanding verification. The implementation and skill
-are small app-local adapters, not a production plugin distribution or universal
-runner API.
+regression results, and outstanding verification. The skill and the
+workspace wiring in `src/evals/external/runExternalSuite.ts` are app-local. The
+process runner, Codex and Claude adapters, MCP host, scenario runner and
+supervisor live in [`@sqlrooms/evals/external`](../../../packages/evals/README.md#external-harnesses-sqlroomsevalsexternal)
+for reuse by other applications. Build workspace packages
+(`pnpm build`) before running the executable.
 
 Browser external mode, imports, rendered/capture correctness, production
 persistence/restart, WebMCP, and additional harnesses remain outside this milestone.

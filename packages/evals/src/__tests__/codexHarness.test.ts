@@ -2,7 +2,8 @@ import {expect, it} from '@jest/globals';
 import {mkdtemp, readFile, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {codexArguments, runHarnessProcess} from '../external/codexHarness';
+import {codexArguments} from '../external/codex';
+import {runHarnessProcess} from '../external/process';
 
 it('routes Codex through OpenRouter using an environment key and the selected model', () => {
   const options = {
@@ -10,7 +11,10 @@ it('routes Codex through OpenRouter using an environment key and the selected mo
     url: 'http://127.0.0.1:1234/mcp',
     model: 'deepseek/deepseek-v4-flash-0731',
     prompt: 'Use the workspace.',
-    disabledSkills: [],
+    disabledSkills: [] as string[],
+    skillName: 'sqlrooms',
+    mcpServerName: 'sqlrooms',
+    tokenEnvVar: 'SQLROOMS_EVAL_MCP_TOKEN',
   };
   const args = codexArguments({...options, modelProvider: 'openrouter'});
   expect(args[args.indexOf('--model') + 1]).toBe(options.model);

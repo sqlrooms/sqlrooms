@@ -25,6 +25,11 @@
       "types": "./dist/promptfoo/readModel.d.ts",
       "import": "./dist/promptfoo/readModel.js",
       "default": "./dist/promptfoo/readModel.js"
+    },
+    "./external": {
+      "types": "./dist/external/index.d.ts",
+      "import": "./dist/external/index.js",
+      "default": "./dist/external/index.js"
     }
   },
   "main": "dist/index.js",
@@ -48,9 +53,18 @@
   },
   "devDependencies": {
     "@jest/globals": "^30.3.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@sqlrooms/preset-jest": "workspace:*",
     "ai": "^6.0.177",
     "jest": "^30.1.3",
     "ts-jest": "^29.4.4"
+  },
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0"
+  },
+  "peerDependenciesMeta": {
+    "@modelcontextprotocol/sdk": {
+      "optional": true
+    }
   }
 }

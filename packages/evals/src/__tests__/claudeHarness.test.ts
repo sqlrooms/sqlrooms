@@ -1,6 +1,29 @@
 import {expect, it} from '@jest/globals';
-import {claudeArguments} from '../external/claudeHarness';
-import {readClaudeOutput} from '../external/claudeOutput';
+import {
+  claudeArguments as buildArguments,
+  readClaudeOutput as readOutput,
+} from '../external/claude';
+
+const claudeArguments = (options: {
+  pluginDir: string;
+  prompt: string;
+  model?: string;
+}) =>
+  buildArguments({
+    mcpConfig: `${options.pluginDir}/mcp.json`,
+    allowedTools: [
+      'Read(./plugin/skills/sqlrooms/**)',
+      'Skill(sqlrooms:sqlrooms)',
+      'mcp__sqlrooms__*',
+    ],
+    appendSystemPrompt: 'Use the native sqlrooms:sqlrooms skill.',
+    ...options,
+  });
+const readClaudeOutput = (stdout: string) =>
+  readOutput(stdout, {
+    skillId: 'sqlrooms:sqlrooms',
+    skillPathFragment: '/skills/sqlrooms/',
+  });
 
 it('uses native plugins and env-based MCP auth without overriding user models', () => {
   const args = claudeArguments({

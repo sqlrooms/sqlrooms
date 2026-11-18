@@ -12,8 +12,13 @@ adapter uses Node's built-in SQLite API.
 - Scenarios describe user turns, compatible production profiles, fixtures, and
   target-neutral outcome expectations.
 - Checks inspect the final answer, database snapshot, workspace state, errors,
-  and mutations. Check IDs must be unique and cover every scenario
-  expectation; they do not require one exact tool trajectory.
+  mutations and, for `trajectory` checks, the ordered run events. Check IDs
+  must be unique and cover every scenario expectation; outcome checks do not
+  require one exact tool trajectory.
+- A check can declare `appliesTo` target types. On any other target it reports
+  a `notApplicable` result, which satisfies its expectation and is excluded
+  from summaries and Promptfoo named scores. Use this for path checks that only
+  make sense for one target, such as in-app tool names.
 - Run evidence records strictly ordered events and durable outcomes in a
   versioned JSON envelope. Preserved extension fields must contain JSON values.
 - `@sqlrooms/evals/promptfoo` contains structural conversion helpers, a
@@ -28,9 +33,64 @@ adapter uses Node's built-in SQLite API.
 - The scripted model implements the AI SDK v3 language-model contract and can
   assert prompt/tool wiring without credentials or network access.
 
-No generic execution adapter is defined. The in-process CLI target will be the
-first concrete runner; an adapter seam should be introduced only after a second
-working target such as MCP exists.
+## External harnesses (`@sqlrooms/evals/external`)
+
+A Node-only entry point runs actual external agent CLIs (Codex, Claude Code)
+against an application workspace over a real loopback MCP host. It needs the
+optional peer dependency `@modelcontextprotocol/sdk`.
+
+- `createCodexHarness` and `createClaudeHarness` own only the CLI contract:
+  staging a skill or plugin into a temporary directory, the exact invocation,
+  parsing structured output, and verifying that required guidance was read.
+- `startEvalMcpHost` serves a fresh MCP `Server` per request with a random
+  bearer token, loopback and `Origin` checks, and an owner-only credential file.
+- `runExternalScenario` runs one scenario: stage, prepare the workspace, start
+  the host, run the harness with a time limit and output cap, grade, and write
+  `RunEvidence`. The application supplies `prepare()`, which returns its MCP
+  server factory, snapshot, and cleanup hooks. Without `checks`, the run is
+  graded elsewhere and its status reflects only errors.
+- `superviseExternalWorker` bounds a whole suite in a forked worker and reaps
+  harness process groups and temporary directories if it cannot settle.
+- `createExternalPromptfooProvider` exposes a run as a Promptfoo provider, so
+  existing Promptfoo assertions can grade external runs.
+
+Runs are never retried or repaired. A missing CLI, failed login, transport
+failure, unobserved guidance read, timeout or cleanup failure is an `error`,
+kept separate from behavioral `failed` results. The temporary working
+directory is not an adversarial isolation boundary.
+
+```ts
+import {
+  createCodexHarness,
+  runExternalScenario,
+} from '@sqlrooms/evals/external';
+
+const harness = createCodexHarness({
+  skillDir: 'skills/my-app',
+  skillName: 'my-app',
+  instructions: 'Use the installed skill and MCP for all workspace access.\n',
+});
+const evidence = await runExternalScenario({
+  harness,
+  harnessDescription: await harness.describe(),
+  scenario,
+  checks,
+  outputDir: 'evidence/attempt-01',
+  target: {
+    type: 'my-app-external-codex',
+    profileName: 'default',
+    profileVersion: 1,
+  },
+  async prepare(recorder) {
+    const workspace = await openFixtureWorkspace();
+    return {
+      createServer: ({onRequest}) => createMyMcpServer(workspace, onRequest),
+      snapshot: () => workspace.snapshot(),
+      dispose: () => workspace.close(),
+    };
+  },
+});
+```
 
 ## Example
 
