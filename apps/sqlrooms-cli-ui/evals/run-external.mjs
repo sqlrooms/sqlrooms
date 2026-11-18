@@ -1,6 +1,6 @@
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {superviseExternalWorker} from './supervise-external.mjs';
+import {superviseExternalWorker} from '@sqlrooms/evals/external';
 const script = fileURLToPath(import.meta.url);
 const directory = path.dirname(script);
 const worker = process.argv[2] === '--worker';

@@ -8,6 +8,8 @@ export default {
     '^@sqlrooms/duckdb-node$':
       '<rootDir>/../../packages/duckdb-node/src/index.ts',
     '^@sqlrooms/evals$': '<rootDir>/../../packages/evals/src/index.ts',
+    '^@sqlrooms/evals/external$':
+      '<rootDir>/../../packages/evals/src/external/index.ts',
   },
   transform: {
     '^.+\\.tsx?$': [
