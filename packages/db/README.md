@@ -81,3 +81,16 @@ connector implements `DbConnector` in the current runtime.
 HTTP bridges accept explicit authorization through the existing `headers` option.
 Bridge fetches reject redirects so credentials and query payloads stay on the
 configured endpoint.
+
+## Tailwind CSS
+
+Import this package’s source entry in your app’s main CSS, alongside the SQLRooms
+theme preset. It includes sources from transitive SQLRooms dependencies under pnpm.
+
+```css
+@import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/db/tailwind.css';
+```
+
+See the [Tailwind setup guide](https://sqlrooms.org/getting-started#configure-tailwind-css)
+for package selection, workspace development, and migration details.

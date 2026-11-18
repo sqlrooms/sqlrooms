@@ -595,3 +595,16 @@ function SkillCreator() {
 - `@sqlrooms/ai-core` for lower-level AI slice and chat primitives
 - `@sqlrooms/ai-settings` for settings slice/components only
 - `@sqlrooms/ai-config` for Zod schemas and migrations
+
+## Tailwind CSS
+
+Import this package’s source entry in your app’s main CSS, alongside the SQLRooms
+theme preset. It includes sources from transitive SQLRooms dependencies under pnpm.
+
+```css
+@import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/ai/tailwind.css';
+```
+
+See the [Tailwind setup guide](https://sqlrooms.org/getting-started#configure-tailwind-css)
+for package selection, workspace development, and migration details.

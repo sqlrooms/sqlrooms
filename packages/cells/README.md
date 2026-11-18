@@ -73,3 +73,16 @@ Import from package root for stable APIs:
 ## Internal APIs
 
 Avoid importing internal implementation modules directly (for example `dagUtils`, `execution`, or component subpaths). These are not guaranteed to be semver-stable.
+
+## Tailwind CSS
+
+Import this package’s source entry in your app’s main CSS, alongside the SQLRooms
+theme preset. It includes sources from transitive SQLRooms dependencies under pnpm.
+
+```css
+@import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/cells/tailwind.css';
+```
+
+See the [Tailwind setup guide](https://sqlrooms.org/getting-started#configure-tailwind-css)
+for package selection, workspace development, and migration details.
