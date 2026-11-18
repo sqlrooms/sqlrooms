@@ -27,15 +27,26 @@ describe('superviseExternalWorker', () => {
       const directory=process.argv[3]; mkdirSync(directory); mkdirSync(directory+'/workspace');
       writeFileSync(directory+'/pid',String(process.pid));
       ${manifestContent === undefined ? '' : `writeFileSync(directory+'/manifest.json',${JSON.stringify(manifestContent)});`}
-      process.send({kind:'workspace',value:directory+'/workspace',active:true});
+      process.send({kind:'workspace',value:directory+'/workspace',active:true},()=>setTimeout(()=>writeFileSync(directory+'/ready',''),100));
       process.on('SIGTERM',()=>{}); setInterval(()=>{},1000);`,
           );
-          if (mode === 'cancelled')
-            cancel = setTimeout(() => controller.abort(), 300);
+          if (mode === 'cancelled') {
+            // Cancel once the worker has started, not on a fixed delay.
+            const started = async (): Promise<void> => {
+              const ready = await stat(path.join(outputDir, 'ready')).then(
+                () => true,
+                () => false,
+              );
+              if (ready) controller.abort();
+              else cancel = setTimeout(() => void started(), 50);
+            };
+            void started();
+          }
           const code = await superviseExternalWorker({
             workerPath,
             outputDir,
-            timeoutMs: mode === 'deadline' ? 300 : 5000,
+            // Long enough for a loaded machine to start the worker.
+            timeoutMs: mode === 'deadline' ? 3000 : 20_000,
             graceMs: 100,
             signal: controller.signal,
           });
@@ -73,5 +84,5 @@ describe('superviseExternalWorker', () => {
           clearTimeout(cancel);
           await rm(root, {recursive: true, force: true});
         }
-      });
+      }, 30_000);
 });

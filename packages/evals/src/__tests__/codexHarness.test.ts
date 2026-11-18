@@ -52,12 +52,23 @@ it.each(['success', 'failure', 'timeout', 'cancellation'] as const)(
         ],
         cwd,
         env: {},
-        timeoutMs: mode === 'timeout' ? 300 : 5000,
+        // Long enough for a loaded machine to start the child and print.
+        timeoutMs: mode === 'timeout' ? 3000 : 20_000,
         signal: controller.signal,
         evidencePrefix: path.join(cwd, 'attempt'),
       });
-      if (mode === 'cancellation')
-        cancel = setTimeout(() => controller.abort(), 300);
+      if (mode === 'cancellation') {
+        // Cancel once the child is running, not on a fixed delay.
+        const started = async (): Promise<void> => {
+          const text = await readFile(
+            path.join(cwd, 'attempt.stdout.jsonl'),
+            'utf8',
+          ).catch(() => '');
+          if (text.trim()) controller.abort();
+          else cancel = setTimeout(() => void started(), 50);
+        };
+        void started();
+      }
       const result = await pending;
       expect(result.timedOut).toBe(mode === 'timeout');
       expect(result.cancelled).toBe(mode === 'cancellation');
@@ -74,6 +85,7 @@ it.each(['success', 'failure', 'timeout', 'cancellation'] as const)(
       await rm(cwd, {recursive: true, force: true});
     }
   },
+  30_000,
 );
 
 it('decodes UTF-8 across chunks and flushes incomplete tails while retaining raw bytes', async () => {

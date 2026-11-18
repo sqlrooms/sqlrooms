@@ -2,7 +2,7 @@ import {z} from 'zod';
 import type {JsonObject, JsonValue} from './json.js';
 import {JsonObjectSchema, JsonValueSchema} from './json.js';
 import type {ScenarioDefinition} from './scenario.js';
-import type {RunEvidence} from './evidence.js';
+import type {RunEvidenceEvent} from './runEvent.js';
 
 /** Supported evaluator-neutral behavioral check categories. */
 export const BehavioralCheckKindSchema = z.enum([
@@ -58,7 +58,7 @@ export type BehavioralCheckContext = {
   errors: readonly ObservedError[];
   mutations: readonly ObservedMutation[];
   /** Strictly ordered run events: model, tool, nested-agent and mutation steps. */
-  events?: RunEvidence['events'];
+  events?: readonly RunEvidenceEvent[];
   metadata: JsonObject;
 };
 
@@ -167,7 +167,7 @@ export function createPolicyCheck(
 
 /** Creates a check over the ordered run events, such as tool calls. */
 export function createTrajectoryCheck(
-  options: BehavioralCheckOptions<RunEvidence['events']>,
+  options: BehavioralCheckOptions<readonly RunEvidenceEvent[]>,
 ): BehavioralCheck {
   return createSpecializedCheck(
     'trajectory',
