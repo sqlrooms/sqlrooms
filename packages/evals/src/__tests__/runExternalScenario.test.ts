@@ -237,6 +237,64 @@ describe('runExternalScenario', () => {
     await readFile(path.join(outputDir, 'counter.increment.r1.evidence.json'));
   });
 
+  it('rejects multi-turn and profile-incompatible scenarios', async () => {
+    const harness = stubHarness();
+    const base = {
+      harness,
+      harnessDescription: {},
+      outputDir,
+      target: {
+        type: 'counter-external-stub',
+        profileName: 'counter',
+        profileVersion: 1,
+      },
+      prepare: counterTarget(),
+    };
+    await expect(
+      runExternalScenario({
+        ...base,
+        scenario: {
+          ...scenario,
+          turns: [...scenario.turns, {id: 'again', input: 'Again.'}],
+        },
+      }),
+    ).rejects.toThrow(/exactly one turn/);
+    await expect(
+      runExternalScenario({
+        ...base,
+        scenario,
+        target: {...base.target, profileName: 'other'},
+      }),
+    ).rejects.toThrow(/does not support profile other/);
+  });
+
+  it('keeps non-object event data within the evidence schema', async () => {
+    const harness = stubHarness();
+    const prepareCounter = counterTarget();
+    const evidence = await runExternalScenario({
+      harness,
+      harnessDescription: {},
+      scenario,
+      outputDir,
+      target: {
+        type: 'counter-external-stub',
+        profileName: 'counter',
+        profileVersion: 1,
+      },
+      prepare: async (recorder) => {
+        recorder.recordEvent({type: 'tool', name: 'scalar', data: 3});
+        recorder.recordEvent({type: 'tool', name: 'list', data: ['a']});
+        return prepareCounter();
+      },
+    });
+    expect(evidence.status).toBe('passed');
+    expect(
+      evidence.events
+        .filter((event) => event.name === 'scalar' || event.name === 'list')
+        .map((event) => event.data),
+    ).toEqual([{value: 3}, {value: ['a']}]);
+  });
+
   it("refuses to replace an earlier attempt's evidence", async () => {
     const harness = stubHarness();
     const options = {

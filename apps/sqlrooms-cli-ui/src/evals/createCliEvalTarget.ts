@@ -705,8 +705,8 @@ export function createCliEvalTarget(
           JSON.stringify(fixtureState) === JSON.stringify(finalState)
             ? []
             : [{kind: 'workspace-state', data: {finalState}}];
-        // Built before grading so trajectory checks see the run's events;
-        // error and mutation events are appended after.
+        // Built before grading, mutation included, so trajectory checks see
+        // the run's events; error events are appended after.
         const events = eventsFromMessages(
           messages,
           startedAt,
@@ -714,6 +714,15 @@ export function createCliEvalTarget(
             typeof eventsFromMessages
           >[2],
         );
+        if (mutations.length > 0) {
+          events.push({
+            sequence: events.length,
+            timestamp: endedAt.toISOString(),
+            type: 'mutation',
+            name: 'workspace-state',
+            data: {kind: mutations[0]!.kind},
+          });
+        }
         const checkResults = await evaluateBehavioralChecks(checks, {
           scenario,
           target: CLI_IN_PROCESS_TARGET,
@@ -735,15 +744,6 @@ export function createCliEvalTarget(
             type: 'error',
             ...(error.name ? {name: error.name} : {}),
             data: {message: error.message, ...(error.metadata ?? {})},
-          });
-        }
-        if (mutations.length > 0) {
-          events.push({
-            sequence: events.length,
-            timestamp: endedAt.toISOString(),
-            type: 'mutation',
-            name: 'workspace-state',
-            data: {kind: mutations[0]!.kind},
           });
         }
         const evidence = RunEvidenceSchema.parse({

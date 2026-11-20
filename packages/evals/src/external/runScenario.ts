@@ -21,8 +21,15 @@ import type {ExternalHarness, HarnessOutput} from './harness.js';
 import {startEvalMcpHost} from './mcpHost.js';
 import {runHarnessProcess, type HarnessResult} from './process.js';
 
-const json = (value: unknown) =>
-  JSON.parse(JSON.stringify(value)) as JsonObject;
+const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as JsonValue;
+
+/** Event data must be an object; a scalar or array is kept under `value`. */
+const eventData = (value: unknown): JsonObject => {
+  const data = json(value);
+  return data !== null && typeof data === 'object' && !Array.isArray(data)
+    ? data
+    : {value: data};
+};
 
 /** Resources reported to an external process supervisor. */
 export type ExternalRunResource = {
@@ -116,6 +123,19 @@ export async function runExternalScenario(
   const {harness, scenario} = options;
   if (options.checks && !('expectations' in scenario))
     throw new Error('Checks require a full scenario definition.');
+  // Only the first turn would be sent, so the evidence would misrepresent
+  // what the harness saw.
+  if (scenario.turns.length !== 1)
+    throw new Error(
+      `External runs support exactly one turn; ${scenario.id} has ${scenario.turns.length}.`,
+    );
+  if (
+    'compatibleProfiles' in scenario &&
+    !scenario.compatibleProfiles.includes(options.target.profileName)
+  )
+    throw new Error(
+      `Scenario ${scenario.id} does not support profile ${options.target.profileName}.`,
+    );
   const repetition = options.repetition ?? 0;
   const filePrefix = path.join(
     options.outputDir,
@@ -159,7 +179,7 @@ export async function runExternalScenario(
       timestamp: new Date().toISOString(),
       type: event.type,
       ...(event.name ? {name: event.name} : {}),
-      data: event.data === undefined ? {} : json(event.data),
+      data: event.data === undefined ? {} : eventData(event.data),
     });
   const recordError = (error: unknown, kind: string) => {
     failureKind ??= kind;
