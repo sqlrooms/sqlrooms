@@ -1,5 +1,5 @@
 import {spawn} from 'node:child_process';
-import {createWriteStream} from 'node:fs';
+import {open} from 'node:fs/promises';
 import {finished} from 'node:stream/promises';
 import {StringDecoder} from 'node:string_decoder';
 
@@ -26,13 +26,21 @@ export async function runHarnessProcess(options: {
   evidencePrefix: string;
   onProcess?: (pid: number, active: boolean) => void;
 }): Promise<HarnessResult> {
-  const stdoutFile = createWriteStream(
+  // Opened before spawning so an existing evidence file (`wx`) rejects here,
+  // as a setup error, instead of surfacing as an unhandled stream error.
+  const stdoutHandle = await open(
     `${options.evidencePrefix}.stdout.jsonl`,
-    {flags: 'wx'},
+    'wx',
   );
-  const stderrFile = createWriteStream(`${options.evidencePrefix}.stderr.log`, {
-    flags: 'wx',
-  });
+  let stderrHandle;
+  try {
+    stderrHandle = await open(`${options.evidencePrefix}.stderr.log`, 'wx');
+  } catch (error) {
+    await stdoutHandle.close();
+    throw error;
+  }
+  const stdoutFile = stdoutHandle.createWriteStream();
+  const stderrFile = stderrHandle.createWriteStream();
   let stdout = '',
     stderr = '',
     bytes = 0;

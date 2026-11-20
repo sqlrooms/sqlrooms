@@ -5,7 +5,6 @@ import type {AddressInfo} from 'node:net';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import type {Server} from '@modelcontextprotocol/sdk/server/index.js';
-import {StreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type {HarnessHostConnection} from './harness.js';
 
 /** A running evaluation MCP host. */
@@ -33,6 +32,11 @@ export async function startEvalMcpHost(options: {
   /** Credential file prefix; defaults to `sqlrooms-eval-auth-`. */
   credentialPrefix?: string;
 }): Promise<EvalMcpHost> {
+  // Loaded here, not at module load: `@modelcontextprotocol/sdk` is an
+  // optional peer, and the rest of `@sqlrooms/evals/external` (process runner,
+  // supervisor, harness adapters) works without it.
+  const {StreamableHTTPServerTransport} =
+    await import('@modelcontextprotocol/sdk/server/streamableHttp.js');
   const token = randomBytes(32).toString('hex');
   const sessions = new Set<Server>();
   const pending = new Set<Promise<unknown>>();

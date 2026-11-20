@@ -178,8 +178,24 @@ export function createCodexHarness(
   const mcpServerName = options.mcpServerName ?? options.skillName;
   const tokenEnvVar = options.tokenEnvVar ?? 'SQLROOMS_EVAL_MCP_TOKEN';
   let disabledSkills: string[] = [];
-  /** SKILL.md as read by `describe()`; staged and verified for every run. */
+  /** SKILL.md as first read; staged and verified for every run. */
   let skillContents = '';
+  // Loaded once, by `describe()` or the first `stage()`, whichever runs first,
+  // so a caller that skips `describe()` still disables other local skills and
+  // verifies against real contents.
+  let loaded: Promise<void> | undefined;
+  const load = () =>
+    (loaded ??= (async () => {
+      disabledSkills = await (
+        options.findDisabledSkills ?? findOtherCodexSkills
+      )();
+      skillContents = await readFile(
+        path.join(options.skillDir, 'SKILL.md'),
+        'utf8',
+      );
+      if (!skillContents.trim())
+        throw new Error(`${options.skillName} SKILL.md is empty.`);
+    })());
   return {
     id: 'codex',
     command: 'codex',
@@ -193,22 +209,15 @@ export function createCodexHarness(
         encoding: 'utf8',
         timeout: 10_000,
       }).trim();
-      disabledSkills = await (
-        options.findDisabledSkills ?? findOtherCodexSkills
-      )();
-      skillContents = await readFile(
-        path.join(options.skillDir, 'SKILL.md'),
-        'utf8',
-      );
+      await load();
       return {harnessVersion: version, disabledSkillPaths: disabledSkills};
     },
     async stage(cwd) {
-      if (!skillContents)
-        throw new Error('Call describe() before staging the Codex harness.');
+      await load();
       const staged = path.join(cwd, '.agents/skills', options.skillName);
       await cp(options.skillDir, staged, {recursive: true});
       // Stage the contents `verifyGuidance` checks, even if SKILL.md changed
-      // since `describe()`.
+      // since it was first read.
       await writeFile(path.join(staged, 'SKILL.md'), skillContents);
       await writeFile(path.join(cwd, 'AGENTS.md'), options.instructions);
     },
@@ -240,9 +249,11 @@ export function createCodexHarness(
     readOutput: (stdout) =>
       readCodexOutput(stdout, {skillName: options.skillName}),
     verifyGuidance(output) {
-      return output.skillReads.some((read) =>
-        read.output.includes(skillContents.trim()),
-      )
+      // Empty contents would match any read; staging guarantees they're set.
+      return skillContents.trim() &&
+        output.skillReads.some((read) =>
+          read.output.includes(skillContents.trim()),
+        )
         ? []
         : [
             `Successful native ${options.skillName} skill read was not observed.`,

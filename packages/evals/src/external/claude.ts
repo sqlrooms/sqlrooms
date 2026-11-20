@@ -184,6 +184,7 @@ export function createClaudeHarness(
 ): ExternalHarness {
   const model = options.model?.trim() || undefined;
   const skillName = path.basename(options.skillPath);
+  /** Read at staging when the skill read is required; empty otherwise. */
   let skillContents = '';
   return {
     id: 'claude',
@@ -212,10 +213,13 @@ export function createClaudeHarness(
         await cp(file.from, path.join(staged, file.to), {recursive: true});
       for (const excluded of options.excludeFromPlugin ?? [])
         await rm(path.join(staged, excluded), {recursive: true, force: true});
-      skillContents = await readFile(
-        path.join(staged, options.skillPath, 'SKILL.md'),
-        'utf8',
-      );
+      // A plugin whose guidance comes another way (requireSkillRead: false)
+      // need not ship SKILL.md.
+      if (options.requireSkillRead !== false)
+        skillContents = await readFile(
+          path.join(staged, options.skillPath, 'SKILL.md'),
+          'utf8',
+        );
     },
     invocation({cwd, host, prompt}) {
       const pluginDir = path.join(cwd, 'plugin');
@@ -250,6 +254,7 @@ export function createClaudeHarness(
       if (
         options.requireSkillRead !== false &&
         (!output.skillInvoked ||
+          !skillContents.trim() ||
           !output.skillReads.some((read) =>
             read.output.includes(skillContents.trim()),
           ))

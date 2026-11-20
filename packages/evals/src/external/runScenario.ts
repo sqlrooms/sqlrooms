@@ -157,6 +157,19 @@ export async function runExternalScenario(
       metadata: {kind},
     });
   };
+  const applyState = (next: JsonObject) => {
+    if (JSON.stringify(next) !== JSON.stringify(finalState)) {
+      pushEvent({
+        type: 'mutation',
+        name: 'workspace-state',
+        data: {finalState: next},
+      });
+      finalState = next;
+    }
+  };
+  /** Snapshots requested through the recorder, applied in order. */
+  let stateChanges: Promise<void> | undefined;
+  let transportFailures = 0;
   const recorder: ExternalTargetRecorder = {
     recordEvent: pushEvent,
     recordError: (error) => {
@@ -165,20 +178,36 @@ export async function runExternalScenario(
     },
     noteStateChange() {
       if (!prepared) return Promise.resolve();
-      const apply = (next: JsonObject) => {
-        if (JSON.stringify(next) !== JSON.stringify(finalState)) {
-          pushEvent({
-            type: 'mutation',
-            name: 'workspace-state',
-            data: {finalState: next},
-          });
-          finalState = next;
-        }
+      const target = prepared;
+      const take = (): void | Promise<void> => {
+        const next = target.snapshot();
+        return next instanceof Promise
+          ? next.then(applyState)
+          : applyState(next);
       };
-      const next = prepared.snapshot();
-      if (next instanceof Promise) return next.then(apply);
-      apply(next);
-      return Promise.resolve();
+      // Never rejects, so `void recorder.noteStateChange()` is safe; a failed
+      // snapshot is a run error instead.
+      const report = (error: unknown) => recordError(error, 'snapshot');
+      let step: Promise<void>;
+      if (!stateChanges) {
+        // Idle: a synchronous snapshot is applied before this returns.
+        try {
+          const pending = take();
+          if (!pending) return Promise.resolve();
+          step = pending.catch(report);
+        } catch (error) {
+          report(error);
+          return Promise.resolve();
+        }
+      } else {
+        // Queued behind earlier snapshots, so a slow one cannot land last.
+        step = stateChanges.then(take).catch(report);
+      }
+      const current: Promise<void> = step.finally(() => {
+        if (stateChanges === current) stateChanges = undefined;
+      });
+      stateChanges = current;
+      return current;
     },
   };
   try {
@@ -206,7 +235,17 @@ export async function runExternalScenario(
               });
           },
         }),
-      onError: (error) => recordError(error, 'transport'),
+      // One failed request (a client that gave up after its tool timeout, say)
+      // is a diagnostic, not a run error: a run that never reached the tools
+      // already fails the discovery check below.
+      onError: (error) => {
+        transportFailures += 1;
+        pushEvent({
+          type: 'tool',
+          name: 'mcp-transport-failure',
+          data: {message: String(error)},
+        });
+      },
     });
     const prompt = scenario.turns[0]!.input;
     const call = harness.invocation({cwd, host, prompt});
@@ -275,12 +314,19 @@ export async function runExternalScenario(
   } catch (error) {
     recordError(error, 'setup');
   } finally {
-    try {
-      prepared?.cancel?.();
-      if (host) await host.dispose();
-      await prepared?.drain?.();
-    } catch (error) {
-      recordError(error, 'cleanup');
+    // Each step runs even if an earlier one threw: a host left running keeps
+    // its loopback port and bearer-token file.
+    for (const step of [
+      () => prepared?.cancel?.(),
+      () => host?.dispose(),
+      () => prepared?.drain?.(),
+      () => stateChanges,
+    ]) {
+      try {
+        await step();
+      } catch (error) {
+        recordError(error, 'cleanup');
+      }
     }
     if (prepared) {
       try {
@@ -331,7 +377,7 @@ export async function runExternalScenario(
   const usage = harnessOutput?.usage;
   const evidence = RunEvidenceSchema.parse({
     schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
-    runId: `${scenario.id}-${startedAt.getTime()}`,
+    runId: `${scenario.id}-r${repetition}-${startedAt.getTime()}`,
     scenario: {id: scenario.id, version: scenario.version, repetition},
     target: options.target,
     repository: options.repository,
@@ -363,21 +409,23 @@ export async function runExternalScenario(
           grader: {totalTokens: 0},
         }
       : undefined,
+    // Caller metadata first, so it cannot overwrite the runner's own keys.
     metadata: {
+      ...options.harnessDescription,
+      ...options.metadata,
       initialState,
       fixtureState: initialState,
       failureKind,
-      ...options.harnessDescription,
       invocation,
       harnessDiagnostics: harnessOutput?.diagnostics ?? [],
       observedSkillReads:
         harnessOutput?.skillReads.map((read) => read.command) ?? [],
       mcpRequests: protocol,
+      mcpTransportFailures: transportFailures,
       gradedBy: options.checks ? 'sqlrooms-checks' : 'external',
       cleanupCompleted: !errors.some(
         (error) => error.metadata?.kind === 'cleanup',
       ),
-      ...options.metadata,
     },
   });
   await writeFile(

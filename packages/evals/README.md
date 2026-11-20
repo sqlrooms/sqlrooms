@@ -17,7 +17,9 @@ adapter uses Node's built-in SQLite API.
   require one exact tool trajectory.
 - A check can declare `appliesTo` target types. On any other target it reports
   a `notApplicable` result, which satisfies its expectation and is excluded
-  from summaries and Promptfoo named scores. Use this for path checks that only
+  from summaries, Promptfoo named scores and calibration rates; trajectory
+  graphs show it as `not-applicable`. A runner must pass `target` (and
+  `events`, for trajectory checks) to `evaluateBehavioralChecks`. Use this for path checks that only
   make sense for one target, such as in-app tool names.
 - Run evidence records strictly ordered events and durable outcomes in a
   versioned JSON envelope. Preserved extension fields must contain JSON values.
@@ -36,8 +38,9 @@ adapter uses Node's built-in SQLite API.
 ## External harnesses (`@sqlrooms/evals/external`)
 
 A Node-only entry point runs actual external agent CLIs (Codex, Claude Code)
-against an application workspace over a real loopback MCP host. It needs the
-optional peer dependency `@modelcontextprotocol/sdk`.
+against an application workspace over a real loopback MCP host. The MCP host
+needs the optional peer dependency `@modelcontextprotocol/sdk`, loaded when a
+host starts; the process runner, supervisor and harness adapters do not.
 
 - `createCodexHarness` and `createClaudeHarness` own only the CLI contract:
   staging a skill or plugin into a temporary directory, the exact invocation,
@@ -54,9 +57,12 @@ optional peer dependency `@modelcontextprotocol/sdk`.
 - `createExternalPromptfooProvider` exposes a run as a Promptfoo provider, so
   existing Promptfoo assertions can grade external runs.
 
-Runs are never retried or repaired. A missing CLI, failed login, transport
-failure, unobserved guidance read, timeout or cleanup failure is an `error`,
-kept separate from behavioral `failed` results. The temporary working
+Runs are never retried or repaired. A missing CLI, failed login, unobserved MCP
+discovery or invocation, unobserved guidance read, timeout or cleanup failure
+is an `error`, kept separate from behavioral `failed` results. A single failed
+MCP request (for example one a client abandoned after its tool timeout) is a
+diagnostic: an `mcp-transport-failure` event and the `mcpTransportFailures`
+count, not a run error. A `timeoutMs` of zero runs without a deadline. The temporary working
 directory is not an adversarial isolation boundary.
 
 ```ts

@@ -1,5 +1,9 @@
 import {expect, it} from '@jest/globals';
+import {mkdir, mkdtemp, rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
 import {
+  createClaudeHarness,
   claudeArguments as buildArguments,
   readClaudeOutput as readOutput,
 } from '../external/claude';
@@ -152,4 +156,33 @@ it('does not treat denied guidance or an interrupted turn as success', () => {
       }),
     ).failed,
   ).toBe(true);
+});
+
+it('stages a plugin without SKILL.md when the skill read is not required', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'sqlrooms-claude-test-'));
+  try {
+    const pluginDir = path.join(root, 'plugin-src');
+    await mkdir(path.join(pluginDir, 'skills/demo'), {recursive: true});
+    const harness = createClaudeHarness({
+      pluginDir,
+      skillId: 'demo:demo',
+      skillPath: 'skills/demo',
+      mcpTools: 'mcp__demo__*',
+      requireSkillRead: false,
+    });
+    const cwd = path.join(root, 'cwd');
+    await mkdir(cwd);
+    await harness.stage(cwd);
+    expect(
+      harness.verifyGuidance({
+        finalAnswer: 'Done.',
+        completed: true,
+        failed: false,
+        diagnostics: [],
+        skillReads: [],
+      }),
+    ).toEqual([]);
+  } finally {
+    await rm(root, {recursive: true, force: true});
+  }
 });

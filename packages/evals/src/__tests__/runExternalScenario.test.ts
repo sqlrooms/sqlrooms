@@ -282,6 +282,51 @@ describe('runExternalScenario', () => {
     expect(evidence.metadata.failureKind).toBe('operation');
   });
 
+  it('records a failed snapshot without an unhandled rejection', async () => {
+    const harness = stubHarness();
+    const prepareCounter = counterTarget();
+    let fail = false;
+    const evidence = await runExternalScenario({
+      harness,
+      harnessDescription: {},
+      scenario,
+      outputDir,
+      // Caller metadata cannot overwrite the runner's own keys.
+      metadata: {failureKind: 'caller', caseId: 'demo'},
+      target: {
+        type: 'counter-external-stub',
+        profileName: 'counter',
+        profileVersion: 1,
+      },
+      prepare: async (recorder) => {
+        const target = await prepareCounter(recorder);
+        return {
+          ...target,
+          createServer: (hooks) =>
+            target.createServer({
+              onRequest(method, input) {
+                hooks.onRequest(method, input);
+                if (method.startsWith('tools/call:')) {
+                  fail = true;
+                  // Fire and forget, as an application would.
+                  void recorder.noteStateChange();
+                  fail = false;
+                }
+              },
+            }),
+          snapshot: () =>
+            fail
+              ? Promise.reject(new Error('Snapshot failed.'))
+              : target.snapshot(),
+        };
+      },
+    });
+    expect(evidence.status).toBe('error');
+    expect(evidence.metadata.failureKind).toBe('snapshot');
+    expect(evidence.metadata.caseId).toBe('demo');
+    expect(evidence.runId).toMatch(/^counter\.increment-r0-\d+$/);
+  });
+
   it('runs without a deadline when the timeout is zero', async () => {
     const harness = stubHarness();
     const evidence = await runExternalScenario({

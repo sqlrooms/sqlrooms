@@ -3,7 +3,6 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import {startEvalMcpHost as startHost} from '@sqlrooms/evals/external';
 import type {createCliCapabilityRuntime} from '../../createCliCapabilityRuntime';
 
 type CliCapabilityRuntime = ReturnType<typeof createCliCapabilityRuntime>;
@@ -44,27 +43,4 @@ export function createCliMcpServer(
     };
   });
   return server;
-}
-
-/** Real local MCP transport around the shared CLI runtime; owns no operations. */
-export async function startEvalMcpHost(
-  runtime: CliCapabilityRuntime,
-  onRequest?: (method: string, input?: unknown) => void,
-) {
-  const host = await startHost({
-    createServer: () => createCliMcpServer(runtime, onRequest),
-  });
-  let disposed = false;
-  return {
-    url: host.url,
-    token: host.token,
-    credentialFile: host.credentialFile,
-    async dispose() {
-      if (disposed) return;
-      disposed = true;
-      runtime.dispose();
-      await host.dispose();
-      await runtime.drain();
-    },
-  };
 }
