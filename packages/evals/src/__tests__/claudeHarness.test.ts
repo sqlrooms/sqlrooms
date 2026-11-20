@@ -168,6 +168,7 @@ it('stages a plugin without SKILL.md when the skill read is not required', async
       skillId: 'demo:demo',
       skillPath: 'skills/demo',
       mcpTools: 'mcp__demo__*',
+      appendSystemPrompt: 'Use MCP.',
       requireSkillRead: false,
     });
     const cwd = path.join(root, 'cwd');

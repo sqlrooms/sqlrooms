@@ -237,6 +237,33 @@ describe('runExternalScenario', () => {
     await readFile(path.join(outputDir, 'counter.increment.r1.evidence.json'));
   });
 
+  it("refuses to replace an earlier attempt's evidence", async () => {
+    const harness = stubHarness();
+    const options = {
+      harness,
+      harnessDescription: {},
+      scenario,
+      outputDir,
+      target: {
+        type: 'counter-external-stub',
+        profileName: 'counter',
+        profileVersion: 1,
+      },
+      prepare: counterTarget(),
+    };
+    const first = await runExternalScenario(options);
+    await expect(runExternalScenario(options)).rejects.toThrow(
+      /Evidence already exists/,
+    );
+    const stored = JSON.parse(
+      await readFile(
+        path.join(outputDir, 'counter.increment.evidence.json'),
+        'utf8',
+      ),
+    );
+    expect(stored.runId).toBe(first.runId);
+  });
+
   it('records a failed preparation without grading the empty state', async () => {
     const harness = stubHarness();
     const evidence = await runExternalScenario({
@@ -299,7 +326,7 @@ describe('runExternalScenario', () => {
         profileVersion: 1,
       },
       prepare: async (recorder) => {
-        const target = await prepareCounter(recorder);
+        const target = await prepareCounter();
         return {
           ...target,
           createServer: (hooks) =>

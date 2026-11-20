@@ -46,7 +46,7 @@ describe('createExternalPromptfooProvider', () => {
       metadata: () => ({sqlroomsEvidence: null, extra: 1}),
     });
     const controller = new AbortController();
-    const response = await new Provider().callApi(
+    const response = await Provider().callApi(
       'Go.',
       {vars: {}},
       {abortSignal: controller.signal},
@@ -62,7 +62,7 @@ describe('createExternalPromptfooProvider', () => {
       id: 'demo',
       run: async () => evidence('error'),
     });
-    const response = await new Provider().callApi('Go.');
+    const response = await Provider().callApi('Go.');
     expect(response.error).toBe(
       'External run error (harness); see sqlroomsEvidence for details.',
     );

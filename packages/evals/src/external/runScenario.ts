@@ -1,6 +1,6 @@
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
+import {access, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import type {Server} from '@modelcontextprotocol/sdk/server/index.js';
@@ -121,6 +121,18 @@ export async function runExternalScenario(
     options.outputDir,
     repetition === 0 ? scenario.id : `${scenario.id}.r${repetition}`,
   );
+  // Never replace an earlier attempt's evidence: its raw streams are opened
+  // exclusively too, so a rerun into the same directory is a caller error.
+  const evidencePath = `${filePrefix}.evidence.json`;
+  if (
+    await access(evidencePath).then(
+      () => true,
+      () => false,
+    )
+  )
+    throw new Error(
+      `Evidence already exists at ${evidencePath}; use a new output directory or repetition.`,
+    );
   const startedAt = new Date();
   const events: RunEvidence['events'] = [];
   const errors: ObservedError[] = [];
@@ -428,10 +440,9 @@ export async function runExternalScenario(
       ),
     },
   });
-  await writeFile(
-    `${filePrefix}.evidence.json`,
-    JSON.stringify(evidence, null, 2),
-  );
+  await writeFile(evidencePath, JSON.stringify(evidence, null, 2), {
+    flag: 'wx',
+  });
   return evidence;
 }
 
