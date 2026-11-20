@@ -1,28 +1,13 @@
 import {z} from 'zod';
 import {JsonObjectSchema, JsonValueSchema} from './json.js';
 import {BehavioralCheckResultSchema} from './behavioralCheck.js';
+import {RunEvidenceEventSchema} from './runEvent.js';
 import {ScenarioIdSchema} from './scenario.js';
+
+export {RunEvidenceEventSchema, type RunEvidenceEvent} from './runEvent.js';
 
 /** Current version of the durable run-evidence envelope. */
 export const RUN_EVIDENCE_SCHEMA_VERSION = 1 as const;
-
-/** Ordered event captured while a behavioral scenario runs. */
-export const RunEvidenceEventSchema = z
-  .looseObject({
-    sequence: z.number().int().nonnegative(),
-    timestamp: z.string().datetime(),
-    type: z.enum([
-      'model',
-      'tool',
-      'nested-agent',
-      'approval',
-      'error',
-      'mutation',
-    ]),
-    name: z.string().min(1).optional(),
-    data: JsonObjectSchema.default(() => ({})),
-  })
-  .catchall(JsonValueSchema);
 
 /** Versioned evidence persisted for one behavioral scenario run. */
 export const RunEvidenceSchema = z

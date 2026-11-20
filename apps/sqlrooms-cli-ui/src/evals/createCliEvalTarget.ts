@@ -572,6 +572,9 @@ function createHeadlessStore(
   return {store: roomStore, connector};
 }
 
+/** Target type of in-process CLI runs, for `appliesTo` on behavioral checks. */
+export const CLI_IN_PROCESS_TARGET = 'cli-in-process';
+
 /** Creates an isolated, in-process CLI eval target using production wiring. */
 export function createCliEvalTarget(
   options: CliEvalTargetOptions,
@@ -702,8 +705,28 @@ export function createCliEvalTarget(
           JSON.stringify(fixtureState) === JSON.stringify(finalState)
             ? []
             : [{kind: 'workspace-state', data: {finalState}}];
+        // Built before grading, mutation included, so trajectory checks see
+        // the run's events; error events are appended after.
+        const events = eventsFromMessages(
+          messages,
+          startedAt,
+          (session?.agentProgress ?? {}) as Parameters<
+            typeof eventsFromMessages
+          >[2],
+        );
+        if (mutations.length > 0) {
+          events.push({
+            sequence: events.length,
+            timestamp: endedAt.toISOString(),
+            type: 'mutation',
+            name: 'workspace-state',
+            data: {kind: mutations[0]!.kind},
+          });
+        }
         const checkResults = await evaluateBehavioralChecks(checks, {
           scenario,
+          target: CLI_IN_PROCESS_TARGET,
+          events: [...events],
           workspace: finalState,
           database: {tables: finalState.tables},
           finalAnswer,
@@ -714,13 +737,6 @@ export function createCliEvalTarget(
         const summary = summarizeBehavioralCheckResults(checkResults);
         const status =
           errors.length > 0 ? 'error' : summary.pass ? 'passed' : 'failed';
-        const events = eventsFromMessages(
-          messages,
-          startedAt,
-          (session?.agentProgress ?? {}) as Parameters<
-            typeof eventsFromMessages
-          >[2],
-        );
         for (const error of errors) {
           events.push({
             sequence: events.length,
@@ -730,21 +746,12 @@ export function createCliEvalTarget(
             data: {message: error.message, ...(error.metadata ?? {})},
           });
         }
-        if (mutations.length > 0) {
-          events.push({
-            sequence: events.length,
-            timestamp: endedAt.toISOString(),
-            type: 'mutation',
-            name: 'workspace-state',
-            data: {kind: mutations[0]!.kind},
-          });
-        }
         const evidence = RunEvidenceSchema.parse({
           schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
           runId: `${scenario.id}-${repetition}-${startedAt.getTime()}`,
           scenario: {id: scenario.id, version: scenario.version, repetition},
           target: {
-            type: 'cli-in-process',
+            type: CLI_IN_PROCESS_TARGET,
             profileName: profile.name,
             profileVersion: profile.version,
           },

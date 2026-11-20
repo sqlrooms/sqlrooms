@@ -1,5 +1,8 @@
 import {expect, it} from '@jest/globals';
-import {readCodexOutput} from '../external/codexOutput';
+import {readCodexOutput as readOutput} from '../external/codex';
+
+const readCodexOutput = (stdout: string) =>
+  readOutput(stdout, {skillName: 'sqlrooms'});
 it('grades the final answer rather than a plan and retains unknown usage', () => {
   const stdout = [
     {

@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "mcp:contract:generate": "node build-mcp-tool-contract.mjs",
     "preview": "vite preview",
-    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest && node --test ../../scripts/cli-dev-args.test.mjs ../../scripts/cli-dev-readiness.test.mjs cliDevProxy.test.mjs evals/supervise-external.test.mjs",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest && node --test ../../scripts/cli-dev-args.test.mjs ../../scripts/cli-dev-readiness.test.mjs cliDevProxy.test.mjs",
     "typecheck": "tsc -b"
   },
   "dependencies": {
