@@ -99,6 +99,13 @@ export async function superviseExternalWorker({
   } finally {
     clearTimeout(deadline);
     clearTimeout(killTimer);
+    // The worker's close does not mean its group is gone: a setup subprocess
+    // can outlive it. Settle the whole group before returning.
+    try {
+      kill(child.pid, 'SIGKILL');
+    } catch (error) {
+      cleanupErrors.push(String(error));
+    }
     signal?.removeEventListener('abort', abort);
     for (const pid of harnesses) {
       try {

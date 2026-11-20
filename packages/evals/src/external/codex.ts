@@ -80,6 +80,8 @@ export function readCodexOutput(
             exit_code?: number;
           };
           usage?: {input_tokens?: number; output_tokens?: number};
+          message?: string;
+          error?: {message?: string};
         },
     );
   const completedItems = records
@@ -110,6 +112,16 @@ export function readCodexOutput(
           ? ('warning' as const)
           : ('error' as const),
     }));
+  // Turn-level failures, such as a rejected login or model, are not items.
+  for (const record of records) {
+    const message =
+      record.type === 'error'
+        ? record.message
+        : record.type === 'turn.failed'
+          ? record.error?.message
+          : undefined;
+    if (message) diagnostics.push({message, severity: 'error'});
+  }
   return {
     diagnostics,
     finalAnswer: messages[messages.length - 1]?.text ?? '',
@@ -166,6 +178,7 @@ export function createCodexHarness(
   const mcpServerName = options.mcpServerName ?? options.skillName;
   const tokenEnvVar = options.tokenEnvVar ?? 'SQLROOMS_EVAL_MCP_TOKEN';
   let disabledSkills: string[] = [];
+  /** SKILL.md as read by `describe()`; staged and verified for every run. */
   let skillContents = '';
   return {
     id: 'codex',
@@ -190,11 +203,13 @@ export function createCodexHarness(
       return {harnessVersion: version, disabledSkillPaths: disabledSkills};
     },
     async stage(cwd) {
-      await cp(
-        options.skillDir,
-        path.join(cwd, '.agents/skills', options.skillName),
-        {recursive: true},
-      );
+      if (!skillContents)
+        throw new Error('Call describe() before staging the Codex harness.');
+      const staged = path.join(cwd, '.agents/skills', options.skillName);
+      await cp(options.skillDir, staged, {recursive: true});
+      // Stage the contents `verifyGuidance` checks, even if SKILL.md changed
+      // since `describe()`.
+      await writeFile(path.join(staged, 'SKILL.md'), skillContents);
       await writeFile(path.join(cwd, 'AGENTS.md'), options.instructions);
     },
     invocation({cwd, host, prompt}) {

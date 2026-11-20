@@ -34,11 +34,18 @@ const call = async (method, params) => {
     },
     body: JSON.stringify({jsonrpc: '2.0', id: 1, method, params}),
   });
-  return response.json();
+  if (response.status !== 200) throw new Error(method + ' returned HTTP ' + response.status);
+  const body = await response.json();
+  if (body.error) throw new Error(method + ' failed: ' + JSON.stringify(body.error));
+  return body;
 };
 const listed = await call('tools/list', {});
 console.log(JSON.stringify({type: 'tools', names: listed.result.tools.map((tool) => tool.name)}));
-if (process.argv[2] !== 'skip-call') await call('tools/call', {name: 'increment', arguments: {by: 2}});
+if (process.argv[2] !== 'skip-call') {
+  const called = await call('tools/call', {name: 'increment', arguments: {by: 2}});
+  const count = called.result?.content?.[0]?.text;
+  if (count !== '2') throw new Error('Unexpected counter value: ' + count);
+}
 console.log(JSON.stringify({type: 'result', text: 'Incremented the counter.'}));
 `;
 
@@ -229,6 +236,70 @@ describe('runExternalScenario', () => {
     expect(evidence.metadata.failureKind).toBe('setup');
     await readFile(path.join(outputDir, 'counter.increment.r1.evidence.json'));
   });
+
+  it('records a failed preparation without grading the empty state', async () => {
+    const harness = stubHarness();
+    const evidence = await runExternalScenario({
+      harness,
+      harnessDescription: {},
+      scenario,
+      checks,
+      outputDir,
+      target: {
+        type: 'counter-external-stub',
+        profileName: 'counter',
+        profileVersion: 1,
+      },
+      prepare: async () => {
+        throw new Error('No workspace.');
+      },
+    });
+    expect(evidence.status).toBe('error');
+    expect(evidence.metadata.failureKind).toBe('setup');
+    expect(evidence.checkResults).toEqual([]);
+    await readFile(path.join(outputDir, 'counter.increment.evidence.json'));
+  });
+
+  it('classifies an operation error recorded by the application', async () => {
+    const harness = stubHarness();
+    const prepareCounter = counterTarget();
+    const evidence = await runExternalScenario({
+      harness,
+      harnessDescription: {},
+      scenario,
+      outputDir,
+      target: {
+        type: 'counter-external-stub',
+        profileName: 'counter',
+        profileVersion: 1,
+      },
+      prepare: async (recorder) => {
+        recorder.recordError({name: 'QueryError', message: 'Query failed.'});
+        return prepareCounter();
+      },
+    });
+    expect(evidence.status).toBe('error');
+    expect(evidence.metadata.failureKind).toBe('operation');
+  });
+
+  it('runs without a deadline when the timeout is zero', async () => {
+    const harness = stubHarness();
+    const evidence = await runExternalScenario({
+      harness,
+      harnessDescription: {},
+      scenario,
+      outputDir,
+      timeoutMs: 0,
+      target: {
+        type: 'counter-external-stub',
+        profileName: 'counter',
+        profileVersion: 1,
+      },
+      prepare: counterTarget(),
+    });
+    expect(evidence.status).toBe('passed');
+    expect(evidence.finalState).toEqual({count: 2});
+  });
 });
 
 describe('startEvalMcpHost', () => {
@@ -245,6 +316,74 @@ describe('startEvalMcpHost', () => {
       );
       expect(credential).toEqual({token: host.token, mcpUrl: host.url});
     } finally {
+      await host.dispose();
+    }
+  });
+
+  it('answers 500 and reports a server factory that throws', async () => {
+    const errors: unknown[] = [];
+    const host = await startEvalMcpHost({
+      createServer: () => {
+        throw new Error('No schema.');
+      },
+      onError: (error) => errors.push(error),
+    });
+    try {
+      const response = await fetch(host.url, {
+        method: 'POST',
+        headers: {authorization: `Bearer ${host.token}`},
+        body: '{}',
+      });
+      expect(response.status).toBe(500);
+      expect(String(errors[0])).toMatch(/No schema/);
+    } finally {
+      await host.dispose();
+    }
+  });
+
+  it('settles a request whose client disconnected mid-call', async () => {
+    let release!: () => void;
+    const blocked = new Promise<void>((resolve) => (release = resolve));
+    let started!: () => void;
+    const called = new Promise<void>((resolve) => (started = resolve));
+    const host = await startEvalMcpHost({
+      createServer: () => {
+        const server = new Server(
+          {name: 'slow', version: '1.0.0'},
+          {capabilities: {tools: {}}},
+        );
+        server.setRequestHandler(CallToolRequestSchema, async () => {
+          started();
+          await blocked;
+          return {content: []};
+        });
+        return server;
+      },
+    });
+    const controller = new AbortController();
+    const request = fetch(host.url, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        authorization: `Bearer ${host.token}`,
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {name: 'slow', arguments: {}},
+      }),
+    }).catch(() => undefined);
+    try {
+      await called;
+      controller.abort();
+      await request;
+      // Disposal must not wait on the abandoned response.
+      await host.dispose();
+    } finally {
+      release();
       await host.dispose();
     }
   });

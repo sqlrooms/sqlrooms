@@ -119,10 +119,11 @@ export function readClaudeOutput(
     finalAnswer: result?.result ?? '',
     completed: Boolean(result),
     failed: !result || result.is_error === true || result.subtype !== 'success',
-    diagnostics: (result?.errors ?? []).map((message) => ({
-      message,
-      severity: 'error' as const,
-    })),
+    // An error result's text carries API failures such as a rejected login.
+    diagnostics: [
+      ...(result?.errors ?? []),
+      ...(result?.is_error && result.result ? [result.result] : []),
+    ].map((message) => ({message, severity: 'error' as const})),
     usage: result?.usage,
     observedModelId:
       records.find(

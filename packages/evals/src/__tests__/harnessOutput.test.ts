@@ -57,6 +57,23 @@ describe('readCodexOutput', () => {
   });
 });
 
+describe('readCodexOutput turn failures', () => {
+  it('keeps error and failed-turn messages as diagnostics', () => {
+    const output = readCodexOutput(
+      jsonl(
+        {type: 'error', message: 'unexpected status 401 Unauthorized'},
+        {type: 'turn.failed', error: {message: 'Model not supported.'}},
+      ),
+      {skillName: 'demo'},
+    );
+    expect(output.failed).toBe(true);
+    expect(output.diagnostics.map((item) => item.message)).toEqual([
+      'unexpected status 401 Unauthorized',
+      'Model not supported.',
+    ]);
+  });
+});
+
 describe('readClaudeOutput', () => {
   it('requires a successful skill invocation and strips read line numbers', () => {
     const output = readClaudeOutput(
@@ -115,6 +132,22 @@ describe('readClaudeOutput', () => {
         },
       ],
     });
+  });
+
+  it('keeps an error result as a diagnostic', () => {
+    const output = readClaudeOutput(
+      jsonl({
+        type: 'result',
+        subtype: 'success',
+        is_error: true,
+        result: 'Invalid API key · Please run /login',
+      }),
+      {skillId: 'demo:demo', skillPathFragment: '/skills/demo/'},
+    );
+    expect(output.failed).toBe(true);
+    expect(output.diagnostics).toEqual([
+      {message: 'Invalid API key · Please run /login', severity: 'error'},
+    ]);
   });
 
   it('passes allowed tools and MCP configuration through', () => {

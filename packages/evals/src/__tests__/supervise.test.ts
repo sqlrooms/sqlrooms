@@ -85,4 +85,68 @@ describe('superviseExternalWorker', () => {
           await rm(root, {recursive: true, force: true});
         }
       }, 30_000);
+
+  it('terminates descendants and reported harness groups that outlive the worker', async () => {
+    const root = await mkdtemp(
+      path.join(tmpdir(), 'sqlrooms-supervisor-test-'),
+    );
+    const outputDir = path.join(root, 'attempt');
+    const workerPath = path.join(root, 'leaky.mjs');
+    const pids: number[] = [];
+    try {
+      // The worker exits on SIGTERM, leaving a SIGTERM-resistant child in its
+      // group and a detached harness group it reported over IPC.
+      await writeFile(
+        workerPath,
+        `import {spawn} from 'node:child_process';
+      import {mkdirSync,writeFileSync} from 'node:fs';
+      const directory=process.argv[3]; mkdirSync(directory);
+      const stubborn="process.on('SIGTERM',()=>{});setInterval(()=>{},1000)";
+      const setup=spawn(process.execPath,['-e',stubborn],{stdio:'ignore'});
+      const harness=spawn(process.execPath,['-e',stubborn],{stdio:'ignore',detached:true});
+      writeFileSync(directory+'/pids',JSON.stringify([setup.pid,harness.pid]));
+      process.send({kind:'harness',value:harness.pid,active:true});
+      process.on('SIGTERM',()=>process.exit(1)); setInterval(()=>{},1000);`,
+      );
+      const code = await superviseExternalWorker({
+        workerPath,
+        outputDir,
+        timeoutMs: 3000,
+        graceMs: 5000,
+      });
+      expect(code).toBe(124);
+      pids.push(
+        ...(JSON.parse(
+          await readFile(path.join(outputDir, 'pids'), 'utf8'),
+        ) as number[]),
+      );
+      expect(pids).toHaveLength(2);
+      // Exited before the grace period, so nothing waited for escalation.
+      const report = JSON.parse(
+        await readFile(path.join(outputDir, 'supervisor.json'), 'utf8'),
+      );
+      expect(report.forced).toBe(false);
+      // SIGKILL is delivered asynchronously; allow the kernel to reap.
+      const alive = (pid: number) => {
+        try {
+          process.kill(pid, 0);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      for (let attempt = 0; attempt < 50 && pids.some(alive); attempt++)
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(pids.filter(alive)).toEqual([]);
+    } finally {
+      for (const pid of pids) {
+        try {
+          process.kill(pid, 'SIGKILL');
+        } catch {
+          // Already gone.
+        }
+      }
+      await rm(root, {recursive: true, force: true});
+    }
+  }, 30_000);
 });

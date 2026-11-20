@@ -20,6 +20,7 @@ export async function runHarnessProcess(options: {
   args: string[];
   cwd: string;
   env: NodeJS.ProcessEnv;
+  /** Process deadline; zero or less runs without one. */
   timeoutMs: number;
   signal?: AbortSignal;
   evidencePrefix: string;
@@ -64,10 +65,14 @@ export async function runHarnessProcess(options: {
     cancelled = true;
     stop();
   };
-  const timeout = setTimeout(() => {
-    timedOut = true;
-    stop();
-  }, options.timeoutMs);
+  // Zero or less disables the deadline.
+  const timeout =
+    options.timeoutMs > 0
+      ? setTimeout(() => {
+          timedOut = true;
+          stop();
+        }, options.timeoutMs)
+      : undefined;
   options.signal?.addEventListener('abort', abort, {once: true});
   if (options.signal?.aborted) abort();
   const append = (chunk: Buffer, stream: 'stdout' | 'stderr') => {

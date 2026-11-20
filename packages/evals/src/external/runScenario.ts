@@ -91,6 +91,7 @@ export type RunExternalScenarioOptions = {
   target: {type: string; profileName: string; profileVersion: number};
   repository?: RunEvidence['repository'];
   repetition?: number;
+  /** Harness deadline; defaults to four minutes, zero or less disables it. */
   timeoutMs?: number;
   signal?: AbortSignal;
   onResource?: (resource: ExternalRunResource) => void;
@@ -132,6 +133,8 @@ export async function runExternalScenario(
   let harnessOutput: HarnessOutput | undefined;
   let cwd: string | undefined;
   let prepared: PreparedExternalTarget | undefined;
+  /** Set once the initial snapshot succeeded; checks grade nothing before. */
+  let gradable = false;
   let host: Awaited<ReturnType<typeof startEvalMcpHost>> | undefined;
   let invocation: string[] = [];
   const pushEvent = (event: {
@@ -156,8 +159,10 @@ export async function runExternalScenario(
   };
   const recorder: ExternalTargetRecorder = {
     recordEvent: pushEvent,
-    recordError: (error) =>
-      errors.push({...error, metadata: {kind: 'operation', ...error.metadata}}),
+    recordError: (error) => {
+      failureKind ??= 'operation';
+      errors.push({...error, metadata: {kind: 'operation', ...error.metadata}});
+    },
     noteStateChange() {
       if (!prepared) return Promise.resolve();
       const apply = (next: JsonObject) => {
@@ -183,6 +188,7 @@ export async function runExternalScenario(
     prepared = await options.prepare(recorder);
     initialState = await prepared.snapshot();
     finalState = initialState;
+    gradable = true;
     const target = prepared;
     host = await startEvalMcpHost({
       createServer: () =>
@@ -200,6 +206,7 @@ export async function runExternalScenario(
               });
           },
         }),
+      onError: (error) => recordError(error, 'transport'),
     });
     const prompt = scenario.turns[0]!.input;
     const call = harness.invocation({cwd, host, prompt});
@@ -239,9 +246,13 @@ export async function runExternalScenario(
           harnessOutput.failed ||
           !harnessOutput.completed)
       ) {
+        // Not stdout: the model's event stream can mention any of these.
         const authentication =
-          /unauthori[sz]ed|authenticat|not logged in|login required|401/i.test(
-            processResult.stdout + processResult.stderr,
+          /unauthori[sz]ed|authenticat|not logged in|login required|\b401\b/i.test(
+            [
+              processResult.stderr,
+              ...harnessOutput.diagnostics.map((item) => item.message),
+            ].join('\n'),
           );
         recordError(
           new Error(
@@ -298,7 +309,7 @@ export async function runExternalScenario(
       ? []
       : [{kind: 'workspace-state', data: {finalState}}];
   let checkResults: BehavioralCheckResult[] = [];
-  if (options.checks && 'expectations' in scenario) {
+  if (options.checks && 'expectations' in scenario && gradable) {
     checkResults = await evaluateBehavioralChecks(options.checks, {
       scenario,
       target: options.target.type,

@@ -25,6 +25,11 @@ export type EvalMcpHost = HarnessHostConnection & {
  */
 export async function startEvalMcpHost(options: {
   createServer: () => Server;
+  /**
+   * Called when a request cannot be served: the server factory threw, or the
+   * transport failed. The client receives an HTTP 500.
+   */
+  onError?: (error: unknown) => void;
   /** Credential file prefix; defaults to `sqlrooms-eval-auth-`. */
   credentialPrefix?: string;
 }): Promise<EvalMcpHost> {
@@ -42,29 +47,46 @@ export async function startEvalMcpHost(options: {
       response.writeHead(403).end();
       return;
     }
-    const server = options.createServer();
+    const fail = (error: unknown) => {
+      if (!response.headersSent && !response.destroyed)
+        response.writeHead(500).end();
+      else response.end();
+      if (options.onError) options.onError(error);
+      else console.error('MCP request failed:', error);
+    };
+    let server: Server;
+    try {
+      server = options.createServer();
+    } catch (error) {
+      fail(error);
+      return;
+    }
     sessions.add(server);
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
     });
-    response.on('close', () => {
-      sessions.delete(server);
-      void server.close();
-    });
+    // Closing the server drops the transport's response map, so a request
+    // whose client disconnected may never settle. Track it until either it
+    // settles or its response closes; the application drains the tool work
+    // itself (`PreparedExternalTarget.drain`).
+    const closed = new Promise<void>((resolve) =>
+      response.once('close', () => {
+        sessions.delete(server);
+        void server.close();
+        resolve();
+      }),
+    );
     const handled = (async () => {
       await server.connect(transport);
       await transport.handleRequest(request, response);
-    })();
-    pending.add(handled);
+    })().catch(fail);
+    const settled = Promise.race([handled, closed]);
+    pending.add(settled);
     try {
-      await handled;
-    } catch (error) {
-      if (!response.headersSent) response.writeHead(500).end();
-      else response.end();
-      console.error('MCP transport failed:', error);
+      await settled;
     } finally {
-      pending.delete(handled);
+      pending.delete(settled);
     }
   });
   http.requestTimeout = 35_000;
