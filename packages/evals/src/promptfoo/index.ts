@@ -63,19 +63,22 @@ export function toPromptfooAssertionResult(
   }
 
   const summary = summarizeBehavioralCheckResults(parsedResults);
-  const failures = parsedResults.filter((result) => !result.pass);
+  const applicable = parsedResults.filter((result) => !result.notApplicable);
+  const failures = applicable.filter((result) => !result.pass);
   return {
     ...summary,
     reason:
       parsedResults.length === 0
         ? 'No SQLRooms check results were produced.'
-        : failures.length === 0
-          ? `${parsedResults.length} SQLRooms check${parsedResults.length === 1 ? '' : 's'} passed.`
-          : failures
-              .map((result) => `${result.checkId}: ${result.reason}`)
-              .join('; '),
+        : applicable.length === 0
+          ? 'No applicable SQLRooms check results were produced.'
+          : failures.length === 0
+            ? `${applicable.length} SQLRooms check${applicable.length === 1 ? '' : 's'} passed.`
+            : failures
+                .map((result) => `${result.checkId}: ${result.reason}`)
+                .join('; '),
     namedScores: Object.fromEntries(
-      parsedResults.map((result) => [result.checkId, result.score]),
+      applicable.map((result) => [result.checkId, result.score]),
     ),
   };
 }

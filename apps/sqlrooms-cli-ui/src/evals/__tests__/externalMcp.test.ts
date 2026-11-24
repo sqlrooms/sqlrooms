@@ -7,15 +7,39 @@ import {
   describeIsolatedEvalCommand,
   isolatedEvalPolicy,
 } from '../external/policy';
-import {startEvalMcpHost} from '../external/mcpHost';
+import {startEvalMcpHost} from '@sqlrooms/evals/external';
+import {createCliMcpServer} from '../external/mcpHost';
 import {seedDocument} from '../workspaceFixture';
 import {CLI_BEHAVIORAL_SCENARIOS} from '../scenarios';
 import {snapshotCliEvalState} from '../snapshot';
 
+type CliRuntime = ReturnType<typeof createCliCapabilityRuntime>;
+
+/**
+ * The suite's production wiring: the package host over `createCliMcpServer`,
+ * shut down in `runExternalScenario`'s order (cancel, close the host, drain).
+ */
+async function startCliHost(runtime: CliRuntime) {
+  const host = await startEvalMcpHost({
+    createServer: () => createCliMcpServer(runtime),
+  });
+  let disposed = false;
+  return {
+    ...host,
+    async dispose() {
+      if (disposed) return;
+      disposed = true;
+      runtime.dispose();
+      await host.dispose();
+      await runtime.drain();
+    },
+  };
+}
+
 it('discovers and executes through real MCP, enforces fixture policy and closes the host', async () => {
   const workspace = createCliHeadlessWorkspace();
   const client = new Client({name: 'deterministic-mcp-check', version: '1'});
-  let host: Awaited<ReturnType<typeof startEvalMcpHost>> | undefined;
+  let host: Awaited<ReturnType<typeof startCliHost>> | undefined;
   try {
     await workspace.initialize();
     const runtime = createCliCapabilityRuntime({
@@ -23,7 +47,7 @@ it('discovers and executes through real MCP, enforces fixture policy and closes 
       policy: isolatedEvalPolicy,
       describeCommand: describeIsolatedEvalCommand,
     });
-    host = await startEvalMcpHost(runtime);
+    host = await startCliHost(runtime);
     expect((await fetch(host.url)).status).toBe(403);
     await client.connect(
       new StreamableHTTPClientTransport(new URL(host.url), {
@@ -237,7 +261,7 @@ it('drains a command that ignores abort before host disposal completes', async (
   const startedPromise = new Promise<void>((resolve) => {
     started = resolve;
   });
-  let host: Awaited<ReturnType<typeof startEvalMcpHost>> | undefined;
+  let host: Awaited<ReturnType<typeof startCliHost>> | undefined;
   try {
     await workspace.initialize();
     workspace.store.getState().commands.registerCommand('test', {
@@ -259,7 +283,7 @@ it('drains a command that ignores abort before host disposal completes', async (
       store: workspace.store,
       policy: {authorize: () => ({allowed: true})},
     });
-    host = await startEvalMcpHost(runtime);
+    host = await startCliHost(runtime);
     const call = runtime.callTool(
       'execute_command',
       {commandId: 'test.delayed'},

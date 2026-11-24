@@ -1,8 +1,9 @@
 import {expect, it} from '@jest/globals';
-import {mkdtemp, readFile, rm} from 'node:fs/promises';
+import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {codexArguments, runHarnessProcess} from '../external/codexHarness';
+import {codexArguments, createCodexHarness} from '../external/codex';
+import {runHarnessProcess} from '../external/process';
 
 it('routes Codex through OpenRouter using an environment key and the selected model', () => {
   const options = {
@@ -10,7 +11,10 @@ it('routes Codex through OpenRouter using an environment key and the selected mo
     url: 'http://127.0.0.1:1234/mcp',
     model: 'deepseek/deepseek-v4-flash-0731',
     prompt: 'Use the workspace.',
-    disabledSkills: [],
+    disabledSkills: [] as string[],
+    skillName: 'sqlrooms',
+    mcpServerName: 'sqlrooms',
+    tokenEnvVar: 'SQLROOMS_EVAL_MCP_TOKEN',
   };
   const args = codexArguments({...options, modelProvider: 'openrouter'});
   expect(args[args.indexOf('--model') + 1]).toBe(options.model);
@@ -48,12 +52,23 @@ it.each(['success', 'failure', 'timeout', 'cancellation'] as const)(
         ],
         cwd,
         env: {},
-        timeoutMs: mode === 'timeout' ? 300 : 5000,
+        // Long enough for a loaded machine to start the child and print.
+        timeoutMs: mode === 'timeout' ? 3000 : 20_000,
         signal: controller.signal,
         evidencePrefix: path.join(cwd, 'attempt'),
       });
-      if (mode === 'cancellation')
-        cancel = setTimeout(() => controller.abort(), 300);
+      if (mode === 'cancellation') {
+        // Cancel once the child is running, not on a fixed delay.
+        const started = async (): Promise<void> => {
+          const text = await readFile(
+            path.join(cwd, 'attempt.stdout.jsonl'),
+            'utf8',
+          ).catch(() => '');
+          if (text.trim()) controller.abort();
+          else cancel = setTimeout(() => void started(), 50);
+        };
+        void started();
+      }
       const result = await pending;
       expect(result.timedOut).toBe(mode === 'timeout');
       expect(result.cancelled).toBe(mode === 'cancellation');
@@ -70,6 +85,7 @@ it.each(['success', 'failure', 'timeout', 'cancellation'] as const)(
       await rm(cwd, {recursive: true, force: true});
     }
   },
+  30_000,
 );
 
 it('decodes UTF-8 across chunks and flushes incomplete tails while retaining raw bytes', async () => {
@@ -116,5 +132,67 @@ it('decodes UTF-8 across chunks and flushes incomplete tails while retaining raw
     );
   } finally {
     await rm(cwd, {recursive: true, force: true});
+  }
+});
+
+it('rejects an existing evidence file as an error instead of crashing', async () => {
+  const cwd = await mkdtemp(path.join(tmpdir(), 'sqlrooms-harness-test-'));
+  try {
+    const run = () =>
+      runHarnessProcess({
+        command: process.execPath,
+        args: ['-e', ''],
+        cwd,
+        env: {},
+        timeoutMs: 20_000,
+        evidencePrefix: path.join(cwd, 'attempt'),
+      });
+    await run();
+    await expect(run()).rejects.toMatchObject({code: 'EEXIST'});
+  } finally {
+    await rm(cwd, {recursive: true, force: true});
+  }
+});
+
+it('stages and verifies Codex skills without describe()', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'sqlrooms-codex-test-'));
+  try {
+    const skillDir = path.join(root, 'skill');
+    await mkdir(skillDir);
+    await writeFile(path.join(skillDir, 'SKILL.md'), '# Demo skill\n');
+    const harness = createCodexHarness({
+      skillDir,
+      skillName: 'demo',
+      instructions: 'Use the skill.\n',
+      findDisabledSkills: async () => ['/home/user/.agents/skills/other'],
+    });
+    const cwd = path.join(root, 'cwd');
+    await mkdir(cwd);
+    await harness.stage(cwd);
+    expect(
+      await readFile(path.join(cwd, '.agents/skills/demo/SKILL.md'), 'utf8'),
+    ).toBe('# Demo skill\n');
+    const {args} = harness.invocation({
+      cwd,
+      prompt: 'Go.',
+      host: {url: 'http://127.0.0.1:1/mcp', token: 't', credentialFile: ''},
+    });
+    expect(args.join(' ')).toContain('/home/user/.agents/skills/other');
+    const output = {
+      finalAnswer: '',
+      completed: true,
+      failed: false,
+      diagnostics: [],
+      skillReads: [{command: 'cat SKILL.md', output: 'unrelated'}],
+    };
+    expect(harness.verifyGuidance(output)).toHaveLength(1);
+    expect(
+      harness.verifyGuidance({
+        ...output,
+        skillReads: [{command: 'cat SKILL.md', output: '# Demo skill\n'}],
+      }),
+    ).toEqual([]);
+  } finally {
+    await rm(root, {recursive: true, force: true});
   }
 });

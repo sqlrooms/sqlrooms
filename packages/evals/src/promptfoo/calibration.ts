@@ -41,6 +41,8 @@ export function computeCalibrationRates(
   >();
   for (const run of runs) {
     for (const check of run.checkResults) {
+      // A check that did not apply to this run's target was not run.
+      if (check.notApplicable) continue;
       const identity = {
         scenarioId: run.scenario.id,
         scenarioVersion: run.scenario.version,
