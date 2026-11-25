@@ -2,6 +2,7 @@ import {SpinnerPane} from '@sqlrooms/ui';
 import {type Coordinator} from '@uwdata/mosaic-core';
 import {type Query} from '@uwdata/mosaic-sql';
 import {type FC, useEffect, useMemo, useState} from 'react';
+import {createChartRuntimeIssueFromError} from '../../../chart-runtime';
 import {VgPlotChart} from '../../../VgPlotChart';
 import {MosaicChartError} from '../../MosaicChartError';
 import {type ChartRendererProps} from '../base-types';
@@ -85,6 +86,19 @@ export const HistogramPercentileRenderer: FC<
     result?.coordinator === coordinator && result.query === query
       ? result
       : undefined;
+  const queryError = current?.error;
+  useEffect(() => {
+    if (queryError && runtimeIssueContext) {
+      runtimeIssueReporter?.reportIssue(
+        createChartRuntimeIssueFromError(
+          queryError,
+          runtimeIssueContext,
+          dataPolicy,
+        ),
+      );
+    }
+  }, [dataPolicy, queryError, runtimeIssueContext, runtimeIssueReporter]);
+
   const spec = useMemo(() => {
     if (prepared.error || (query && current?.bound == null)) return;
     return createHistogramSpec(

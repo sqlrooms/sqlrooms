@@ -130,4 +130,29 @@ describe('Upper percentile histogram', () => {
       `CAST('${cutoffValue}' AS ${type})`,
     );
   });
+
+  it.each(['DECIMAL(19,18)', 'DECIMAL(38, 18)'])(
+    'preserves the low-order digits of a %s median',
+    (type) => {
+      const {cutoff, source} = createHistogramPercentileQueries(
+        dataTable.table,
+        {name: field, type},
+        50,
+      );
+      expect(String(cutoff)).toContain('QUANTILE_DISC("duration.ms", 0.5)');
+      expect(String(source())).toContain('QUANTILE_DISC("duration.ms", 0.5)');
+      expect(String(source('1.000000000000000002'))).toContain(
+        `CAST('1.000000000000000002' AS ${type})`,
+      );
+    },
+  );
+
+  it('keeps interpolated cutoffs for decimals stored in 64 bits', () => {
+    const {cutoff} = createHistogramPercentileQueries(
+      dataTable.table,
+      {name: field, type: 'DECIMAL(18, 17)'},
+      50,
+    );
+    expect(String(cutoff)).toContain('QUANTILE_CONT("duration.ms", 0.5)');
+  });
 });

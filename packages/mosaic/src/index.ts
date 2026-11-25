@@ -310,6 +310,10 @@ export {Field} from './components/Field';
 export {TableSelector} from './components/TableSelector';
 export {ColumnSelector} from './components/ColumnSelector';
 export {MultiFieldSelector} from './components/MultiFieldSelector';
+export {
+  HistogramSettingsComponent,
+  type HistogramSettingsComponentProps,
+} from './charts/chart-types/histogram/HistogramSettings';
 export {BlockCaptionEditor} from './components/BlockCaptionEditor';
 export {
   ColumnsProvider,

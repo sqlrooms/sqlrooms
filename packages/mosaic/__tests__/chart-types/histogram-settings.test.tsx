@@ -22,8 +22,10 @@ const columns = [{name: 'duration', type: 'DOUBLE'}];
 
 function Settings({
   onChange,
+  showUpperPercentile,
 }: {
   onChange: (config: HistogramChartConfig) => void;
+  showUpperPercentile?: boolean;
 }): ReactElement {
   const [config, setConfig] = useState<HistogramChartConfig>({
     chartType: 'histogram',
@@ -39,10 +41,19 @@ function Settings({
         onChange(parsed);
       }}
     >
-      <HistogramSettingsComponent />
+      <HistogramSettingsComponent showUpperPercentile={showUpperPercentile} />
     </MosaicChartSettingsProvider>
   );
 }
+
+it('keeps the bin count available when a JSON-only builder hides the percentile', () => {
+  render(<Settings onChange={jest.fn()} showUpperPercentile={false} />);
+
+  expect(
+    screen.queryByRole('spinbutton', {name: 'Upper percentile'}),
+  ).toBeNull();
+  expect(screen.getByRole('spinbutton')).toHaveProperty('value', '20');
+});
 
 it('commits a valid percentile on blur and clears it for full range', () => {
   const onChange = jest.fn();

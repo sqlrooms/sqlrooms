@@ -329,8 +329,8 @@ For long-tailed distributions, set **Upper percentile** in a histogram's
 settings to focus the bins on values at or below that percentile, including
 ties. The cutoff comes from the source dataset and stays fixed while you brush
 or filter the chart. The field accepts percentages greater than 0 and at most 100. Leaving it blank or setting it to 100 shows the full range.
-Wide integer and nanosecond timestamp cutoffs use an observed value to preserve
-precision.
+Wide integers, decimals with more than 18 digits of precision, and nanosecond
+timestamps use an observed cutoff value to preserve precision.
 
 For example, use this chart configuration with a `latency_ms` column that has a
 few extreme values:
@@ -348,6 +348,11 @@ Percentile histograms use a database-backed renderer. **View spec** is available
 for full-range histograms. Programmatic `histogramChartType.createSpec` can also
 build a clipped runtime spec for `VgPlotChart`; its SQL query source is a Mosaic
 SQL object.
+
+For a builder that writes editable JSON specs, set the histogram definition's
+settings component to a wrapper around
+`<HistogramSettingsComponent showUpperPercentile={false} />`. This keeps the
+field, color, and bin count settings available for full-range histograms.
 
 A spec chart definition may supply `getRenderer` to select a component for
 configurations that need runtime preparation. Returning `undefined` keeps the
