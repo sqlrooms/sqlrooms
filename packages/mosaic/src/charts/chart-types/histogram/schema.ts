@@ -21,6 +21,14 @@ export const HistogramChartSettings = z.object({
       `Maximum number of bins for the histogram (default: ${DEFAULT_BINS_COUNT})`,
     ),
   color: z.string().nullish().describe('Optional color for histogram bars'),
+  upperPercentile: z
+    .number()
+    .gt(0)
+    .max(100)
+    .nullish()
+    .describe(
+      'Upper percentile of source values to include, greater than 0 and at most 100. Omit for the full range.',
+    ),
 });
 
 export type HistogramChartSettings = z.infer<typeof HistogramChartSettings>;

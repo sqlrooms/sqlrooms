@@ -50,6 +50,7 @@ Required: field must be quantitative not text/categorical: (${QUANTITATIVE_COLUM
 NOTE: Histograms automatically bin data into ranges and aggregate counts, so they handle large datasets efficiently (no data point limit).
 
 Optional: maxBins (${MIN_BINS_COUNT}-${MAX_BINS_COUNT}, default ${DEFAULT_BINS_COUNT}) controls the number of bins/bars in the histogram. Use fewer bins for coarse overview, more bins for detailed distribution.
+Optional: upperPercentile (greater than 0 and at most 100) focuses on values at or below that percentile. Omit it for a full-range histogram, especially when showing extremes. Label the selected percentile when using a cutoff.
 
 CRITICAL: Only for quantitative continuous data to see distribution shape, outliers, skewness.
 Do NOT use for: categorical data (use count-plot), relationships between columns (use scatter-plot), time series trends (use line-chart).`,

@@ -5,6 +5,7 @@ import {HistogramSettingsComponent} from './HistogramSettings';
 import {createHistogramAiTool} from './tool';
 import {BarChart3} from 'lucide-react';
 import {createHistogramSpec} from './spec';
+import {HistogramPercentileRenderer} from './HistogramPercentileRenderer';
 
 const DESCRIPTION = 'Create a histogram of a field';
 
@@ -20,4 +21,8 @@ export const histogramChartType: SpecChartTypeDefinition<HistogramChartConfig> =
     buildTitle: titleFromDescription(DESCRIPTION),
     createTool: createHistogramAiTool,
     createSpec: createHistogramSpec,
+    getRenderer: ({settings}) =>
+      settings.upperPercentile != null && settings.upperPercentile < 100
+        ? HistogramPercentileRenderer
+        : undefined,
   };

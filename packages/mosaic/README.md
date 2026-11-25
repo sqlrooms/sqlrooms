@@ -318,12 +318,40 @@ compatibility. When `metric` is omitted, a provided `valueField` implies
 providers emit `null` for a field they mean to leave unset, so the optional
 inputs on the exported chart-settings schemas are `.nullish()` — they accept
 `null` in addition to `undefined`. This spans, for example, scatter `x`/`y`/`size`,
-heatmap and box-plot axes, histogram `field`/`color`, count-plot `field`/
+heatmap and box-plot axes, histogram `field`/`color`/`upperPercentile`, count-plot `field`/
 `valueField`/`leftMargin`, and line-chart `metric`/`yFields`/`xInterval`. A
 `null` is treated the same as an omitted value: it resolves to the field's
 documented default or auto behavior (e.g. line-chart `metric: null` →
 `"aggregate"`; count-plot `valueField: null` → row count; `leftMargin: null` →
 metadata-derived margin) rather than being rendered as a literal `null`.
+
+For long-tailed distributions, set **Upper percentile** in a histogram's
+settings to focus the bins on values at or below that percentile, including
+ties. The cutoff comes from the source dataset and stays fixed while you brush
+or filter the chart. The field accepts percentages greater than 0 and at most 100. Leaving it blank or setting it to 100 shows the full range.
+Wide integer and nanosecond timestamp cutoffs use an observed value to preserve
+precision.
+
+For example, use this chart configuration with a `latency_ms` column that has a
+few extreme values:
+
+```ts
+import type {ChartConfig} from '@sqlrooms/mosaic';
+
+const chartConfig = {
+  chartType: 'histogram',
+  settings: {field: 'latency_ms', upperPercentile: 99},
+} satisfies ChartConfig;
+```
+
+Percentile histograms use a database-backed renderer. **View spec** is available
+for full-range histograms. Programmatic `histogramChartType.createSpec` can also
+build a clipped runtime spec for `VgPlotChart`; its SQL query source is a Mosaic
+SQL object.
+
+A spec chart definition may supply `getRenderer` to select a component for
+configurations that need runtime preparation. Returning `undefined` keeps the
+spec-based renderer.
 
 Count plots cap the visible categories instead of folding the hidden tail into
 `Others` so the generated vgplot spec continues to cross-filter against the
