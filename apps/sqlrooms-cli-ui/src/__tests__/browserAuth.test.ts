@@ -247,14 +247,21 @@ describe('explicit browser authorization', () => {
     const auth = await import('../browserAuth');
     await auth.bootstrapAuthorization();
     const {createDbSettingsSlice} = await import('@sqlrooms/db-settings');
+    const {createDbSlice} = await import('@sqlrooms/db');
+    const {createBaseRoomSlice} = await import('@sqlrooms/room-store');
     const {createStore} = await import('zustand/vanilla');
-    const store = createStore(
-      createDbSettingsSlice({
+    type TestState = import('@sqlrooms/room-store').BaseRoomStoreState &
+      import('@sqlrooms/db').DbSliceState &
+      import('@sqlrooms/db-settings').DbSettingsSliceState;
+    const store = createStore<TestState>()((...args) => ({
+      ...createBaseRoomSlice()(...args),
+      ...createDbSlice()(...args),
+      ...createDbSettingsSlice({
         fetch: (url, init) =>
           auth.authorizedFetch(auth.instancePath(url), init),
-      }),
-    );
-    store.getState().dbSettings.upsertConnection({
+      })(...args),
+    }));
+    store.getState().db.connectors.registerConnection({
       id: 'test',
       engineId: 'postgres',
       title: 'Test',
@@ -266,7 +273,7 @@ describe('explicit browser authorization', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(reply({ok: true}));
     expect(await store.getState().dbSettings.saveToServer()).toBe(true);
-    expect(store.getState().dbSettings.hasUnsavedChanges).toBe(false);
+    expect(store.getState().dbSettings.hasUnsavedChanges()).toBe(false);
     expect(
       await store.getState().dbSettings.testConnection('postgres', {}),
     ).toEqual({ok: true});
@@ -284,9 +291,9 @@ describe('explicit browser authorization', () => {
     globalThis.fetch = jest
       .fn<typeof fetch>()
       .mockResolvedValue(reply({error: 'unauthorized'}, 401));
-    store.getState().dbSettings.removeConnection('test');
+    store.getState().db.connectors.removeConnection('test');
     expect(await store.getState().dbSettings.saveToServer()).toBe(false);
-    expect(store.getState().dbSettings.hasUnsavedChanges).toBe(true);
+    expect(store.getState().dbSettings.hasUnsavedChanges()).toBe(true);
     expect(() => auth.pageCredential()).toThrow('authorization');
   });
 });

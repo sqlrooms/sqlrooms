@@ -5,57 +5,73 @@
 State and UI components for editing SQLRooms database connections and reporting
 connector-driver availability.
 
-This package complements `@sqlrooms/db`: the settings slice owns editable
-configuration, while `syncConnectionsToDb()` copies available connections into
-the database execution registry.
+Connection definitions live only in `db.config.connections`. Settings components
+read that registry and edit it through `db.connectors.registerConnection()` and
+`removeConnection()`. This slice owns editor options, connection testing through
+the host transport, and server persistence. No connection synchronization is needed.
 
 ## Store setup
 
-Compose the settings slice with a room store that already includes
-`DbSliceState` (usually through `createRoomShellSlice()`):
+Compose the settings slice with a room store that includes `DbSliceState`
+(usually through `createRoomShellSlice()`), and initialize connections in `db`:
 
 ```ts
-import {
-  createDbSettingsSlice,
-  syncConnectionsToDb,
-} from '@sqlrooms/db-settings';
+import {DbConnection} from '@sqlrooms/db';
+import {createDbSettingsSlice} from '@sqlrooms/db-settings';
 import {createRoomShellSlice, createRoomStore} from '@sqlrooms/room-shell';
 
-const {roomStore} = createRoomStore((set, get, store) => ({
-  ...createRoomShellSlice({})(set, get, store),
-  ...createDbSettingsSlice({
-    config: {
-      connections: [],
-      diagnostics: [],
-      supportedEngines: ['postgres'],
-    },
-  })(set, get, store),
-}));
-
-syncConnectionsToDb(roomStore);
-
-const unsubscribe = roomStore.subscribe((state, previousState) => {
-  const config = state.dbSettings.config;
-  const previousConfig = previousState.dbSettings.config;
-  if (
-    config.connections !== previousConfig.connections ||
-    config.diagnostics !== previousConfig.diagnostics
-  ) {
-    syncConnectionsToDb(roomStore);
-  }
+const warehouse = DbConnection.parse({
+  id: 'warehouse',
+  engineId: 'postgres',
+  title: 'Warehouse',
+  runtimeSupport: 'server',
+  requiresBridge: true,
+  bridgeId: 'server',
 });
 
-// Call unsubscribe() when the store is disposed.
+const {roomStore} = createRoomStore((set, get, store) => ({
+  ...createRoomShellSlice({
+    createDbProps: {
+      config: {connections: {[warehouse.id]: warehouse}},
+      diagnostics: [],
+    },
+  })(set, get, store),
+  ...createDbSettingsSlice({
+    config: {supportedEngines: ['postgres']},
+  })(set, get, store),
+}));
 ```
 
-Keep the subscription while the settings UI is active so edits immediately
-update the execution registry. Connections whose matching diagnostic has
-`available: false` are not registered for execution.
+Register the corresponding bridge or direct connector through `db.connectors`
+when configuring execution. Driver diagnostics live at
+`db.connectors.diagnostics` and can be updated with `setDiagnostics()`.
+Connections marked unavailable remain editable and are saved, but `db` excludes
+them from catalog operations and rejects query execution.
 
-Connection `config` may contain credentials, so the example intentionally does
-not add `DbSettingsSliceConfig` to `persistSliceConfigs()`. The schema is
-available for validation, but hosts should keep credentials in server-managed
-configuration or use an explicitly redacted persistence shape.
+`dbSettings.hasUnsavedChanges()` compares the canonical definitions with the last
+successful save, or the store's initial definitions before the first save. It
+also detects changes made directly through `db`, without subscriptions. In React,
+select the boolean result: `useStoreWithDbSettings(s => s.dbSettings.hasUnsavedChanges())`.
+A save captures the current non-core definitions; edits made while it is in flight
+remain unsaved. Failed saves retain the previous baseline. Core connections are
+excluded from dirty tracking and server saves.
+
+Connection `config` may contain credentials. Keep it out of browser persistence
+and shared workspace state unless explicitly redacted. Hosts should keep
+credentials in server-managed configuration. `DbSettingsSliceConfig` now contains
+only editor options (`supportedEngines` and `engineConfigFields`).
+
+## Migrating from duplicated settings state
+
+- Move initial connections into `createDbSlice({config: {connections}})`
+  (a record keyed by ID), or the shell's `createDbProps`.
+- Move initial diagnostics to `createDbSlice({diagnostics})`; read them from
+  `db.connectors.diagnostics` and update them with `db.connectors.setDiagnostics()`.
+  Import `ConnectorDriverDiagnostic` from `@sqlrooms/db`.
+- Replace `dbSettings.upsertConnection()` / `removeConnection()` with
+  `db.connectors.registerConnection()` / `removeConnection()`.
+- Call `dbSettings.hasUnsavedChanges()` instead of reading a stored boolean.
+- Remove `syncConnectionsToDb()` calls and subscriptions; the export is removed.
 
 ## UI
 

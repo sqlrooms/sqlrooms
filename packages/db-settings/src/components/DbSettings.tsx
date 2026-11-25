@@ -17,7 +17,7 @@ const DbSettingsTriggerButton = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof Button>
 >((props, ref) => {
   const diagnostics = useStoreWithDbSettings(
-    (s) => s.dbSettings.config.diagnostics,
+    (s) => s.db.connectors.diagnostics,
   );
   const missingCount = React.useMemo(
     () => diagnostics.filter((d) => !d.available).length,
@@ -86,7 +86,7 @@ function DbSettingsDiagnostics() {
 
 function DriversTabLabel() {
   const diagnostics = useStoreWithDbSettings(
-    (s) => s.dbSettings.config.diagnostics,
+    (s) => s.db.connectors.diagnostics,
   );
   const missingCount = React.useMemo(
     () => diagnostics.filter((d) => !d.available).length,
@@ -108,8 +108,8 @@ function DriversTabLabel() {
 function DbSettingsSaveButton({apiBaseUrl}: {apiBaseUrl?: string}) {
   const saveToServer = useStoreWithDbSettings((s) => s.dbSettings.saveToServer);
   const isSaving = useStoreWithDbSettings((s) => s.dbSettings.isSaving);
-  const hasUnsavedChanges = useStoreWithDbSettings(
-    (s) => s.dbSettings.hasUnsavedChanges,
+  const hasUnsavedChanges = useStoreWithDbSettings((s) =>
+    s.dbSettings.hasUnsavedChanges(),
   );
 
   const handleSave = React.useCallback(async () => {
