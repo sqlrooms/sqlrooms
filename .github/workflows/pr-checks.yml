@@ -55,6 +55,11 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      - name: Verify Tailwind sources in a pnpm consumer
+        run: |
+          pnpm dlx playwright@1.62.1 install --with-deps chromium
+          pnpm test:tailwind-consumer
+
       - name: Verify canonical MCP contract
         run: |
           pnpm --filter sqlrooms-cli-app mcp:contract:generate

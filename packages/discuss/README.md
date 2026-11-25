@@ -134,3 +134,16 @@ function DiscussionActions() {
 - slice: `createDiscussSlice`, `createDefaultDiscussConfig`
 - config/types: `DiscussSliceConfig`, `DiscussSliceState`, `Discussion`, `Comment`
 - hook: `useStoreWithDiscussion`
+
+## Tailwind CSS
+
+Import this package’s source entry in your app’s main CSS, alongside the SQLRooms
+theme preset. It includes sources from transitive SQLRooms dependencies under pnpm.
+
+```css
+@import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/discuss/tailwind.css';
+```
+
+See the [Tailwind setup guide](https://sqlrooms.org/getting-started#configure-tailwind-css)
+for package selection, workspace development, and migration details.

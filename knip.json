@@ -9,7 +9,9 @@
     "python/**",
     "docs/**",
     "examples/app-builder/app-scaffolds/**",
-    "apps/sqlrooms-cli-ui/app-scaffolds/get-started/**"
+    "apps/sqlrooms-cli-ui/app-scaffolds/get-started/**",
+    "tests/tailwind-consumer/**",
+    "packages/*/tailwind.css"
   ],
   "exclude": ["exports", "types", "duplicates"],
   "workspaces": {
@@ -22,7 +24,9 @@
         "mermaid",
         "remove",
         "vitepress-plugin-llms",
-        "typescript-language-server"
+        "typescript-language-server",
+        "playwright",
+        "vite"
       ],
       "ignoreBinaries": [
         "uv",

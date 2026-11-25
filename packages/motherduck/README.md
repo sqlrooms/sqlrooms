@@ -53,3 +53,16 @@ if (isWasmMotherDuckDbConnector(connector)) {
 ## Example
 
 - MotherDuck cloud query example: https://github.com/sqlrooms/examples/tree/main/query-motherduck
+
+## Tailwind CSS
+
+Import this package’s source entry in your app’s main CSS, alongside the SQLRooms
+theme preset. It includes sources from transitive SQLRooms dependencies under pnpm.
+
+```css
+@import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/motherduck/tailwind.css';
+```
+
+See the [Tailwind setup guide](https://sqlrooms.org/getting-started#configure-tailwind-css)
+for package selection, workspace development, and migration details.

@@ -10,6 +10,38 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### Tailwind source discovery with pnpm
+
+Keep the theme preset import and add a `tailwind.css` import for each public
+SQLRooms UI package your app uses directly:
+
+```css
+@import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/sql-editor/tailwind.css';
+@import '@sqlrooms/room-shell/tailwind.css';
+```
+
+These entries compose transitive sources, including `schema-tree` through
+`sql-editor`. Remove SQLRooms-specific `@source` globs into `node_modules` or the
+monorepo’s packages directory. Keep source declarations for your own app or other
+libraries. Once all entry packages use this release, remove direct dependencies
+added solely as CSS workarounds (for example, `@sqlrooms/schema-tree` if you do not
+import it yourself). Upgrade SQLRooms packages together so dependency CSS entries
+are available throughout the graph. Old source scans remain compatible, but are
+redundant after migration. Existing JavaScript imports are unchanged.
+
+This integration requires Tailwind 4.1.18 or later and works with published and
+workspace packages. Theme variables and consumer utility overrides retain their
+existing cascade. SSR does not gain JavaScript-side CSS imports. See the
+[Tailwind setup guide](./getting-started#configure-tailwind-css) for custom themes
+and package-level CSS pruning.
+
+Schema tree rows now use a `1.375rem` minimum height instead of a fixed 22px
+height. At the default font size they remain 22px and grow with larger text.
+`BaseTreeNode.className` applies to the outer row; explicit height utilities can
+still set a fixed height. For heights below the default minimum, also override
+the minimum (for example, `min-h-0 h-4`).
+
 ### `@sqlrooms/documents`: canonical document names (breaking)
 
 The prerelease document APIs now distinguish structured block documents from

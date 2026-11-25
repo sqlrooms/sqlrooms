@@ -94,3 +94,16 @@ Python block commands target `block-document` artifacts and use canonical
 `block-document.*` IDs and “block document” descriptions. Hosts can customize
 `commandGroup` for UI grouping; artifact type, label, and command namespace
 overrides are not supported.
+
+## Tailwind CSS
+
+Import this package’s source entry in your app’s main CSS, alongside the SQLRooms
+theme preset. It includes sources from transitive SQLRooms dependencies under pnpm.
+
+```css
+@import '@sqlrooms/ui/tailwind-preset.css';
+@import '@sqlrooms/python/tailwind.css';
+```
+
+See the [Tailwind setup guide](https://sqlrooms.org/getting-started#configure-tailwind-css)
+for package selection, workspace development, and migration details.

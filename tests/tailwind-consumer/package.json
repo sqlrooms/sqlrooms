@@ -1,0 +1,18 @@
+{
+  "name": "sqlrooms-tailwind-consumer",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@sqlrooms/room-shell": "0.29.0",
+    "@sqlrooms/sql-editor": "0.29.0",
+    "@sqlrooms/ui": "0.29.0",
+    "react": "19.2.1",
+    "react-dom": "19.2.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.18",
+    "playwright": "1.62.1",
+    "tailwindcss": "4.1.18",
+    "vite": "8.2.0"
+  }
+}
