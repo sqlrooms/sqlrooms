@@ -87,8 +87,8 @@ Publishing.
 See [Publishing SQLRooms and Roomie](../PUBLISHING.md) for the release sequence,
 PyPI authentication, and installation checks against the published runtime.
 
-Development setup requires Node 24, pnpm 11 and uv. End users of the wheel do not
-need Node. `pnpm --filter roomie-python dev:setup` installs the paired checkout
+Development setup requires Node 24.22.1+ (24.x), pnpm 11 and uv. End users of the
+wheel do not need Node. `pnpm --filter roomie-python dev:setup` installs the paired checkout
 runtime and Roomie into `python/.venv`, explicitly bypassing Roomie dependency
 resolution only while the upstream release is pending. Published metadata never
 uses this development override. Version Roomie independently with

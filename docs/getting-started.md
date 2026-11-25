@@ -44,7 +44,7 @@ Your application should have the following dependencies:
 
 - [React 18+](https://react.dev/) (React 19 is supported)
 - [Tailwind CSS](https://tailwindcss.com/)
-- [Node.js](https://nodejs.org/) >= 22
+- [Node.js](https://nodejs.org/) 22.23.4+, 24.22.1+, or 26.12.1+ within a supported release line (see the [October 2026 security advisory](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases))
 
 SQLRooms uses [Zustand](https://zustand.docs.pmnd.rs) for state management and [Zod](https://zod.dev) for schema validation internally, but you don't need to install them separately
 
