@@ -9,6 +9,8 @@ import {useBlockSettingsStore} from '../block-settings/useBlockSettingsStore';
 
 export type BlockDocumentEditorContentProps = {
   className?: string;
+  /** Shows Image in the block menus. Defaults to true. */
+  showImageBlockMenuItem?: boolean;
 };
 
 type ClosestTextBlock = {
@@ -190,7 +192,7 @@ function isSelectionPreservingClick(event: ReactMouseEvent) {
 
 export const BlockDocumentEditorContent: FC<
   BlockDocumentEditorContentProps
-> = ({className}) => {
+> = ({className, showImageBlockMenuItem}) => {
   const {editor, readOnly} = useBlockDocumentEditorContext();
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
     null,
@@ -249,7 +251,10 @@ export const BlockDocumentEditorContent: FC<
     >
       <div className="relative min-h-full">
         <EditorContent editor={editor} className="min-h-full" />
-        <BlockDocumentBlockControls scrollElement={scrollElement} />
+        <BlockDocumentBlockControls
+          scrollElement={scrollElement}
+          showImageBlockMenuItem={showImageBlockMenuItem}
+        />
       </div>
     </ScrollArea>
   );
