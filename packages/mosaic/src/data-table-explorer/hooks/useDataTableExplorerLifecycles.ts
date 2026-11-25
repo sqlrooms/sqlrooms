@@ -3,6 +3,7 @@ import type {MosaicClient, Selection} from '@uwdata/mosaic-core';
 import type {MosaicSliceState} from '../../MosaicSlice';
 import type {DataTableExplorerStore} from '../createDataTableExplorerStore';
 import type {
+  DataTableExplorerColumnKind,
   DataTableExplorerPaginationState,
   DataTableExplorerSqlTableReference,
   DataTableExplorerSorting,
@@ -21,6 +22,11 @@ import {
  */
 export type UseDataTableExplorerLifecyclesOptions = {
   categoryLimit: number;
+  /**
+   * Resolved summary kind per field name. Columns resolved to `'none'` get no
+   * summary clients.
+   */
+  columnKinds?: Record<string, DataTableExplorerColumnKind>;
   columns?: string[];
   connection: MosaicSliceState['mosaic']['connection'];
   fieldNames: string[];
@@ -67,6 +73,7 @@ export function useDataTableExplorerLifecycles(
 ): UseDataTableExplorerLifecyclesReturn {
   const {
     categoryLimit,
+    columnKinds,
     columns,
     connection,
     fieldNames,
@@ -215,6 +222,7 @@ export function useDataTableExplorerLifecycles(
 
     return connectDataTableExplorerSummaryClients({
       categoryLimit,
+      columnKinds,
       connection,
       fields,
       selection,
@@ -225,6 +233,7 @@ export function useDataTableExplorerLifecycles(
     });
   }, [
     categoryLimit,
+    columnKinds,
     connection,
     fields,
     dataTableExplorerStore,

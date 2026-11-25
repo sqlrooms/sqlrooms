@@ -8,6 +8,8 @@ import * as arrow from 'apache-arrow';
 import type {
   DataTableExplorerBin,
   DataTableExplorerCategoryBucket,
+  DataTableExplorerColumnKind,
+  DataTableExplorerColumnKindOverride,
   DataTableExplorerPaginationState,
   DataTableExplorerSqlTableReference,
   DataTableExplorerSorting,
@@ -34,6 +36,42 @@ export function isDataTableExplorerUnsupportedSummaryType(
 ): boolean {
   const category = getArrowColumnTypeCategory(type);
   return category === 'binary' || category === 'geometry';
+}
+
+/**
+ * Resolves the effective summary kind for a column, combining the default
+ * Arrow-type-driven behavior with an optional user override.
+ *
+ * `'none'` is always honored. `'category'` and `'histogram'` are honored only
+ * when the column type supports them; incompatible requests fall back to the
+ * type-driven default so a bad override can not produce broken summary
+ * queries.
+ */
+export function resolveDataTableExplorerColumnKind(
+  field: arrow.Field,
+  getColumnKind?: (field: arrow.Field) => DataTableExplorerColumnKindOverride,
+): DataTableExplorerColumnKind {
+  const autoKind: DataTableExplorerColumnKind =
+    isDataTableExplorerUnsupportedSummaryType(field.type)
+      ? 'unsupported'
+      : isDataTableExplorerHistogramType(field.type)
+        ? 'histogram'
+        : 'category';
+
+  const override = getColumnKind?.(field) ?? 'auto';
+  if (override === 'auto') {
+    return autoKind;
+  }
+  if (override === 'none') {
+    return 'none';
+  }
+  if (autoKind === 'unsupported') {
+    return autoKind;
+  }
+  if (override === 'histogram' && autoKind !== 'histogram') {
+    return autoKind;
+  }
+  return override;
 }
 
 export function getDataTableExplorerValueType(
@@ -524,8 +562,16 @@ export function parseCategoryBucketKey(key: string):
 
 export function createEmptySummaryState(
   field: arrow.Field,
+  kind: DataTableExplorerColumnKind = resolveDataTableExplorerColumnKind(field),
 ): DataTableExplorerSummaryState {
-  if (isDataTableExplorerUnsupportedSummaryType(field.type)) {
+  if (kind === 'none') {
+    return {
+      isLoading: false,
+      kind: 'none',
+    };
+  }
+
+  if (kind === 'unsupported') {
     return {
       isLoading: false,
       kind: 'unsupported',
@@ -533,7 +579,7 @@ export function createEmptySummaryState(
     };
   }
 
-  return isDataTableExplorerHistogramType(field.type)
+  return kind === 'histogram'
     ? {
         filteredBins: [],
         filteredNullCount: 0,
