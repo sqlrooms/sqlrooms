@@ -142,7 +142,11 @@ export function createObservatoryTrajectory(
       id,
       kind: 'check',
       label: result.checkId,
-      status: result.pass ? 'passed' : 'failed',
+      status: result.notApplicable
+        ? 'not-applicable'
+        : result.pass
+          ? 'passed'
+          : 'failed',
       data: {
         reason: result.reason,
         score: result.score,

@@ -102,4 +102,17 @@ describe('observatory trajectory read model', () => {
     expect(trajectory.graphRecommended).toBe(false);
     expect(trajectory.recommendationReason).toContain('ordered event list');
   });
+
+  it('marks checks that did not apply to the target', () => {
+    const base = run([]);
+    const trajectory = createObservatoryTrajectory({
+      ...base,
+      checkResults: [
+        {...base.checkResults[0]!, pass: true, notApplicable: true},
+      ],
+    });
+    expect(trajectory.nodes.find((node) => node.kind === 'check')?.status).toBe(
+      'not-applicable',
+    );
+  });
 });

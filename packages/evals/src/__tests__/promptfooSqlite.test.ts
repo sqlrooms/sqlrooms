@@ -295,6 +295,17 @@ describe('Promptfoo SQLite observatory adapter', () => {
         passRate: 0.5,
       }),
     ]);
+    // A check that did not apply to a run's target is not counted.
+    const notApplicable = {
+      ...failed,
+      id: 'not-applicable-copy',
+      checkResults: [
+        {...filtered[0]!.checkResults[0]!, pass: true, notApplicable: true},
+      ],
+    };
+    expect(
+      computeCalibrationRates([filtered[0]!, failed, notApplicable]),
+    ).toEqual([expect.objectContaining({total: 2, passed: 1})]);
 
     const lateRun = {
       ...filtered[0]!,

@@ -1,5 +1,5 @@
 import {spawn} from 'node:child_process';
-import {createWriteStream} from 'node:fs';
+import {open} from 'node:fs/promises';
 import {finished} from 'node:stream/promises';
 import {StringDecoder} from 'node:string_decoder';
 
@@ -20,18 +20,27 @@ export async function runHarnessProcess(options: {
   args: string[];
   cwd: string;
   env: NodeJS.ProcessEnv;
+  /** Process deadline; zero or less runs without one. */
   timeoutMs: number;
   signal?: AbortSignal;
   evidencePrefix: string;
   onProcess?: (pid: number, active: boolean) => void;
 }): Promise<HarnessResult> {
-  const stdoutFile = createWriteStream(
+  // Opened before spawning so an existing evidence file (`wx`) rejects here,
+  // as a setup error, instead of surfacing as an unhandled stream error.
+  const stdoutHandle = await open(
     `${options.evidencePrefix}.stdout.jsonl`,
-    {flags: 'wx'},
+    'wx',
   );
-  const stderrFile = createWriteStream(`${options.evidencePrefix}.stderr.log`, {
-    flags: 'wx',
-  });
+  let stderrHandle;
+  try {
+    stderrHandle = await open(`${options.evidencePrefix}.stderr.log`, 'wx');
+  } catch (error) {
+    await stdoutHandle.close();
+    throw error;
+  }
+  const stdoutFile = stdoutHandle.createWriteStream();
+  const stderrFile = stderrHandle.createWriteStream();
   let stdout = '',
     stderr = '',
     bytes = 0;
@@ -64,10 +73,14 @@ export async function runHarnessProcess(options: {
     cancelled = true;
     stop();
   };
-  const timeout = setTimeout(() => {
-    timedOut = true;
-    stop();
-  }, options.timeoutMs);
+  // Zero or less disables the deadline.
+  const timeout =
+    options.timeoutMs > 0
+      ? setTimeout(() => {
+          timedOut = true;
+          stop();
+        }, options.timeoutMs)
+      : undefined;
   options.signal?.addEventListener('abort', abort, {once: true});
   if (options.signal?.aborted) abort();
   const append = (chunk: Buffer, stream: 'stdout' | 'stderr') => {
@@ -108,52 +121,4 @@ export async function runHarnessProcess(options: {
     stderrFile.end();
     await Promise.all([finished(stdoutFile), finished(stderrFile)]);
   }
-}
-
-/** Codex's supported CLI automation and repo skill discovery, with explicit local MCP configuration. */
-export function codexArguments(options: {
-  cwd: string;
-  url: string;
-  model: string;
-  modelProvider?: 'codex' | 'openrouter';
-  prompt: string;
-  disabledSkills: string[];
-}) {
-  return [
-    'exec',
-    '--ignore-user-config',
-    '--ignore-rules',
-    '--ephemeral',
-    '--skip-git-repo-check',
-    '--sandbox',
-    'read-only',
-    '--json',
-    '--color',
-    'never',
-    '-C',
-    options.cwd,
-    '--model',
-    options.model,
-    ...(options.modelProvider === 'openrouter'
-      ? [
-          '-c',
-          'model_provider="openrouter"',
-          '-c',
-          'model_providers.openrouter={name="OpenRouter",base_url="https://openrouter.ai/api/v1",env_key="OPENROUTER_API_KEY",wire_api="responses",requires_openai_auth=false}',
-        ]
-      : []),
-    '-c',
-    'model_reasoning_effort="medium"',
-    '-c',
-    'skills.config=[' +
-      options.disabledSkills
-        .map((skill) => `{path=${JSON.stringify(skill)},enabled=false}`)
-        .join(',') +
-      ']',
-    '-c',
-    `mcp_servers.sqlrooms={url=${JSON.stringify(options.url)},bearer_token_env_var="SQLROOMS_EVAL_MCP_TOKEN",required=true,startup_timeout_sec=20,tool_timeout_sec=35}`,
-    '-c',
-    'mcp_servers.sqlrooms.default_tools_approval_mode="approve"',
-    '$sqlrooms\n\n' + options.prompt,
-  ];
 }
