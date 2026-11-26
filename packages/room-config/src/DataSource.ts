@@ -54,7 +54,9 @@ export const UrlDataSource = BaseDataSource.extend({
   url: z
     .string()
     .describe(
-      'URL to fetch data from. Currently only CSV and Parquet files are supported.',
+      'URL to fetch data from. The file extension selects the reader (e.g. CSV, JSON, Parquet). ' +
+        'For a URL without an extension, the browser (WASM) connector picks CSV, JSON or Parquet ' +
+        'from the response Content-Type or content, unless loadOptions.method names a reader.',
     ),
   /** Optional configuration for file loading */
   loadOptions: LoadFileOptions.optional().describe(

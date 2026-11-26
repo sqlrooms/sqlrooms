@@ -26,7 +26,17 @@ export {genRandomStr} from './random';
 
 export {formatBytes, camelCaseToTitle, capitalize, truncate} from './str';
 
-export {postData, downloadFile, uploadFile, type ProgressInfo} from './xhr';
+export {
+  postData,
+  downloadFile,
+  downloadFileWithMetadata,
+  isDownloadFileError,
+  uploadFile,
+  type DownloadFileError,
+  type DownloadFileOptions,
+  type DownloadFileResult,
+  type ProgressInfo,
+} from './xhr';
 
 export {
   splitFilePath,

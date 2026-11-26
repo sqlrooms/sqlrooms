@@ -14,8 +14,15 @@ import {
   StandardLoadOptions,
   isSpatialLoadFileOptions,
 } from '@sqlrooms/room-config';
-import {safeJsonParse, splitFilePath} from '@sqlrooms/utils';
+import {safeJsonParse} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
+import {
+  getExtensionlessFileReader,
+  getRegisteredFileSuffix,
+} from './fileLoadFallback';
+
+/** How many leading bytes of a file to read to identify its format. */
+const FORMAT_SNIFF_BYTES = 4096;
 
 export interface WasmDuckDbConnectorOptions extends duckdb.DuckDBConfig {
   /** @deprecated use `path` instead */
@@ -222,6 +229,22 @@ export function createWasmDuckDbConnector(
       if (!conn) {
         throw new Error('DuckDB connection not initialized');
       }
+      // DuckDB's 'auto' path identifies a file by its extension. A browser
+      // File without one (e.g. from a URL like https://host/export) gets a
+      // reader chosen from its type and first bytes instead. Files with an
+      // extension, string paths and explicit readers are unchanged.
+      const fallbackMethod =
+        (!opts?.method || opts.method === 'auto') &&
+        file instanceof File &&
+        !getRegisteredFileSuffix(file.name)
+          ? getExtensionlessFileReader({
+              contentType: file.type,
+              bytes: new Uint8Array(
+                await file.slice(0, FORMAT_SNIFF_BYTES).arrayBuffer(),
+              ),
+            })
+          : undefined;
+
       await withTempRegisteredFile(file, async (fileName) => {
         if (opts && isSpatialLoadFileOptions(opts)) {
           await conn!.query(loadSpatial(tableName, fileName, opts));
@@ -231,6 +254,8 @@ export function createWasmDuckDbConnector(
           } catch {
             await conn!.query(load('auto', tableName, fileName, opts));
           }
+        } else if (fallbackMethod) {
+          await conn!.query(load(fallbackMethod, tableName, fileName, opts));
         } else {
           await conn!.query(
             load(opts?.method ?? 'auto', tableName, fileName, opts),
@@ -279,8 +304,8 @@ export function createWasmDuckDbConnector(
     let fileName: string;
     let tempFileName: string | undefined = undefined;
     if (file instanceof File) {
-      const {ext} = splitFilePath(file.name);
-      tempFileName = `${Math.random().toString(36).substring(2, 15)}${ext ? `.${ext}` : ''}`;
+      const suffix = getRegisteredFileSuffix(file.name);
+      tempFileName = `${Math.random().toString(36).substring(2, 15)}${suffix ? `.${suffix}` : ''}`;
       fileName = tempFileName;
       await db.registerFileHandle(
         fileName,
