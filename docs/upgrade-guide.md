@@ -8,6 +8,35 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## Unreleased
+
+### `@sqlrooms/duckdb`: Wasm connector rejects `temp: true` (breaking)
+
+With `createWasmDuckDbConnector`, these calls now throw instead of creating a
+temporary table or view:
+
+- `connector.loadFile(file, tableName, {temp: true})`
+- `connector.loadObjects(rows, tableName, {temp: true})`
+- `db.createTableFromQuery(tableName, query, {temp: true})` and the
+  `db.create-table-from-query` command
+
+DuckDB temp objects exist only on the connection that created them, and the
+Wasm connector runs each query on its own connection so queries can be
+cancelled. `createTableFromQuery` temp objects disappeared as soon as the
+statement finished. `loadFile`/`loadObjects` temp tables lived on the
+connector's long-lived connection, which `connector.query()` never uses, so
+querying them failed with a catalog error.
+
+To migrate, drop `temp: true` and create a regular table. To keep it out of
+`db.tables` and the schema tree, use `loadTableSchemasFilter` and
+`loadSchemaCatalogFilter` on `createDuckDbSlice`, and drop the table when done.
+If you read a `loadFile` temp table only through the long-lived connection (for
+example, through Mosaic, which uses `connector.getConnection()` with the Wasm
+connector), create it with SQL on that connection instead:
+`connector.getConnection().query('CREATE TEMP TABLE ...')`.
+
+Other connectors are unchanged.
+
 ## 0.29.0 (upcoming)
 
 ### `@sqlrooms/documents`: canonical document names (breaking)

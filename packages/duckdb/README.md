@@ -443,6 +443,36 @@ function AdvancedDataLoader() {
 }
 ```
 
+### Temporary tables and the Wasm connector
+
+DuckDB keeps a temporary table or view only on the connection that created it.
+The Wasm connector (`createWasmDuckDbConnector`) runs each `query` and `execute`
+call on its own connection so the query can be cancelled, so a temp object would
+be gone, or out of reach, by the time the next query runs. With that connector,
+`temp: true` is therefore rejected with an error by:
+
+- `connector.loadFile(file, tableName, {temp: true})`
+- `connector.loadObjects(rows, tableName, {temp: true})`
+- `db.createTableFromQuery(tableName, query, {temp: true})` and the
+  `db.create-table-from-query` command
+
+Other connectors are unchanged. To keep an internal table (for example, a
+staging table for a pending replacement) out of `db.tables` and the schema tree,
+create a regular table and hide it with `loadTableSchemasFilter` and
+`loadSchemaCatalogFilter` (see
+[Table visibility and catalog inspection](#table-visibility-and-catalog-inspection)).
+Drop it when you no longer need it.
+
+Code that deliberately works on the connector's long-lived connection, such as
+Mosaic queries through `connector.getConnection()`, can still create
+connection-scoped temp tables with SQL on that connection:
+
+```ts
+await connector.getConnection().query('CREATE TEMP TABLE scratch AS SELECT 1');
+```
+
+`connector.query()` will not see such tables.
+
 ### Detecting the File Format
 
 `detectFileFormat` identifies which DuckDB reader fits a file when its name
