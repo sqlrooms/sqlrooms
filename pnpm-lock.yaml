@@ -4539,6 +4539,9 @@ importers:
       '@jest/globals':
         specifier: ^30.3.0
         version: 30.4.1
+      '@sqlrooms/duckdb-node':
+        specifier: workspace:*
+        version: link:../duckdb-node
       '@sqlrooms/preset-jest':
         specifier: workspace:*
         version: link:../preset-jest

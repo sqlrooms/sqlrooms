@@ -87,6 +87,25 @@ filter applies to catalog table entries too. `null` disables the respective filt
 Hiding a database, schema, or table from the catalog does not remove tables
 accepted by `loadTableSchemasFilter` from `db.tables`.
 
+A custom filter replaces the default one (which hides `__sqlrooms*` names and
+DuckDB's `temp` database). To add rules while keeping that hiding, call the
+defaults from your filter:
+
+```ts
+const defaultTableFilter = createDefaultLoadTableSchemasFilter();
+
+createDuckDbSlice({
+  loadTableSchemasFilter: (table, metadata) =>
+    defaultTableFilter(table, metadata) && !table.table.startsWith('staging_'),
+  loadSchemaCatalogFilter: (entry, metadata) =>
+    defaultLoadSchemaCatalogFilter(entry, metadata) &&
+    !(entry.type === 'table' && entry.table.table.startsWith('staging_')),
+});
+```
+
+With `@sqlrooms/room-shell`, pass the same options as
+`createRoomShellSlice({createDbProps: {duckDb: {...}}})`.
+
 ### Monitoring WebSocket DuckDB Connections
 
 `createWebSocketDuckDbConnector()` exposes the persistent WebSocket lifecycle
