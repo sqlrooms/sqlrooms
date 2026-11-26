@@ -129,6 +129,49 @@ function RoomActions() {
 }
 ```
 
+## Hiding internal tables
+
+Apps sometimes keep tables that users should not pick from, such as a staging
+table for a pending replacement. Pass table and catalog filters to the DuckDB
+slice through `createDbProps.duckDb`:
+
+```ts
+import {
+  createDefaultLoadTableSchemasFilter,
+  defaultLoadSchemaCatalogFilter,
+  type QualifiedTableName,
+} from '@sqlrooms/duckdb';
+
+const isStagingTable = (table: QualifiedTableName) =>
+  table.table.startsWith('staging_');
+const defaultTableFilter = createDefaultLoadTableSchemasFilter();
+
+createRoomShellSlice({
+  // ...
+  createDbProps: {
+    duckDb: {
+      // Hides matching tables from `db.tables` and `db.loadTableSchemas()`.
+      loadTableSchemasFilter: (table, metadata) =>
+        defaultTableFilter(table, metadata) && !isStagingTable(table),
+      // Hides them from `db.schemaTrees` (the data source panel).
+      loadSchemaCatalogFilter: (entry, metadata) =>
+        defaultLoadSchemaCatalogFilter(entry, metadata) &&
+        !(entry.type === 'table' && isStagingTable(entry.table)),
+    },
+  },
+})(set, get, store);
+```
+
+Filtered tables are hidden after the next schema refresh but stay queryable by
+SQL. Without `createDbProps.duckDb` filters, the defaults hide `__sqlrooms*`
+names and DuckDB's `temp` database. A custom filter **replaces** the default, so
+build on `createDefaultLoadTableSchemasFilter()` and
+`defaultLoadSchemaCatalogFilter` as above to keep that hiding. If you pass only
+`loadTableSchemasFilter`, it also applies to table entries in the catalog, and
+databases and schemas keep the default catalog filter. See
+[`@sqlrooms/duckdb`](../duckdb/README.md#table-visibility-and-catalog-inspection)
+for the filter callbacks.
+
 ## Persistence
 
 Use `persistSliceConfigs` with schemas:

@@ -68,7 +68,9 @@ export const defaultLoadTableSchemasFilter: LoadTableSchemasFilterFunction = (
 /**
  * Factory returning {@link defaultLoadTableSchemasFilter}.
  * Hides `__sqlrooms_*` names and DuckDB's `temp` database.
- * Apps can pass {@link CreateDuckDbSliceProps.loadTableSchemasFilter} to add more rules.
+ * A custom {@link CreateDuckDbSliceProps.loadTableSchemasFilter} replaces this
+ * default; call the returned filter from it to add rules while keeping the
+ * default hiding.
  */
 export function createDefaultLoadTableSchemasFilter(): LoadTableSchemasFilterFunction {
   return defaultLoadTableSchemasFilter;
@@ -377,13 +379,17 @@ export type CreateDuckDbSliceProps = {
    * Optional selectable-table filter for `db.tables` and `loadTableSchemas`.
    * Receives catalog metadata, including `isView`, as its second argument.
    * An independent catalog filter may retain entries in `db.schemaTrees`.
-   * Defaults to {@link createDefaultLoadTableSchemasFilter}.
+   * Defaults to {@link createDefaultLoadTableSchemasFilter}. A custom filter
+   * replaces the default, so call the default from it to keep hiding
+   * `__sqlrooms*` names and the `temp` database. `null` disables filtering.
    */
   loadTableSchemasFilter?: LoadTableSchemasFilterFunction | null;
   /**
    * Optional catalog visibility filter for the data source panel.
    * Defaults to {@link defaultLoadSchemaCatalogFilter}. When omitted, custom
    * table filters still apply to table entries while schemas/databases use the default.
+   * A custom catalog filter replaces the default; call
+   * {@link defaultLoadSchemaCatalogFilter} from it to keep the default hiding.
    */
   loadSchemaCatalogFilter?: LoadSchemaCatalogFilterFunction | null;
 };
