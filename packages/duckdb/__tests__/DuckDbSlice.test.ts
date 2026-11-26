@@ -135,6 +135,53 @@ describe('DuckDbSlice', () => {
       expect(tempResult.numRows).toBe(1);
     });
 
+    it('should reject temp: true with the Wasm connector', async () => {
+      // Stand-in for the Wasm connector, which runs each query on its own
+      // connection: any temp object would vanish when that connection closes.
+      const nodeConnector = createNodeDuckDbConnector({dbPath: ':memory:'});
+      const sentQueries: string[] = [];
+      const wasmLikeConnector = {
+        ...nodeConnector,
+        type: 'wasm' as const,
+        query: (
+          sql: string,
+          options?: Parameters<DuckDbConnector['query']>[1],
+        ) => {
+          sentQueries.push(sql);
+          return nodeConnector.query(sql, options);
+        },
+      } as DuckDbConnector;
+      const wasmStore = createStore<TestStoreState>()((...args) => ({
+        ...createBaseRoomSlice()(...args),
+        ...createDuckDbSlice({connector: wasmLikeConnector})(...args),
+      }));
+      await wasmStore.getState().db.initialize();
+
+      for (const view of [false, true]) {
+        await expect(
+          wasmStore
+            .getState()
+            .db.createTableFromQuery('staging', 'SELECT 1 AS id', {
+              temp: true,
+              view,
+            }),
+        ).rejects.toThrow(
+          'createTableFromQuery: temporary tables and views are not supported by the DuckDB-Wasm connector',
+        );
+      }
+      // Rejected before any CREATE statement reaches DuckDB.
+      expect(sentQueries.filter((sql) => /\bCREATE\b/i.test(sql))).toEqual([]);
+
+      // Non-temp tables still work with the same connector.
+      await expect(
+        wasmStore
+          .getState()
+          .db.createTableFromQuery('regular', 'SELECT 1 AS id'),
+      ).resolves.toMatchObject({rowCount: 1});
+
+      await wasmStore.getState().db.destroy();
+    });
+
     it('should handle multiple statements when allowMultipleStatements is true', async () => {
       const result = await store.getState().db.createTableFromQuery(
         'result_table',

@@ -29,7 +29,11 @@ import deepEquals from 'fast-deep-equal';
 import {produce} from 'immer';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
-import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
+import {
+  createWasmDuckDbConnector,
+  isWasmDuckDbConnector,
+} from './connectors/createDuckDbConnector';
+import {createWasmTempObjectError} from './connectors/WasmDuckDbConnector';
 import {
   loadSchemaCatalog,
   LoadSchemaCatalogFilterFunction,
@@ -120,7 +124,9 @@ const CreateTableFromQueryCommandInput = z.object({
     .boolean()
     .optional()
     .default(false)
-    .describe('Whether to create a temporary object.'),
+    .describe(
+      'Whether to create a temporary object. Not supported with the DuckDB-Wasm connector.',
+    ),
   allowMultipleStatements: z
     .boolean()
     .optional()
@@ -325,6 +331,11 @@ export type DuckDbSliceState = {
       query: string,
       options?: {
         replace?: boolean;
+        /**
+         * Create a temporary table/view. Rejected with the Wasm connector:
+         * temp objects exist only on the connection that created them, and
+         * that connector runs each query on its own connection.
+         */
         temp?: boolean;
         view?: boolean;
         allowMultipleStatements?: boolean;
@@ -555,7 +566,9 @@ export function createDuckDbSlice({
            * @param query - SQL query (must be a SELECT statement, or multiple statements ending with a SELECT when allowMultipleStatements is true)
            * @param options - Creation options
            * @param options.replace - If true, uses CREATE OR REPLACE (default: true)
-           * @param options.temp - If true, creates a temporary table/view (default: false)
+           * @param options.temp - If true, creates a temporary table/view (default: false).
+           *   Not supported with the Wasm connector, which runs each query on its own
+           *   connection; the call rejects instead of creating an unreachable object.
            * @param options.view - If true, creates a view instead of a table (default: false)
            * @param options.allowMultipleStatements - If true, allows multiple statements where preceding statements are executed first and the final SELECT is wrapped in CREATE TABLE/VIEW (default: false)
            * @returns Object with tableName and rowCount (rowCount is undefined for views)
@@ -592,6 +605,9 @@ export function createDuckDbSlice({
               : baseQualifiedName;
 
             const connector = await get().db.getConnector();
+            if (temp && isWasmDuckDbConnector(connector)) {
+              throw createWasmTempObjectError('createTableFromQuery');
+            }
 
             const {precedingStatements, lastStatement} =
               separateLastStatement(query);

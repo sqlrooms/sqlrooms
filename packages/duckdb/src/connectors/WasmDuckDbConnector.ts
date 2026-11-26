@@ -17,6 +17,29 @@ import {
 import {safeJsonParse, splitFilePath} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 
+/**
+ * Builds the error the Wasm connector raises when asked to create a temporary
+ * table or view.
+ *
+ * DuckDB keeps a temp object only on the connection that created it, and the
+ * Wasm connector runs each `query`/`execute` call on its own connection (so
+ * queries can be cancelled), so `connector.query()` could never read the
+ * object.
+ *
+ * @param operation - The API that received `temp: true`, used in the message.
+ * @internal
+ */
+export function createWasmTempObjectError(operation: string): Error {
+  return new Error(
+    `${operation}: temporary tables and views are not supported by the ` +
+      `DuckDB-Wasm connector. DuckDB keeps a temp object only on the ` +
+      `connection that created it, and this connector runs each query on its ` +
+      `own connection, so later queries could not see it. Create a regular ` +
+      `table instead; to hide it from the table list, use the DuckDB slice's ` +
+      `loadTableSchemasFilter and loadSchemaCatalogFilter.`,
+  );
+}
+
 export interface WasmDuckDbConnectorOptions extends duckdb.DuckDBConfig {
   /** @deprecated use `path` instead */
   dbPath?: string;
@@ -30,6 +53,14 @@ export interface WasmDuckDbConnectorOptions extends duckdb.DuckDBConfig {
   bundles?: duckdb.DuckDBBundles;
 }
 
+/**
+ * DuckDB connector that runs DuckDB-Wasm in a Web Worker.
+ *
+ * Each `query`/`execute` call runs on its own connection so it can be
+ * cancelled. Because DuckDB temp tables and views exist only on the connection
+ * that created them, `loadFile`, `loadObjects` and the DuckDB slice's
+ * `createTableFromQuery` reject `temp: true` with this connector.
+ */
 export interface WasmDuckDbConnector extends DuckDbConnector {
   getDb(): duckdb.AsyncDuckDB;
   getConnection(): duckdb.AsyncDuckDBConnection;
@@ -219,6 +250,9 @@ export function createWasmDuckDbConnector(
       tableName: string,
       opts?: LoadFileOptions,
     ) {
+      if (opts?.temp) {
+        throw createWasmTempObjectError('loadFile');
+      }
       if (!conn) {
         throw new Error('DuckDB connection not initialized');
       }
@@ -260,6 +294,9 @@ export function createWasmDuckDbConnector(
       tableName: string,
       opts?: StandardLoadOptions,
     ) {
+      if (opts?.temp) {
+        throw createWasmTempObjectError('loadObjects');
+      }
       if (!conn) {
         throw new Error('DuckDB connection not initialized');
       }
