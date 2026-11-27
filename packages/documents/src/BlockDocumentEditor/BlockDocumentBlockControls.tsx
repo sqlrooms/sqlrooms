@@ -72,7 +72,6 @@ type DraggableNode = NonNullable<ReturnType<Editor['state']['doc']['nodeAt']>>;
 
 type BlockDocumentBlockControlsProps = {
   scrollElement: HTMLElement | null;
-  showImageBlockMenuItem?: boolean;
 };
 
 type BlockDropTarget = {
@@ -699,7 +698,6 @@ function buildTextBlockMenuItems(): BlockMenuItem[] {
 
 function buildMediaBlockMenuItems(
   statefulBlockTypes: BlockDocumentStatefulBlockType[],
-  showImageBlockMenuItem: boolean,
 ): BlockMenuItem[] {
   return [
     {
@@ -711,19 +709,15 @@ function buildMediaBlockMenuItems(
         attrs: {id},
       }),
     },
-    ...(showImageBlockMenuItem
-      ? [
-          {
-            label: 'Image',
-            description: 'Document image block',
-            icon: ImageIcon,
-            createNode: (id: string) => ({
-              type: 'blockDocumentImage',
-              attrs: {id, assetId: '', caption: ''},
-            }),
-          },
-        ]
-      : []),
+    {
+      label: 'Image',
+      description: 'Document image block',
+      icon: ImageIcon,
+      createNode: (id) => ({
+        type: 'blockDocumentImage',
+        attrs: {id, assetId: '', caption: ''},
+      }),
+    },
     {
       label: 'Chart',
       description: 'Standalone chart block',
@@ -739,7 +733,7 @@ function buildMediaBlockMenuItems(
 
 export const BlockDocumentBlockControls: FC<
   BlockDocumentBlockControlsProps
-> = ({scrollElement, showImageBlockMenuItem = true}) => {
+> = ({scrollElement}) => {
   const {editor, readOnly, generateBlockId} = useBlockDocumentEditorContext();
   const statefulBlockTypes = useBlockDocumentStatefulBlockTypes();
   const [activeBlock, setActiveBlock] = useState<BlockControlState | null>(
@@ -764,8 +758,8 @@ export const BlockDocumentBlockControls: FC<
   const hideTimerRef = useRef<number | null>(null);
   const textMenuItems = useMemo(() => buildTextBlockMenuItems(), []);
   const mediaMenuItems = useMemo(
-    () => buildMediaBlockMenuItems(statefulBlockTypes, showImageBlockMenuItem),
-    [statefulBlockTypes, showImageBlockMenuItem],
+    () => buildMediaBlockMenuItems(statefulBlockTypes),
+    [statefulBlockTypes],
   );
   const isBlockReadOnly = useCallback(
     (node: ReturnType<typeof getNodeAt>) =>

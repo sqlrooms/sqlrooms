@@ -396,21 +396,6 @@ does not import Mosaic, pivot, or other feature packages:
 </BlockDocumentChartRendererProvider>
 ```
 
-Hosts without an image upload flow can set `showImageBlockMenuItem` to `false`
-on `BlockDocumentEditor.Content`. This hides **Image** from the block menus
-and slash search. Existing image blocks still render from their assets.
-
-```tsx
-<BlockDocumentEditor
-  documentId={documentId}
-  value={content}
-  assets={assets}
-  onChange={setContent}
->
-  <BlockDocumentEditor.Content showImageBlockMenuItem={false} />
-</BlockDocumentEditor>
-```
-
 Hosts can customize a chart block's outer frame with
 `getBlockFrameClassName`. The callback receives the document ID, block ID,
 block type, and current selection state. Its classes are merged after the
