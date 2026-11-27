@@ -4,7 +4,7 @@
 import {jest} from '@jest/globals';
 import type {Editor} from '@tiptap/react';
 import {ImageIcon, SparklesIcon} from 'lucide-react';
-import {act} from 'react';
+import {act, type ReactNode} from 'react';
 import {createRoot, type Root} from 'react-dom/client';
 import type {BlockDocumentContent} from '../src/BlockDocumentSliceConfig';
 import type {BlockDocumentInsertItem} from '../src/BlockDocumentEditor/BlockDocumentInsertItems';
@@ -82,7 +82,7 @@ async function mountEditor({
 }: {
   insertItems?: BlockDocumentInsertItem[];
   value?: BlockDocumentContent;
-  toolbar?: boolean;
+  toolbar?: boolean | ReactNode;
 }): Promise<Mounted> {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -99,7 +99,7 @@ async function mountEditor({
           editor = readyEditor;
         }}
       >
-        {toolbar ? <BlockDocumentEditor.Toolbar /> : null}
+        {toolbar === true ? <BlockDocumentEditor.Toolbar /> : toolbar || null}
         <BlockDocumentEditor.Content />
       </BlockDocumentEditor>,
     );
@@ -413,5 +413,100 @@ describe('BlockDocumentEditor.Toolbar', () => {
     });
     await act(async () => button.click());
     expect(createNode).toHaveBeenCalledTimes(2);
+  });
+
+  it('renders composed children in the given order', async () => {
+    const {container} = await mountEditor({
+      insertItems: [...createDefaultBlockDocumentInsertItems(), imageItem],
+      toolbar: (
+        <BlockDocumentEditor.Toolbar>
+          <BlockDocumentEditor.Toolbar.InsertButton itemId="chart" />
+          <span data-testid="host">Host</span>
+          <BlockDocumentEditor.Toolbar.InsertButton itemId="image" />
+        </BlockDocumentEditor.Toolbar>
+      ),
+    });
+    const toolbar = container.querySelector('[role="toolbar"]')!;
+    expect(
+      Array.from(toolbar.children).map(
+        (child) =>
+          child.getAttribute('aria-label') ?? child.getAttribute('data-testid'),
+      ),
+    ).toEqual(['Insert chart', 'host', 'Insert image']);
+    // No formatting controls or default insert buttons.
+    expect(container.querySelector('[aria-label="Insert paragraph"]')).toBe(
+      null,
+    );
+  });
+
+  it('renders nothing for an unknown InsertButton id', async () => {
+    const {container} = await mountEditor({
+      toolbar: (
+        <BlockDocumentEditor.Toolbar>
+          <BlockDocumentEditor.Toolbar.InsertButton itemId="missing" />
+        </BlockDocumentEditor.Toolbar>
+      ),
+    });
+    const toolbar = container.querySelector('[role="toolbar"]');
+    expect(toolbar).not.toBe(null);
+    expect(toolbar!.childElementCount).toBe(0);
+    expect(toolbarLabels(container)).toEqual([]);
+  });
+
+  describe('InsertButton with an async createNode', () => {
+    async function mountCalloutButton(
+      createNode: BlockDocumentInsertItem['createNode'],
+    ) {
+      const result = await mountEditor({
+        insertItems: [calloutItem(createNode)],
+        toolbar: (
+          <BlockDocumentEditor.Toolbar>
+            <BlockDocumentEditor.Toolbar.InsertButton itemId="callout" />
+          </BlockDocumentEditor.Toolbar>
+        ),
+      });
+      act(() => {
+        result.editor.commands.setTextSelection(
+          result.editor.state.doc.content.size - 1,
+        );
+      });
+      const button = result.container.querySelector<HTMLButtonElement>(
+        '[aria-label="Insert callout"]',
+      )!;
+      return {...result, button};
+    }
+
+    it('inserts the block once the promise resolves', async () => {
+      const pending = deferred<Record<string, unknown> | null>();
+      const {editor, button} = await mountCalloutButton(() => pending.promise);
+      const before = topLevelBlocks(editor).length;
+
+      act(() => button.click());
+      expect(button.disabled).toBe(true);
+      expect(topLevelBlocks(editor)).toHaveLength(before);
+
+      await act(async () => {
+        pending.resolve({type: 'horizontalRule', attrs: {id: 'callout-1'}});
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(topLevelBlocks(editor).map((block) => block.id)).toContain(
+        'callout-1',
+      );
+      expect(button.disabled).toBe(false);
+    });
+
+    it('inserts nothing when the promise resolves to null', async () => {
+      const pending = deferred<Record<string, unknown> | null>();
+      const {editor, button} = await mountCalloutButton(() => pending.promise);
+      const before = JSON.stringify(editor.getJSON());
+
+      act(() => button.click());
+      await act(async () => {
+        pending.resolve(null);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(JSON.stringify(editor.getJSON())).toBe(before);
+      expect(button.disabled).toBe(false);
+    });
   });
 });

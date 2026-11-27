@@ -641,9 +641,49 @@ further selections are ignored. When it resolves, the editor finds the target
 block again by its block id and does nothing if that block is gone or has
 changed type. A rejected promise is logged and leaves the document unchanged.
 
-The toolbar shows buttons for the `'paragraph'`, `'image'` and `'chart'` items
-and leaves a button out when its item is missing. `BlockDocumentArtifact`
-forwards `insertItems` to the editor.
+`BlockDocumentArtifact` forwards `insertItems` to the editor. Pass it children
+to choose the editor surfaces it renders (it defaults to just
+`<BlockDocumentEditor.Content />`):
+
+```tsx
+<BlockDocumentArtifact artifactId={artifactId}>
+  <BlockDocumentEditor.Toolbar />
+  <BlockDocumentEditor.Content />
+</BlockDocumentArtifact>
+```
+
+### Toolbar
+
+`BlockDocumentEditor.Toolbar` is a compound component. With no children it
+renders the default layout: formatting controls, a separator, and insert
+buttons for the `'paragraph'`, `'image'` and `'chart'` items. A button is left
+out when its item is missing from `insertItems`, so Image only appears when the
+host adds an `'image'` item.
+
+Pass children to compose your own bar:
+
+```tsx
+<BlockDocumentEditor {...props}>
+  <BlockDocumentEditor.Toolbar>
+    <BlockDocumentEditor.Toolbar.Formatting />
+    <BlockDocumentEditor.Toolbar.Separator />
+    <BlockDocumentEditor.Toolbar.InsertButton itemId="chart" />
+    <BlockDocumentEditor.Toolbar.InsertButton itemId="image" />
+    <MyHostButton />
+  </BlockDocumentEditor.Toolbar>
+  <BlockDocumentEditor.Content />
+</BlockDocumentEditor>
+```
+
+- `Toolbar.Formatting` renders the text formatting controls.
+- `Toolbar.Separator` renders a vertical divider.
+- `Toolbar.InsertButton itemId` renders the icon and label of the insert item
+  with that id and inserts it at the selection through the same path as the
+  block menu, so async `createNode` and `null` cancels behave the same. It
+  renders nothing for an unknown id and is disabled while read-only or while
+  its insert is pending.
+- Host buttons can read `editor`, `readOnly` and the rest of the editor state
+  with `useBlockDocumentEditorContext()`.
 
 ## Block headers
 

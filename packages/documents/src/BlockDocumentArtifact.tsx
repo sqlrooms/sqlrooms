@@ -15,6 +15,11 @@ export type BlockDocumentArtifactProps = {
   onEditorReady?: (editor: Editor) => void;
   /** Blocks offered for insertion; see `BlockDocumentEditorRootProps`. */
   insertItems?: readonly BlockDocumentInsertItem[];
+  /**
+   * Editor surfaces to render, e.g. `<BlockDocumentEditor.Toolbar />` and
+   * `<BlockDocumentEditor.Content />`. Defaults to just the content.
+   */
+  children?: React.ReactNode;
 };
 
 export const BlockDocumentArtifact: React.FC<BlockDocumentArtifactProps> = ({
@@ -23,6 +28,7 @@ export const BlockDocumentArtifact: React.FC<BlockDocumentArtifactProps> = ({
   onTitleChange,
   onEditorReady,
   insertItems,
+  children,
 }) => {
   const {blockDocument, ensureBlockDocument, setContent, syncMetadata} =
     useStoreWithBlockDocuments(
@@ -63,7 +69,7 @@ export const BlockDocumentArtifact: React.FC<BlockDocumentArtifactProps> = ({
       onEditorReady={onEditorReady}
       insertItems={insertItems}
     >
-      <BlockDocumentEditor.Content />
+      {children ?? <BlockDocumentEditor.Content />}
     </BlockDocumentEditor>
   );
 };

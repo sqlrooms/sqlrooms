@@ -7,6 +7,7 @@ import {HtmlAppBlock} from '@sqlrooms/app-runtime';
 import {
   BlockDocumentChartRendererProvider,
   BlockDocumentArtifact,
+  BlockDocumentEditor,
   BlockSettingsPanelLayout,
   BlockDocumentStatefulBlockRendererProvider,
   startBlockScopedChat,
@@ -283,7 +284,10 @@ export const DocumentArtifact: RoomPanelComponent = ({panelId, meta}) => {
             title={artifact.title}
             onTitleChange={handleTitleChange}
             onEditorReady={setEditor}
-          />
+          >
+            <BlockDocumentEditor.Toolbar />
+            <BlockDocumentEditor.Content />
+          </BlockDocumentArtifact>
         </BlockSettingsPanelLayout>
       </BlockDocumentStatefulBlockRendererProvider>
     </BlockDocumentChartRendererProvider>
