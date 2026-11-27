@@ -1,28 +1,35 @@
 import {Button, cn} from '@sqlrooms/ui';
-import {BarChart3Icon, ImageIcon, PilcrowIcon} from 'lucide-react';
-import type {FC} from 'react';
+import {type FC, useMemo} from 'react';
 import {RichToolbar} from '../MarkdownDocumentEditor/RichToolbar';
 import {useBlockDocumentEditorContext} from './BlockDocumentEditorContext';
+import {insertBlockDocumentItem} from './BlockDocumentInsertItems';
+import {useBlockDocumentInsertItems} from './useBlockDocumentInsertItems';
+
+/** Ids of the insert items the toolbar shows as buttons, in order. */
+const TOOLBAR_INSERT_ITEM_IDS = ['paragraph', 'image', 'chart'];
 
 export type BlockDocumentToolbarProps = {
   className?: string;
 };
 
+/**
+ * Formatting toolbar plus insert buttons for the Paragraph, Image and Chart
+ * items of the editor's `insertItems`. A button is left out when its item is
+ * missing, so Image only appears when the host provides an `'image'` item.
+ */
 export const BlockDocumentToolbar: FC<BlockDocumentToolbarProps> = ({
   className,
 }) => {
   const {editor, readOnly, generateBlockId} = useBlockDocumentEditorContext();
-
-  const insertAtomBlock = (type: string, attrs: Record<string, unknown>) => {
-    editor
-      ?.chain()
-      .focus()
-      .insertContent({
-        type,
-        attrs: {id: generateBlockId(), ...attrs},
-      })
-      .run();
-  };
+  const insertItems = useBlockDocumentInsertItems();
+  const toolbarItems = useMemo(
+    () =>
+      TOOLBAR_INSERT_ITEM_IDS.flatMap((id) => {
+        const item = insertItems.find((candidate) => candidate.id === id);
+        return item ? [item] : [];
+      }),
+    [insertItems],
+  );
 
   return (
     <div
@@ -33,58 +40,32 @@ export const BlockDocumentToolbar: FC<BlockDocumentToolbarProps> = ({
     >
       <RichToolbar editor={editor} disabled={readOnly} />
       <div className="bg-border mx-1 h-6 w-px" />
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        className="h-8 w-8"
-        disabled={!editor || readOnly}
-        title="Insert paragraph"
-        aria-label="Insert paragraph"
-        onClick={() =>
-          editor
-            ?.chain()
-            .focus()
-            .insertContent({
-              type: 'paragraph',
-              attrs: {id: generateBlockId()},
-            })
-            .run()
-        }
-      >
-        <PilcrowIcon className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        className="h-8 w-8"
-        disabled={!editor || readOnly}
-        title="Insert image block"
-        aria-label="Insert image block"
-        onClick={() =>
-          insertAtomBlock('blockDocumentImage', {assetId: '', caption: ''})
-        }
-      >
-        <ImageIcon className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        className="h-8 w-8"
-        disabled={!editor || readOnly}
-        title="Insert chart block"
-        aria-label="Insert chart block"
-        onClick={() =>
-          insertAtomBlock('blockDocumentChart', {
-            config: {},
-            caption: '',
-          })
-        }
-      >
-        <BarChart3Icon className="h-4 w-4" />
-      </Button>
+      {toolbarItems.map((item) => {
+        const title = `Insert ${item.label.toLowerCase()}`;
+        return (
+          <Button
+            key={item.id}
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            disabled={!editor || readOnly}
+            title={title}
+            aria-label={title}
+            onClick={() => {
+              if (!editor) return;
+              insertBlockDocumentItem({
+                editor,
+                item,
+                nodeId: generateBlockId(),
+                target: {kind: 'selection'},
+              });
+            }}
+          >
+            <item.icon className="h-4 w-4" />
+          </Button>
+        );
+      })}
     </div>
   );
 };

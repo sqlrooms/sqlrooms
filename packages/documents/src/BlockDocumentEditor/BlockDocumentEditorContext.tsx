@@ -6,6 +6,7 @@ import type {
 } from '../BlockDocumentSliceConfig';
 import type {BlockDocumentMutationMetadata} from '../BlockDocumentsSlice';
 import type {DocumentAsset} from '../DocumentAsset';
+import type {BlockDocumentInsertItem} from './BlockDocumentInsertItems';
 
 export type BlockDocumentEditorChangeHandler = (
   value: BlockDocumentContent,
@@ -20,6 +21,11 @@ export type BlockDocumentEditorContextValue = {
   onChange: BlockDocumentEditorChangeHandler;
   readOnly: boolean;
   generateBlockId: () => string;
+  /**
+   * Items offered by the block menu, slash search and toolbar, before items
+   * for registered stateful block types are appended.
+   */
+  insertItems: readonly BlockDocumentInsertItem[];
 };
 
 export const BlockDocumentEditorContext =

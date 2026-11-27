@@ -2,6 +2,7 @@ import React, {useCallback, useEffect} from 'react';
 import type {Editor} from '@tiptap/react';
 import {useShallow} from 'zustand/react/shallow';
 import {BlockDocumentEditor} from './BlockDocumentEditor';
+import type {BlockDocumentInsertItem} from './BlockDocumentEditor/BlockDocumentInsertItems';
 import type {BlockDocumentContent} from './BlockDocumentSliceConfig';
 import type {BlockDocumentMutationMetadata} from './BlockDocumentsSlice';
 import {createEmptyBlockDocumentContent} from './BlockDocumentSliceConfig';
@@ -12,6 +13,8 @@ export type BlockDocumentArtifactProps = {
   title?: string;
   onTitleChange?: (title: string) => void;
   onEditorReady?: (editor: Editor) => void;
+  /** Blocks offered for insertion; see `BlockDocumentEditorRootProps`. */
+  insertItems?: readonly BlockDocumentInsertItem[];
 };
 
 export const BlockDocumentArtifact: React.FC<BlockDocumentArtifactProps> = ({
@@ -19,6 +22,7 @@ export const BlockDocumentArtifact: React.FC<BlockDocumentArtifactProps> = ({
   title = 'Untitled',
   onTitleChange,
   onEditorReady,
+  insertItems,
 }) => {
   const {blockDocument, ensureBlockDocument, setContent, syncMetadata} =
     useStoreWithBlockDocuments(
@@ -57,6 +61,7 @@ export const BlockDocumentArtifact: React.FC<BlockDocumentArtifactProps> = ({
       title={title}
       onTitleChange={onTitleChange}
       onEditorReady={onEditorReady}
+      insertItems={insertItems}
     >
       <BlockDocumentEditor.Content />
     </BlockDocumentEditor>

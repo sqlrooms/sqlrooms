@@ -40,6 +40,12 @@ import {
   normalizeBlockDocumentContent,
   type BlockDocumentEditorContextValue,
 } from './BlockDocumentEditorContext';
+import {
+  createDefaultBlockDocumentInsertItems,
+  type BlockDocumentInsertItem,
+} from './BlockDocumentInsertItems';
+
+const DEFAULT_INSERT_ITEMS = createDefaultBlockDocumentInsertItems();
 
 export type BlockDocumentEditorRootProps = PropsWithChildren<{
   documentId: string;
@@ -53,6 +59,13 @@ export type BlockDocumentEditorRootProps = PropsWithChildren<{
   title?: string;
   onTitleChange?: (title: string) => void;
   onEditorReady?: (editor: Editor) => void;
+  /**
+   * Blocks offered by the block menu, slash search and toolbar. Defaults to
+   * `createDefaultBlockDocumentInsertItems()`. Items for registered
+   * `statefulBlockTypes` are appended automatically. Memoize the array to
+   * avoid re-rendering the editor controls.
+   */
+  insertItems?: readonly BlockDocumentInsertItem[];
 }>;
 
 function stableStringify(value: unknown) {
@@ -148,6 +161,7 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
   title = 'Untitled',
   onTitleChange,
   onEditorReady,
+  insertItems = DEFAULT_INSERT_ITEMS,
   children,
 }) => {
   const onChangeRef = useRef(onChange);
@@ -355,8 +369,17 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
       onChange,
       readOnly,
       generateBlockId: () => generateBlockIdRef.current(),
+      insertItems,
     }),
-    [assets, documentId, editor, normalizedValue, onChange, readOnly],
+    [
+      assets,
+      documentId,
+      editor,
+      insertItems,
+      normalizedValue,
+      onChange,
+      readOnly,
+    ],
   );
 
   useEffect(() => {

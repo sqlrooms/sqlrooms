@@ -169,6 +169,10 @@ export {
   type BlockDocumentToolbarProps,
 } from './BlockDocumentEditor/BlockDocumentToolbar';
 export {
+  createDefaultBlockDocumentInsertItems,
+  type BlockDocumentInsertItem,
+} from './BlockDocumentEditor/BlockDocumentInsertItems';
+export {
   createDefaultBlockDocumentBlockId,
   normalizeBlockDocumentContent,
   useBlockDocumentEditorContext,

@@ -30,6 +30,7 @@ function createEditorContext(editor: Editor): BlockDocumentEditorContextValue {
     onChange: jest.fn(),
     readOnly: false,
     generateBlockId: () => 'generated-block',
+    insertItems: [],
   };
 }
 

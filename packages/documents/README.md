@@ -581,6 +581,70 @@ Standalone chart blocks are best for one chart with local context. Dashboard
 stateful blocks are best for coordinated multi-panel views, richer dashboard
 layout, or when dashboard AI tools are the natural authoring path.
 
+### Insert Items
+
+The block menu, slash search and `BlockDocumentEditor.Toolbar` all offer blocks
+from one list, the editor's `insertItems`. It defaults to
+`createDefaultBlockDocumentInsertItems()`, which returns plain data in its
+default order. Each item has a stable `id` (`'paragraph'`, `'heading-1'`,
+`'heading-2'`, `'heading-3'`, `'bulleted-list'`, `'numbered-list'`, `'todo'`,
+`'quote'`, `'code'`, `'divider'`, `'chart'`) and a `group` (`'text'` or
+`'insert'`) that picks its menu section. Items for registered
+`statefulBlockTypes` are appended automatically.
+
+Filter, reorder or replace items by id, and memoize the array:
+
+```tsx
+const insertItems = useMemo(
+  () =>
+    createDefaultBlockDocumentInsertItems().filter(
+      (item) => item.id !== 'chart',
+    ),
+  [],
+);
+
+<BlockDocumentEditor insertItems={insertItems} {...props}>
+  <BlockDocumentEditor.Toolbar />
+  <BlockDocumentEditor.Content />
+</BlockDocumentEditor>;
+```
+
+The defaults have no **Image** item, because the package has no upload flow.
+Saved `blockDocumentImage` blocks still render from `assets`. A host with an
+upload flow adds its own `'image'` item. `createNode` may return a promise, and
+resolving to `null` cancels:
+
+```tsx
+const insertItems = useMemo(
+  () => [
+    ...createDefaultBlockDocumentInsertItems(),
+    {
+      id: 'image',
+      group: 'insert',
+      label: 'Image',
+      description: 'Upload an image',
+      icon: ImageIcon,
+      createNode: async (id) => {
+        const file = await pickImageFile(); // host UI
+        if (!file) return null;
+        const assetId = await addDocumentAsset(documentId, file); // host storage
+        return {type: 'blockDocumentImage', attrs: {id, assetId, caption: ''}};
+      },
+    },
+  ],
+  [documentId],
+);
+```
+
+While an async `createNode` is pending, the menu or slash search closes and
+further selections are ignored. When it resolves, the editor finds the target
+block again by its block id and does nothing if that block is gone or has
+changed type. A rejected promise is logged and leaves the document unchanged.
+
+The toolbar shows buttons for the `'paragraph'`, `'image'` and `'chart'` items
+and leaves a button out when its item is missing. `BlockDocumentArtifact`
+forwards `insertItems` to the editor.
+
 ## Block headers
 
 `BlockHeader` is the shared chrome for a block's title bar. Chart, map, table

@@ -115,6 +115,7 @@ function renderContent(editor: Editor) {
     onChange: jest.fn(),
     readOnly: false,
     generateBlockId: () => 'generated-block',
+    insertItems: [],
   };
 
   act(() => {
