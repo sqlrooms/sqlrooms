@@ -354,10 +354,6 @@ settings component to a wrapper around
 `<HistogramSettingsComponent showUpperPercentile={false} />`. This keeps the
 field, color, and bin count settings available for full-range histograms.
 
-A spec chart definition may supply `getRenderer` to select a component for
-configurations that need runtime preparation. Returning `undefined` keeps the
-spec-based renderer.
-
 Count plots cap the visible categories instead of folding the hidden tail into
 `Others` so the generated vgplot spec continues to cross-filter against the
 source table without pre-aggregating the rendered values.
@@ -817,6 +813,20 @@ Available compound components:
 - `ChartBuilderActions` - Back/Create buttons
 
 For simpler use cases, the legacy `ChartBuilderDialog` component is still available but deprecated.
+
+#### Runtime renderers for spec chart types
+
+A spec chart definition can implement `getRenderer(config)` when certain
+configurations need to prepare data before drawing. Return a chart component for
+those configurations, or `undefined` to use the definition's synchronous
+`createSpec` path. The chart settings show **View spec** when the chart uses
+that spec path.
+
+If your host saves or edits charts as JSON specs, offer settings that produce
+serializable specs and check `getRenderer?.(config)` before calling
+`createSpec`. A returned component indicates that the configuration uses a
+runtime renderer. The [Deck.gl filter builder](../../examples/deckgl-mosaic/src/components/filters/FiltersPanel.tsx)
+shows how to enforce this in a custom builder.
 
 ### Working with Selections
 

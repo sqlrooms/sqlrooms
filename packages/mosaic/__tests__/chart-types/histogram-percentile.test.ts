@@ -155,4 +155,19 @@ describe('Upper percentile histogram', () => {
     );
     expect(String(cutoff)).toContain('QUANTILE_CONT("duration.ms", 0.5)');
   });
+
+  it.each(['FLOAT', 'REAL'])(
+    'restores a %s cutoff in its native type',
+    (type) => {
+      const {cutoff, source} = createHistogramPercentileQueries(
+        dataTable.table,
+        {name: field, type},
+        99,
+      );
+      expect(String(cutoff)).toContain('QUANTILE_CONT("duration.ms", 0.99)');
+      expect(String(source('0.1'))).toContain(
+        `"duration.ms" <= CAST('0.1' AS ${type})`,
+      );
+    },
+  );
 });

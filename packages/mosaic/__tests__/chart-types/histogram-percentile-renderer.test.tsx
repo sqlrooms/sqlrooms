@@ -6,6 +6,7 @@ import {jest} from '@jest/globals';
 import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 import {act, render, screen} from '@testing-library/react';
 import {type Coordinator} from '@uwdata/mosaic-core';
+import {type ChartRuntimeIssueReporter} from '../../src/chart-runtime';
 import {HistogramPercentileRenderer} from '../../src/charts/chart-types/histogram/HistogramPercentileRenderer';
 
 const table = makeQualifiedTableName({schema: 'main', table: 'requests'});
@@ -18,6 +19,26 @@ const dataTable: DataTable = {
 };
 const runtimeIssueContext = {panelId: 'requests-plot', chartType: 'histogram'};
 
+function histogram(
+  coordinator: Coordinator,
+  runtimeIssueReporter: ChartRuntimeIssueReporter,
+  upperPercentile = 99,
+) {
+  return (
+    <HistogramPercentileRenderer
+      config={{
+        chartType: 'histogram',
+        settings: {field: 'duration', upperPercentile},
+      }}
+      coordinator={coordinator}
+      dataTable={dataTable}
+      table={table}
+      runtimeIssueContext={runtimeIssueContext}
+      runtimeIssueReporter={runtimeIssueReporter}
+    />
+  );
+}
+
 it('displays and reports a cutoff query failure as a SQL issue', async () => {
   const message = 'Cutoff query could not read requests';
   const query = jest
@@ -26,17 +47,10 @@ it('displays and reports a cutoff query failure as a SQL issue', async () => {
   const reportIssue = jest.fn();
 
   render(
-    <HistogramPercentileRenderer
-      config={{
-        chartType: 'histogram',
-        settings: {field: 'duration', upperPercentile: 99},
-      }}
-      coordinator={{query} as unknown as Coordinator}
-      dataTable={dataTable}
-      table={table}
-      runtimeIssueContext={runtimeIssueContext}
-      runtimeIssueReporter={{reportIssue, clearIssue: jest.fn()}}
-    />,
+    histogram({query} as unknown as Coordinator, {
+      reportIssue,
+      clearIssue: jest.fn(),
+    }),
   );
 
   expect(await screen.findByText(message)).toBeTruthy();
@@ -59,21 +73,8 @@ it('ignores a cutoff failure after the percentile changes', async () => {
   const coordinator = {query} as unknown as Coordinator;
   const reportIssue = jest.fn();
   const reporter = {reportIssue, clearIssue: jest.fn()};
-  const view = (upperPercentile: number) => (
-    <HistogramPercentileRenderer
-      config={{
-        chartType: 'histogram',
-        settings: {field: 'duration', upperPercentile},
-      }}
-      coordinator={coordinator}
-      dataTable={dataTable}
-      table={table}
-      runtimeIssueContext={runtimeIssueContext}
-      runtimeIssueReporter={reporter}
-    />
-  );
-  const {rerender} = render(view(99));
-  rerender(view(90));
+  const {rerender} = render(histogram(coordinator, reporter));
+  rerender(histogram(coordinator, reporter, 90));
   expect(query).toHaveBeenCalledTimes(2);
 
   await act(async () => {
@@ -89,4 +90,35 @@ it('ignores a cutoff failure after the percentile changes', async () => {
   expect(reportIssue).toHaveBeenCalledWith(
     expect.objectContaining({message: 'Current cutoff query'}),
   );
+});
+
+it('clears a cutoff issue when the current query succeeds with no finite values', async () => {
+  const emptyCutoff = {get: () => ({upper_bound: null})};
+  const superseded = Promise.withResolvers<typeof emptyCutoff>();
+  const current = Promise.withResolvers<typeof emptyCutoff>();
+  const query = jest
+    .fn<() => Promise<typeof emptyCutoff>>()
+    .mockRejectedValueOnce(new Error('Cutoff failed'))
+    .mockReturnValueOnce(superseded.promise)
+    .mockReturnValueOnce(current.promise);
+  const coordinator = {query} as unknown as Coordinator;
+  const reporter = {reportIssue: jest.fn(), clearIssue: jest.fn()};
+  const {rerender} = render(histogram(coordinator, reporter));
+  expect(await screen.findByText('Cutoff failed')).toBeTruthy();
+  expect(reporter.reportIssue).toHaveBeenCalledTimes(1);
+
+  rerender(histogram(coordinator, reporter, 90));
+  rerender(histogram(coordinator, reporter, 80));
+  await act(async () => {
+    superseded.resolve(emptyCutoff);
+  });
+  expect(reporter.clearIssue).not.toHaveBeenCalled();
+
+  await act(async () => {
+    current.resolve(emptyCutoff);
+  });
+  expect(screen.getByRole('status').textContent).toBe(
+    'No finite values to bin.',
+  );
+  expect(reporter.clearIssue).toHaveBeenCalledTimes(1);
 });

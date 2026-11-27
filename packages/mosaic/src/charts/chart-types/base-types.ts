@@ -210,7 +210,10 @@ export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
   BaseChartTypeDefinition<TConfig> & {
     createSpec: (options: CreateSpecOptions<TConfig['settings']>) => Spec;
     canViewSpec?: boolean;
-    /** Select a runtime renderer when this configuration needs a database query before rendering. */
+    /**
+     * Select a component for configurations that need runtime preparation.
+     * Return undefined to use createSpec and expose the generated spec in the viewer.
+     */
     getRenderer?: (
       config: TConfig,
     ) => ComponentType<ChartRendererProps<TConfig>> | undefined;

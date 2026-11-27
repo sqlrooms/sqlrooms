@@ -1,7 +1,7 @@
 import {SpinnerPane} from '@sqlrooms/ui';
 import {type Coordinator} from '@uwdata/mosaic-core';
 import {type Query} from '@uwdata/mosaic-sql';
-import {type FC, useEffect, useMemo, useState} from 'react';
+import {type FC, useEffect, useMemo, useRef, useState} from 'react';
 import {createChartRuntimeIssueFromError} from '../../../chart-runtime';
 import {VgPlotChart} from '../../../VgPlotChart';
 import {MosaicChartError} from '../../MosaicChartError';
@@ -52,14 +52,20 @@ export const HistogramPercentileRenderer: FC<
   }, [dataTable, field, upperPercentile]);
 
   const [result, setResult] = useState<CutoffResult>();
+  const reporterRef = useRef(runtimeIssueReporter);
+  useEffect(() => {
+    reporterRef.current = runtimeIssueReporter;
+  }, [runtimeIssueReporter]);
+
   const {query} = prepared;
   useEffect(() => {
     if (!query) return;
     let active = true;
     void coordinator.query(query, {cache: false}).then(
       (rows) => {
-        const bound = rows.get(0)?.upper_bound;
         if (active) {
+          const bound = rows.get(0)?.upper_bound;
+          reporterRef.current?.clearIssue();
           setResult({
             coordinator,
             query,

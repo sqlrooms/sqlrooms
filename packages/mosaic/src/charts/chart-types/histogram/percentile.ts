@@ -19,6 +19,8 @@ function getBoundType(field: TableColumn): string {
   if (DECIMAL_TYPE.test(type)) return type;
   if (/^BIT\b/.test(type)) return 'BIT';
   if (EXACT_QUANTILE_TYPES.has(type) || type === 'TIME') return type;
+  // DuckDB serializes FLOAT cutoffs with enough digits to round-trip as FLOAT.
+  if (type === 'FLOAT' || type === 'REAL') return type;
   if (getColumnTypeCategory(field) === 'number') return 'DOUBLE';
   if (type === 'TIMETZ' || type === 'TIME WITH TIME ZONE') return 'TIMETZ';
   return /TIMESTAMPTZ|WITH TIME ZONE/.test(type) ? 'TIMESTAMPTZ' : 'TIMESTAMP';
