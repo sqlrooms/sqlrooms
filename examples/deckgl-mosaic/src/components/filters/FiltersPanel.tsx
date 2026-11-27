@@ -2,6 +2,7 @@ import type {Param} from '@sqlrooms/mosaic';
 import {
   type ChartConfig,
   createDefaultChartTypes,
+  HistogramSettingsComponent,
   isSpecChartType,
   MosaicChartBuilder,
   MosaicSpecChart,
@@ -13,6 +14,10 @@ import {Code, FilterX, X} from 'lucide-react';
 import {FC, useCallback, useEffect, useMemo, useState} from 'react';
 import {useRoomStore} from '../../store';
 import {defaultChartConfigs, type FilterChartItem} from './filterPlots';
+
+function FullRangeHistogramSettings() {
+  return <HistogramSettingsComponent showUpperPercentile={false} />;
+}
 
 export const FiltersPanel: FC<{className?: string}> = ({className}) => {
   const mosaicConn = useRoomStore((state) => state.mosaic.connection);
@@ -71,9 +76,16 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
     });
   }, []);
 
-  // Only include spec-based chart types (filter panel doesn't support component renderers)
+  // The filter editor requires JSON specs, so limit histograms to their full range.
   const chartTypes = useMemo(
-    () => createDefaultChartTypes().filter(isSpecChartType),
+    () =>
+      createDefaultChartTypes()
+        .filter(isSpecChartType)
+        .map((chartType) =>
+          chartType.id === 'histogram'
+            ? {...chartType, settingsComponent: FullRangeHistogramSettings}
+            : chartType,
+        ),
     [],
   );
 
@@ -92,6 +104,10 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
           console.error('No data table');
           return;
         }
+        if (chartTypeDef.getRenderer?.(config)) {
+          console.error('Filter charts require a JSON spec');
+          return;
+        }
         // chartTypes is filtered to only spec-based types, so createSpec exists
         const spec = chartTypeDef.createSpec({
           dataTable: earthquakesTable,
@@ -102,7 +118,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
         console.error('Failed to create chart:', error);
       }
     },
-    [chartTypes],
+    [chartTypes, earthquakesTable],
   );
 
   const handleRemoveChart = useCallback((chartId: string) => {

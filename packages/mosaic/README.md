@@ -318,12 +318,41 @@ compatibility. When `metric` is omitted, a provided `valueField` implies
 providers emit `null` for a field they mean to leave unset, so the optional
 inputs on the exported chart-settings schemas are `.nullish()` — they accept
 `null` in addition to `undefined`. This spans, for example, scatter `x`/`y`/`size`,
-heatmap and box-plot axes, histogram `field`/`color`, count-plot `field`/
+heatmap and box-plot axes, histogram `field`/`color`/`upperPercentile`, count-plot `field`/
 `valueField`/`leftMargin`, and line-chart `metric`/`yFields`/`xInterval`. A
 `null` is treated the same as an omitted value: it resolves to the field's
 documented default or auto behavior (e.g. line-chart `metric: null` →
 `"aggregate"`; count-plot `valueField: null` → row count; `leftMargin: null` →
 metadata-derived margin) rather than being rendered as a literal `null`.
+
+For long-tailed distributions, set **Upper percentile** in a histogram's
+settings to focus the bins on values at or below that percentile, including
+ties. The cutoff comes from the source dataset and stays fixed while you brush
+or filter the chart. The field accepts percentages greater than 0 and at most 100. Leaving it blank or setting it to 100 shows the full range.
+Wide integers, decimals with more than 18 digits of precision, and nanosecond
+timestamps use an observed cutoff value to preserve precision.
+
+For example, use this chart configuration with a `latency_ms` column that has a
+few extreme values:
+
+```ts
+import type {ChartConfig} from '@sqlrooms/mosaic';
+
+const chartConfig = {
+  chartType: 'histogram',
+  settings: {field: 'latency_ms', upperPercentile: 99},
+} satisfies ChartConfig;
+```
+
+Percentile histograms use a database-backed renderer. **View spec** is available
+for full-range histograms. Programmatic `histogramChartType.createSpec` can also
+build a clipped runtime spec for `VgPlotChart`; its SQL query source is a Mosaic
+SQL object.
+
+For a builder that writes editable JSON specs, set the histogram definition's
+settings component to a wrapper around
+`<HistogramSettingsComponent showUpperPercentile={false} />`. This keeps the
+field, color, and bin count settings available for full-range histograms.
 
 Count plots cap the visible categories instead of folding the hidden tail into
 `Others` so the generated vgplot spec continues to cross-filter against the
@@ -784,6 +813,20 @@ Available compound components:
 - `ChartBuilderActions` - Back/Create buttons
 
 For simpler use cases, the legacy `ChartBuilderDialog` component is still available but deprecated.
+
+#### Runtime renderers for spec chart types
+
+A spec chart definition can implement `getRenderer(config)` when certain
+configurations need to prepare data before drawing. Return a chart component for
+those configurations, or `undefined` to use the definition's synchronous
+`createSpec` path. The chart settings show **View spec** when the chart uses
+that spec path.
+
+If your host saves or edits charts as JSON specs, offer settings that produce
+serializable specs and check `getRenderer?.(config)` before calling
+`createSpec`. A returned component indicates that the configuration uses a
+runtime renderer. The [Deck.gl filter builder](../../examples/deckgl-mosaic/src/components/filters/FiltersPanel.tsx)
+shows how to enforce this in a custom builder.
 
 ### Working with Selections
 

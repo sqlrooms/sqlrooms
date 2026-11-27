@@ -4,7 +4,7 @@ import {
   InvalidColumnTypeError,
   MissingColumnsError,
   RequiredFieldsError,
-} from './chart-types';
+} from './chart-types/errors';
 
 type MosaicChartErrorProps = {
   error: Error;

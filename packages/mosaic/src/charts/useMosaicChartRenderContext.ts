@@ -57,6 +57,10 @@ export function useMosaicChartRenderContext(
     }
 
     if (isSpecChartType(chartTypeDefinition)) {
+      const renderer = chartTypeDefinition.getRenderer?.(config);
+      if (renderer) {
+        return {type: 'component', renderer, dataTable};
+      }
       return createMosaicSpecChartRenderContext(
         chartTypeDefinition,
         dataTable,
