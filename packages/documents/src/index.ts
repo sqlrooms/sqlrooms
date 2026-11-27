@@ -166,6 +166,10 @@ export {
 } from './BlockDocumentEditor/BlockDocumentEditorContent';
 export {
   BlockDocumentToolbar,
+  BlockDocumentToolbarFormatting,
+  BlockDocumentToolbarInsertButton,
+  BlockDocumentToolbarSeparator,
+  type BlockDocumentToolbarInsertButtonProps,
   type BlockDocumentToolbarProps,
 } from './BlockDocumentEditor/BlockDocumentToolbar';
 export {
