@@ -22,20 +22,9 @@ import {
 import {isMacOS} from '@sqlrooms/utils';
 import type {Editor} from '@tiptap/react';
 import {
-  BarChart3Icon,
-  CheckSquareIcon,
-  Code2Icon,
   GripVerticalIcon,
-  Heading1Icon,
-  Heading2Icon,
-  Heading3Icon,
-  ImageIcon,
-  ListIcon,
-  ListOrderedIcon,
-  MinusIcon,
   PilcrowIcon,
   PlusIcon,
-  QuoteIcon,
   Rows3Icon,
   Trash2Icon,
 } from 'lucide-react';
@@ -51,12 +40,15 @@ import {
 } from 'react';
 import {
   isBlockDocumentStatefulBlockTypeEnabled,
-  type BlockDocumentStatefulBlockCreateNodeOptions,
-  type BlockDocumentStatefulBlockType,
   useBlockDocumentStatefulBlockTypes,
 } from '../BlockDocumentStatefulBlockRendererContext';
 import {BLOCK_DOCUMENT_TITLE_NODE_NAME} from './extensions/BlockDocumentTitleNode';
 import {useBlockDocumentEditorContext} from './BlockDocumentEditorContext';
+import {
+  type BlockDocumentInsertItem,
+  insertBlockDocumentItem,
+} from './BlockDocumentInsertItems';
+import {useBlockDocumentInsertItems} from './useBlockDocumentInsertItems';
 import {
   BLOCK_DOCUMENT_CONTENT_GUTTER,
   BLOCK_DOCUMENT_CONTROLS_LEFT_INSET,
@@ -85,17 +77,6 @@ type BlockDropIndicator = {
   top: number;
   left: number;
   width: number;
-};
-
-type BlockMenuItem = {
-  label: string;
-  description: string;
-  icon: FC<{className?: string}>;
-  selectAfterInsert?: boolean;
-  createNode: (
-    id: string,
-    options?: BlockDocumentStatefulBlockCreateNodeOptions,
-  ) => Record<string, unknown>;
 };
 
 type FocusedBlockState = BlockControlState & {
@@ -136,18 +117,6 @@ const BLOCK_TYPE_SEARCH_MENU_VIEWPORT_PADDING = 16;
 const EMPTY_BLOCK_PLACEHOLDER = "Press '/' to change block type";
 const SLASH_SEARCH_PLACEHOLDER = 'Type to search';
 const FILTER_SEARCH_PLACEHOLDER = 'Type to filter';
-
-function labelFromArtifactType(artifactType: string) {
-  return artifactType
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-function labelFromBlockType(blockType: string) {
-  return labelFromArtifactType(blockType);
-}
 
 function directEditorChild(
   editorElement: HTMLElement,
@@ -549,186 +518,16 @@ function clearTextInNode(
   }
 }
 
-function blockMenuItemMatchesQuery(item: BlockMenuItem, query: string) {
+function blockMenuItemMatchesQuery(
+  item: BlockDocumentInsertItem,
+  query: string,
+) {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return true;
 
   return `${item.label} ${item.description}`
     .toLowerCase()
     .includes(normalizedQuery);
-}
-
-function buildStatefulBlockMenuItems(
-  blockTypes: BlockDocumentStatefulBlockType[],
-): BlockMenuItem[] {
-  return blockTypes.map((blockType) => {
-    const label = blockType.label ?? labelFromBlockType(blockType.blockType);
-    return {
-      label,
-      description: blockType.description ?? `Insert ${label}`,
-      icon: Rows3Icon,
-      selectAfterInsert: true,
-      createNode:
-        blockType.createNode ??
-        ((id: string) => ({
-          type: 'blockDocumentStatefulBlock',
-          attrs: {
-            id,
-            blockType: blockType.blockType,
-            blockInstanceId: id,
-            ownership: 'owned',
-            caption: '',
-            ...(blockType.resizableHeight
-              ? {height: blockType.defaultHeight ?? 560}
-              : {}),
-          },
-        })),
-    };
-  });
-}
-
-function buildTextBlockMenuItems(): BlockMenuItem[] {
-  return [
-    {
-      label: 'Paragraph',
-      description: 'Plain text',
-      icon: PilcrowIcon,
-      createNode: (id) => ({
-        type: 'paragraph',
-        attrs: {id},
-      }),
-    },
-    {
-      label: 'Heading 1',
-      description: 'Large section heading',
-      icon: Heading1Icon,
-      createNode: (id) => ({
-        type: 'heading',
-        attrs: {id, level: 1},
-        content: [{type: 'text', text: 'Heading'}],
-      }),
-    },
-    {
-      label: 'Heading 2',
-      description: 'Medium section heading',
-      icon: Heading2Icon,
-      createNode: (id) => ({
-        type: 'heading',
-        attrs: {id, level: 2},
-        content: [{type: 'text', text: 'Heading'}],
-      }),
-    },
-    {
-      label: 'Heading 3',
-      description: 'Small section heading',
-      icon: Heading3Icon,
-      createNode: (id) => ({
-        type: 'heading',
-        attrs: {id, level: 3},
-        content: [{type: 'text', text: 'Heading'}],
-      }),
-    },
-    {
-      label: 'Bulleted list',
-      description: 'List of items',
-      icon: ListIcon,
-      createNode: (id) => ({
-        type: 'bulletList',
-        attrs: {id},
-        content: [
-          {
-            type: 'listItem',
-            content: [{type: 'paragraph'}],
-          },
-        ],
-      }),
-    },
-    {
-      label: 'Numbered list',
-      description: 'Ordered items',
-      icon: ListOrderedIcon,
-      createNode: (id) => ({
-        type: 'orderedList',
-        attrs: {id},
-        content: [
-          {
-            type: 'listItem',
-            content: [{type: 'paragraph'}],
-          },
-        ],
-      }),
-    },
-    {
-      label: 'Todo',
-      description: 'Task checkbox',
-      icon: CheckSquareIcon,
-      createNode: (id) => ({
-        type: 'taskList',
-        attrs: {id},
-        content: [
-          {
-            type: 'taskItem',
-            attrs: {checked: false},
-            content: [{type: 'paragraph'}],
-          },
-        ],
-      }),
-    },
-    {
-      label: 'Quote',
-      description: 'Quoted text',
-      icon: QuoteIcon,
-      createNode: (id) => ({
-        type: 'blockquote',
-        attrs: {id},
-        content: [{type: 'paragraph'}],
-      }),
-    },
-    {
-      label: 'Code',
-      description: 'Code block',
-      icon: Code2Icon,
-      createNode: (id) => ({
-        type: 'codeBlock',
-        attrs: {id},
-      }),
-    },
-  ];
-}
-
-function buildMediaBlockMenuItems(
-  statefulBlockTypes: BlockDocumentStatefulBlockType[],
-): BlockMenuItem[] {
-  return [
-    {
-      label: 'Divider',
-      description: 'Horizontal rule',
-      icon: MinusIcon,
-      createNode: (id) => ({
-        type: 'horizontalRule',
-        attrs: {id},
-      }),
-    },
-    {
-      label: 'Image',
-      description: 'Document image block',
-      icon: ImageIcon,
-      createNode: (id) => ({
-        type: 'blockDocumentImage',
-        attrs: {id, assetId: '', caption: ''},
-      }),
-    },
-    {
-      label: 'Chart',
-      description: 'Standalone chart block',
-      icon: BarChart3Icon,
-      createNode: (id) => ({
-        type: 'blockDocumentChart',
-        attrs: {id, config: {}, caption: ''},
-      }),
-    },
-    ...buildStatefulBlockMenuItems(statefulBlockTypes),
-  ];
 }
 
 export const BlockDocumentBlockControls: FC<
@@ -756,10 +555,14 @@ export const BlockDocumentBlockControls: FC<
   const suppressHandleClickRef = useRef(false);
   const controlsRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
-  const textMenuItems = useMemo(() => buildTextBlockMenuItems(), []);
+  const insertItems = useBlockDocumentInsertItems();
+  const textMenuItems = useMemo(
+    () => insertItems.filter((item) => item.group === 'text'),
+    [insertItems],
+  );
   const mediaMenuItems = useMemo(
-    () => buildMediaBlockMenuItems(statefulBlockTypes),
-    [statefulBlockTypes],
+    () => insertItems.filter((item) => item.group === 'insert'),
+    [insertItems],
   );
   const isBlockReadOnly = useCallback(
     (node: ReturnType<typeof getNodeAt>) =>
@@ -1066,45 +869,34 @@ export const BlockDocumentBlockControls: FC<
   ]);
 
   const turnBlockInto = useCallback(
-    (block: BlockControlState | null, item: BlockMenuItem) => {
+    (block: BlockControlState | null, item: BlockDocumentInsertItem) => {
       if (!editor || !block) return;
       const node = getNodeAt(editor, block.pos);
       if (!node || isTitleNode(node) || isBlockReadOnly(node)) return;
 
-      const replacement = preserveTextInNode(
-        item.createNode(getNodeId(node, generateBlockId), {
-          initialText: node.textContent,
-        }),
-        node.textContent,
-      );
-
-      if (
-        replacement.type === 'paragraph' &&
-        node.type.name === 'paragraph' &&
-        isEmptyTextBlock(node)
-      ) {
-        setHandleMenuOpen(false);
-        clearBlockTypeSearchView();
-        setActiveBlock(null);
-        return;
-      }
-
-      const chain = editor
-        .chain()
-        .focus()
-        .insertContentAt(
-          {
-            from: block.pos,
-            to: block.pos + node.nodeSize,
+      const nodeId = getNodeId(node, generateBlockId);
+      const nodeTypeName = node.type.name;
+      insertBlockDocumentItem({
+        editor,
+        item,
+        nodeId,
+        createNodeOptions: {initialText: node.textContent},
+        target: {
+          kind: 'replace',
+          pos: block.pos,
+          blockId: nodeId,
+          isTarget: (target) =>
+            target.type.name === nodeTypeName &&
+            !isTitleNode(target) &&
+            !isBlockReadOnly(target),
+          prepareNode: (created, target) => {
+            const replacement = preserveTextInNode(created, target.textContent);
+            return replacement.type === 'paragraph' && isEmptyTextBlock(target)
+              ? null
+              : replacement;
           },
-          replacement,
-        );
-
-      if (item.selectAfterInsert) {
-        chain.setNodeSelection(block.pos);
-      }
-
-      chain.run();
+        },
+      });
 
       setHandleMenuOpen(false);
       clearBlockTypeSearchView();
@@ -1114,62 +906,66 @@ export const BlockDocumentBlockControls: FC<
   );
 
   const turnActiveBlockInto = useCallback(
-    (item: BlockMenuItem) => {
+    (item: BlockDocumentInsertItem) => {
       turnBlockInto(activeBlock, item);
     },
     [activeBlock, turnBlockInto],
   );
 
   const turnBlockTypeSearchInto = useCallback(
-    (item: BlockMenuItem) => {
+    (item: BlockDocumentInsertItem) => {
       if (!editor || !blockTypeSearch) return;
       const node = getNodeAt(editor, blockTypeSearch.pos);
       if (!node || isTitleNode(node)) return;
 
-      const replacement = clearTextInNode(
-        item.createNode(getNodeId(node, generateBlockId), {initialText: ''}),
-      );
-
-      if (
-        replacement.type === 'paragraph' &&
-        node.type.name === 'paragraph' &&
-        isEmptyTextBlock(node)
-      ) {
-        clearBlockTypeSearchView();
-        return;
-      }
-
-      const chain = editor
-        .chain()
-        .focus()
-        .insertContentAt(
-          {
-            from: blockTypeSearch.pos,
-            to: blockTypeSearch.pos + node.nodeSize,
+      const nodeId = getNodeId(node, generateBlockId);
+      const isSlashSearch = blockTypeSearch.mode === 'slash';
+      const pending = insertBlockDocumentItem({
+        editor,
+        item,
+        nodeId,
+        createNodeOptions: {initialText: ''},
+        target: {
+          kind: 'replace',
+          pos: blockTypeSearch.pos,
+          blockId: nodeId,
+          isTarget: (target) =>
+            target.type.name === 'paragraph' &&
+            (!isSlashSearch || target.textContent.startsWith('/')),
+          prepareNode: (created, target) => {
+            const replacement = clearTextInNode(created);
+            return replacement.type === 'paragraph' && isEmptyTextBlock(target)
+              ? null
+              : replacement;
           },
-          replacement,
-        );
+        },
+      });
 
-      if (item.selectAfterInsert) {
-        chain.setNodeSelection(blockTypeSearch.pos);
+      if (pending) {
+        // Keep the slash search closed while the block is being created.
+        dismissBlockTypeSearch({rememberSlash: true});
+      } else {
+        clearBlockTypeSearchView();
       }
-
-      chain.run();
-
-      clearBlockTypeSearchView();
     },
-    [blockTypeSearch, clearBlockTypeSearchView, editor, generateBlockId],
+    [
+      blockTypeSearch,
+      clearBlockTypeSearchView,
+      dismissBlockTypeSearch,
+      editor,
+      generateBlockId,
+    ],
   );
 
   const handleActiveBlockTypeSelect = useCallback(
-    (item: BlockMenuItem) => {
+    (item: BlockDocumentInsertItem) => {
       turnActiveBlockInto(item);
     },
     [turnActiveBlockInto],
   );
 
   const handleBlockTypeSearchSelect = useCallback(
-    (item: BlockMenuItem) => {
+    (item: BlockDocumentInsertItem) => {
       turnBlockTypeSearchInto(item);
     },
     [turnBlockTypeSearchInto],
@@ -1313,9 +1109,12 @@ export const BlockDocumentBlockControls: FC<
     setHandleMenuOpen((open) => !open);
   };
 
-  const renderMenuItem = (item: BlockMenuItem, onSelect: () => void) => (
+  const renderMenuItem = (
+    item: BlockDocumentInsertItem,
+    onSelect: () => void,
+  ) => (
     <DropdownMenuItem
-      key={item.label}
+      key={item.id}
       className="h-9 gap-2 px-2 py-1.5"
       onSelect={onSelect}
     >
@@ -1325,15 +1124,14 @@ export const BlockDocumentBlockControls: FC<
   );
 
   const renderBlockTypeSearchItem = (
-    item: BlockMenuItem,
-    onSelect: () => void,
+    item: BlockDocumentInsertItem,
     options?: {
       onPointerMove?: () => void;
       searchIndex?: number;
       selected?: boolean;
     },
   ) => (
-    <Tooltip key={item.label}>
+    <Tooltip key={item.id}>
       <TooltipTrigger asChild>
         <button
           type="button"
@@ -1343,7 +1141,7 @@ export const BlockDocumentBlockControls: FC<
             options?.selected && 'bg-accent text-accent-foreground',
           )}
           data-block-type-search-item={options?.searchIndex}
-          onClick={onSelect}
+          onClick={() => handleBlockTypeSearchSelect(item)}
           onMouseDown={(event) => event.preventDefault()}
           onPointerMove={options?.onPointerMove}
         >
@@ -1363,7 +1161,7 @@ export const BlockDocumentBlockControls: FC<
   );
 
   const renderBlockTypeMenuItems = (
-    onSelect: (item: BlockMenuItem) => void,
+    onSelect: (item: BlockDocumentInsertItem) => void,
   ) => (
     <>
       <DropdownMenuSub>
@@ -1384,7 +1182,7 @@ export const BlockDocumentBlockControls: FC<
 
   const renderBlockTypeSearchMenuGroup = (
     label: string,
-    items: BlockMenuItem[],
+    items: BlockDocumentInsertItem[],
     startIndex: number,
   ) =>
     items.length ? (
@@ -1394,19 +1192,15 @@ export const BlockDocumentBlockControls: FC<
         </div>
         {items.map((item, itemIndex) => {
           const index = startIndex + itemIndex;
-          return renderBlockTypeSearchItem(
-            item,
-            () => handleBlockTypeSearchSelect(item),
-            {
-              onPointerMove: () =>
-                setBlockTypeSearchSelection({
-                  index,
-                  key: blockTypeSearchSelectionKey,
-                }),
-              searchIndex: index,
-              selected: index === blockTypeSearchSelectedIndex,
-            },
-          );
+          return renderBlockTypeSearchItem(item, {
+            onPointerMove: () =>
+              setBlockTypeSearchSelection({
+                index,
+                key: blockTypeSearchSelectionKey,
+              }),
+            searchIndex: index,
+            selected: index === blockTypeSearchSelectedIndex,
+          });
         })}
       </>
     ) : null;

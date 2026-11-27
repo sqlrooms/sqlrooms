@@ -47,6 +47,7 @@ describe('asset block capture targets', () => {
                 readOnly,
                 onChange: jest.fn(),
                 generateBlockId: () => 'generated-block',
+                insertItems: [],
                 assets: {
                   'asset-1': {
                     id: 'asset-1',
